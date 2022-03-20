@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -44,7 +45,7 @@ namespace SlowTests.Bugs.MapRedue
         }
 
         [Fact]
-        public void CanUseMaxOnNullableDateTimeOffset()
+        public async Task CanUseMaxOnNullableDateTimeOffset()
         {
             using (var store = GetDocumentStore())
             {              
@@ -83,7 +84,7 @@ namespace SlowTests.Bugs.MapRedue
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .ToList();
 
-                    var db = GetDocumentDatabaseInstanceFor(store).Result;
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                     Assert.Equal(0, errorsCount);

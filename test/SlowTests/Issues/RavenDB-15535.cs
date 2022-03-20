@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                     var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 await StoreInTransactionMode(store, 1);
                 await StoreInRegularMode(store, 10);
@@ -133,7 +133,7 @@ namespace SlowTests.Issues
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 var tasks = new List<Task>
                 {
@@ -192,7 +192,7 @@ namespace SlowTests.Issues
                     var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 var testServer = Servers.First(server => server.ServerStore.IsLeader() == false);
 
@@ -206,7 +206,7 @@ namespace SlowTests.Issues
                     FromNodes = new[] { testServer.ServerStore.NodeTag },
                 });
 
-                await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.Index, TimeSpan.FromSeconds(10));
 
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, database), 2, 20000);
                 Assert.Equal(2, val);
@@ -258,7 +258,7 @@ namespace SlowTests.Issues
                     var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -312,7 +312,7 @@ namespace SlowTests.Issues
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 var tasks = new List<Task>
                 {
@@ -386,7 +386,7 @@ namespace SlowTests.Issues
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
 
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 var tasks = new List<Task>
                 {
@@ -474,7 +474,7 @@ namespace SlowTests.Issues
                     var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                     (index, _) = await leader.ServerStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 }
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 await StoreInRegularMode(storeA, 3);
 
@@ -492,7 +492,7 @@ namespace SlowTests.Issues
                     FromNodes = new[] { dbCreation.Servers[0].ServerStore.NodeTag },
                 });
 
-                await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.Index, TimeSpan.FromSeconds(10));
 
                 await WaitAndAssertForValueAsync(() =>
                 {

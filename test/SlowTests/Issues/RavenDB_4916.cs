@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     Maps = { "from doc in docs select new { doc.Amount }" }
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

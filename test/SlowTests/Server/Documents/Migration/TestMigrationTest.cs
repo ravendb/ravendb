@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.Migration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationTestSettings
                     {
@@ -72,7 +72,7 @@ namespace SlowTests.Server.Documents.Migration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationTestSettings
                     {
@@ -113,7 +113,7 @@ namespace SlowTests.Server.Documents.Migration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationTestSettings
                     {

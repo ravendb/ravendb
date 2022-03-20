@@ -473,7 +473,7 @@ namespace SlowTests.Client.Subscriptions
 
         private async Task AssertNoLeftovers(IDocumentStore store, string id)
         {
-            var db = await GetDocumentDatabaseInstanceFor(store);
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
             await AssertWaitForValueAsync(() =>
             {
@@ -759,7 +759,7 @@ namespace SlowTests.Client.Subscriptions
                     await mre2.WaitAsync();
 
                     store.Subscriptions.DropSubscriptionWorker(worker2);
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out var subscriptionConnectionsState);
                     Assert.Equal(1, subscriptionConnectionsState.GetConnections().Count);
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6 || con1Docs.Count + con2Docs.Count == 8), 6000);

@@ -42,7 +42,7 @@ namespace SlowTests.Tests.Linq
                     indexDefinition.Name = indexName;
                     store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var results = session.Query<CommitInfo>(indexName)
                                             .Where(x => x.Revision == 1);

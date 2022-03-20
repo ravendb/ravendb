@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 }
 
                 IndexCreation.CreateIndexes(new[] { new MyIndex() }, store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {
@@ -71,7 +71,7 @@ namespace SlowTests.Issues
                 }
 
                 IndexCreation.CreateIndexes(new[] { new MyIndex() }, store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {

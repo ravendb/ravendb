@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                 _session.Store(articleGroup);
                 _session.SaveChanges();
 
-                WaitForIndexing(_store);
+                Indexes.WaitForIndexing(_store);
 
                 var facets = _session.Advanced.DocumentQuery<Item, ItemsWithDynamicFieldsIndex>()
                     .AggregateBy(new[]

@@ -22,7 +22,7 @@ namespace SlowTests.Issues
                 session.Store(new Foo { Bar = "Shalom" });
                 session.Store(new Foo { Bar = "Salam" });
                 session.SaveChanges();
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 var res = session.Query<Foo, FooBarIndex>().Single(x => x.Bar.StartsWith("Sh"));
                 Assert.Equal(res.Bar, "Shalom");
             }

@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var now = DateTime.UtcNow;
                 var nowSeconds = now.Second;
                 now = now.AddSeconds(-nowSeconds);
@@ -68,13 +68,13 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await WaitForPolicyRunner(database);
-                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 4, policies: new List<TimeSeriesPolicy> { p1 });
-                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 5, policies: new List<TimeSeriesPolicy> { p2 });
-                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 2, policies: new List<TimeSeriesPolicy> { p3 });
-                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 3, policies: new List<TimeSeriesPolicy> { p4 });
+                await TimeSeries.WaitForPolicyRunnerAsync(database);
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 4, policies: new List<TimeSeriesPolicy> { p1 });
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 5, policies: new List<TimeSeriesPolicy> { p2 });
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 2, policies: new List<TimeSeriesPolicy> { p3 });
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 3, policies: new List<TimeSeriesPolicy> { p4 });
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())

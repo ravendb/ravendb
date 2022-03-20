@@ -28,7 +28,7 @@ namespace SlowTests.Issues
             }
 
             new TestIndexOrderByThenBy().Execute(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             using (var session = store.OpenSession())
             {
                 var ravenQueryable = session.Query<Result, TestIndexOrderByThenBy>().ToList();

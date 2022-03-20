@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                     session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToList();
 
-                    WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
+                    Indexes.WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
 
                     // ensure the timeout was reset after the run completed
                     Assert.False(index._firstBatchTimeout.HasValue);
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
 
                     session.Query<User>(usersByname).Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToList();
 
-                    WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
+                    Indexes.WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
 
                     // ensure the timeout was reset after the run completed
                     Assert.False(index._firstBatchTimeout.HasValue);

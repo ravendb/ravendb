@@ -100,7 +100,7 @@ namespace SlowTests.MailingList
                 new AccItems_Spatial().Execute(store);
                 new AccItems_Attributes().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

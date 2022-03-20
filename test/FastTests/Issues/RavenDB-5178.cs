@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Threading.Tasks;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Issues
@@ -10,7 +11,7 @@ namespace FastTests.Issues
         }
 
         [NonLinuxFact]
-        public void CanUsePathLongerThan260Chars()
+        public async Task CanUsePathLongerThan260Chars()
         {
             DoNotReuseServer();
 
@@ -21,7 +22,7 @@ namespace FastTests.Issues
                 ModifyDatabaseName = _ => longName
             }))
             {
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 Assert.Equal(db.Name, longName);
             }
         }

@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, allowErrors: true);
+                Indexes.WaitForIndexing(store, allowErrors: true);
 
                 IndexStats indexStats = null;
 
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                 }
 
                 //we wait until the index is corrupted or 15 seconds pass
-                //-> no need to WaitForIndexing() because either the index is corrupted or not, 15 seconds for 10 docs is A LOT
+                //-> no need to Indexes.WaitForIndexing() because either the index is corrupted or not, 15 seconds for 10 docs is A LOT
                 IndexStats indexStats = null;
 
                 Assert.True(SpinWait.SpinUntil(() =>
@@ -152,7 +152,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
-using FastTests.Sharding;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
@@ -642,7 +641,7 @@ namespace SlowTests.Sharding.ETL
                     }
                 }
 
-                Assert.True(WaitForCounterReplication(new List<IDocumentStore>
+                Assert.True(Replication.WaitForCounterReplication(new List<IDocumentStore>
                 {
                     dest
                 }, "users/1", "likes", 2, TimeSpan.FromSeconds(60)));

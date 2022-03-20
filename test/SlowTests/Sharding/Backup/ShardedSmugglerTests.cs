@@ -6,7 +6,6 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Sharding;
 using FastTests.Utils;
 using Orders;
 using Raven.Client;
@@ -557,7 +556,7 @@ namespace SlowTests.Sharding.Backup
         {
             var file = Path.GetTempFileName();
             var file2 = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -795,14 +794,14 @@ namespace SlowTests.Sharding.Backup
             var file = GetTempFileName();
             var file2 = Path.GetTempFileName();
             var hubSettings = new ConcurrentDictionary<string, string>();
-            var hubCertificates = GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var hubCerts = SetupServerAuthentication(hubSettings, certificates: hubCertificates);
+            var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates);
             var hubDB = GetDatabaseName();
             var pullReplicationName = $"{hubDB}-pull";
 
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
 
-            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 

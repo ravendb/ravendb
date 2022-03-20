@@ -531,7 +531,7 @@ select incl(c)"
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -567,7 +567,7 @@ select incl(c)"
 
                         innerSession.SaveChanges();
 
-                        WaitForIndexing(store);
+                        Indexes.WaitForIndexing(store);
                     }
 
                     companies = session.Query<Company, Companies_ByName>()
@@ -609,7 +609,7 @@ select incl(c)"
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -645,7 +645,7 @@ select incl(c)"
 
                         await innerSession.SaveChangesAsync();
 
-                        WaitForIndexing(store);
+                        Indexes.WaitForIndexing(store);
                     }
 
                     companies = await session.Query<Company, Companies_ByName>()
@@ -687,7 +687,7 @@ select incl(c)"
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -739,7 +739,7 @@ select incl(c)"
 
                         innerSession.SaveChanges();
 
-                        WaitForIndexing(store);
+                        Indexes.WaitForIndexing(store);
                     }
 
                     companies = session.Advanced

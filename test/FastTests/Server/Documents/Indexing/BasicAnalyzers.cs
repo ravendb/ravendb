@@ -42,7 +42,7 @@ namespace FastTests.Server.Documents.Indexing
                 var configuration = RavenConfiguration.CreateForTesting("test", Raven.Server.ServerWide.ResourceType.Server);
                 configuration.Initialize();
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var index = new TestIndex(database, configuration.Indexing);
 
@@ -115,7 +115,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 configuration.Initialize();
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var index = new TestIndex(database, configuration.Indexing);
 

@@ -46,7 +46,7 @@ namespace SlowTests.Tests.Suggestions
                     s.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {
@@ -90,7 +90,7 @@ namespace SlowTests.Tests.Suggestions
                     s.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenAsyncSession())
                 {

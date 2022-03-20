@@ -22,7 +22,7 @@ namespace SlowTests.Issues
             {
                 StoreData(store);
                 store.ExecuteIndex(new Events_SpatialIndex());
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics stats;
@@ -53,7 +53,7 @@ namespace SlowTests.Issues
             {
                 StoreData(store);
                 store.ExecuteIndex(new Events_SpatialIndex());
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics stats;

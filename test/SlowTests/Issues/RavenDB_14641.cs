@@ -57,9 +57,9 @@ namespace SlowTests.Issues
                 autoIndexName = stats.IndexName;
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
             var indexInstance = database.IndexStore.GetIndex(index.IndexName);
             indexInstance.SetState(IndexState.Error);

@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                 //Checking that we can't change a locked index
                 indexDefinition.Maps = new HashSet<string> { NewMap };
                 store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 indexDefinition = store.Maintenance.Send(new GetIndexOperation("SimpleIndex"));
                 Assert.Equal(indexDefinition.Maps.First(), map);
                 //Checking that we can unlock a index
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                 //checking that the index is indeed overridden
                 indexDefinition.Maps = new HashSet<string> { NewMap };
                 store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 indexDefinition = store.Maintenance.Send(new GetIndexOperation("SimpleIndex"));
                 Assert.Equal(NewMap, indexDefinition.Maps.First());
             }

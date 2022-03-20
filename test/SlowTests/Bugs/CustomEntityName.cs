@@ -156,7 +156,7 @@ namespace SlowTests.Bugs
 
             var index = new T();
             await index.ExecuteAsync(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenAsyncSession())
             {

@@ -160,7 +160,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(index.IndexName));
                 Assert.False(staleness.IsStale);
@@ -205,7 +205,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -251,7 +251,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -289,7 +289,7 @@ return attachments.map(attachment => ({
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -347,7 +347,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(index.IndexName));
                 Assert.False(staleness.IsStale);
@@ -389,7 +389,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -435,7 +435,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -474,7 +474,7 @@ return attachments.map(attachment => ({
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -533,7 +533,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(index.IndexName));
                 Assert.False(staleness.IsStale);
@@ -578,7 +578,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -624,7 +624,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -662,7 +662,7 @@ return attachments.map(attachment => ({
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -720,7 +720,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(index.IndexName));
                 Assert.False(staleness.IsStale);
@@ -762,7 +762,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -808,7 +808,7 @@ return attachments.map(attachment => ({
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -847,7 +847,7 @@ return attachments.map(attachment => ({
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.CompanyName), fromValue: null));
                 Assert.Equal(1, terms.Length);

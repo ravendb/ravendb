@@ -71,7 +71,7 @@ namespace SlowTests.SlowTests.Issues
                     await bulk.StoreAsync(user);
                 }
             }
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             int skippedResults = 0;
             var pagedResults = new List<User>();

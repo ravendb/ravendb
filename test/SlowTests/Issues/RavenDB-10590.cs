@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     }
                     await session.SaveChangesAsync();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query = session.Query<Doc, DocsIndex>()
                         .Where(x => x.Id == "doc-1")

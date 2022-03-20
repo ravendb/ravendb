@@ -81,7 +81,7 @@ namespace FastTests.Client
 
                     await asyncSession.SaveChangesAsync();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
                 using (var asyncSession = store.OpenAsyncSession())
                 {

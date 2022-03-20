@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var fst = db.Time.GetUtcNow();
 

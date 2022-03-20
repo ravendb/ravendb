@@ -424,7 +424,7 @@ namespace SlowTests.Server.Replication
                     s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
-                WaitForIndexing(store2);
+                Indexes.WaitForIndexing(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
@@ -480,7 +480,7 @@ namespace SlowTests.Server.Replication
                     s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
-                WaitForIndexing(store2);
+                Indexes.WaitForIndexing(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
@@ -533,7 +533,7 @@ namespace SlowTests.Server.Replication
                     s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
-                WaitForIndexing(store2);
+                Indexes.WaitForIndexing(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");

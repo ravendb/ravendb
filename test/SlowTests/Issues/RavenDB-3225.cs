@@ -52,7 +52,7 @@ namespace SlowTests.Issues
 
                     var sueryStr = query.ToString();
                     //WaitForUserToContinueTheTest(store);
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var results = query.ToList();
 
                     Assert.NotNull(results);

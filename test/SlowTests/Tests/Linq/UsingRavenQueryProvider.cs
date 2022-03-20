@@ -56,10 +56,10 @@ namespace SlowTests.Tests.Linq
                     var indexDefinition = new IndexDefinitionBuilder<User, User>()
                     {
                         Map = docs => from doc in docs
-                            select new {doc.Name, doc.Age},
+                                      select new { doc.Name, doc.Age },
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                     WaitForQueryToComplete(session);
 
@@ -109,7 +109,7 @@ namespace SlowTests.Tests.Linq
                                       select new { doc.Name, doc.Age },
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                     WaitForQueryToComplete(session);
 
@@ -142,14 +142,14 @@ namespace SlowTests.Tests.Linq
                 {
                     AddData(session);
                     var indexDefinition = new IndexDefinitionBuilder<User, User>()
-                        {
-                            Map = docs => from doc in docs
-                                select new {doc.Name, doc.Age},
-                            Indexes = {{x => x.Name, FieldIndexing.Search}}
-                        }
+                    {
+                        Map = docs => from doc in docs
+                                      select new { doc.Name, doc.Age },
+                        Indexes = { { x => x.Name, FieldIndexing.Search } }
+                    }
                         .ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                     WaitForQueryToComplete(session);
 
@@ -190,19 +190,19 @@ namespace SlowTests.Tests.Linq
                     var indexDefinition = new IndexDefinitionBuilder<User, User>()
                     {
                         Map = docs => from doc in docs
-                            select new
-                            {
-                                doc.Name,
-                                doc.Age,
-                                doc.Info,
-                                doc.Active
-                            },
-                        Indexes = {{x => x.Name, FieldIndexing.Search}}
+                                      select new
+                                      {
+                                          doc.Name,
+                                          doc.Age,
+                                          doc.Info,
+                                          doc.Active
+                                      },
+                        Indexes = { { x => x.Name, FieldIndexing.Search } }
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var testQuery = session.Query<User>(indexName)
                                         .Where(x => x.Name == ("Matt") && x.Active);
@@ -248,8 +248,8 @@ namespace SlowTests.Tests.Linq
                     indexDefinition.Name = indexName;
                     store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
-                    
-                    WaitForIndexing(store);
+
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(3, session.Query<User>(indexName).ToArray().Length);
 
@@ -310,7 +310,7 @@ namespace SlowTests.Tests.Linq
                     indexDefinition.Name = indexName;
                     store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
-                   
+
 
                     WaitForQueryToComplete(session);
 
@@ -452,7 +452,7 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Maintenance.Send(new PutIndexesOperation(new [] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = "ByLineCost",
@@ -586,9 +586,9 @@ namespace SlowTests.Tests.Linq
             public DateTime TimeOfDay { get; set; }
         }
 
-        private static void WaitForQueryToComplete(IDocumentSession session)
+        private void WaitForQueryToComplete(IDocumentSession session)
         {
-            WaitForIndexing(session.Advanced.DocumentStore);
+            Indexes.WaitForIndexing(session.Advanced.DocumentStore);
         }
 
         private readonly User firstUser = new User { Name = "Alan", Age = 30 };
@@ -813,7 +813,7 @@ namespace SlowTests.Tests.Linq
 
                 using (var s = store.OpenSession())
                 {
-                    var items = (from item in s.Query<OrderItem>().Customize(x=>x.WaitForNonStaleResults())
+                    var items = (from item in s.Query<OrderItem>().Customize(x => x.WaitForNonStaleResults())
                                  where item.Quantity.In(list)
                                  select item
                                      ).ToArray();

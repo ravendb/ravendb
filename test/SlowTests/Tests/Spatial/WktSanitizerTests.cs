@@ -80,7 +80,7 @@ namespace SlowTests.Tests.Spatial
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

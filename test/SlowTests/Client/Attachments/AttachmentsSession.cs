@@ -83,7 +83,7 @@ namespace SlowTests.Client.Attachments
                     AttachmentsCrud.AssertAttachmentCount(store, 3, 3);
 
                     var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
-                    await SetDatabaseId(store, dbId1);
+                    await Databases.SetDatabaseId(store, dbId1);
 
                     var readBuffer = new byte[8];
                     for (var i = 0; i < names.Length; i++)
@@ -296,7 +296,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
-                await SetDatabaseId(store, dbId1);
+                await Databases.SetDatabaseId(store, dbId1);
 
                 using (var session = store.OpenSession())
                 {
@@ -559,7 +559,7 @@ namespace SlowTests.Client.Attachments
 
             var all = Task.WhenAll(tasks);
 
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
             while (true)
             {

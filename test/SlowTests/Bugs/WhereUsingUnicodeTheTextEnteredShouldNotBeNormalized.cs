@@ -30,7 +30,7 @@ namespace SlowTests.Bugs
                 }
                 using (var session = documentStore.OpenSession())
                 {
-                    WaitForIndexing(documentStore);
+                    Indexes.WaitForIndexing(documentStore);
                     var result = session.Query<UnicodeItem>()
                         .Count(item => item.Content == content);
 

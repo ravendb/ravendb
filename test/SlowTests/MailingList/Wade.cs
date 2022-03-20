@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
                 CreateIndexes(documentStore);
 
                 PopulateDB(documentStore);
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
 
                 var d1960 = new DateTime(year: 1960, month: 1, day: 1);
@@ -128,7 +128,7 @@ namespace SlowTests.MailingList
                 CreateIndexes(documentStore);
 
                 PopulateDB(documentStore);
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
 
                 var d1960 = new DateTime(year: 1960, month: 1, day: 1);
@@ -199,7 +199,7 @@ namespace SlowTests.MailingList
                 CreateIndexes(documentStore);
 
                 PopulateDB(documentStore);
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 var d2000 = new DateTime(year: 2000, month: 1, day: 1);
                 var d2009 = new DateTime(year: 2009, month: 12, day: 31);

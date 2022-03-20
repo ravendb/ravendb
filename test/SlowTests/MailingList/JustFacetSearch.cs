@@ -173,7 +173,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var facets = searcher.FacetSearch("how to");
                 Assert.Equal(2, facets.Count);

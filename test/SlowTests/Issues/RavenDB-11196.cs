@@ -69,7 +69,7 @@ loadToPeople(person);
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByQueryOperation("from @all_docs as doc update {  del(id(doc)); }"));
                 operation.WaitForCompletion();

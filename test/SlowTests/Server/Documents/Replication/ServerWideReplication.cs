@@ -393,7 +393,7 @@ namespace SlowTests.Server.Documents.Replication
                 // new server should have only 0 external replications
                 var server = GetNewServer();
 
-                using (EnsureDatabaseDeletion(databaseName, store))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 using (var store2 = GetDocumentStore(new Options
                 {
                     CreateDatabase = false,
@@ -504,7 +504,7 @@ namespace SlowTests.Server.Documents.Replication
                 // new server should have only 0 external replications
                 var server = GetNewServer();
 
-                using (EnsureDatabaseDeletion(databaseName, store))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 using (var store2 = GetDocumentStore(new Options
                 {
                     CreateDatabase = false,

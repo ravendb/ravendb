@@ -69,7 +69,7 @@ namespace SlowTests.Core.Indexing
 
                     session.Store(new Company { EmployeesIds = new List<string>() { "employees/1", "employees/2", "employees/3" } });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var html5PostsQuery = session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "HTML 5");
                     var javascriptPostsQuery = session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "Javascript");
@@ -116,7 +116,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -164,7 +164,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -190,7 +190,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -218,7 +218,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -240,7 +240,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -259,7 +259,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
             }
         }
 
@@ -311,7 +311,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -337,7 +337,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -364,7 +364,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -386,7 +386,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -405,7 +405,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
             }
         }
 
@@ -435,7 +435,7 @@ namespace SlowTests.Core.Indexing
                     }
 
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(2, session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "HTML 5").ToList().Count);
                     Assert.Equal(1, session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "Javascript").ToList().Count);
@@ -445,7 +445,7 @@ namespace SlowTests.Core.Indexing
                     session.Store(last);
 
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(1, session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "HTML 5").ToList().Count);
                     Assert.Equal(1, session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "Javascript").ToList().Count);
@@ -454,7 +454,7 @@ namespace SlowTests.Core.Indexing
                     session.Delete(last); // referenced document delete
 
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(0, session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "JSON").ToList().Count);
                 }
@@ -489,7 +489,7 @@ namespace SlowTests.Core.Indexing
                     }
 
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(5, session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", null).ToList().Count);
                 }
@@ -527,7 +527,7 @@ namespace SlowTests.Core.Indexing
                     await session.SaveChangesAsync();
 
                     index.Execute(store);
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     //Index disable
                     store.Maintenance.Send(new DisableIndexOperation(index.IndexName));
@@ -543,7 +543,7 @@ namespace SlowTests.Core.Indexing
                     store.Maintenance.Send(new EnableIndexOperation(index.IndexName));
                     
                     //Assert
-                    WaitForIndexing(store, timeout: TimeSpan.FromSeconds(10));
+                    Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(10));
                 }
             }
         }
@@ -595,7 +595,7 @@ namespace SlowTests.Core.Indexing
                     await session.SaveChangesAsync();
                     
                     index.Execute(store);
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     
                     //Index disable
                     store.Maintenance.Send(new DisableIndexOperation(index.IndexName));
@@ -615,7 +615,7 @@ namespace SlowTests.Core.Indexing
 
                     //Index enable
                     store.Maintenance.Send(new EnableIndexOperation(index.IndexName));
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     //Assert
                     var queryResult = await session

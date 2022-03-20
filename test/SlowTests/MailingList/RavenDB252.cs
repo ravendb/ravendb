@@ -72,7 +72,7 @@ namespace SlowTests.MailingList
                     });
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
@@ -80,7 +80,7 @@ namespace SlowTests.MailingList
                     Maps = { "docs.users.Select(x=>new {x.FirstName })" }
                 }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

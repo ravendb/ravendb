@@ -86,8 +86,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
-                await WaitForPolicyRunner(database);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                await TimeSeries.WaitForPolicyRunnerAsync(database);
 
 
                 using (var session = store.OpenSession())

@@ -40,7 +40,7 @@ namespace SlowTests.SlowTests.Issues
                 });
 
                 // Test that the indexing can complete, without being in an infinite indexing run due to touches to documents increasing the etag.
-                WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(Math.Max(sp.Elapsed.TotalSeconds / 2, 120)));
+                Indexes.WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(Math.Max(sp.Elapsed.TotalSeconds / 2, 120)));
             }
         }
 

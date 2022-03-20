@@ -99,7 +99,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore())
             {
-                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
+                var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
 
                 // get by reflection the maxTimerTimeoutInMilliseconds field
                 // this field is the maximum interval acceptable in .Net's threading timer
@@ -151,7 +151,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
+                var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
 
                 // get by reflection the maxTimerTimeoutInMilliseconds field
                 // this field is the maximum interval acceptable in .Net's threading timer
@@ -432,7 +432,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backup = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(store));
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var now = DateTime.UtcNow;
                 var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record, record.PeriodicBackups.First(), new PeriodicBackupStatus
@@ -675,7 +675,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var sourceStats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var databasePath = database.Configuration.Core.DataDirectory.FullPath;
                 var compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
                 Assert.Equal(2, compressionRecovery.Length);
@@ -703,7 +703,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     Assert.Equal(sourceStats.CountOfDocuments, restoreStats.CountOfDocuments);
 
-                    database = await GetDocumentDatabaseInstanceFor(store, restoredDatabaseName);
+                    database = await Databases.GetDocumentDatabaseInstanceFor(store, restoredDatabaseName);
                     databasePath = database.Configuration.Core.DataDirectory.FullPath;
                     compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
                     Assert.Equal(2, compressionRecovery.Length);
@@ -1508,10 +1508,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var result = await store.Maintenance.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
-                await WaitForRaftIndexToBeAppliedInCluster(periodicBackupTaskId, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(periodicBackupTaskId, TimeSpan.FromSeconds(15));
 
                 await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
-                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
+                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInClusterAsync(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
                 var backupInfo = new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup);
                 var backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
@@ -1534,7 +1534,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(4, nodesCount);
 
                 await Backup.RunBackupInClusterAsync(store, backupInfoResult.TaskId, isFullBackup: true);
-                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
+                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInClusterAsync(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
                 backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
                 Assert.Equal(originalNode, backupInfoResult.ResponsibleNode.NodeTag);
@@ -2355,7 +2355,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .ToArray();
 
                 var databaseName = GetDatabaseName() + "_restore";
-                using (EnsureDatabaseDeletion(databaseName, store))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 {
                     var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
                     {
@@ -2448,7 +2448,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .ToArray();
 
                 var databaseName = GetDatabaseName() + "_restore";
-                using (EnsureDatabaseDeletion(databaseName, store))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 {
                     var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
                     {
@@ -2537,7 +2537,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .ToArray();
 
                 var databaseName = GetDatabaseName() + "_restore";
-                using (EnsureDatabaseDeletion(databaseName, store))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 {
                     var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
                     {
@@ -2621,7 +2621,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .ToArray();
 
                 var databaseName = GetDatabaseName() + "_restore";
-                using (EnsureDatabaseDeletion(databaseName, store))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 {
                     var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
                     {

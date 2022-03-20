@@ -153,7 +153,7 @@ namespace SlowTests.Verifications
 
                 new TranslatedEntities_Map().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced
@@ -183,7 +183,7 @@ select {
 
                 new TranslatedEntities_MapReduce().Execute(store);
           
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

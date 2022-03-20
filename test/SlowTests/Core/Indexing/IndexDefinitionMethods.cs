@@ -23,7 +23,7 @@ namespace SlowTests.Core.Indexing
             using (var store = GetDocumentStore())
             {
                 new Companies_CompanyByType().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -58,7 +58,7 @@ namespace SlowTests.Core.Indexing
                         Contacts = new List<Contact> { contact1, contact2, contact3 }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Companies_CompanyByType.ReduceResult[] companies = session.Query<Companies_CompanyByType.ReduceResult, Companies_CompanyByType>()
                         .OrderBy(x => x.Type)
@@ -87,7 +87,7 @@ namespace SlowTests.Core.Indexing
 
                     new Companies_AllProperties().Execute(store);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var companies = session.Query<Companies_AllProperties.Result, Companies_AllProperties>()
                         .Where(x => x.Query == "Address1")
@@ -114,7 +114,7 @@ namespace SlowTests.Core.Indexing
                     var post4 = new Post { Title = "Post4", Desc = "Post4 desc", Comments = new Post[] { post3 } };
                     session.Store(post4);
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var posts = session.Query<Post, Posts_Recurse>()
                         .ToArray();

@@ -19,7 +19,7 @@ namespace FastTests.Sharding.Encryption
         [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public void Can_Setup_Sharded_Encrypted_Database()
         {
-            EncryptedServer(out var certificates, out var dbName);
+            Encryption.EncryptedServer(out var certificates, out var dbName);
 
             var options = new Options
             {
@@ -55,7 +55,7 @@ namespace FastTests.Sharding.Encryption
         [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task CRUD_Operations_Encrypted()
         {
-            EncryptedServer(out var certificates, out var dbName);
+            Encryption.EncryptedServer(out var certificates, out var dbName);
 
             var options = new Options
             {

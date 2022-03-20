@@ -20,13 +20,13 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Server;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -503,7 +503,7 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Equal(newQuery, newState.Query);
                     Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
 
-                    var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                     using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -587,7 +587,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
 
-                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -678,7 +678,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
-                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -1165,7 +1165,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var t2 = worker2.Run(x => { });
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var testingStuff = db.ForTestingPurposesOnly();
 
                 var subscriptionInterrupt = new AsyncManualResetEvent();
@@ -1258,7 +1258,7 @@ namespace SlowTests.Client.Subscriptions
                         await session.SaveChangesAsync();
                     }
                     
-                    var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                     using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -1267,6 +1267,93 @@ namespace SlowTests.Client.Subscriptions
                         holdAck.Set();
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task WaitingSubscriptionShouldBeRegisteredInSubscriptionConnections()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = "Subscription0" });
+
+                List<Task> workerTasks = new List<Task>();
+                var finishedWorkersCde = new CountdownEvent(2);
+
+                var mre1 = new AsyncManualResetEvent();
+                var mreConnect1 = new AsyncManualResetEvent();
+                var mre2 = new AsyncManualResetEvent();
+                var mreConnect2 = new AsyncManualResetEvent();
+                using var subsWorker1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId)
+                {
+                    Strategy = SubscriptionOpeningStrategy.WaitForFree
+                });
+                subsWorker1.OnEstablishedSubscriptionConnection += () =>
+                {
+                    mreConnect1.Set();
+                };
+                var t1 = subsWorker1.Run(_ => { mre1.Set(); }).ContinueWith(res =>
+                {
+                    finishedWorkersCde.Signal();
+                });
+
+                Assert.True(await mreConnect1.WaitAsync(_reasonableWaitTime));
+
+                using var subsWorker2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId)
+                {
+                    Strategy = SubscriptionOpeningStrategy.WaitForFree
+                });
+                subsWorker2.OnEstablishedSubscriptionConnection += () =>
+                {
+                    mreConnect2.Set();
+                };
+                var t2 = subsWorker2.Run(_ => { mre2.Set(); }).ContinueWith(res =>
+                {
+                    finishedWorkersCde.Signal();
+                });
+
+                workerTasks.Add(t1);
+                workerTasks.Add(t2);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(await mre1.WaitAsync(_reasonableWaitTime));
+
+                await AssertRunningSubscriptionAndDrop(store);
+
+                // waiting subscription connects
+                Assert.True(await mreConnect2.WaitAsync(_reasonableWaitTime));
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+                // waiting subscription process document
+                Assert.True(await mre2.WaitAsync(_reasonableWaitTime));
+
+                await AssertRunningSubscriptionAndDrop(store);
+
+                // both workers should be disconnected
+                Assert.True(finishedWorkersCde.Wait(_reasonableWaitTime));
+                Assert.All(workerTasks, task => Assert.True(task.IsCompleted));
+            }
+        }
+
+        private async Task AssertRunningSubscriptionAndDrop(DocumentStore store)
+        {
+            DocumentDatabase db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var name = $"Subscription0";
+                var subscription = db
+                    .SubscriptionStorage
+                    .GetRunningSubscription(context, null, name, false);
+                Assert.NotNull(subscription);
+                db.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
+                    new SubscriptionClosedException("Dropped by Test"));
             }
         }
 

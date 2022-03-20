@@ -39,9 +39,9 @@ namespace SlowTests.Issues
                 session.SaveChanges();
 
                 new JavascriptIndex().Execute(store);
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5), allowErrors: true);
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5), allowErrors: true);
 
-                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
 
@@ -69,7 +69,7 @@ namespace SlowTests.Issues
 
                 new JavascriptIndex2().Execute(store);
 
-                var indexErrors = WaitForIndexingErrors(store);
+                var indexErrors = Indexes.WaitForIndexingErrors(store);
 
                 var exceptions = indexErrors.First().Errors;
                 Assert.NotEmpty(exceptions);

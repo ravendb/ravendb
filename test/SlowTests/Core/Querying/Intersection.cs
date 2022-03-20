@@ -76,7 +76,7 @@ namespace SlowTests.Core.Querying
                         }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var tshirts = session.Query<TShirt, TShirtIndex>()
                         .ProjectInto<TShirtIndex.Result>()

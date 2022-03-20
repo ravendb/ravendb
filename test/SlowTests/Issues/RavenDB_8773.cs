@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Attachments.Delete("#", "#");;
+                    session.Advanced.Attachments.Delete("#", "#");
 
                     session.SaveChanges();
 

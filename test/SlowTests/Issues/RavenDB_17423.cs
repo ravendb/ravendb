@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                 await session.StoreAsync(new Location { Id = $"locations/{i}" });
                 identifiers.Add( $"locations/{i}");
                 await session.SaveChangesAsync();
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
     
                 var ravenQueryable = session
                     .Query<SearchIndex.Entry, SearchIndex>()
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
             for(int i = 0; i < 257; ++i)
                 excludedList.Add(identifiers[i]);
             
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             using (var session = store.OpenSession())
             {
                 var ravenQueryable = session

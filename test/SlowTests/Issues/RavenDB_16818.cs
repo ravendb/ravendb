@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
                 new Orders_ByEmployee().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

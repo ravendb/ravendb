@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 WaitForUserToContinueTheTest(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<Index_TestGrouping4.Result, Index_TestGrouping4>()

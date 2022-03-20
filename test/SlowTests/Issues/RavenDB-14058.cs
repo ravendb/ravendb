@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                 }
 
                 new OrdersMapReduceIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                 await database.TombstoneCleaner.ExecuteCleanup();
 
                 store.Maintenance.Send(new StartIndexOperation(nameof(OrdersMapReduceIndex)));
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

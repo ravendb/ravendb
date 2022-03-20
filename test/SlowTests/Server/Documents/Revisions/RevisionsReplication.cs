@@ -275,7 +275,7 @@ namespace SlowTests.Server.Documents.Revisions
                 await SetupReplicationAsync(store2, store1);
                 WaitForMarker(store2, store1);
 
-                var db = await GetDocumentDatabaseInstanceFor(store1);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
@@ -376,7 +376,7 @@ namespace SlowTests.Server.Documents.Revisions
 
         private async Task AssertRevisionBin(IDocumentStore store)
         {
-            var db = await GetDocumentDatabaseInstanceFor(store);
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -521,8 +521,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store1);
-                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
                 database.TombstoneCleaner.Subscribe(this);
                 database2.TombstoneCleaner.Subscribe(this);
 
@@ -870,7 +870,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 foreach (var store in new[] { store1, store2 })
                 {
-                    var documentDatabase = await GetDocumentDatabaseInstanceFor(store);
+                    var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {

@@ -153,7 +153,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
@@ -192,7 +192,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -488,7 +488,7 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var tshirts = session.Query<TShirt, TShirtIndex>()
                         .ProjectInto<TShirtIndex.Result>()
@@ -774,7 +774,6 @@ from 'Users' as user select output(user)", queryAsString);
 
                 var now = DateTime.Now;
 
-                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
                 using (var session = store.OpenSession())
                 {
                     // explicitly specify id & type
@@ -782,7 +781,6 @@ from 'Users' as user select output(user)", queryAsString);
                     session.Advanced.Patch<User, DateTime>(_docId, u => u.LastLogin, now);
                     session.SaveChanges();
                 }
-                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
 
                 using (var session = store.OpenSession())
                 {
@@ -792,7 +790,8 @@ from 'Users' as user select output(user)", queryAsString);
 
                     // infer type & the id from entity
                     session.Advanced.Patch(loaded, u => u.Stuff[0].Phone, "123456");
-                    SaveChangesWithTryCatch(session, loaded);
+
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -1048,7 +1047,7 @@ from 'Users' as user select output(user)", queryAsString);
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1090,7 +1089,6 @@ from 'Users' as user select output(user)", queryAsString);
                     session.SaveChanges();
                 }
 
-                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
                 using (var session = store.OpenSession())
                 {
                     //push
@@ -1098,7 +1096,6 @@ from 'Users' as user select output(user)", queryAsString);
                     session.Advanced.Patch<User, Stuff>(_docId, u => u.Stuff, roles => roles.Add(new Stuff { Key = 75 }));
                     session.SaveChanges();
                 }
-                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
 
                 using (var session = store.OpenSession())
                 {
@@ -1109,7 +1106,8 @@ from 'Users' as user select output(user)", queryAsString);
                     //concat
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(101, 102, 103));
                     session.Advanced.Patch(loaded, u => u.Stuff, roles => roles.Add(new Stuff { Key = 102 }, new Stuff { Phone = "123456" }));
-                    SaveChangesWithTryCatch(session, loaded);
+
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
@@ -1122,7 +1120,8 @@ from 'Users' as user select output(user)", queryAsString);
                     Assert.Equal(loaded.Stuff[3].Phone, "123456");
 
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(new[] { 201, 202, 203 }));
-                    SaveChangesWithTryCatch(session, loaded);
+
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())

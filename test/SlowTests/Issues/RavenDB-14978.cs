@@ -39,7 +39,7 @@ namespace SlowTests.Issues
             }.Initialize();
 
             var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-            await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
 
             Can_setup_write_load_balancing(store, ref context);
         }
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
             };
 
             var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-            await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
 
             await store.Maintenance.SendAsync(new PutClientConfigurationOperation(configuration), cts.Token);
 

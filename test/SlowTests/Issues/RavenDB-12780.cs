@@ -35,9 +35,9 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
-                var stats = WaitForIndexingErrors(store, errorsShouldExists: false);
+                var stats = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                 Assert.Null(stats);
             }
         }
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 
-                var stats = WaitForIndexingErrors(store, errorsShouldExists: false);
+                var stats = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                 Assert.Null(stats);
             }
         }
@@ -73,9 +73,9 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 
-                var stats = WaitForIndexingErrors(store, errorsShouldExists: false);
+                var stats = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                 Assert.Null(stats);
             }
         }
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
                 
                 
 
-                var stats = WaitForIndexingErrors(store);
+                var stats = Indexes.WaitForIndexingErrors(store);
                 Assert.NotEmpty(stats[0].Errors);
                 Assert.True(stats[0].Errors[0].Error.Contains("Id may only be called with a document"));
             }
@@ -131,7 +131,7 @@ namespace SlowTests.Issues
                 }
 
 
-                var stats = WaitForIndexingErrors(store);
+                var stats = Indexes.WaitForIndexingErrors(store);
                 Assert.NotEmpty(stats[0].Errors);
                 Assert.True(stats[0].Errors[0].Error.Contains("MetadataFor may only be called with a document"));
             }
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 
-                var stats = WaitForIndexingErrors(store);
+                var stats = Indexes.WaitForIndexingErrors(store);
                 Assert.NotEmpty(stats[0].Errors);
                 Assert.True(stats[0].Errors[0].Error.Contains("AsJson may only be called with a document"));
             }

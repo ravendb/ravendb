@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, allowErrors:true);
+                Indexes.WaitForIndexing(store, allowErrors:true);
 
                 Assert.True(SpinWait.SpinUntil(() =>
                 {

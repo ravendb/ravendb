@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {

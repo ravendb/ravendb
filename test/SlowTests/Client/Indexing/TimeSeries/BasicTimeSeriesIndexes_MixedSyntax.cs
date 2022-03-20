@@ -56,7 +56,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -78,7 +78,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -118,7 +118,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -144,7 +144,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -164,7 +164,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
@@ -177,7 +177,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);

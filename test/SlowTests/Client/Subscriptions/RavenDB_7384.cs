@@ -139,7 +139,7 @@ namespace SlowTests.Client.Subscriptions
                     Query = newQuery
                 }, Guid.NewGuid().ToString(), subscriptionState.SubscriptionId);
 
-                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {

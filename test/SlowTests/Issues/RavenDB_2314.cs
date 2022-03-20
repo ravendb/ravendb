@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                 }
 
                 new SpatialIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

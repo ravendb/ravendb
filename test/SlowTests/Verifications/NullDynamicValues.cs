@@ -55,7 +55,7 @@ namespace SlowTests.Verifications
 
                 store.Maintenance.Send(new PutIndexesOperation(transformerDefinition));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 // 3. Retrieve doc with transformer & verify 'Age' is null since it is not part of Person
                 using (var session = store.OpenSession())

@@ -30,9 +30,9 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, allowErrors: true);
+                Indexes.WaitForIndexing(store, allowErrors: true);
 
-                var errors = WaitForIndexingErrors(store);
+                var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(2, errors.Length);
 
                 var simpleMapErrors = errors.Single(x => x.Name == new SimpleMapIndex().IndexName);

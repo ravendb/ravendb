@@ -49,7 +49,7 @@ namespace SlowTests.Core.Commands
                         Name = indexName
                     }));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var companies = commands.Query(new IndexQuery { Query = $"FROM INDEX '{indexName}'" });
                     Assert.Equal(3, companies.TotalResults);
@@ -90,7 +90,7 @@ namespace SlowTests.Core.Commands
                         Name = "Test"
                     }}));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 var stringBuilder = new StringBuilder("FROM INDEX 'Test' WHERE");
@@ -126,7 +126,7 @@ namespace SlowTests.Core.Commands
                     }
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var count = 0;
                 using (var session = store.OpenSession())
@@ -168,7 +168,7 @@ namespace SlowTests.Core.Commands
                     }
 
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var facets = new List<Facet>
                     {
@@ -210,7 +210,7 @@ namespace SlowTests.Core.Commands
                         new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets },
                         null);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     using (var session = store.OpenSession())
                     {
@@ -345,7 +345,7 @@ namespace SlowTests.Core.Commands
                     commands.Put("users/4", null, new User { Name = "David Jones" }, new Dictionary<string, object> { { "@collection", "Users" } });
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
 
                 using (var session = store.OpenSession())

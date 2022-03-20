@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
                     db.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
                 using (IDocumentSession db = documentStore.OpenSession())
                 {
                     List<Shape> results = db.Query<Shapes_SpatialIndex.Result, Shapes_SpatialIndex>()
