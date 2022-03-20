@@ -64,11 +64,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             if (JsOptions.EngineType == JavaScriptEngineType.V8)
             {
-                string? memorySnapshotName = null;
-#if DEBUG
-                memorySnapshotName = "reduce";
-#endif
-                V8EngineEx.DisposeAndCollectGarbage(_outputs, memorySnapshotName);
+                V8EngineEx.DisposeAndCollectGarbage(_outputs, "reduce");
             }
 
             _outputs.Clear();
