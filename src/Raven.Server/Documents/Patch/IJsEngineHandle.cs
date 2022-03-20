@@ -46,6 +46,12 @@ namespace Raven.Server.Documents.Patch
 
         object MakeSnapshot(string name);
 
+        bool RemoveMemorySnapshot(string name);
+
+        void AddToLastMemorySnapshotBefore(JsHandle h);
+        
+        void RemoveFromLastMemorySnapshotBefore(JsHandle h);
+        
         void CheckForMemoryLeaks(string name, bool shouldRemove = true);
         
         void TryCompileScript(string script);

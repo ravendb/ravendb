@@ -405,7 +405,7 @@ var process = {
 }
 ";
 
-        public static void DisposeAndCollectGarbage(List<object> items, string? snapshotName)
+        public static void DisposeAndCollectGarbage(List<object> items, string snapshotName)
         {
             V8Engine? engine = null;
             for (int i = items.Count - 1; i >= 0; i--)
@@ -429,9 +429,11 @@ var process = {
                 }
             }
 
-            engine?.ForceV8GarbageCollection();
-            if (snapshotName != null)
-                engine?.CheckForMemoryLeaks(snapshotName);
+            if (engine != null && engine.IsMemoryChecksOn)
+            {
+                engine.ForceV8GarbageCollection();
+                engine.CheckForMemoryLeaks(snapshotName);
+            }
 
         }
 
@@ -493,7 +495,21 @@ var process = {
             return base.MakeMemorySnapshot(name);
         }
 
+        public bool RemoveMemorySnapshot(string name)
+        {
+            return base.RemoveMemorySnapshot(name);
+        }
 
+        public void AddToLastMemorySnapshotBefore(JsHandle h)
+        {
+            AddToLastMemorySnapshotBefore(h.V8.Item);
+        }
+
+        public void RemoveFromLastMemorySnapshotBefore(JsHandle h)
+        {
+            RemoveFromLastMemorySnapshotBefore(h.V8.Item);
+        }
+        
         public void TryCompileScript(string script)
         {
             try

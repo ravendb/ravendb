@@ -152,6 +152,15 @@ var process = {
         {
             return null;
         }
+
+        public bool RemoveMemorySnapshot(string name)
+        {
+            return false;
+        }
+
+        public void AddToLastMemorySnapshotBefore(JsHandle h) {}
+        
+        public void RemoveFromLastMemorySnapshotBefore(JsHandle h) {}
         
         public void CheckForMemoryLeaks(string name, bool shouldRemove = true)
         {}
