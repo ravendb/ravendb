@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Sharding;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -14,12 +13,13 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Subscriptions
 {
-    public class ShardedSubscriptionClusterTests : ShardedClusterTestBase
+    public class ShardedSubscriptionClusterTests : ClusterTestBase
     {
         public ShardedSubscriptionClusterTests(ITestOutputHelper output) : base(output)
         {
@@ -32,7 +32,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             var db = GetDatabaseName();
             var (nodes, leader) = await CreateRaftCluster(3);
-            await CreateShardedDatabaseInCluster(db, 2, (nodes, leader));
+            await ShardingCluster.CreateShardedDatabaseInCluster(db, 2, (nodes, leader));
             using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
             {
                 var id = store.Subscriptions.Create<User>();
@@ -82,7 +82,7 @@ namespace SlowTests.Sharding.Subscriptions
             var db = GetDatabaseName();
             var (nodes, leader) = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
 
-            await CreateShardedDatabaseInCluster(db, rf, (nodes, leader));
+            await ShardingCluster.CreateShardedDatabaseInCluster(db, rf, (nodes, leader));
 
             using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
             {
@@ -90,8 +90,8 @@ namespace SlowTests.Sharding.Subscriptions
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
-                var servers = await GetShardsDocumentDatabaseInstancesFor(store, nodes);
-                while (ShardedTestBase.AllShardHaveDocs(servers) == false)
+                var servers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(store, nodes);
+                while (Sharding.AllShardHaveDocs(servers) == false)
                 {
                     using (var session = store.OpenSession())
                     {
@@ -106,7 +106,7 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 // Wait for documents to replicate
-                Assert.True(WaitForShardedChangeVectorInCluster(nodes, store.Database, rf));
+                Assert.True(ShardingCluster.WaitForShardedChangeVectorInCluster(nodes, store.Database, rf));
 
                 var disposed = new List<string>();
                 var hashset = new HashSet<string>();
@@ -232,7 +232,7 @@ namespace SlowTests.Sharding.Subscriptions
             int rf = 2;
             var db = GetDatabaseName();
             var (nodes, leader) = await CreateRaftCluster(3, shouldRunInMemory: false);
-            await CreateShardedDatabaseInCluster(db, rf, (nodes, leader));
+            await ShardingCluster.CreateShardedDatabaseInCluster(db, rf, (nodes, leader));
 
             using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
             {
@@ -252,9 +252,9 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 // Wait for documents to replicate
-                Assert.True(WaitForShardedChangeVectorInCluster(nodes, store.Database, rf));
+                Assert.True(ShardingCluster.WaitForShardedChangeVectorInCluster(nodes, store.Database, rf));
 
-                var servers = await GetShardsDocumentDatabaseInstancesFor(store, nodes);
+                var servers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(store, nodes);
 
                 var nodesWithIds = new Dictionary<string, List<string>>();
                 foreach (var kvp in servers)

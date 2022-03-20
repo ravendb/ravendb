@@ -61,13 +61,7 @@ public partial class ClusterTestBase
             return topology;
         }
 
-        public new void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, string database = null, X509Certificate2 clientCert = null)
-        {
-            var db = database ?? $"{documentStore.Database}$0";
-            RavenTestBase.WaitForUserToContinueTheTest(documentStore, debug, db, clientCert);
-        }
-
-        internal static async Task<IDictionary<string, List<DocumentDatabase>>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> Nodes, string database = null)
+        public async Task<IDictionary<string, List<DocumentDatabase>>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> Nodes, string database = null)
         {
             var dbs = new Dictionary<string, List<DocumentDatabase>>();
             foreach (var server in Nodes)
@@ -85,12 +79,12 @@ public partial class ClusterTestBase
             return dbs;
         }
 
-        protected bool WaitForShardedChangeVectorInCluster(List<RavenServer> nodes, string database, int replicationFactor, int timeout = 15000)
+        public bool WaitForShardedChangeVectorInCluster(List<RavenServer> nodes, string database, int replicationFactor, int timeout = 15000)
         {
             return AsyncHelpers.RunSync(() => WaitForShardedChangeVectorInClusterAsync(nodes, database, replicationFactor, timeout));
         }
 
-        protected async Task<bool> WaitForShardedChangeVectorInClusterAsync(List<RavenServer> nodes, string database, int replicationFactor, int timeout = 15000)
+        public async Task<bool> WaitForShardedChangeVectorInClusterAsync(List<RavenServer> nodes, string database, int replicationFactor, int timeout = 15000)
         {
             return await WaitForValueAsync(async () =>
             {
@@ -134,7 +128,7 @@ public partial class ClusterTestBase
             }, true, timeout: timeout, interval: 333);
         }
 
-        public static async Task<DatabaseTopology[]> GetShards(DocumentStore store)
+        public async Task<DatabaseTopology[]> GetShards(DocumentStore store)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             return record.Shards;
