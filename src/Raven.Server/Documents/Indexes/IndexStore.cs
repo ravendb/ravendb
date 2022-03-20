@@ -84,6 +84,8 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly DatabaseIndexStateProcessor State;
 
+        public readonly DatabaseIndexDeleteProcessor Delete;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -92,6 +94,7 @@ namespace Raven.Server.Documents.Indexes
             LockMode = new DatabaseIndexLockModeProcessor(documentDatabase);
             Priority = new DatabaseIndexPriorityProcessor(documentDatabase);
             State = new DatabaseIndexStateProcessor(documentDatabase);
+            Delete = new DatabaseIndexDeleteProcessor(documentDatabase);
 
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
@@ -1319,47 +1322,6 @@ namespace Raven.Server.Documents.Indexes
             return ResetIndexInternal(index);
         }
 
-        public async Task<bool> TryDeleteIndexIfExists(string name, string raftRequestId)
-        {
-            var index = GetIndex(name);
-            if (index == null)
-                return false;
-
-            if (name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
-            {
-                await HandleSideBySideIndexDelete(name, raftRequestId);
-                return true;
-            }
-
-            var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, raftRequestId));
-
-            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-
-            return true;
-        }
-
-        private async Task HandleSideBySideIndexDelete(string name, string raftRequestId)
-        {
-            var originalIndexName = name.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
-            var originalIndex = GetIndex(originalIndexName);
-            if (originalIndex == null)
-            {
-                // we cannot find the original index
-                // but we need to remove the side by side one by the original name
-                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(originalIndexName, _documentDatabase.Name, raftRequestId));
-
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-
-                return;
-            }
-
-            // deleting the side by side index means that we need to save the original one in the database record
-
-            var indexDefinition = originalIndex.GetIndexDefinition();
-            indexDefinition.Name = originalIndexName;
-            await CreateIndex(indexDefinition, raftRequestId);
-        }
-
         public async Task DeleteIndex(string name, string raftRequestId)
         {
             var index = GetIndex(name);
@@ -2070,7 +2032,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     await CreateIndex(definition, $"{raftRequestId}/{definition.Name}");
-                    await TryDeleteIndexIfExists(kvp.Key, $"{raftRequestId}/{kvp.Key}");
+                    await Delete.TryDeleteIndexIfExistsAsync(kvp.Key, $"{raftRequestId}/{kvp.Key}");
 
                     moreWork = true;
                     break; // extending only one auto-index at a time
@@ -2088,7 +2050,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
-                    await TryDeleteIndexIfExists(indexName, $"{raftRequestId}/{indexName}");
+                    await Delete.TryDeleteIndexIfExistsAsync(indexName, $"{raftRequestId}/{indexName}");
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Deleted index '{indexName}' because it is surpassed.");
                 }

@@ -115,6 +115,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedIndexHandlerProcessorForOpenFaultyIndex(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/indexes", "DELETE")]
+        public async Task Delete()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForDelete(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
 
