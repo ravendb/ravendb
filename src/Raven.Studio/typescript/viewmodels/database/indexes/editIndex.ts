@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
-import dialog = require("plugins/dialog");
 import indexDefinition = require("models/database/index/indexDefinition");
 import autoIndexDefinition = require("models/database/index/autoIndexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
@@ -41,7 +40,7 @@ import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyz
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
-import { IndexListItem } from "../../../components/models/indexes";
+import IndexUtils from "../../../components/utils/IndexUtils";
 
 class editIndex extends viewModelBase {
     
@@ -756,9 +755,9 @@ class editIndex extends viewModelBase {
     private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<string> {
         eventsCollector.default.reportEvent("index", "save");
 
-        if (indexDto.Name.startsWith(IndexListItem.SideBySideIndexPrefix)) {
+        if (indexDto.Name.startsWith(IndexUtils.SideBySideIndexPrefix)) {
             // trim side by side prefix
-            indexDto.Name = indexDto.Name.substr(IndexListItem.SideBySideIndexPrefix.length);
+            indexDto.Name = indexDto.Name.substr(IndexUtils.SideBySideIndexPrefix.length);
         }
 
         const db = this.activeDatabase();
