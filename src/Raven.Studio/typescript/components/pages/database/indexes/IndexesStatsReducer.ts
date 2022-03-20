@@ -22,7 +22,19 @@ interface ActionSetIndexLockMode {
     type: "SetLockMode";
 }
 
-type IndexesStatsReducerAction = ActionStatsLoaded | ActionSetIndexPriority | ActionSetIndexLockMode;
+interface ActionDisableIndexing {
+    indexName: string;
+    location: databaseLocationSpecifier;
+    type: "DisableIndexing";
+}
+
+interface ActionEnableIndexing {
+    indexName: string;
+    location: databaseLocationSpecifier;
+    type: "EnableIndexing";
+}
+
+type IndexesStatsReducerAction = ActionStatsLoaded | ActionSetIndexPriority | ActionSetIndexLockMode | ActionDisableIndexing | ActionEnableIndexing;
 
 interface IndexesStatsState {
     indexes: IndexSharedInfo[];
@@ -32,11 +44,9 @@ interface IndexesStatsState {
 function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
     return {
         name: stats.Name,
-        state: stats.State,
         collections: Object.keys(stats.Collections),
         nodesInfo: [],
         lockMode: stats.LockMode,
-        status: stats.Status,
         type: stats.Type,
         priority: stats.Priority,
         sourceType: stats.SourceType,
@@ -52,7 +62,9 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
         status: "loaded",
         details: {
             errorCount: stats.ErrorsCount,
-            entriesCount: stats.EntriesCount
+            entriesCount: stats.EntriesCount,
+            state: stats.State,
+            status: stats.Status
         }
     }
 }
@@ -131,6 +143,61 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                     return index;
                 })
             }
+        case "EnableIndexing":
+            return {
+                ...state,
+                indexes: state.indexes.map(index => {
+                    if (index.name !== action.indexName) {
+                        return index;
+                    } else {
+                        return {
+                            ...index,
+                            nodesInfo: index.nodesInfo.map(nodeInfo => {
+                                if (nodeInfo.location.nodeTag === action.location.nodeTag && nodeInfo.location.shardNumber === action.location.shardNumber) {
+                                    return {
+                                        ...nodeInfo,
+                                        details: {
+                                            ...nodeInfo.details,
+                                            state: "Normal",
+                                            status: "Running"
+                                        }
+                                    }
+                                }
+                                return nodeInfo;
+                            })
+                        }
+                    }
+                })
+            }
+        case "DisableIndexing":
+            return {
+                ...state,
+                indexes: state.indexes.map(index => {
+                    if (index.name !== action.indexName) {
+                        return index;
+                    } else {
+                        return {
+                            ...index,
+                            nodesInfo: index.nodesInfo.map(nodeInfo => {
+                                if (nodeInfo.location.nodeTag === action.location.nodeTag && nodeInfo.location.shardNumber === action.location.shardNumber) {
+                                    return {
+                                        ...nodeInfo,
+                                        details: {
+                                            ...nodeInfo.details,
+                                            state: "Disabled",
+                                            status: "Disabled"
+                                        }
+                                    }
+                                }
+                                return nodeInfo;
+                            })
+                        }
+                    }
+                })
+            }
+        default:
+            console.warn("Unhandled action: ", action)
+            return state;
     }
 }
 

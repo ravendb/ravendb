@@ -10,8 +10,6 @@ export interface IndexGroup {
 export interface IndexSharedInfo {
     name: string;
     sourceType: IndexSourceType;
-    status: Raven.Client.Documents.Indexes.IndexRunningStatus;
-    state: Raven.Client.Documents.Indexes.IndexState;
     collections: string[];
     priority: Raven.Client.Documents.Indexes.IndexPriority;
     type: Raven.Client.Documents.Indexes.IndexType;
@@ -33,6 +31,8 @@ export interface IndexNodeInfo {
 export interface IndexNodeInfoDetails {
     errorCount: number;
     entriesCount: number;
+    status: Raven.Client.Documents.Indexes.IndexRunningStatus;
+    state: Raven.Client.Documents.Indexes.IndexState;
 }
 
 export interface IndexFilterCriteria {

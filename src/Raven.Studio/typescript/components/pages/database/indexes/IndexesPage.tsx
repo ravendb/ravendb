@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useReducer, useState } from "react"
+﻿import React, { useCallback, useEffect, useMemo, useReducer, useState } from "react"
 import database from "models/resources/database";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import {
@@ -20,13 +20,16 @@ import collection from "models/database/documents/collection";
 import IndexUtils from "../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
 import { shardingTodo } from "common/developmentHelper";
+import viewHelpers from "common/helpers/view/viewHelpers";
+import { CheckboxTriple } from "../../../common/CheckboxTriple";
+import eventsCollector from "common/eventsCollector";
 
 interface IndexesPageProps {
     database: database;
     reload: () => Promise<void>;
 }
 
-async function promptDeleteIndexes(db: database, indexes: IndexSharedInfo[]): Promise<void> {
+async function confirmDeleteIndexes(db: database, indexes: IndexSharedInfo[]): Promise<void> {
     if (indexes.length > 0) {
         const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
         app.showBootstrapDialog(deleteIndexesVm);
@@ -40,6 +43,27 @@ async function promptDeleteIndexes(db: database, indexes: IndexSharedInfo[]): Pr
     }
 }
 
+async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<boolean> {
+    return new Promise(done => {
+        viewHelpers.confirmationMessage("Reset index?",
+            `You're resetting index: <br><ul><li><strong>${genUtils.escapeHtml(index.name)}</strong></li></ul>
+             <div class="margin-top margin-top-lg text-warning bg-warning padding padding-xs flex-horizontal">
+                <div class="flex-start">
+                    <small><i class="icon-warning"></i></small>
+                </div>
+                <div>
+                    <small>Clicking <strong>Reset</strong> will remove all existing indexed data.</small><br>
+                    <small>All items matched by the index definition will be re-indexed.</small>
+                </div>
+             </div>`, {
+                buttons: ["Cancel", "Reset"],
+                html: true
+            })
+            .done(result => {
+                done(result.can);
+            });
+    });
+}
 
 function NoIndexes() {
     const newIndexUrl = appUrl.forCurrentDatabase().newIndex();
@@ -73,11 +97,13 @@ function matchesAnyIndexStatus(index: IndexSharedInfo, status: IndexStatus[]): b
     ADD : _.includes(status, "Stale") && this.isStale()
         || _.includes(status, "RollingDeployment") && this.rollingDeploymentInProgress()
      */
+    return true; 
+    /* TODO
     return status.includes("Normal") && IndexUtils.isNormalState(index)
         || status.includes("ErrorOrFaulty") && (IndexUtils.isErrorState(index) || IndexUtils.isFaulty(index))
         || status.includes("Paused") && IndexUtils.isPausedState(index)
         || status.includes("Disabled") && IndexUtils.isDisabledState(index)
-        || status.includes("Idle") && IndexUtils.isIdleState(index);
+        || status.includes("Idle") && IndexUtils.isIdleState(index);*/
 }
 
 function indexMatchesFilter(index: IndexSharedInfo, filter: IndexFilterCriteria): boolean {
@@ -193,6 +219,107 @@ export function IndexesPage(props: IndexesPageProps) {
         })
     }
     
+    const enableIndexing = async (index: IndexSharedInfo) => {
+        //TODO: dialog with confirmation which locations should be modified
+        const locations = database.getLocations();
+        while (locations.length > 0) {
+            const location = locations.pop();
+            await indexesService.enable(index, database, location);
+            dispatch({
+                type: "EnableIndexing",
+                indexName: index.name,
+                location
+            });
+        }
+    }
+    
+    const disableIndexing = async (index: IndexSharedInfo) => {
+        //TODO: dialog with confirmation which locations should be modified
+        const locations = database.getLocations();
+        while (locations.length > 0) {
+            const location = locations.pop();
+            await indexesService.disable(index, database, location);
+            dispatch({
+                type: "DisableIndexing",
+                indexName: index.name,
+                location
+            });
+        }
+    }
+    
+    const resetIndex = async (index: IndexSharedInfo) => {
+        const canReset = await confirmResetIndex(database, index);
+        if (canReset) {
+            //TODO: eventsCollector.default.reportEvent("indexes", "reset");
+            
+            await indexesService.resetIndex(index, database);
+            
+            /* TODO
+             // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
+                    // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
+                    // Unfortunately we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
+                    // is resolved. 
+                    this.resetsInProgress.add(i.name);
+
+                    new resetIndexCommand(i.name, this.activeDatabase())
+                        .execute();
+
+                    setTimeout(() => {
+                        this.resetsInProgress.delete(i.name);
+                    }, 30000);
+             */
+        }
+    }
+    
+    const getAllIndexes = () => {
+        const allIndexes: IndexSharedInfo[] = [];
+        groups.forEach(group => allIndexes.push(...group.indexes));
+        return allIndexes;
+    }
+    
+    const toggleSelectAll = () => {
+        eventsCollector.default.reportEvent("indexes", "toggle-select-all");
+        
+        const selectedIndexesCount = selectedIndexes.length;
+
+        if (selectedIndexesCount > 0) {
+            setSelectedIndexes([]);
+        } else {
+            const toSelect: string[] = [];
+            groups.forEach(group => {
+                toSelect.push(...group.indexes.map(x => x.name));
+            });
+            setSelectedIndexes(toSelect); 
+            /* TODO handle replacements
+             this.indexGroups().forEach(indexGroup => {
+                if (!indexGroup.groupHidden()) {
+                    indexGroup.indexes().forEach(index => {
+                        if (!index.filteredOut() && !_.includes(namesToSelect, index.name)) {
+                            namesToSelect.push(index.name);
+
+                            if (index.replacement()) {
+                                namesToSelect.push(index.replacement().name);
+                            }
+                        }
+                    });
+                }
+            });
+             */
+        }
+    }
+    
+    const indexesSelectionState = (): checkbox => {
+        const selectedCount = selectedIndexes.length;
+        const indexesCount = getAllIndexes().length;
+        if (indexesCount && selectedCount === indexesCount) {
+            return "checked";
+        }
+        if (selectedCount > 0) {
+            return "some_checked";
+        }
+        return "unchecked";
+    };
+    
     return (
         <div className="flex-vertical absolute-fill">
             <div className="flex-header">
@@ -202,8 +329,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             <div className="form-inline">
                                 <div className="checkbox checkbox-primary checkbox-inline align-checkboxes"
                                      title="Select all or none" data-bind="requiredAccess: 'DatabaseReadWrite'">
-                                    <input type="checkbox" className="styled"
-                                           data-bind="checkboxTriple: indexesSelectionState, event: { change: toggleSelectAll }"/>
+                                    <CheckboxTriple onChanged={toggleSelectAll} state={indexesSelectionState()} />
                                     <label/>
                                 </div>
 
@@ -228,8 +354,11 @@ export function IndexesPage(props: IndexesPageProps) {
                                 (
                                     <IndexPanel setPriority={p => setIndexPriority(index, p)}
                                                 setLockMode={l => setIndexLockMode(index, l)}
+                                                resetIndex={() => resetIndex(index)}
+                                                enableIndexing={() => enableIndexing(index)}
+                                                disableIndexing={() => disableIndexing(index)}
                                                 index={index}
-                                                deleteIndex={() => promptDeleteIndexes(database, [index])}
+                                                deleteIndex={() => confirmDeleteIndexes(database, [index])}
                                                 selected={selectedIndexes.includes(index.name)}
                                                 toggleSelection={() => toggleSelection(index)}
                                                 key={index.name}

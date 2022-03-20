@@ -15,14 +15,7 @@ class indexes {
     localNodeTag = ko.observable<string>();
     isCluster: KnockoutComputed<boolean>;
 
-    spinners = {
-        globalStartStop: ko.observable<boolean>(false),
-        globalLockChanges: ko.observable<boolean>(false),
-        localPriority: ko.observableArray<string>([]),
-        localLockChanges: ko.observableArray<string>([]),
-        localState: ko.observableArray<string>([]),
-        swapNow: ko.observableArray<string>([])
-    };
+
 
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
@@ -60,12 +53,7 @@ class indexes {
         this.indexesCount = ko.pureComputed(() => {
             return _.sum(this.indexGroups().map(x => x.indexes().length));
         });
-        
-        
     }
-    
-   
-
     private getAllIndexes(): index[] {
         const all: index[] = [];
         this.indexGroups().forEach(g => all.push(...g.indexes()));
@@ -97,8 +85,6 @@ class indexes {
                 this.fetchIndexes(true);
             }
         });
-        
-      
 
 
         this.lockModeCommon = ko.pureComputed(() => {
@@ -412,40 +398,7 @@ class indexes {
     }
 
     resetIndex(i: index) {
-        this.confirmationMessage("Reset index?",
-            `You're resetting index: <br><ul><li><strong>${generalUtils.escapeHtml(i.name)}</strong></li></ul>
-             <div class="margin-top margin-top-lg text-warning bg-warning padding padding-xs flex-horizontal">
-                <div class="flex-start">
-                    <small><i class="icon-warning"></i></small>
-                </div>
-                <div>
-                    <small>Clicking <strong>Reset</strong> will remove all existing indexed data.</small><br>
-                    <small>All items matched by the index definition will be re-indexed.</small>
-                </div>
-             </div>`,
-            {
-                buttons: ["Cancel", "Reset"],
-                html: true
-            })
-            .done(result => {
-                if (result.can) {
-
-                    eventsCollector.default.reportEvent("indexes", "reset");
-
-                    // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
-                    // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
-                    // Unfortunately we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
-                    // is resolved. 
-                    this.resetsInProgress.add(i.name);
-
-                    new resetIndexCommand(i.name, this.activeDatabase())
-                        .execute();
-
-                    setTimeout(() => {
-                        this.resetsInProgress.delete(i.name);
-                    }, 30000);
-                }
-            });
+        
     }
 
     deleteIndex(i: index) {
@@ -528,46 +481,6 @@ class indexes {
         }
     }
 
-    unlockIndex(i: index) {
-        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "Unlock");
-        this.updateIndexLockMode(i, "Unlock", "Unlocked");
-    }
-
-    lockIndex(i: index) {
-        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedIgnore");
-        this.updateIndexLockMode(i, "LockedIgnore", "Locked");
-    }
-
-    lockErrorIndex(i: index) {
-        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedError");
-        this.updateIndexLockMode(i, "LockedError","Locked (Error)");
-    }
-
-    private updateIndexLockMode(i: index, newLockMode: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
-        if (i.lockMode() !== newLockMode) {
-            this.spinners.localLockChanges.push(i.name);
-
-            new saveIndexLockModeCommand([i], newLockMode, this.activeDatabase(), lockModeStrForTitle)
-                .execute()
-                .done(() => i.lockMode(newLockMode))
-                .always(() => this.spinners.localLockChanges.remove(i.name));
-        }
-    }
-
-    normalPriority(idx: index) {
-        eventsCollector.default.reportEvent("index", "priority", "normal");
-        this.setIndexPriority(idx, "Normal");
-    }
-
-    lowPriority(idx: index) {
-        eventsCollector.default.reportEvent("index", "priority", "low");
-        this.setIndexPriority(idx, "Low");
-    }
-
-    highPriority(idx: index) {
-        eventsCollector.default.reportEvent("index", "priority", "high");
-        this.setIndexPriority(idx, "High");
-    }
 
     private setIndexPriority(idx: index, newPriority: Raven.Client.Documents.Indexes.IndexPriority) {
         const originalPriority = idx.priority();
@@ -614,17 +527,7 @@ class indexes {
             });
     }
 
-    unlockSelectedIndexes() {
-        this.setLockModeSelectedIndexes("Unlock", "Unlock");
-    }
-
-    lockSelectedIndexes() {
-        this.setLockModeSelectedIndexes("LockedIgnore", "Lock");
-    }
-
-    lockErrorSelectedIndexes() {
-        this.setLockModeSelectedIndexes("LockedError", "Lock (Error)");
-    }
+   
 
     private setLockModeSelectedIndexes(lockModeString: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
         if (this.lockModeCommon() === lockModeString)
@@ -823,31 +726,6 @@ class indexes {
         }
     }
 
-    toggleSelectAll() {
-        eventsCollector.default.reportEvent("indexes", "toggle-select-all");
-        const selectedIndexesCount = this.selectedIndexesName().length;
-
-        if (selectedIndexesCount > 0) {
-            this.selectedIndexesName([]);
-        } else {
-            const namesToSelect: string[] = [];
-
-            this.indexGroups().forEach(indexGroup => {
-                if (!indexGroup.groupHidden()) {
-                    indexGroup.indexes().forEach(index => {
-                        if (!index.filteredOut() && !_.includes(namesToSelect, index.name)) {
-                            namesToSelect.push(index.name);
-
-                            if (index.replacement()) {
-                                namesToSelect.push(index.replacement().name);
-                            }
-                        }
-                    });
-                }
-            });
-            this.selectedIndexesName(namesToSelect);
-        }
-    }
 
     showStaleReasons(idx: index) {
         const view = new indexStalenessReasons(this.activeDatabase(), idx.name);

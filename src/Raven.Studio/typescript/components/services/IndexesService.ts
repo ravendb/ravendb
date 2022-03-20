@@ -6,7 +6,9 @@ import saveIndexLockModeCommand from "commands/database/index/saveIndexLockModeC
 import { IndexSharedInfo } from "../models/indexes";
 import getIndexesStatsCommand from "commands/database/index/getIndexesStatsCommand";
 import IndexUtils from "../utils/IndexUtils";
-
+import resetIndexCommand from "commands/database/index/resetIndexCommand";
+import enableIndexCommand from "commands/database/index/enableIndexCommand";
+import disableIndexCommand from "commands/database/index/disableIndexCommand";
 
 export default class IndexesService {
     
@@ -25,5 +27,20 @@ export default class IndexesService {
             .execute();
         
         return stats;
+    }
+    
+    async resetIndex(index: IndexSharedInfo, db: database) {
+        await new resetIndexCommand(index.name, db)
+            .execute();
+    } 
+    
+    async enable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
+        await new enableIndexCommand(index.name, db, location)
+            .execute();
+    }
+
+    async disable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
+        await new disableIndexCommand(index.name, db, location)
+            .execute();
     }
 }

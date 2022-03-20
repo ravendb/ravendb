@@ -24,27 +24,6 @@ export default function IndexToolbarAction() {
                         <span className="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul className="dropdown-menu">
-                        <li className="margin-left margin-top margin-top-sm"
-                            data-bind="visible: isCluster">
-                            <label><strong>Cluster Wide</strong></label>
-                        </li>
-                        <li data-bind="click: _.partial(enableSelectedIndexes, true), visible: isCluster">
-                            <a href="#" title="Enable indexing on ALL cluster nodes">
-                                <i className="icon-play"/>
-                                <span>Enable</span>
-                            </a>
-                        </li>
-                        <li data-bind="click: _.partial(disableSelectedIndexes, true), visible: isCluster">
-                            <a href="#" title="Disable indexing on All cluster nodes">
-                                <i className="icon-cancel"/>
-                                <span>Disable</span>
-                            </a>
-                        </li>
-                        <li className="divider" data-bind="visible: isCluster"/>
-                        <li className="margin-left margin-top margin-top-sm"
-                            data-bind="visible: isCluster">
-                            <label><strong>Local Node</strong></label>
-                        </li>
                         <li data-bind="click: _.partial(enableSelectedIndexes, false),
                                                        attr: { title: 'Enable indexing on node ' + localNodeTag() }">
                             <a href="#">
