@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
@@ -9,7 +8,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
@@ -36,6 +34,8 @@ public partial class ShardedContext
 
         public readonly ShardedIndexStateProcessor State;
 
+        public readonly ShardedIndexDeleteProcessor Delete;
+
         public ShardedIndexesCache(ShardedContext context, ServerStore serverStore, DatabaseRecord record)
         {
             _serverStore = serverStore;
@@ -43,6 +43,7 @@ public partial class ShardedContext
             LockMode = new ShardedIndexLockModeProcessor(context, serverStore);
             Priority = new ShardedIndexPriorityProcessor(context, serverStore);
             State = new ShardedIndexStateProcessor(context, serverStore);
+            Delete = new ShardedIndexDeleteProcessor(context, serverStore);
 
             _configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, record.DatabaseName, record.Settings);
             _scriptRunnerCache = new ScriptRunnerCache(database: null, _configuration);

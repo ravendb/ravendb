@@ -16,7 +16,6 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
-using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
@@ -30,7 +29,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers
@@ -404,19 +402,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Delete()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-            {
-                var clientCert = GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                auditLog.Info($"Index {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
-            }
-
-            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name, GetRaftRequestIdFromQuery())
-                ? (int)HttpStatusCode.NoContent
-                : (int)HttpStatusCode.NotFound;
+            using (var processor = new IndexHandlerProcessorForDelete(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
