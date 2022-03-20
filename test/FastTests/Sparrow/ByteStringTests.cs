@@ -49,8 +49,8 @@ namespace FastTests.Sparrow
                 context.Allocate(1, out var byteStringNextSegment);
 
                 long startLocation = (long)byteStringInFirstSegment._pointer;
-                Assert.InRange((long)byteStringWholeSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
-                Assert.NotInRange((long)byteStringNextSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
+                Assert.InRange((long)byteStringWholeSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes -1);
+                Assert.NotInRange((long)byteStringNextSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes -1);
             }
         }
 
