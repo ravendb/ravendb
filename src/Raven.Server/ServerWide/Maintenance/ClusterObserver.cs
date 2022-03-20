@@ -737,7 +737,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var someNodesRequireMoreTime = false;
             var rotatePreferredNode = false;
-
+            
             foreach (var member in databaseTopology.Members)
             {
                 var status = None;
@@ -1230,7 +1230,7 @@ namespace Raven.Server.ServerWide.Maintenance
             topology.PromotablesStatus[member] = GetStatus();
 
             LogMessage($"Node {member} of database '{dbName}': {reason}", database: dbName);
-
+            Console.WriteLine($"{_engine.Url} : Node {member} of database '{dbName}': {reason}");
             DatabasePromotionStatus GetStatus()
             {
                 if (nodeStats != null)

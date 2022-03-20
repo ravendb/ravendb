@@ -928,12 +928,14 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to leader state");
             }
+            Console.WriteLine($"{Url} , Switching to leader state");
             var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
             {
                 ClusterCommandsVersionManager.SetClusterVersion(version);
                 _currentLeader = leader;
             });
+            Console.WriteLine($"{Url} , Start leader");
             leader.Start(connections);
         }
 
@@ -1005,7 +1007,7 @@ namespace Raven.Server.Rachis
                 {
                     IsForcedElection = forced
                 };
-
+                Console.WriteLine($"{Url} , {_tag} : Switching to candidate state because {reason} forced: {forced} ");
                 Candidate = candidate;
                 SetNewState(RachisState.Candidate, candidate, currentTerm, reason);
                 candidate.Start();

@@ -54,6 +54,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private TriggerState _currentState;
             private ClusterNode _currentClusterNode;
+            internal bool _printInfo;
 
             internal void SetTriggerTimeoutAfterNoChangeAction(string tag)
             {
@@ -72,15 +73,19 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         case TriggerState.None:
                             _currentState = TriggerState.Ready;
+                            Console.WriteLine($"TriggerState.Ready");
                             break;
                         case TriggerState.Ready:
                             _currentState = TriggerState.Armed;
+                            Console.WriteLine($"TriggerState.Armed");
                             break;
                         case TriggerState.Armed:
                             node.OnTimeout();
                             _currentState = TriggerState.Fired;
+                            Console.WriteLine($"TriggerState.Fired");
                             break;
                         case TriggerState.Fired:
+                            Console.WriteLine($"TriggerState.Fired");
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -319,8 +324,9 @@ namespace Raven.Server.ServerWide.Maintenance
                                 }
 
                                 _parent.ForTestingPurposes?.BeforeReportBuildAction(this);
-
+                                Console.WriteLine($"{_parent._server.Engine.Url} Start report");
                                 var nodeReport = BuildReport(rawReport, connection.SupportedFeatures);
+                                Console.WriteLine($"{_parent._server.Engine.Url} - {Url} nodeReport, {nodeReport?.Status}, {nodeReport?.Error}");
                                 timeoutEvent.Defer(_parent._leaderClusterTag);
 
 
@@ -334,6 +340,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                     catch (Exception e)
                     {
+                        Console.WriteLine($"{Url} Exception was thrown while collecting info from {ClusterTag}, {e}");
                         if (_token.IsCancellationRequested)
                             return;
 
@@ -353,8 +360,16 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private void UpdateNodeReportIfNeeded(ClusterNodeStatusReport nodeReport, List<DatabaseStatusReport> unchangedReports)
             {
-                foreach (var dbReport in nodeReport.Report)
+                if (_parent.ForTestingPurposes?._printInfo == true)
                 {
+                    Console.WriteLine($"{_parent._server.Engine.Url} - {Url}, {ClusterTag} {_name} start UpdateNodeReportIfNeeded");
+                }
+                foreach (var dbReport in nodeReport.Report)
+                { 
+                    if (_parent.ForTestingPurposes?._printInfo == true)
+                    {
+                        Console.WriteLine($"{_parent._server.Engine.Url} -{Url}, {ClusterTag} {dbReport.Value.Status}");
+                    }
                     if (dbReport.Value.Status == DatabaseStatus.NoChange)
                     {
                         _parent.ForTestingPurposes?.NoChangeFoundAction(this);
@@ -369,8 +384,13 @@ namespace Raven.Server.ServerWide.Maintenance
                 // we take the last received and not the last successful.
                 // we don't want to reuse by mistake a successful report when we receive an 'unchanged' error.
                 var lastReport = ReceivedReport;
+                if (_parent.ForTestingPurposes?._printInfo == true)
+                {
+                    Console.WriteLine($"{_parent._server.Engine.Url} - {Url}, {ClusterTag} {lastReport}");
+                }
                 if (lastReport.Status != ClusterNodeStatusReport.ReportStatus.Ok)
                 {
+                    Console.WriteLine($"{_parent._server.Engine.Url} - {Url}, We have databases with {DatabaseStatus.NoChange} status, but our last report from this node is {lastReport.Status}");
                     throw new InvalidOperationException(
                         $"We have databases with '{DatabaseStatus.NoChange}' status, but our last report from this node is '{lastReport.Status}'");
                 }
@@ -380,6 +400,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     var dbName = dbReport.Name;
                     if (lastReport.Report.TryGetValue(dbName, out var previous) == false)
                     {
+                        Console.WriteLine($"{_parent._server.Engine.Url} - {Url}, We got '{DatabaseStatus.NoChange}' for the database '{dbReport}', but it is missing in the last good report");
                         throw new InvalidOperationException(
                             $"We got '{DatabaseStatus.NoChange}' for the database '{dbReport}', but it is missing in the last good report");
                     }
@@ -392,6 +413,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
             internal void OnTimeout()
             {
+                if (_parent.ForTestingPurposes?._printInfo == true)
+                {
+                    Console.WriteLine($"{_parent._server.Engine.Url} - {Url}, {ClusterTag} OnTimeout");
+                }
                 if (_token.IsCancellationRequested)
                     return;
 

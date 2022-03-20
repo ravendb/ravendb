@@ -52,6 +52,7 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
                     }
+                    Console.WriteLine($"{_engine.Url} , Candidate {_engine.Tag}: Starting elections ");
                     ClusterTopology clusterTopology;
                     using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
@@ -90,6 +91,7 @@ namespace Raven.Server.Rachis
                     {
                         if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves
+                        Console.WriteLine($"{_engine.Url}, {_engine.Tag}, Start CandidateAmbassador voter {voter.Key} - {voter.Value}");
                         var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value);
                         _voters = new List<CandidateAmbassador>(_voters)
                         {
@@ -104,7 +106,7 @@ namespace Raven.Server.Rachis
                         {
                             ElectionTerm = _engine.CurrentTerm + 1;
                             _engine.RandomizeTimeout(extend: true);
-
+                            Console.WriteLine($"{_engine.Url},{_engine.ClusterId}, {_engine.Tag}, after RandomizeTimeout {_engine.Timeout.TimeoutPeriod}");
                             StateChange(); // will wake ambassadors and make them ping peers again
                             continue;
                         }
@@ -145,15 +147,16 @@ namespace Raven.Server.Rachis
 
                         if (realElectionsCount >= majority)
                         {
+                            Console.WriteLine($"{_engine.Url} , Candidate {_engine.Tag}: Starting elections {Thread.CurrentThread.ManagedThreadId}");
                             ElectionResult = ElectionResult.Won;
                             _running.Lower();
-
+                            Console.WriteLine($"{_engine.Url} , Step 1 for leader");
                             var connections = new Dictionary<string, RemoteConnection>();
                             var versions = new List<int>
                             {
                                 ClusterCommandsVersionManager.MyCommandsVersion
                             };
-
+                            Console.WriteLine($"{_engine.Url} , Step 2 for leader");
                             foreach (var candidateAmbassador in _voters)
                             {
                                 if (candidateAmbassador.ClusterCommandsVersion > 0)
@@ -166,11 +169,12 @@ namespace Raven.Server.Rachis
                                     connections[candidateAmbassador.Tag] = connection;
                                 }
                             }
+                            Console.WriteLine($"{_engine.Url} , Step 3 for leader");
                             StateChange();
-
+                            Console.WriteLine($"{_engine.Url} , Step 4 for leader");
                             var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(versions, _engine.MaximalVersion);
                             string msg = $"Was elected by {realElectionsCount} nodes for leadership in term {ElectionTerm} with cluster version of {minimalVersion}";
-
+                            Console.WriteLine($"{_engine.Url} , Was elected by {realElectionsCount} nodes for leadership in term {ElectionTerm} with cluster version of {minimalVersion}");
                             _engine.SwitchToLeaderState(ElectionTerm, minimalVersion, msg, connections);
                             break;
                         }
@@ -183,6 +187,7 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine($"{_engine.Url} , we have exception {e}");
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Failure during candidacy run with current state of {_engine.CurrentState}", e);

@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User(), "marker");
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)), "Failed to replicate marker");
                 }
 
                 var res = new Dictionary<string, int>();
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                     await database.TimeSeriesPolicyRunner.RunRollups();
 
                     var name = config.Collections["Users"].Policies[0].GetTimeSeriesName("Heartrate");
-                    WaitForValue(() =>
+                    var res2 = WaitForValue(() =>
                     {
                         using (var session = store.OpenSession())
                         {
@@ -98,13 +98,13 @@ namespace SlowTests.Issues
                             return val != null;
                         }
                     }, true);
-
+                    Assert.True(res2, $"{server.ServerStore.NodeTag} : Time series for users/karmel/0 is null");
                     using (var session = store.OpenSession())
                     {
                         var val = session.TimeSeriesFor("users/karmel/0", name)
                             .Get(DateTime.MinValue, DateTime.MaxValue).Length;
                         res.Add(server.ServerStore.NodeTag, val);
-                        Assert.True(val > 0);
+                        Assert.True(val > 0, $"{server.ServerStore.NodeTag} : Time series for users/karmel/0 is {val}");
                     }
                 }
 
@@ -114,6 +114,7 @@ namespace SlowTests.Issues
                     return record.Topology.Members.Count;
                 }, 3);
                 Assert.Equal(3, record.Topology.Members.Count);
+
                 var firstNode2 = record.Topology.Members[0];
                 Assert.Equal(firstNode2, firstNode);
 
@@ -121,12 +122,14 @@ namespace SlowTests.Issues
                 var list = record.Topology.Members;
                 list.Reverse();
                 await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, list));
+
                 await WaitForValueAsync(async () =>
                 {
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     return record.Topology.Members.Count;
                 }, 3);
                 Assert.Equal(3, record.Topology.Members.Count);
+
                 firstNode2 = record.Topology.Members[0];
                 Assert.NotEqual(firstNode2, firstNode);
 
@@ -141,16 +144,19 @@ namespace SlowTests.Issues
 
                 foreach (var server in Servers)
                 {
-                    WaitForValue(() =>
+                    var info = "";
+                    var res2 = WaitForValue(() =>
                     {
                         using (var session = store.OpenSession())
                         {
                             var name = config.Collections["Users"].Policies[0].GetTimeSeriesName("Heartrate");
                             var val = session.TimeSeriesFor("users/karmel/0", name)
                                 .Get(DateTime.MinValue, DateTime.MaxValue);
+                            info += $"{val.Length} > {res[server.ServerStore.NodeTag]}";
                             return val.Length > res[server.ServerStore.NodeTag];
                         }
                     }, true);
+                    Assert.True(res2, $"{server.ServerStore.NodeTag} : {info}");
                 }
 
                 using (var session = store.OpenSession())
@@ -159,7 +165,7 @@ namespace SlowTests.Issues
                     var val = session.TimeSeriesFor("users/karmel/0", name)
                         .Get(DateTime.MinValue, DateTime.MaxValue);
 
-                    Assert.True(val.Length > res[Servers[0].ServerStore.NodeTag]);
+                    Assert.True(val.Length > res[Servers[0].ServerStore.NodeTag], $"server0 = {Servers[0].ServerStore.NodeTag} : {val.Length} > {res[Servers[0].ServerStore.NodeTag]}");
                 }
 
                 

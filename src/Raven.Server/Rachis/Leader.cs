@@ -101,7 +101,7 @@ namespace Raven.Server.Rachis
             }
 
             RefreshAmbassadors(clusterTopology, connections);
-
+            Console.WriteLine($"{_engine.Url} , Start leader thread");
             _leaderLongRunningWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, $"Consensus Leader - {_engine.Tag} in term {Term}");
         }
@@ -310,11 +310,13 @@ namespace Raven.Server.Rachis
                 };
 
                 _newEntry.Set(); //This is so the noop would register right away
+                Console.WriteLine($"{_engine.Url} , Start leader run ");
                 while (_running)
                 {
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
                     {
                         case 0: // new entry
+                            Console.WriteLine($"{_engine.Url} , Leader run case 0");
                             _newEntry.Reset();
                             // release any waiting ambassadors to send immediately
                             TaskExecutor.CompleteAndReplace(ref _newEntriesArrived);
@@ -323,15 +325,19 @@ namespace Raven.Server.Rachis
                             break;
                         case 1: // voter responded
                             _voterResponded.Reset();
+                            Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation case 1");
                             OnVoterConfirmation();
                             break;
                         case 2: // promotable updated
+                            Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation case 2");
                             _promotableUpdated.Reset();
                             CheckPromotables();
                             break;
                         case WaitHandle.WaitTimeout:
+                            Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation timoeout");
                             break;
                         case 3: // shutdown requested
+                            Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation case 4");
                             if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
                             {
                                 _engine.Log.Info($"{ToString()}: shutting down");
@@ -339,6 +345,7 @@ namespace Raven.Server.Rachis
                             _running.Lower();
                             return;
                         case 4: // an error occurred during EmptyQueue()
+                            Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation case 5");
                             _errorOccurred.Task.Wait();
                             break;
                     }
@@ -371,7 +378,7 @@ namespace Raven.Server.Rachis
             catch (Exception e)
             {
                 const string msg = "Error when running leader behavior";
-
+                Console.WriteLine($"{_engine.Url} , Error when running leader behavior {e}");
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info(msg, e);
@@ -442,6 +449,7 @@ namespace Raven.Server.Rachis
 
         private void OnVoterConfirmation()
         {
+            Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation 1 ");
             if (_hasNewTopology.Lower())
             {
                 ClusterTopology clusterTopology;
@@ -459,7 +467,7 @@ namespace Raven.Server.Rachis
                 }
                 RefreshAmbassadors(clusterTopology);
             }
-
+            Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation 2 ");
             var maxIndexOnQuorum = GetMaxIndexOnQuorum(VotersMajority);
 
             if (_lastCommit >= maxIndexOnQuorum ||
@@ -478,7 +486,7 @@ namespace Raven.Server.Rachis
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
                     return;// can't commit until at least one entry from our term has been published
-
+                Console.WriteLine($"{_engine.Url} , Leader run OnVoterConfirmation 3 ");
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
 
                 var sp = Stopwatch.StartNew();

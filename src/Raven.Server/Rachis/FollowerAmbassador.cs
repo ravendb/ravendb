@@ -278,6 +278,14 @@ namespace Raven.Server.Rachis
                                         foreach (var value in table.SeekByPrimaryKey(key, 0))
                                         {
                                             var entry = BuildRachisEntryToSend(context, value);
+                                            if (entry.TryGet(nameof(RachisEntry.Term), out long term))
+                                            {
+                                                Console.WriteLine($"{_engine.Url} - {Url}, term = {term} _term =  {_term}");
+                                                if (term > _term)
+                                                {
+                                                    Console.WriteLine($"{_engine.Url} - {Url}, {term} > {_term}");
+                                                }
+                                            }
                                             _engine.Validator.AssertEntryBeforeSendToFollower(entry, FollowerCommandsVersion, _tag);
                                             entries.Add(entry);
                                             totalSize += entry.Size;
@@ -810,7 +818,7 @@ namespace Raven.Server.Rachis
                 var term = *(long*)value.Reader.Read(1, out size);
                 Debug.Assert(size == sizeof(long));
                 writer.WriteValue(term);
-
+                
                 writer.WritePropertyName(nameof(RachisEntry.Entry));
                 writer.WriteEmbeddedBlittableDocument(value.Reader.Read(2, out size), size);
 

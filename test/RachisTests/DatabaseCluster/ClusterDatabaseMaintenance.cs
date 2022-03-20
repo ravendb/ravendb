@@ -226,8 +226,10 @@ namespace RachisTests.DatabaseCluster
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "50";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.OnErrorDelayTime)] = "15";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod)] = "25";
-
+            Console.WriteLine("Start test DontMoveToRehabOnNoChangeAfterTimeout");
             var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            Console.WriteLine($"{cluster.Leader.WebUrl} : {cluster.Nodes[0].WebUrl} - {cluster.Nodes[1].WebUrl} - {cluster.Nodes[2].WebUrl}");
+            cluster.Leader.ServerStore.ClusterMaintenanceSupervisor.ForTestingPurposesOnly()._printInfo = true;
             using (var store = GetDocumentStore(new Options
                    {
                        ReplicationFactor = 3, 
@@ -245,13 +247,48 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 WaitForIndexingInTheCluster(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "marker");
+                    session.SaveChanges();
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)), "Failed to replicate marker");
+                }
 
                 cluster.Leader.ServerStore.ClusterMaintenanceSupervisor.ForTestingPurposesOnly().SetTriggerTimeoutAfterNoChangeAction("B");
-
+                WaitForUserToContinueTheTest(store);
                 await Task.Delay(2 * 1000); // twice the StabilizationTime
 
                 var members = await GetMembersCount(store);
-                Assert.Equal(3, members);
+                var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                
+                var info = "Members = { ";
+                foreach (var member in res.Topology.Members)
+                {
+                    info += $"{member}, ";
+                }
+
+                info += "}, Rehab = {";
+                foreach (var rehab in res.Topology.Rehabs)
+                {
+                    info += $"{rehab}, ";
+                }
+                info += "}";
+                if (res.Topology.DemotionReasons != null)
+                {
+                    foreach (var demotion in res.Topology.DemotionReasons)
+                    {
+                        info += $"{demotion.Key} - {demotion.Value}";
+                    }
+                }
+                if (res.Topology.PromotablesStatus != null)
+                {
+                    foreach (var promotables in res.Topology.PromotablesStatus)
+                    {
+                        info += $"{promotables.Key} - {promotables.Value}";
+                    }
+                }
+                
+                Assert.True(3 == members, info);
             }
         }
 

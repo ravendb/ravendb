@@ -355,10 +355,11 @@ namespace Raven.Server.Rachis
             using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 var logLength = connection.Read<LogLengthNegotiation>(context);
-
+                Console.WriteLine($"{engine.Url} :CheckIfValidLeader {logLength.Term} < {engine.CurrentTerm}");
                 if (logLength.Term < engine.CurrentTerm)
                 {
                     var msg = $"The incoming term {logLength.Term} is smaller than current term {engine.CurrentTerm} and is therefor rejected (From thread: {logLength.SendingThread})";
+                    Console.WriteLine($"{engine.Url} :The incoming term {logLength.Term} is smaller than current term {engine.CurrentTerm} and is therefor rejected (From thread: {logLength.SendingThread})");
                     if (engine.Log.IsInfoEnabled)
                     {
                         engine.Log.Info(msg);
@@ -372,6 +373,8 @@ namespace Raven.Server.Rachis
                     connection.Dispose();
                     return false;
                 }
+                Console.WriteLine($"{engine.Url} :The incoming term { logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
+
                 if (engine.Log.IsInfoEnabled)
                 {
                     engine.Log.Info($"The incoming term { logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
