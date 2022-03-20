@@ -1,16 +1,20 @@
 ﻿import React, { MouseEvent, useState } from "react";
 import classNames from "classnames";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
-import { IndexNodeInfo, IndexSharedInfo } from "../../../models/indexes";
+import { IndexNodeInfo, IndexNodeInfoDetails, IndexSharedInfo } from "../../../models/indexes";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { useAppUrls } from "../../../hooks/useAppUrls";
 import IndexUtils from "../../../utils/IndexUtils";
+import eventsCollector from "common/eventsCollector";
 
 interface IndexPanelProps {
     index: IndexSharedInfo;
     setPriority: (priority: IndexPriority) => Promise<void>;
     setLockMode: (lockMode: IndexLockMode) => Promise<void>;
+    enableIndexing: () => Promise<void>;
+    disableIndexing: () => Promise<void>;
     deleteIndex: () => Promise<void>;
+    resetIndex: () => Promise<void>;
     selected: boolean;
     toggleSelection: () => void;
 }
@@ -20,24 +24,51 @@ export function IndexPanel(props: IndexPanelProps) {
 
     const [updatingLocalPriority, setUpdatingLocalPriority] = useState(false);
     const [updatingLockMode, setUpdatingLockMode] = useState(false);
+    const [updatingState, setUpdatingState] = useState(false); //TODO: bind me!
     
     const setPriority = async (e: MouseEvent, priority: IndexPriority) => {
         e.preventDefault();
-        setUpdatingLocalPriority(true);
-        try {
-            await props.setPriority(priority);
-        } finally {
-            setUpdatingLocalPriority(false);
+        if (priority !== index.priority) {
+            setUpdatingLocalPriority(true);
+            try {
+                await props.setPriority(priority);
+            } finally {
+                setUpdatingLocalPriority(false);
+            }
         }
     }
     
     const setLockMode = async (e: MouseEvent, lockMode: IndexLockMode) => {
         e.preventDefault();
-        setUpdatingLockMode(true);
+        if (lockMode !== index.lockMode) {
+            setUpdatingLockMode(true);
+            try {
+                await props.setLockMode(lockMode);
+            } finally {
+                setUpdatingLockMode(false);
+            }
+        }
+    }
+    
+    const enableIndexing = async (e: MouseEvent) => {
+        e.preventDefault();
+        eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
+        setUpdatingState(true);
         try {
-            await props.setLockMode(lockMode);
+            await props.enableIndexing();
         } finally {
-            setUpdatingLockMode(false);
+            setUpdatingState(false);
+        }
+    }
+    
+    const disableIndexing = async (e: MouseEvent) => {
+        e.preventDefault();
+        eventsCollector.default.reportEvent("indexes", "set-state", "disabled");
+        setUpdatingState(true);
+        try {
+            await props.disableIndexing();
+        } finally {
+            setUpdatingState(false);
         }
     }
     
@@ -45,6 +76,8 @@ export function IndexPanel(props: IndexPanelProps) {
         e.preventDefault();
         return props.deleteIndex();
     }
+    
+    const resetIndex = () => props.resetIndex();
     
     const urls = useAppUrls();
     const queryUrl = urls.query(index.name)();
@@ -55,7 +88,6 @@ export function IndexPanel(props: IndexPanelProps) {
         <div className="sidebyside-indexes">
             <div className="panel panel-state panel-hover index" data-bind="css: { 'has-replacement': replacement }">
                 <div className="padding padding-sm js-index-template" id={indexUniqueId(index)}>
-                    <div className={classNames("state", badgeClass(index))} data-state-text={badgeText(index)} />
                     <div className="row">
                         <div className="col-xs-12 col-sm-6 col-xl-4 info-container">
                             <div className="flex-horizontal">
@@ -102,91 +134,6 @@ export function IndexPanel(props: IndexPanelProps) {
                         </div>
                         { !IndexUtils.isFaulty(index) && (
                             <div className="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container">
-                                <div className="properties-item state-selector">
-                                    <span className="properties-label">State:</span>
-                                    <div className="btn-group properties-value">
-                                        <button type="button" className="btn set-size dropdown-toggle" data-toggle="dropdown"
-                                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
-                                               enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
-                                               requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
-                                            { (IndexUtils.isPausedState(index) && !IndexUtils.isErrorState(index)) && (
-                                                <span className="text-warning">
-                                                <i className="icon-cancel" />
-                                                <span>Paused until restart</span>
-                                            </span>
-                                            ) }
-                                            { IndexUtils.isNormalState(index) && (
-                                                <span>
-                                                <i className="icon-check" />
-                                                <span>Normal</span>
-                                            </span>
-                                            )}
-                                            { IndexUtils.isIdleState(index) && (
-                                                <span>
-                                                <i className="icon-coffee" />
-                                                <span>Idle</span>
-                                            </span>
-                                            )}
-                                            { IndexUtils.isDisabledState(index) && (
-                                                <span className="text-danger">
-                                                <i className="icon-cancel" />
-                                                <span>Indexing disabled</span>
-                                            </span>
-                                            )}
-                                            { IndexUtils.isErrorState(index) && (
-                                                <span className="text-danger">
-                                                <i className="icon-danger" />
-                                                <span>Error</span>
-                                            </span>
-                                            )}
-                                            <span className="caret"/>
-                                        </button>
-                                        <ul className="dropdown-menu">
-                                            <li data-bind="visible: canBeEnabled() && $root.isCluster()">
-                                                <a href="#" data-bind="click: _.partial($root.enableIndex, $data, true)"
-                                                   title="Enable indexing on ALL cluster nodes">
-                                                    <i className="icon-play" />
-                                                    <span>Enable indexing - Cluster wide</span>
-                                                </a>
-                                            </li>
-                                            <li data-bind="visible: canBeEnabled()">
-                                                <a href="#"
-                                                   data-bind="click: _.partial($root.enableIndex, $data, false), attr: { title: 'Enable indexing on node ' + $root.localNodeTag() }">
-                                                    <i className="icon-play" />
-                                                    <span data-bind="text: $root.isCluster() ? 'Enable indexing - Local node' : 'Enable indexing'"/>
-                                                </a>
-                                            </li>
-                                            <li data-bind="visible: canBeDisabled() && $root.isCluster()">
-                                                <a href="#" data-bind="click: _.partial($root.disableIndex, $data, true)"
-                                                   title="Disable indexing on ALL cluster nodes">
-                                                    <i className="icon-cancel"/>
-                                                    <span>Disable indexing - Cluster wide</span>
-                                                </a>
-                                            </li>
-                                            <li data-bind="visible: canBeDisabled()">
-                                                <a href="#"
-                                                   data-bind="click: _.partial($root.disableIndex, $data, false), attr: { title: 'Disable indexing on node ' + $root.localNodeTag() }">
-                                                    <i className="icon-cancel"/>
-                                                    <span data-bind="text: $root.isCluster() ? 'Disable indexing - Local node' : 'Disable indexing'"/>
-                                                </a>
-                                            </li>
-                                            <li data-bind="visible: canBePaused()">
-                                                <a href="#" className="text-warning" data-bind="click: $root.pauseUntilRestart"
-                                                   title="Pause until restart">
-                                                    <i className="icon-pause"/>
-                                                    <span>Pause indexing until restart</span>
-                                                </a>
-                                            </li>
-                                            <li data-bind="visible: canBeResumed()">
-                                                <a href="#" className="text-success" data-bind="click: $root.resumeIndexing"
-                                                   title="Resume indexing">
-                                                    <i className="icon-play"/>
-                                                    <span>Resume indexing</span>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
                                 <div className="properties-item priority" data-bind="if: !isSideBySide()">
                                     <span className="properties-label">Priority:</span>
                                     <div className="btn-group properties-value">
@@ -286,6 +233,45 @@ export function IndexPanel(props: IndexPanelProps) {
                         <div className="col-xs-12 col-sm-6 col-xl-3 actions-container">
                             <div className="actions">
                                 <div className="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div className="btn-group properties-value">
+                                        <button type="button" className="btn btn-default" data-toggle="dropdown"
+                                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
+                                           enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                            Set State
+                                            <span className="caret"/>
+                                        </button>
+                                        <ul className="dropdown-menu">
+                                            <li data-bind="visible: canBeEnabled()">
+                                                <a href="#" onClick={e => enableIndexing(e)} title="Enable indexing on ALL cluster nodes">
+                                                    <i className="icon-play" />
+                                                    <span>Enable indexing</span>
+                                                </a>
+                                            </li>
+                                            <li data-bind="visible: canBeDisabled()">
+                                                <a href="#" onClick={e => disableIndexing(e)} title="Disable indexing on ALL cluster nodes">
+                                                    <i className="icon-cancel"/>
+                                                    <span>Disable indexing</span>
+                                                </a>
+                                            </li>
+                                            <li data-bind="visible: canBePaused()">
+                                                <a href="#" className="text-warning" data-bind="click: $root.pauseUntilRestart"
+                                                   title="Pause until restart">
+                                                    <i className="icon-pause"/>
+                                                    <span>Pause indexing until restart</span>
+                                                </a>
+                                            </li>
+                                            <li data-bind="visible: canBeResumed()">
+                                                <a href="#" className="text-success" data-bind="click: $root.resumeIndexing"
+                                                   title="Resume indexing">
+                                                    <i className="icon-play"/>
+                                                    <span>Resume indexing</span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    
+                                    
                                     { !IndexUtils.isFaulty(index) && (
                                         <div className="btn-group" role="group">
                                             <a className="btn btn-default" href={queryUrl}>
@@ -325,8 +311,8 @@ export function IndexPanel(props: IndexPanelProps) {
                                     )}
                                     
                                     <div className="btn-group" role="group">
-                                        <button className="btn btn-warning"
-                                                data-bind="click: $root.resetIndex, requiredAccess: 'DatabaseReadWrite'"
+                                        <button className="btn btn-warning" type="button" onClick={resetIndex}
+                                                data-bind="requiredAccess: 'DatabaseReadWrite'"
                                                 title="Reset index (rebuild)"><i className="icon-reset-index"/></button>
                                         <button className="btn btn-danger" onClick={deleteIndex}
                                                 data-bind="requiredAccess: 'DatabaseReadWrite'"
@@ -347,7 +333,10 @@ export function IndexPanel(props: IndexPanelProps) {
                             { nodeInfo.status === "loaded" && (
                                 <>
                                     <span className="margin-right">Errors: {nodeInfo.details.errorCount}</span>
-                                    <span>Entries: {nodeInfo.details.entriesCount}</span>
+                                    <span className="margin-right">Entries: {nodeInfo.details.entriesCount}</span>
+                                    <span className={classNames("badge", badgeClass(index, nodeInfo.details))}>
+                                        {badgeText(index, nodeInfo.details)}
+                                    </span>
                                 </>
                             )}
                         </div>
@@ -358,54 +347,52 @@ export function IndexPanel(props: IndexPanelProps) {
     )
 }
 
-
-
-function badgeClass(index: IndexSharedInfo) {
+function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails) {
     if (IndexUtils.isFaulty(index)) {
-        return "state-danger";
+        return "badge-danger";
     }
 
-    if (IndexUtils.isErrorState(index)) {
-        return "state-danger";
+    if (IndexUtils.isErrorState(details)) {
+        return "badge-danger";
     }
 
-    if (IndexUtils.isPausedState(index)) {
-        return "state-warnwing";
+    if (IndexUtils.isPausedState(details)) {
+        return "badge-warnwing";
     }
 
-    if (IndexUtils.isDisabledState(index)) {
-        return "state-warning";
+    if (IndexUtils.isDisabledState(details)) {
+        return "badge-warning";
     }
 
-    if (IndexUtils.isIdleState(index)) {
-        return "state-warning";
+    if (IndexUtils.isIdleState(details)) {
+        return "badge-warning";
     }
 
-    if (IndexUtils.isErrorState(index)) {
-        return "state-danger";
+    if (IndexUtils.isErrorState(details)) {
+        return "badge-danger";
     }
 
-    return "state-success";
+    return "badge-success";
 }
 
-function badgeText(index: IndexSharedInfo) {
+function badgeText(index: IndexSharedInfo, details: IndexNodeInfoDetails) {
     if (IndexUtils.isFaulty(index)) {
         return "Faulty";
     }
 
-    if (IndexUtils.isErrorState(index)) {
+    if (IndexUtils.isErrorState(details)) {
         return "Error";
     }
 
-    if (IndexUtils.isPausedState(index)) {
+    if (IndexUtils.isPausedState(details)) {
         return "Paused";
     }
 
-    if (IndexUtils.isDisabledState(index)) {
+    if (IndexUtils.isDisabledState(details)) {
         return "Disabled";
     }
 
-    if (IndexUtils.isIdleState(index)) {
+    if (IndexUtils.isIdleState(details)) {
         return "Idle";
     }
 

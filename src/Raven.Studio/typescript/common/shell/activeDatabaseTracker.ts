@@ -24,8 +24,9 @@ class activeDatabaseTracker {
             // but don't do this on databases page
             if (!this.onDatabasesPage()) {
                 if (e.cause === "DatabaseDeleted") {
+                    /* TODO
                     messagePublisher.reportWarning("Database " + e.databaseName + " was deleted");
-                    router.navigate("#databases"); // don't use appUrl since it will create dependency cycle
+                    router.navigate("#databases"); // don't use appUrl since it will create dependency cycle*/
                 } else if (e.cause === "DatabaseDisabled") {
                     messagePublisher.reportWarning("Database " + e.databaseName + " was disabled");
                     router.navigate("#databases"); // don't use appUrl since it will create dependency cycle

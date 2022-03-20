@@ -1,6 +1,6 @@
 import assertUnreachable from "./assertUnreachable";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import { IndexSharedInfo, IndexStatus } from "../models/indexes";
+import { IndexNodeInfoDetails, IndexSharedInfo, IndexStatus } from "../models/indexes";
 import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import collection from "models/database/documents/collection";
 
@@ -67,11 +67,11 @@ export default class IndexUtils {
         return index.type === "Faulty";
     }
     
-    static isErrorState(index: IndexSharedInfo) {
+    static isErrorState(index: IndexNodeInfoDetails) {
         return index.state === "Error";
     }
 
-    static isPausedState(index: IndexSharedInfo) {
+    static isPausedState(index: IndexNodeInfoDetails) {
         /* TODO
         const localStatusIsPaused = this.status() === "Paused";
             const globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
@@ -82,13 +82,13 @@ export default class IndexUtils {
         return index.status === "Paused";
     }
     
-    static isDisabledState(index: IndexSharedInfo) {
+    static isDisabledState(index: IndexNodeInfoDetails) {
         const stateIsDisabled = index.state === "Disabled";
         //TODO:const globalStatusIsDisabled = this.globalIndexingStatus() === "Disabled";
         return stateIsDisabled; //TODO: || globalStatusIsDisableds
     }
     
-    static isIdleState(index: IndexSharedInfo) {
+    static isIdleState(index: IndexNodeInfoDetails) {
         /* TODO
         const stateIsIdle = this.state() === "Idle";
             const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
@@ -98,7 +98,7 @@ export default class IndexUtils {
         return index.state === "Idle";
     }
 
-    static isNormalState(index: IndexSharedInfo) {
+    static isNormalState(index: IndexNodeInfoDetails) {
         /* TODO
           const stateIsNormal = this.state() === "Normal";
             const localStatusIsNormalOrPending = this.status() === "Running" || this.status() === "Pending";
