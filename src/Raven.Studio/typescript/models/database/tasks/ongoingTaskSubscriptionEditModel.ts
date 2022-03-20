@@ -158,7 +158,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 LastClientConnectionTime: null,
                 LastBatchAckTime: null,
                 MentorNode: null,
-                NodeTag: null
+                NodeTag: null,
+                ChangeVectorForNextBatchStartingPointPerShard: null
             });
     }
 }
