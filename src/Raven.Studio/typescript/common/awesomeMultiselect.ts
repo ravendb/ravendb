@@ -43,7 +43,7 @@ class awesomeMultiselect {
      */
     static rebuild(object: JQuery): void {
         if (!object.data('instanceData')) {
-            throw new Error("Please intialize multiselect using awesomeMultiselect.build before calling rebuild");
+            throw new Error("Please initialize multiselect using awesomeMultiselect.build before calling rebuild");
         }
         object.multiselect('rebuild');
         awesomeMultiselect.fixAwesomeCheckboxes(object);

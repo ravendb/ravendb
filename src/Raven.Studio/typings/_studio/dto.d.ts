@@ -878,8 +878,17 @@ interface columnPreviewFeature {
     syntax(column: virtualColumn, escapedValue: any, element: any): void;
 }
 
+interface indexErrorsCount {
+    Name: string;
+    Errors: IndexingErrorCount[];
+}
+
+interface IndexingErrorCount {
+    Action: string;
+    NumberOfErrors: nubmer;
+}
+
 type databaseLocationSpecifier = {
     shardNumber?: number;
     nodeTag: string;
 }
-
