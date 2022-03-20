@@ -8,10 +8,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal class SmugglerValidationOptionsProcessor<T> : AbstractHandlerProcessor<RequestHandler, T>
+    internal class SmugglerHandlerProcessorForValidateOptions<T> : AbstractHandlerProcessor<RequestHandler, T>
     where T : JsonOperationContext
     {
-        internal SmugglerValidationOptionsProcessor(RequestHandler requestHandler, JsonContextPoolBase<T> contextPool) : base(requestHandler, contextPool)
+        internal SmugglerHandlerProcessorForValidateOptions(RequestHandler requestHandler, JsonContextPoolBase<T> contextPool) : base(requestHandler, contextPool)
         {
 
         }

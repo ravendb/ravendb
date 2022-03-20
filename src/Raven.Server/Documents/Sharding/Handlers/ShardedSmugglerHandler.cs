@@ -19,9 +19,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
     public class ShardedSmugglerHandler : ShardedRequestHandler
     {
         [RavenShardedAction("/databases/*/smuggler/validate-options", "POST")]
-        public async Task PostValidateOptions()
+        public async Task ValidateOptions()
         {
-            using (var processor = new SmugglerValidationOptionsProcessor<TransactionOperationContext>(this, ContextPool))
+            using (var processor = new SmugglerHandlerProcessorForValidateOptions<TransactionOperationContext>(this, ContextPool))
             {
                 await processor.ExecuteAsync();
             }
