@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Corax;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -16,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 
-public class BlittableCoraxFlag : StorageTest
+public class RawCoraxFlag : StorageTest
 {
     private const int IndexId = 0, ContentId = 1;
     private IndexFieldsMapping _analyzers;
@@ -24,68 +23,13 @@ public class BlittableCoraxFlag : StorageTest
     private DynamicJsonValue json1 = new() {["Address"] = new DynamicJsonValue() {["City"] = "Atlanta", ["ZipCode"] = 1254}, ["Friends"] = "yes"};
     private DynamicJsonValue json2 = new() {["Address"] = new DynamicJsonValue() {["ZipCode"] = 1234, ["City"] = "New York"}, ["Friends"] = "no"};
 
-    public BlittableCoraxFlag(ITestOutputHelper output) : base(output)
+    public RawCoraxFlag(ITestOutputHelper output) : base(output)
     {
         _bsc = new ByteStringContext(SharedMultipleUseFlag.None);
     }
 
     [Fact]
-    public unsafe void CanStoreBlittableWithAnalyzers()
-    {
-        using var ctx = JsonOperationContext.ShortTermSingleUse();
-        _analyzers = CreateKnownFields(_bsc, true);
-        using var blittable1 = ctx.ReadObject(json1, "foo");
-        using var blittable2 = ctx.ReadObject(json2, "foo");
-        using(var writer = new IndexWriter(Env, _analyzers))
-        {
-            Span<byte> buffer = new byte[10 * 1024];
-            foreach (var (id, item) in new[] {("item/1", blittable1), ("item/2", blittable2)})
-            {
-                var entry = new IndexEntryWriter(buffer, _analyzers);
-                entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
-                entry.Write(ContentId, new Span<byte>(item.BasePointer, item.Size), Encodings.Utf8.GetBytes(item.ToString()).AsSpan());
-                entry.Finish(out var output);
-                writer.Index(id, output, _analyzers);
-            }
-
-            writer.Commit();
-        }
-
-        Span<long> mem = stackalloc long[1024];
-        using (var searcher = new IndexSearcher(Env, _analyzers))
-        {
-            var match = searcher.SearchQuery("Content", "1254", Constants.Search.Operator.Or, false, 1);
-            Assert.Equal(1, match.Fill(mem));
-            var result = searcher.GetReaderFor(mem[0]);
-            result.Read(1, out Span<byte> blittableBinary, out Span<byte> blittableText);
-
-            fixed (byte* ptr = &blittableBinary.GetPinnableReference())
-            {
-                var reader = new BlittableJsonReaderObject(ptr, blittableBinary.Length, ctx);
-                Assert.Equal(blittable1.Size, reader.Size);
-                Assert.True(blittable1.Equals(reader));
-            }
-        }
-
-        //Delete part
-        using (var indexWriter = new IndexWriter(Env, _analyzers))
-        {
-            Assert.True(indexWriter.TryDeleteEntry("Id", "item/1"));
-            indexWriter.Commit();
-        }
-
-        {
-            using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
-            var match = searcher.AllEntries();
-            Assert.Equal(1, match.Fill(mem));
-            Assert.Equal("item/2", searcher.GetIdentityFor(mem[0]));
-        }
-        
-        
-    }
-
-    [Fact]
-    public unsafe void CanStoreBlittableWithoutAnalyzers()
+    public unsafe void StoreBlittableWithoutSavingItIntoIndex()
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
         _analyzers = CreateKnownFields(_bsc, false);
@@ -98,7 +42,7 @@ public class BlittableCoraxFlag : StorageTest
             {
                 var entry = new IndexEntryWriter(buffer, _analyzers);
                 entry.Write(IndexId, Encodings.Utf8.GetBytes(id));
-                entry.Write(ContentId, new Span<byte>(item.BasePointer, item.Size), Encodings.Utf8.GetBytes(item.ToString()).AsSpan());
+                entry.WriteRaw(ContentId, new Span<byte>(item.BasePointer, item.Size));
                 entry.Finish(out var output);
                 writer.Index(id, output, _analyzers);
             }
@@ -109,10 +53,13 @@ public class BlittableCoraxFlag : StorageTest
         Span<long> mem = stackalloc long[1024];
         {
             using var searcher = new IndexSearcher(Env, _analyzers);
-            var match = searcher.TermQuery("Content", blittable1.ToString(), ContentId);
+            var termMatch = searcher.TermQuery("Content", Encodings.Utf8.GetString(blittable1.BasePointer, blittable1.Size));
+            Assert.Equal(0, termMatch.Fill(mem));
+
+            var match = searcher.TermQuery("Id", "1", IndexId);
             Assert.Equal(1, match.Fill(mem));
             var result = searcher.GetReaderFor(mem[0]);
-            result.Read(1, out Span<byte> blittableBinary, out Span<byte> blittableText);
+            result.Read(1, out Span<byte> blittableBinary);
 
             fixed (byte* ptr = &blittableBinary.GetPinnableReference())
             {
@@ -121,7 +68,7 @@ public class BlittableCoraxFlag : StorageTest
                 Assert.True(blittable1.Equals(reader));
             }
         }
-        
+
         //Delete part
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
@@ -136,7 +83,7 @@ public class BlittableCoraxFlag : StorageTest
             Assert.Equal("2", searcher.GetIdentityFor(mem[0]));
         }
     }
-    
+
     [Fact]
     public unsafe void CanStoreBlittableWithWriterScope()
     {
@@ -155,6 +102,7 @@ public class BlittableCoraxFlag : StorageTest
                 {
                     scope.Write(ContentId, ref entry);
                 }
+
                 entry.Finish(out var output);
                 writer.Index(id, output, _analyzers);
             }
@@ -165,11 +113,11 @@ public class BlittableCoraxFlag : StorageTest
         Span<long> mem = stackalloc long[1024];
         {
             using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
-            var match = searcher.SearchQuery("Content", "1254", Constants.Search.Operator.Or, false, ContentId);
+            var match = searcher.SearchQuery("Id", "1", Constants.Search.Operator.Or, false, IndexId);
             Assert.Equal(1, match.Fill(mem));
             var result = searcher.GetReaderFor(mem[0]);
-            result.Read(1, out Span<byte> blittableBinary, out Span<byte> blittableText);
-            var resStr = Encodings.Utf8.GetString(blittableText);
+            result.Read(1, out Span<byte> blittableBinary);
+
             fixed (byte* ptr = &blittableBinary.GetPinnableReference())
             {
                 var reader = new BlittableJsonReaderObject(ptr, blittableBinary.Length, ctx);
@@ -177,7 +125,7 @@ public class BlittableCoraxFlag : StorageTest
                 Assert.True(blittable1.Equals(reader));
             }
         }
-        
+
         //Delete part
         using (var indexWriter = new IndexWriter(Env, _analyzers))
         {
