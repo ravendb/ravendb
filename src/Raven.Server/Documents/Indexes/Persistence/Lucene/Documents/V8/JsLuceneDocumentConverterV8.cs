@@ -77,6 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
                 documentToProcess = boostedValue;
             }
 
+            var jsPropertyValueNew = InternalHandle.Empty;
             foreach (var (propertyName, jsPropertyValue) in documentToProcess.GetOwnProperties())
             {
                 object value;
@@ -85,110 +86,121 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
                 if (_fields.TryGetValue(propertyName, out var field) == false)
                     field = _fields[propertyName] = IndexField.Create(propertyName, new IndexFieldOptions(), _allFields);
 
-                using (jsPropertyValue)
+                jsPropertyValueNew.Set(jsPropertyValue);
+                try
                 {
-                    var isObject = IsObject(jsPropertyValue);
-                    if (isObject)
+                    using (jsPropertyValue)
                     {
-                        if (TryGetBoostedValue(jsPropertyValue, out boostedValue, out propertyBoost))
-                        {
-                            using (boostedValue)
-                            {
-                                jsPropertyValue.Set(boostedValue);
-                                isObject = IsObject(jsPropertyValue);
-                            }
-                        }
-
+                        var isObject = IsObject(jsPropertyValueNew);
                         if (isObject)
                         {
-                            //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
-                            //so we must use field.Name and not property from this point on.
-                            using (InternalHandle jsValue = TryDetectDynamicFieldCreation(propertyName, jsPropertyValue, field))
+                            if (TryGetBoostedValue(jsPropertyValueNew, out boostedValue, out propertyBoost))
                             {
-                                if (jsValue.IsEmpty == false)
+                                using (boostedValue)
                                 {
-                                    if (jsValue.IsObject && jsValue.HasProperty(SpatialPropertyName))
-                                    {
-                                        jsPropertyValue.Set(jsValue); //Here we populate the dynamic spatial field that will be handled below.
-                                    }
-                                    else
-                                    {
-                                        value = TypeConverter.ToBlittableSupportedType(jsValue, flattenArrays: false, forIndexing: true,
-                                            engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
-                                        numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
-
-                                        newFields += numberOfCreatedFields;
-
-                                        BoostDocument(instance, numberOfCreatedFields, documentBoost);
-
-                                        if (value is IDisposable toDispose1)
-                                        {
-                                            // the value was converted to a lucene field and isn't needed anymore
-                                            toDispose1.Dispose();
-                                        }
-
-                                        continue;
-                                    }
+                                    jsPropertyValueNew.Set(boostedValue);
+                                    isObject = IsObject(jsPropertyValueNew);
                                 }
+                            }
 
-                                if (jsPropertyValue.TryGetValue(SpatialPropertyName, out var inner))
+                            if (isObject)
+                            {
+                                //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
+                                //so we must use field.Name and not property from this point on.
+                                using (InternalHandle jsValue = TryDetectDynamicFieldCreation(propertyName, jsPropertyValueNew, field))
                                 {
-                                    using (inner)
+                                    if (jsValue.IsEmpty == false)
                                     {
-                                        SpatialField spatialField;
-                                        IEnumerable<AbstractField> spatial;
-                                        if (inner.IsStringEx)
+                                        if (jsValue.IsObject && jsValue.HasProperty(SpatialPropertyName))
                                         {
-                                            spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                            spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString);
+                                            jsPropertyValueNew.Set(jsValue); //Here we populate the dynamic spatial field that will be handled below.
                                         }
-                                        else if (inner.IsObject)
+                                        else
                                         {
-                                            if (inner.HasOwnProperty("Lat") && inner.HasOwnProperty("Lng") && inner.TryGetValue("Lat", out var lat))
+                                            value = TypeConverter.ToBlittableSupportedType(jsValue, flattenArrays: false, forIndexing: true,
+                                                engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
+                                            numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext,
+                                                out _);
+
+                                            newFields += numberOfCreatedFields;
+
+                                            BoostDocument(instance, numberOfCreatedFields, documentBoost);
+
+                                            if (value is IDisposable toDispose1)
                                             {
-                                                using (lat)
+                                                // the value was converted to a lucene field and isn't needed anymore
+                                                toDispose1.Dispose();
+                                            }
+
+                                            continue;
+                                        }
+                                    }
+
+                                    if (jsPropertyValueNew.TryGetValue(SpatialPropertyName, out var inner))
+                                    {
+                                        using (inner)
+                                        {
+                                            SpatialField spatialField;
+                                            IEnumerable<AbstractField> spatial;
+                                            if (inner.IsStringEx)
+                                            {
+                                                spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                                spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString);
+                                            }
+                                            else if (inner.IsObject)
+                                            {
+                                                if (inner.HasOwnProperty("Lat") && inner.HasOwnProperty("Lng") && inner.TryGetValue("Lat", out var lat))
                                                 {
-                                                    if (lat.IsNumberOrIntEx && inner.TryGetValue("Lng", out var lng) && lng.IsNumberOrIntEx)
+                                                    using (lat)
                                                     {
-                                                        using (lng)
+                                                        if (lat.IsNumberOrIntEx && inner.TryGetValue("Lng", out var lng) && lng.IsNumberOrIntEx)
                                                         {
-                                                            spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                                            spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsDouble, lng.AsDouble);
+                                                            using (lng)
+                                                            {
+                                                                spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                                                spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsDouble, lng.AsDouble);
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            continue; //Ignoring bad spatial field
                                                         }
                                                     }
-                                                    else
-                                                    {
-                                                        continue; //Ignoring bad spatial field
-                                                    }
+                                                }
+                                                else
+                                                {
+                                                    continue; //Ignoring bad spatial field
                                                 }
                                             }
                                             else
                                             {
                                                 continue; //Ignoring bad spatial field
                                             }
-                                        }
-                                        else
-                                        {
-                                            continue; //Ignoring bad spatial field
-                                        }
 
 
-                                        numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext, out _);
+                                            numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext,
+                                                out _);
+                                        }
+
+                                        newFields += numberOfCreatedFields;
+
+                                        BoostDocument(instance, numberOfCreatedFields, documentBoost);
+
+                                        continue;
                                     }
-
-                                    newFields += numberOfCreatedFields;
-
-                                    BoostDocument(instance, numberOfCreatedFields, documentBoost);
-
-                                    continue;
                                 }
                             }
                         }
-                    }
 
-                    value = TypeConverter.ToBlittableSupportedType(jsPropertyValue, flattenArrays: false, forIndexing: true, engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
+                        value = TypeConverter.ToBlittableSupportedType(jsPropertyValueNew, flattenArrays: false, forIndexing: true,
+                            engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
+                    }
                 }
-                
+                finally
+                {
+                    jsPropertyValueNew.Dispose();
+                }
+
                 numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
 
                 newFields += numberOfCreatedFields;
