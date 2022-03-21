@@ -8,6 +8,22 @@ namespace Raven.Client.Documents.Operations
         DynamicJsonValue ToJson();
     }
 
+    public class SetupRvnProgress : IOperationProgress
+    {
+        public long Processed { get; set; }
+        public long Total { get; set; }
+    
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue(GetType())
+            {
+                ["Processed"] = Processed,
+                ["Total"] = Total
+            };
+        }
+    }
+    
+    
     /// <summary>
     /// Used to describe operations with progress expressed as percentage (using processed / total items)
     /// </summary>

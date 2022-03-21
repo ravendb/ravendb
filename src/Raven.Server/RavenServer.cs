@@ -142,7 +142,7 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
-            Certificate = LoadCertificateAtStartup() ?? new CertificateHolder();
+            Certificate = LoadCertificateAtStartup() ?? new LetsEncryptUtils.CertificateHolder();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
@@ -976,11 +976,11 @@ namespace Raven.Server
             return true;
         }
 
-        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate, string raftRequestId, bool forceRenew = false)
+        private async Task DoActualCertificateRefresh(LetsEncryptUtils.CertificateHolder currentCertificate, string raftRequestId, bool forceRenew = false)
         {
             try
             {
-                CertificateHolder newCertificate;
+                LetsEncryptUtils.CertificateHolder newCertificate;
                 var msg = "Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!";
                 try
                 {
@@ -1067,7 +1067,7 @@ namespace Raven.Server
             }
         }
 
-        protected async Task<byte[]> RefreshViaLetsEncrypt(CertificateHolder currentCertificate, bool forceRenew)
+        protected async Task<byte[]> RefreshViaLetsEncrypt(LetsEncryptUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
             byte[] newCertBytes;
             if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
@@ -1152,7 +1152,7 @@ namespace Raven.Server
             return newCertBytes;
         }
 
-        public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(CertificateHolder currentCertificate, bool forceRenew)
+        public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(LetsEncryptUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
             // we want to setup all the renewals for Saturdays, 30 days before expiration. This is done to reduce the amount of cert renewals that are counted against our renewals
             // but if we have less than 20 days or user asked to force-renew, we'll try anyway.
@@ -1255,7 +1255,7 @@ namespace Raven.Server
             }
         }
 
-        private async Task<byte[]> RenewLetsEncryptCertificate(CertificateHolder existing)
+        private async Task<byte[]> RenewLetsEncryptCertificate(LetsEncryptUtils.CertificateHolder existing)
         {
             var license = ServerStore.LoadLicense();
 
@@ -1343,7 +1343,7 @@ namespace Raven.Server
             var certBytes = Convert.FromBase64String(setupInfo.Certificate);
 
             SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, certBytes,
-                setupInfo.Password, ServerStore);
+                setupInfo.Password, ServerStore.LicenseManager.LicenseStatus.Type, true);
 
             return certBytes;
         }
@@ -1380,7 +1380,7 @@ namespace Raven.Server
             return Configuration.Core.ServerUrls[0];
         }
 
-        private CertificateHolder LoadCertificateAtStartup()
+        private LetsEncryptUtils.CertificateHolder LoadCertificateAtStartup()
         {
             try
             {
@@ -1399,7 +1399,7 @@ namespace Raven.Server
             }
         }
 
-        private CertificateHolder LoadCertificate()
+        private LetsEncryptUtils.CertificateHolder LoadCertificate()
         {
             try
             {
@@ -1702,15 +1702,8 @@ namespace Raven.Server
 
         public string WebUrl { get; private set; }
 
-        internal CertificateHolder Certificate;
-
-        public class CertificateHolder
-        {
-            public string CertificateForClients;
-            public X509Certificate2 Certificate;
-            public AsymmetricKeyEntry PrivateKey;
-        }
-
+        internal LetsEncryptUtils.CertificateHolder Certificate;
+        
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -2270,7 +2263,7 @@ namespace Raven.Server
         internal void SetCertificate(X509Certificate2 certificate, byte[] rawBytes, string password)
         {
             var certificateHolder = Certificate;
-            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore);
+            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore.LicenseManager.LicenseStatus.Type, true);
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
                 _httpsConnectionMiddleware.SetCertificate(certificate);

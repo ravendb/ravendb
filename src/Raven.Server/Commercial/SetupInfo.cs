@@ -80,8 +80,8 @@ namespace Raven.Server.Commercial
             {
                 var localCertBytes = Convert.FromBase64String(Certificate);
                 return string.IsNullOrEmpty(Password)
-                      ? new X509Certificate2(localCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
-                      : new X509Certificate2(localCertBytes, Password, X509KeyStorageFlags.MachineKeySet);
+                    ? new X509Certificate2(localCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
+                    : new X509Certificate2(localCertBytes, Password, X509KeyStorageFlags.MachineKeySet);
             }
             catch (Exception e)
             {
@@ -121,12 +121,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(NodeTag)] = NodeTag,
-                [nameof(RegisterClientCert)] = RegisterClientCert,
-                [nameof(Zip)] = Zip
-            };
+            return new DynamicJsonValue {[nameof(NodeTag)] = NodeTag, [nameof(RegisterClientCert)] = RegisterClientCert, [nameof(Zip)] = Zip};
         }
     }
 
@@ -136,10 +131,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(License)] = License.ToJson(),
-            };
+            return new DynamicJsonValue {[nameof(License)] = License.ToJson(),};
         }
     }
 
@@ -150,11 +142,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(License)] = License.ToJson(),
-                [nameof(Domain)] = Domain
-            };
+            return new DynamicJsonValue {[nameof(License)] = License.ToJson(), [nameof(Domain)] = Domain};
         }
     }
 
@@ -186,11 +174,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Ips)] = new DynamicJsonArray(Ips),
-                [nameof(SubDomain)] = SubDomain,
-            };
+            return new DynamicJsonValue {[nameof(Ips)] = new DynamicJsonArray(Ips), [nameof(SubDomain)] = SubDomain,};
         }
     }
 
@@ -206,11 +190,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(SubDomain)] = SubDomain,
-                [nameof(Ips)] = new DynamicJsonArray(Ips)
-            };
+            return new DynamicJsonValue {[nameof(SubDomain)] = SubDomain, [nameof(Ips)] = new DynamicJsonArray(Ips)};
         }
     }
 
@@ -224,9 +204,7 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
-                [nameof(UserDomainsWithIps)] = UserDomainsWithIps.ToJson(),
-                [nameof(MaxClusterSize)] = MaxClusterSize,
-                [nameof(LicenseType)] = LicenseType
+                [nameof(UserDomainsWithIps)] = UserDomainsWithIps.ToJson(), [nameof(MaxClusterSize)] = MaxClusterSize, [nameof(LicenseType)] = LicenseType
             };
         }
     }
@@ -239,12 +217,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Emails)] = Emails,
-                [nameof(RootDomains)] = RootDomains,
-                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
-            };
+            return new DynamicJsonValue {[nameof(Emails)] = Emails, [nameof(RootDomains)] = RootDomains, [nameof(Domains)] = DynamicJsonValue.Convert(Domains)};
         }
     }
 
@@ -256,12 +229,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Emails)] = Emails,
-                [nameof(RootDomains)] = RootDomains,
-                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
-            };
+            return new DynamicJsonValue {[nameof(Emails)] = Emails, [nameof(RootDomains)] = RootDomains, [nameof(Domains)] = DynamicJsonValue.Convert(Domains)};
         }
     }
 
@@ -271,10 +239,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Status)] = Status
-            };
+            return new DynamicJsonValue {[nameof(Status)] = Status};
         }
     }
 
@@ -286,6 +251,51 @@ namespace Raven.Server.Commercial
         Validation,
         GenerateCertificate,
         Finish
+    }
+
+    public class SetupProgressAndResultFromRvn : IOperationResult,IOperationProgress
+    {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+
+        public bool ShouldPersist => false;
+        public string Message { get; private set; }
+
+        public readonly ConcurrentQueue<string> Messages;
+
+        public SetupProgressAndResultFromRvn(string message)
+        {
+            Messages = new ConcurrentQueue<string>();
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue(GetType()) {[nameof(Messages)] = Messages.ToArray()};
+
+            return json;
+        }
+        
+        public void AddWarning(string message)
+        {
+            AddMessage("WARNING", message);
+        }
+
+        public void AddInfo(string message)
+        {
+            AddMessage("INFO", message);
+        }
+
+        public void AddError(string message, Exception ex = null)
+        {
+            AddMessage("ERROR", message, ex);
+        }
+
+        private void AddMessage(string type, string message, Exception ex = null) //<-- remember last message here
+        {
+            Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
+            Messages.Enqueue(Message);
+            if (Logger.IsInfoEnabled)
+                Logger.Info(Message, ex);
+        }
     }
 
     public class SetupProgressAndResult : IOperationResult, IOperationProgress
@@ -311,10 +321,7 @@ namespace Raven.Server.Commercial
         {
             var json = new DynamicJsonValue(GetType())
             {
-                [nameof(Processed)] = Processed,
-                [nameof(Total)] = Total,
-                [nameof(Readme)] = Readme,
-                [nameof(Messages)] = Messages.ToArray()
+                [nameof(Processed)] = Processed, [nameof(Total)] = Total, [nameof(Readme)] = Readme, [nameof(Messages)] = Messages.ToArray()
             };
 
             if (Certificate != null)
@@ -355,10 +362,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Nodes)] = Nodes != null ? new DynamicJsonArray(Nodes.Select(x => x.ToJson())) : null
-            };
+            return new DynamicJsonValue {[nameof(Nodes)] = Nodes != null ? new DynamicJsonArray(Nodes.Select(x => x.ToJson())) : null};
         }
 
         public class Node
@@ -367,10 +371,7 @@ namespace Raven.Server.Commercial
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue
-                {
-                    [nameof(Tag)] = Tag
-                };
+                return new DynamicJsonValue {[nameof(Tag)] = Tag};
             }
         }
     }
