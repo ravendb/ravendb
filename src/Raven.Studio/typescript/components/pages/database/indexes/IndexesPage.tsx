@@ -22,7 +22,7 @@ import genUtils from "common/generalUtils";
 import { shardingTodo } from "common/developmentHelper";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import { CheckboxTriple } from "../../../common/CheckboxTriple";
-import eventsCollector from "common/eventsCollector";
+import { useEventsCollector } from "../../../hooks/useEventsCollector";
 
 interface IndexesPageProps {
     database: database;
@@ -138,6 +138,8 @@ export function IndexesPage(props: IndexesPageProps) {
     const locations = database.getLocations();
     
     const { indexesService } = useServices();
+    
+    const eventsCollector = useEventsCollector();
     
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
     
@@ -273,7 +275,7 @@ export function IndexesPage(props: IndexesPageProps) {
     const resetIndex = async (index: IndexSharedInfo) => {
         const canReset = await confirmResetIndex(database, index);
         if (canReset) {
-            eventsCollector.default.reportEvent("indexes", "reset");
+            eventsCollector.reportEvent("indexes", "reset");
             
             const locations = database.getLocations();
             while (locations.length) {
@@ -304,7 +306,7 @@ export function IndexesPage(props: IndexesPageProps) {
     }
     
     const toggleSelectAll = () => {
-        eventsCollector.default.reportEvent("indexes", "toggle-select-all");
+        eventsCollector.reportEvent("indexes", "toggle-select-all");
         
         const selectedIndexesCount = selectedIndexes.length;
 

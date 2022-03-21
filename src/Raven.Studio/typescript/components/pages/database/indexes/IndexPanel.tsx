@@ -5,7 +5,7 @@ import { IndexNodeInfo, IndexNodeInfoDetails, IndexSharedInfo } from "../../../m
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { useAppUrls } from "../../../hooks/useAppUrls";
 import IndexUtils from "../../../utils/IndexUtils";
-import eventsCollector from "common/eventsCollector";
+import { useEventsCollector } from "../../../hooks/useEventsCollector";
 
 interface IndexPanelProps {
     index: IndexSharedInfo;
@@ -21,6 +21,8 @@ interface IndexPanelProps {
 
 export function IndexPanel(props: IndexPanelProps) {
     const { index, selected, toggleSelection } = props;
+    
+    const eventsCollector = useEventsCollector();
 
     const [updatingLocalPriority, setUpdatingLocalPriority] = useState(false);
     const [updatingLockMode, setUpdatingLockMode] = useState(false);
@@ -52,7 +54,7 @@ export function IndexPanel(props: IndexPanelProps) {
     
     const enableIndexing = async (e: MouseEvent) => {
         e.preventDefault();
-        eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
+        eventsCollector.reportEvent("indexes", "set-state", "enabled");
         setUpdatingState(true);
         try {
             await props.enableIndexing();
@@ -63,7 +65,7 @@ export function IndexPanel(props: IndexPanelProps) {
     
     const disableIndexing = async (e: MouseEvent) => {
         e.preventDefault();
-        eventsCollector.default.reportEvent("indexes", "set-state", "disabled");
+        eventsCollector.reportEvent("indexes", "set-state", "disabled");
         setUpdatingState(true);
         try {
             await props.disableIndexing();
