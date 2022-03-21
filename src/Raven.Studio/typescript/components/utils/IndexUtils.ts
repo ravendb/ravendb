@@ -4,7 +4,6 @@ import { IndexNodeInfoDetails, IndexSharedInfo, IndexStatus } from "../models/in
 import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import collection from "models/database/documents/collection";
 
-
 export default class IndexUtils {
 
     static readonly DefaultIndexGroupName = "Other";

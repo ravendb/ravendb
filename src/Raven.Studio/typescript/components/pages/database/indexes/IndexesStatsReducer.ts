@@ -3,6 +3,7 @@ import { Reducer } from "react";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
+import { produce } from "immer";
 
 interface ActionStatsLoaded {
     location: databaseLocationSpecifier;
@@ -22,6 +23,11 @@ interface ActionSetIndexLockMode {
     type: "SetLockMode";
 }
 
+interface ActionDeleteIndexes {
+    indexNames: string[];
+    type: "DeleteIndexes"
+}
+
 interface ActionDisableIndexing {
     indexName: string;
     location: databaseLocationSpecifier;
@@ -34,7 +40,7 @@ interface ActionEnableIndexing {
     type: "EnableIndexing";
 }
 
-type IndexesStatsReducerAction = ActionStatsLoaded | ActionSetIndexPriority | ActionSetIndexLockMode | ActionDisableIndexing | ActionEnableIndexing;
+type IndexesStatsReducerAction = ActionDeleteIndexes | ActionStatsLoaded | ActionSetIndexPriority | ActionSetIndexLockMode | ActionDisableIndexing | ActionEnableIndexing;
 
 interface IndexesStatsState {
     indexes: IndexSharedInfo[];
@@ -117,84 +123,34 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                 ...state,
                 indexes
             }
+        case "DeleteIndexes":
+            return produce(state, draft => {
+                draft.indexes = draft.indexes.filter(x => !action.indexNames.includes(x.name));
+            });
         case "SetPriority":
-            return {
-                ...state,
-                indexes: state.indexes.map(index => {
-                    if (index.name === action.indexName) {
-                        return {
-                            ...index,
-                            priority: action.priority
-                        }
-                    }
-                    return index;
-                })
-            }
+            return produce(state, draft => {
+                const matchedIndex = draft.indexes.find(x => x.name === action.indexName);
+                matchedIndex.priority = action.priority;
+            });
         case "SetLockMode":
-            return {
-                ...state,
-                indexes: state.indexes.map(index => {
-                    if (index.name === action.indexName) {
-                        return {
-                            ...index,
-                            lockMode: action.lockMode
-                        }
-                    }
-                    return index;
-                })
-            }
+            return produce(state, draft => {
+                const matchedIndex = draft.indexes.find(x => x.name === action.indexName);
+                matchedIndex.lockMode = action.lockMode;
+            });
         case "EnableIndexing":
-            return {
-                ...state,
-                indexes: state.indexes.map(index => {
-                    if (index.name !== action.indexName) {
-                        return index;
-                    } else {
-                        return {
-                            ...index,
-                            nodesInfo: index.nodesInfo.map(nodeInfo => {
-                                if (nodeInfo.location.nodeTag === action.location.nodeTag && nodeInfo.location.shardNumber === action.location.shardNumber) {
-                                    return {
-                                        ...nodeInfo,
-                                        details: {
-                                            ...nodeInfo.details,
-                                            state: "Normal",
-                                            status: "Running"
-                                        }
-                                    }
-                                }
-                                return nodeInfo;
-                            })
-                        }
-                    }
-                })
-            }
+            return produce(state, draft => {
+                const index = draft.indexes.find(x => x.name === action.indexName);
+                const nodeInfo = index.nodesInfo.find(x => x.location.nodeTag === action.location.nodeTag && x.location.shardNumber === action.location.shardNumber);
+                nodeInfo.details.status = "Running";
+                nodeInfo.details.state = "Normal";
+            });
         case "DisableIndexing":
-            return {
-                ...state,
-                indexes: state.indexes.map(index => {
-                    if (index.name !== action.indexName) {
-                        return index;
-                    } else {
-                        return {
-                            ...index,
-                            nodesInfo: index.nodesInfo.map(nodeInfo => {
-                                if (nodeInfo.location.nodeTag === action.location.nodeTag && nodeInfo.location.shardNumber === action.location.shardNumber) {
-                                    return {
-                                        ...nodeInfo,
-                                        details: {
-                                            ...nodeInfo.details,
-                                            state: "Disabled",
-                                            status: "Disabled"
-                                        }
-                                    }
-                                }
-                                return nodeInfo;
-                            })
-                        }
-                    }
-                })
-            }
+            return produce(state, draft => {
+                const index = draft.indexes.find(x => x.name === action.indexName);
+                const nodeInfo = index.nodesInfo.find(x => x.location.nodeTag === action.location.nodeTag && x.location.shardNumber === action.location.shardNumber);
+                nodeInfo.details.status = "Disabled";
+                nodeInfo.details.state = "Disabled";
+            });
         default:
             console.warn("Unhandled action: ", action)
             return state;

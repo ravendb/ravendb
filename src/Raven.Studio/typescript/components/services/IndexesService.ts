@@ -29,8 +29,8 @@ export default class IndexesService {
         return stats;
     }
     
-    async resetIndex(index: IndexSharedInfo, db: database) {
-        await new resetIndexCommand(index.name, db)
+    async resetIndex(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
+        await new resetIndexCommand(index.name, db, location)
             .execute();
     } 
     
