@@ -1,8 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Collections.Generic;
+﻿using System.Linq;
 using FastTests;
-using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
@@ -18,7 +15,9 @@ public class RavenDB_18332 : RavenTestBase
 
     private class User
     {
+#pragma warning disable CS0649
         public string Id, Name, CompanyId;
+#pragma warning restore CS0649
     }
 
     [Fact]
@@ -61,15 +60,13 @@ public class RavenDB_18332 : RavenTestBase
             });
             s.SaveChanges();
         }
-        
-        WaitForIndexing(store);
-        
+
+        Indexes.WaitForIndexing(store);
+
         using (var s = store.OpenSession())
         {
             int count = s.Query<dynamic>("MyIndex").Count();
             Assert.Equal(1, count);
         }
-
-
     }
 }

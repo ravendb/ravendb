@@ -14,18 +14,20 @@ namespace SlowTests.Issues
         {
         }
 
-        public class User
+        private class User
         {
+#pragma warning disable CS0649
             public string Email;
+#pragma warning restore CS0649
         }
-        
-        public class User_Search : AbstractIndexCreationTask<User>
+
+        private class User_Search : AbstractIndexCreationTask<User>
         {
             public User_Search()
             {
                 Map = users =>
                     from u in users
-                    select new {Email = u.Email + "---"};
+                    select new { Email = u.Email + "---" };
             }
         }
 
@@ -47,7 +49,7 @@ namespace SlowTests.Issues
                 var q = await s.Query<User, User_Search>()
                     .Where(x => x.Email == "---")
                     .ToListAsync();
-                
+
                 Assert.NotEmpty(q);
             }
 
