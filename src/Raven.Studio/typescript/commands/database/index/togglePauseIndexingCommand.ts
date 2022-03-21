@@ -17,9 +17,13 @@ class togglePauseIndexingCommand extends commandBase {
     private toggleAll = false;
     private names: Array<string>;
     private type: toggleType;
+    private location: databaseLocationSpecifier;
 
-    constructor(private start: boolean, private db: database, options: optsNames | optsType = null) {
+    constructor(private start: boolean, private db: database, options: optsNames | optsType = null, location: databaseLocationSpecifier = undefined) {
         super();
+        
+        this.location = location;
+        
         if (options && "name" in options) {
             this.names = options.name;
         } else if (options && "type" in options) {
@@ -32,11 +36,13 @@ class togglePauseIndexingCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const basicUrl = this.start ? endpoints.databases.adminIndex.adminIndexesStart : endpoints.databases.adminIndex.adminIndexesStop;
 
-        let args: optsNames | optsType = null;
+        let args: any = {
+            ...this.location
+        };
         if (this.names) {
-            args = { name: this.names };
+            args.name = this.names;
         } else if (this.type) {
-            args = { type: this.type };
+            args.type = this.type;
         }
 
         const url = basicUrl + (args ? this.urlEncodeArgs(args) : "");

@@ -6,3 +6,8 @@ export function withPreventDefault(action: Function): MouseEventHandler<HTMLElem
         action();
     }
 }
+
+
+export function databaseLocationComparator(lhs: databaseLocationSpecifier, rhs: databaseLocationSpecifier) {
+    return lhs.nodeTag === rhs.nodeTag && lhs.shardNumber === rhs.shardNumber;
+}
