@@ -25,7 +25,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void Seed(IDocumentStore store)
+        private void Seed(IDocumentStore store)
         {
             new Ent1Index().Execute(store);
             new Ent1Index_Dynamic().Execute(store);
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private static void Test(IDocumentStore store)

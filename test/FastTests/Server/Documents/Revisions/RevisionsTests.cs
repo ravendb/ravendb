@@ -239,7 +239,7 @@ namespace FastTests.Server.Documents.Revisions
                         session.SaveChanges();
                     }
                 }
-                var database =  await GetDocumentDatabaseInstanceFor(store);
+                var database =  await Databases.GetDocumentDatabaseInstanceFor(store);
                 var dbId =  database.DbBase64Id;
                 var cv = $"A:23-{dbId}";
                 var cv2 = $"A:3-{dbId}";
@@ -422,7 +422,7 @@ namespace FastTests.Server.Documents.Revisions
                     }
                 }
                 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var dbId = database.DbBase64Id;
                 var cv = $"A:23-{dbId}";
                 var cv2 = $"A:3-{dbId}";
@@ -620,7 +620,7 @@ namespace FastTests.Server.Documents.Revisions
                 configuration.Default.MinimumRevisionsToKeep = 5;
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
@@ -704,7 +704,7 @@ namespace FastTests.Server.Documents.Revisions
                 configuration.Default.MinimumRevisionsToKeep = 5;
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
@@ -769,7 +769,7 @@ namespace FastTests.Server.Documents.Revisions
                 configuration.Default = null;
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
@@ -961,7 +961,7 @@ namespace FastTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var old = GetDocumentDatabaseInstanceFor(store).Result;
+                var old = await Databases.GetDocumentDatabaseInstanceFor(store);
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 using (var session = store.OpenAsyncSession())
@@ -972,7 +972,7 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal("Company Name", companiesRevisions[1].Name);
                 }
 
-                var newInstance = GetDocumentDatabaseInstanceFor(store).Result;
+                var newInstance = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 Assert.NotSame(old, newInstance);
             }
@@ -1456,7 +1456,7 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database,
                     modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
 
                 for (var i = 0; i < 10; i++)
@@ -1513,7 +1513,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {

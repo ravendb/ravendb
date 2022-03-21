@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 ValidateTotalExpirationCount(batchSize);
 
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;

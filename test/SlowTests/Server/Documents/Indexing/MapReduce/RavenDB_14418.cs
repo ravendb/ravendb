@@ -35,7 +35,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -82,7 +82,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -126,11 +126,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new Orders_ProfitByProductAndOrderedAt("MyNewProfitsReferences").Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -159,11 +159,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new Orders_ProfitByProductAndOrderedAt(outputReduceToCollection: "Profits2").Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 WaitForUserToContinueTheTest(store);
 

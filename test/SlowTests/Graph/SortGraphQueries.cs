@@ -17,7 +17,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<Order>(@"
@@ -33,7 +33,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<Product>(@"
@@ -51,7 +51,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<Order>(@"
@@ -95,7 +95,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<Product>(@"

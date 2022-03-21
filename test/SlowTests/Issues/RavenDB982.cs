@@ -28,7 +28,7 @@ namespace SlowTests.Issues
 
                 new PeopleByAge().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {

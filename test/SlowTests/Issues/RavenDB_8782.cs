@@ -60,7 +60,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var results = session.Query<Orders_ByProductAndCount_MethodSyntax.Result, Orders_ByProductAndCount_MethodSyntax>()
                         .OrderBy(x => x.Count)

@@ -41,7 +41,7 @@ namespace SlowTests.Server.Documents
                     })).WaitForCompletionAsync(TimeSpan.FromSeconds(300));
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));

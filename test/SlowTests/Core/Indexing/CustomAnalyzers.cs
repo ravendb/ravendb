@@ -45,7 +45,7 @@ namespace SlowTests.Core.Indexing
                     session.Store(new Company { Name = "b" });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     RavenTestHelper.AssertNoIndexErrors(store);
 
                     var companies = session.Query<Company, Companies_SortByName>()
@@ -89,7 +89,7 @@ namespace SlowTests.Core.Indexing
                         Phone = 111222333
                     }, "companies/1");
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     //StandardAnalyzer
                     var companies = session.Query<Company, Companies_CustomAnalyzers>()
@@ -263,7 +263,7 @@ namespace SlowTests.Core.Indexing
                         Name = "The lazy dogs, Bob@hotmail.com lazy 123432 lazy dogs."
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     companies = session.Advanced.DocumentQuery<Company>("Companies/CustomAnalyzers")
                         .Highlight("Name", 128, 1, out Highlightings highlightings)

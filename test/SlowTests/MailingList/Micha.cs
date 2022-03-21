@@ -36,7 +36,7 @@ namespace SlowTests.MailingList
             {
                 new EntityEntityIdPatch().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Operations.Send(new PatchByQueryOperation(
                     new IndexQuery { Query = @"FROM INDEX 'EntityEntityIdPatch' UPDATE { 

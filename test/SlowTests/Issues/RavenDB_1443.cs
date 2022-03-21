@@ -52,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void ActualTestCase(IDocumentStore store)
+        private void ActualTestCase(IDocumentStore store)
         {
             var lorem = new[]
             {
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
                 session.SaveChanges();
             }
 
-            WaitForIndexing((DocumentStore)store);
+            Indexes.WaitForIndexing((DocumentStore)store);
 
             using (var session = store.OpenSession())
             {

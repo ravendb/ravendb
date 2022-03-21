@@ -87,7 +87,7 @@ namespace FastTests.Client
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -170,7 +170,7 @@ namespace FastTests.Client
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -621,7 +621,7 @@ namespace FastTests.Client
 
                     newSession.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
                 
                 using (var newSession = store.OpenSession())

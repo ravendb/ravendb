@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"match (Employees)-[ReportsTo]->(Employees)").ToArray();
@@ -35,7 +35,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() =>
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() =>
@@ -74,7 +74,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateDogDataWithCycle(store);
+                Samples.CreateDogDataWithCycle(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -94,7 +94,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateDogDataWithCycle(store);
+                Samples.CreateDogDataWithCycle(store);
 
                 using (var session = store.OpenSession())
                 {

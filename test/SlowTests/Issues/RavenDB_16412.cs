@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                     new Orders_ByOrderedAtAndShippedAt("index_" + i).Execute(store);
                 }
 
-                WaitForIndexing(store, allowErrors: false);
+                Indexes.WaitForIndexing(store, allowErrors: false);
 
                 WaitForUserToContinueTheTest(store);
             }

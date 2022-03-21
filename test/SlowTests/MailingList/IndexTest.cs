@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
             {
                 await store.ExecuteIndexAsync(new AllowedUsers());
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("AllowedUsers");
                 Assert.NotNull(index);
 
@@ -64,7 +64,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 Assert.True(index.IndexPersistence.HasWriter);
 
                 index.IndexPersistence.Clean(IndexCleanup.All);
@@ -87,7 +87,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 Assert.True(index.IndexPersistence.HasWriter);
 
                 using (var session = store.OpenSession())
@@ -116,7 +116,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 Assert.True(SpinWait.SpinUntil(() => index.IndexPersistence.HasWriter == false, TimeSpan.FromSeconds(15)));
 
                 using (var session = store.OpenSession())
@@ -177,7 +177,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())

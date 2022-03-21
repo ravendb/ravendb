@@ -100,7 +100,7 @@ namespace SlowTests.Issues
 
                 database = GetDatabase(store.Database).Result;
 
-                WaitForIndexing(store); // old index could be opened as well, so we wait until replacement is done and switches the index
+                Indexes.WaitForIndexing(store); // old index could be opened as well, so we wait until replacement is done and switches the index
 
                 indexes = database.IndexStore.GetIndexes().ToList();
 

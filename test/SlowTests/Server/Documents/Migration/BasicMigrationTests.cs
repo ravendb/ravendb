@@ -34,7 +34,7 @@ namespace SlowTests.Server.Documents.Migration
                 {
                     var collection = new RootCollection(schemaName, "order", "Orders");
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -91,7 +91,7 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -157,7 +157,7 @@ namespace SlowTests.Server.Documents.Migration
 
                     var orderItemsCollection = new RootCollection(schemaName, "order_item", "OrderItems");
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -211,7 +211,7 @@ namespace SlowTests.Server.Documents.Migration
                 {
                     var collection = new RootCollection(schemaName, "order_item", "OrderItems");
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -268,7 +268,7 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -333,7 +333,7 @@ namespace SlowTests.Server.Documents.Migration
 
                     var orderCollection = new RootCollection(schemaName, "order", "Orders");
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -409,7 +409,7 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -476,7 +476,7 @@ namespace SlowTests.Server.Documents.Migration
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
                 using (var store = GetDocumentStore())
                 {
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -564,7 +564,7 @@ namespace SlowTests.Server.Documents.Migration
                         }
                     };
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -620,7 +620,7 @@ namespace SlowTests.Server.Documents.Migration
 
                     var orderCollection = new RootCollection(schemaName, "order", "Orders");
 
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -664,7 +664,7 @@ namespace SlowTests.Server.Documents.Migration
 
                 using (var store = GetDocumentStore())
                 {
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {
@@ -704,7 +704,7 @@ namespace SlowTests.Server.Documents.Migration
 
                 using (var store = GetDocumentStore())
                 {
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     var settings = new MigrationSettings
                     {

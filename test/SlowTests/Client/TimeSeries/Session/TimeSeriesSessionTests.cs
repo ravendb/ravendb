@@ -151,7 +151,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal("HeArtRate", session.Advanced.GetTimeSeriesFor(user).Single());
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -174,7 +174,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenWriteTransaction())
                 {
@@ -360,7 +360,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(2, vals.Count);
                     Assert.Equal(new[] { 59d }, vals[0].Values);
                     Assert.Equal("watches/fitbit", vals[0].Tag);
-                    Assert.Equal(baseline.AddMinutes(1), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);;
+                    Assert.Equal(baseline.AddMinutes(1), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                     Assert.Equal(new[] { 79d }, vals[1].Values);
                     Assert.Equal("watches/fitbit", vals[1].Tag);

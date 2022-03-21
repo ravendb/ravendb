@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -99,7 +99,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -159,7 +159,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -189,7 +189,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -208,7 +208,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -243,7 +243,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -270,7 +270,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -297,7 +297,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -327,7 +327,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -357,7 +357,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -387,7 +387,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -406,7 +406,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -441,7 +441,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -488,7 +488,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -532,7 +532,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -579,7 +579,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -628,7 +628,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -677,7 +677,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -703,7 +703,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -733,7 +733,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -763,7 +763,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -790,7 +790,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -829,7 +829,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -859,7 +859,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -889,7 +889,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -908,7 +908,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -920,7 +920,7 @@ namespace SlowTests.Issues
                 Assert.Contains("torun", terms);
                 Assert.Contains("tel aviv", terms);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = database.IndexStore.GetIndex(indexName);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -939,7 +939,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -961,7 +961,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1011,7 +1011,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1055,7 +1055,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1110,7 +1110,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1159,7 +1159,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1208,7 +1208,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1234,7 +1234,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -1264,7 +1264,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1293,7 +1293,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1320,7 +1320,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1358,7 +1358,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1388,7 +1388,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1418,7 +1418,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1437,7 +1437,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1449,7 +1449,7 @@ namespace SlowTests.Issues
                 Assert.Contains("torun", terms);
                 Assert.Contains("tel aviv", terms);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = database.IndexStore.GetIndex(indexName);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1468,7 +1468,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -1490,7 +1490,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1539,7 +1539,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1583,7 +1583,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1638,7 +1638,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1687,7 +1687,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1736,7 +1736,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1762,7 +1762,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -1798,7 +1798,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1843,7 +1843,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1887,7 +1887,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1932,7 +1932,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1979,7 +1979,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2026,7 +2026,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2052,7 +2052,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -2081,7 +2081,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -2128,7 +2128,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2172,7 +2172,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2225,7 +2225,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2272,7 +2272,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2319,7 +2319,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2345,7 +2345,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -2374,7 +2374,7 @@ namespace SlowTests.Issues
                 var indexName = index.IndexName;
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -2421,7 +2421,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2465,7 +2465,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2518,7 +2518,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2565,7 +2565,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2612,7 +2612,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -2638,7 +2638,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenSession())
                 {

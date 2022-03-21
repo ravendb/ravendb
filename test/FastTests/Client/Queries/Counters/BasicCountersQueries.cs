@@ -68,7 +68,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -124,7 +124,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -182,7 +182,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -232,7 +232,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -353,7 +353,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -403,7 +403,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -449,7 +449,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -491,7 +491,7 @@ namespace FastTests.Client.Queries.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {

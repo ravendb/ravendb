@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"
@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"
@@ -53,7 +53,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"
@@ -90,7 +90,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {

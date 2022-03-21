@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
 
                     new TaskIndex().Execute(store);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query = session.Query<Task, TaskIndex>()
                         .AggregateBy(factory => factory.ByField(t => t.AssigneeId).WithDisplayName("AssigneeId"));

@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var indexStats = store.Maintenance.Send(new GetIndexesStatisticsOperation());
 

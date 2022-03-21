@@ -80,7 +80,7 @@ namespace SlowTests.SlowTests.Queries
                 s.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private readonly string[] _lorem = { "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit", "Sed", "auctor", "erat" };

@@ -48,7 +48,7 @@ namespace SlowTests.Issues
             }
             
             new Index().Execute(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             
             using (var s = store.OpenSession())
             {
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
 
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 WaitForUserToContinueTheTest(store);
                 using (var s = store.OpenAsyncSession())

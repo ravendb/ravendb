@@ -25,7 +25,7 @@ namespace SlowTests.Client.Attachments
             if (encrypted)
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = EncryptedServer(out var certificates, out dbName);
+                var key = Encryption.EncryptedServer(out var certificates, out dbName);
                 adminCert = certificates.ServerCertificate.Value;
             }
             else
@@ -43,7 +43,7 @@ namespace SlowTests.Client.Attachments
             }))
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
-                await SetDatabaseId(store, dbId1);
+                await Databases.SetDatabaseId(store, dbId1);
 
                 using (var session = store.OpenSession())
                 using (var stream = new BigDummyStream(size))
@@ -86,7 +86,7 @@ namespace SlowTests.Client.Attachments
             if (encrypted)
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = EncryptedServer(out var certificates, out dbName);
+                var key = Encryption.EncryptedServer(out var certificates, out dbName);
                 adminCert = certificates.ServerCertificate.Value;
             }
             else
@@ -104,7 +104,7 @@ namespace SlowTests.Client.Attachments
             }))
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
-                await SetDatabaseId(store, dbId1);
+                await Databases.SetDatabaseId(store, dbId1);
 
                 using (var session = store.OpenSession())
                 {

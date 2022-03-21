@@ -55,7 +55,7 @@ namespace SlowTests.Bugs.Indexing
                 }
 
                 new Accounts_Search().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

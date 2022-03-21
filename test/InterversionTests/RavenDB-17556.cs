@@ -47,7 +47,7 @@ namespace InterversionTests
                 await ReplicationTests.SetupReplication(oldStore, store);
                 Assert.False(WaitForDocument(store, docId, timeout: 3000));
 
-                var notificationCenter = (await GetDocumentDatabaseInstanceFor(store)).NotificationCenter;
+                var notificationCenter = (await Databases.GetDocumentDatabaseInstanceFor(store)).NotificationCenter;
                 var msg = notificationCenter.GetStoredMessage("AlertRaised/Replication");
                 Assert.NotNull(msg);
                 Assert.Contains($"Detected an item of type Incremental-TimeSeries : '{incrementalTsName}' on document '{docId}", msg);

@@ -20,7 +20,7 @@ namespace SlowTests.Issues
             {
                 var doc = new DatabaseRecord(GetDatabaseName());
 
-                using (EnsureDatabaseDeletion(doc.DatabaseName, store))
+                using (Databases.EnsureDatabaseDeletion(doc.DatabaseName, store))
                 {
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 

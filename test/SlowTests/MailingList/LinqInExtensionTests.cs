@@ -63,7 +63,7 @@ namespace SlowTests.MailingList
                         index++;
                     }
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var foundDocs = session.Query<TestDoc>()
                                            .Customize(x => x.WaitForNonStaleResults())

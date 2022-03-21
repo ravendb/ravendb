@@ -148,7 +148,7 @@ namespace SlowTests.MailingList
                     });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var s = store.OpenSession())
                 {
                     var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()

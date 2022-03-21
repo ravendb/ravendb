@@ -65,7 +65,7 @@ namespace SlowTests.Verifications
                             }
                     });
                     s.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     Assert.Equal(1, s.Query<Result, MyIndex>().Count(x => x.Name == "t"));
                 }
             }

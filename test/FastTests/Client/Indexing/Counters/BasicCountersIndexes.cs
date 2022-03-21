@@ -56,7 +56,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -102,7 +102,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -142,7 +142,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -178,7 +178,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -204,7 +204,7 @@ namespace FastTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -223,7 +223,7 @@ namespace FastTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -292,7 +292,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -318,7 +318,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -343,7 +343,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -369,7 +369,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex(indexName);
@@ -390,7 +390,7 @@ namespace FastTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -454,7 +454,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -494,7 +494,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -534,7 +534,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -570,7 +570,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -636,7 +636,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -673,7 +673,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -700,7 +700,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -727,7 +727,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(0, terms.Length);
@@ -773,7 +773,7 @@ namespace FastTests.Client.Indexing.Counters
                     "}" }
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
@@ -789,7 +789,7 @@ namespace FastTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyCounterIndex", "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
@@ -826,7 +826,7 @@ namespace FastTests.Client.Indexing.Counters
                     "}" }
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 
@@ -868,7 +868,7 @@ namespace FastTests.Client.Indexing.Counters
                     Priority = IndexPriority.High
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 
@@ -926,7 +926,7 @@ namespace FastTests.Client.Indexing.Counters
                      "}"
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 
@@ -1031,7 +1031,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -1068,7 +1068,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -1117,7 +1117,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -1150,7 +1150,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -1207,7 +1207,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -1246,7 +1246,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);
@@ -1316,7 +1316,7 @@ namespace FastTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.False(staleness.IsStale);

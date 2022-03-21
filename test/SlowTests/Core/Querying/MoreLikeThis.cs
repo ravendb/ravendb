@@ -34,7 +34,7 @@ namespace SlowTests.Core.Querying
                     session.Store(new Post { Id = "posts/5", Title = "We love", Desc = "challange" });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var list = session.Query<Post, Posts_ByTitleAndContent>()
                         .MoreLikeThis(f => f.UsingDocument(x => x.Id == "posts/1").WithOptions(new MoreLikeThisOptions
@@ -72,7 +72,7 @@ namespace SlowTests.Core.Querying
                     session.Store(new Address { Id = "addresses/2", City = "New York2", Country = "USA2" });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var list = session.Query<User, Users_ByName>()
                         .Include(x => x.AddressId)

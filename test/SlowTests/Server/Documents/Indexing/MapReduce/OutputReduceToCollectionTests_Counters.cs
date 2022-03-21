@@ -150,7 +150,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             await store.ExecuteIndexAsync(new MonthlyInvoicesIndex());
             await store.ExecuteIndexAsync(new YearlyInvoicesIndex());
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             Assert.True(WaitForValue(() =>
             {

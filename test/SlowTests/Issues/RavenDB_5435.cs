@@ -53,7 +53,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
                 {

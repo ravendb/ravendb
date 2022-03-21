@@ -264,7 +264,7 @@ groupBy(x => x.Total.Currency)
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

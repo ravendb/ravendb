@@ -79,7 +79,7 @@ namespace SlowTests.Core.Commands
                         Name = "test"
                     }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("test", "Name", null, 10))
                     .OrderBy(x => x)
@@ -115,7 +115,7 @@ namespace SlowTests.Core.Commands
                         Name = "test"
                     }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("test", "Name", "user009", 10))
                     .OrderBy(x => x)
@@ -155,7 +155,7 @@ namespace SlowTests.Core.Commands
                         Name = "test"
                     }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {
@@ -222,7 +222,7 @@ namespace SlowTests.Core.Commands
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.StaleIndexes.Length);

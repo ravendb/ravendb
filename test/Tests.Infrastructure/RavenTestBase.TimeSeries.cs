@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.Documents;
 using Sparrow;
 using Xunit;
 
@@ -12,11 +12,18 @@ namespace FastTests
 {
     public abstract partial class RavenTestBase
     {
+        public readonly TimeSeriesTestBase TimeSeries;
+
         public class TimeSeriesTestBase
         {
-            internal static readonly Lazy<TimeSeriesTestBase> Instance = new Lazy<TimeSeriesTestBase>(() => new TimeSeriesTestBase());
+            private readonly RavenTestBase _parent;
 
-            internal async Task VerifyPolicyExecution(DocumentStore store, TimeSeriesCollectionConfiguration configuration, int retentionNumberOfDays, string rawName = "Heartrate", List<TimeSeriesPolicy> policies = null)
+            public TimeSeriesTestBase(RavenTestBase parent)
+            {
+                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            }
+
+            internal async Task VerifyPolicyExecutionAsync(DocumentStore store, TimeSeriesCollectionConfiguration configuration, int retentionNumberOfDays, string rawName = "Heartrate", List<TimeSeriesPolicy> policies = null)
             {
                 var raw = configuration.RawPolicy;
                 configuration.ValidateAndInitialize();
@@ -56,6 +63,21 @@ namespace FastTests
                     }
                     return true;
                 }, true);
+            }
+
+            public async Task WaitForPolicyRunnerAsync(DocumentDatabase database)
+            {
+                var loops = 10;
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                for (int i = 0; i < loops; i++)
+                {
+                    var rolled = await database.TimeSeriesPolicyRunner.RunRollups();
+                    await database.TimeSeriesPolicyRunner.DoRetention();
+                    if (rolled == 0)
+                        return;
+                }
+
+                Assert.True(false, $"We still have pending rollups left.");
             }
         }
     }

@@ -34,7 +34,7 @@ namespace FastTests.Client.Indexing
                         IsActive = true
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<User>("UsersByName").Single(x => x.Name == "Brendan Eich");
                 }
 
@@ -57,7 +57,7 @@ namespace FastTests.Client.Indexing
                         Duration = TimeSpan.FromMinutes(5)
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<Teemo>("TeemoByDuration").Single(x => x.Duration == TimeSpan.FromMinutes(5));
                 }
 
@@ -85,7 +85,7 @@ namespace FastTests.Client.Indexing
                         IsActive = true
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<User>("UsersByNameWithAdditionalSources").Single(x => x.Name == "Mr. Brendan Eich");
                 }
 
@@ -107,7 +107,7 @@ namespace FastTests.Client.Indexing
                         PhoneNumbers = new[] { "555-234-8765", "555-987-3425" }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var result = session.Query<UsersByPhones.UsersByPhonesResult>("UsersByPhones")
                         .Where(x => x.Phone == "555-234-8765")
                         .OfType<User>()
@@ -143,7 +143,7 @@ namespace FastTests.Client.Indexing
                         Numbers = new[] { 3, 8, 5, 17 }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var result = session.Query<FanoutByNumbers.Result>("FanoutByNumbers")
                         .Where(x => x.Sum == 17)
                         .OfType<Fanout>()
@@ -179,7 +179,7 @@ namespace FastTests.Client.Indexing
                         }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     
                     var res = session.Query<DateWithAmount, FanoutByPaymentsWithReduce>().Where(x => x.Amount == 42.833333333333336).ToList();
                     Assert.Equal(3, res.Count);
@@ -207,7 +207,7 @@ namespace FastTests.Client.Indexing
                         Numbers = new[] { 3, 8, 5, 17 }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     WaitForUserToContinueTheTest(store);
                     var result = session.Query<FanoutByNumbersWithReduce.Result>("FanoutByNumbersWithReduce")
                         .Where(x => x.Sum == 33)
@@ -233,7 +233,7 @@ namespace FastTests.Client.Indexing
                         IsActive = true
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     WaitForUserToContinueTheTest(store);
                     session.Query<User>("UsersByNameAndAnalyzedName").ProjectInto<UsersByNameAndAnalyzedName.Result>().Search(x => x.AnalyzedName, "Brendan")
                         .Single();
@@ -262,7 +262,7 @@ namespace FastTests.Client.Indexing
                         IsAvailable = true
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<User>("UsersAndProductsByName").Single(x => x.Name == "Brendan Eich");
                 }
 
@@ -304,7 +304,7 @@ namespace FastTests.Client.Indexing
                         IsAvailable = true
                     }, productId);
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<User>(index.IndexName).Single(x => x.Name == "Brendan Eich");
                 }
             }
@@ -326,7 +326,7 @@ namespace FastTests.Client.Indexing
                         IsActive = true
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<User>("UsersByNameAndIsActive").Single(x => x.Name == "Brendan Eich" && x.IsActive == true);
                 }
 
@@ -353,7 +353,7 @@ namespace FastTests.Client.Indexing
                         IsAvailable = true
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<User>("UsersAndProductsByNameAndCount").OfType<ReduceResults>().Single(x => x.Name == "Brendan Eich");
                 }
             }
@@ -383,7 +383,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        private static void CanUseSpatialFieldsInternal(int kalab, DocumentStore store, string indexName)
+        private void CanUseSpatialFieldsInternal(int kalab, DocumentStore store, string indexName)
         {
             using (var session = store.OpenSession())
             {
@@ -402,7 +402,7 @@ namespace FastTests.Client.Indexing
 
                 });
                 session.SaveChanges();
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
                 session.Query<Location>(indexName).Spatial("Location", criteria => criteria.WithinRadius(kalab, 32.56829122491778, 34.953954053921734)).Single(x => x.Description == "Dor beach");
             }
@@ -419,7 +419,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        private static void ReduceNullValuesInternal(DocumentStore store)
+        private void ReduceNullValuesInternal(DocumentStore store)
         {
             store.ExecuteIndex(new UsersReducedByName());
             using (var session = store.OpenSession())
@@ -430,7 +430,7 @@ namespace FastTests.Client.Indexing
                 session.Store(new User { Name = "Tal" });
                 session.Store(new User { Name = "Maxim" });
                 session.SaveChanges();
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 var res = session.Query<User>("UsersReducedByName").OfType<ReduceResults>().Single(x => x.Count == 3);
                 Assert.Null(res.Name);
             }
@@ -449,7 +449,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new User { Name = "Tal" });
                     session.Store(new User { Name = "Maxim" });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -473,7 +473,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new User { Name = "Tal" });
                     session.Store(new User { Name = "Maxim" });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -513,7 +513,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new Product { Name = "Original Frankfurter", Category = "categories/1-A", PricePerUnit = 16 });
                     session.Store(new Product { Name = "Röd Kaviar", Category = "categories/2-A", PricePerUnit = 18 });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var res = session.Query<Products_ByCategory.Result>("Products/ByCategory")
                         .ToList();
                     var res2 = session.Query<CategoryCount>()
@@ -565,7 +565,7 @@ namespace FastTests.Client.Indexing
                         OrderedAt = new DateTime(1998, 4, 30)
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var res = session.Query<Product_Sales_ByMonth.Result>("Product/Sales/ByMonth")
                         .Where(x => x.Count == 6)
                         .ToList();
@@ -591,7 +591,7 @@ namespace FastTests.Client.Indexing
                 {
                     session.Store(new User { Name = "Foo", Address = address });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var user = session.Query<User>("Users/ByAddress").Single(u => u.Address == address);
                     Assert.Equal("Foo", user.Name);
                 }
@@ -648,7 +648,7 @@ namespace FastTests.Client.Indexing
                         Type = 2
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var res = session.Query<ProductsWarrentyResult>("ProductsWarrenty").Where(u => u.Duration > 20).ProjectInto<Product>().Single();
                     Assert.Equal(res.Name, "p3");
                 }

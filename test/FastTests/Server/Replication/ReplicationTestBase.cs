@@ -426,7 +426,7 @@ namespace FastTests.Server.Replication
             var res = CreateClusterDatabase(caller, source, 2);
             //var doc = MultiDatabase.CreateDatabaseDocument(dbName);
             //var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
-            await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
             return (source, destination);
         }
 

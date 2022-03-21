@@ -30,7 +30,7 @@ namespace SlowTests.Issues
 
                 new Companies_ByName_Without().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                 new Companies_ByName_With().Execute(store);
 
-                WaitForIndexing(store, allowErrors: true);
+                Indexes.WaitForIndexing(store, allowErrors: true);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -83,7 +83,7 @@ namespace SlowTests.Issues
 
                 new Companies_ByName_Without_JavaScript().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
 
                 new Companies_ByName_With_JavaScript().Execute(store);
 
-                WaitForIndexing(store, allowErrors: true);
+                Indexes.WaitForIndexing(store, allowErrors: true);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 

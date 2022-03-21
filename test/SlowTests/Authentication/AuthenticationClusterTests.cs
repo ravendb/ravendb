@@ -133,7 +133,7 @@ namespace SlowTests.Authentication
             IDictionary<string, string> customSettings2 = new ConcurrentDictionary<string, string>();
             IDictionary<string, string> customSettings3 = new ConcurrentDictionary<string, string>();
             
-            var certPath = GenerateAndSaveSelfSignedCertificate();
+            var certPath = Certificates.GenerateAndSaveSelfSignedCertificate();
             var cert2Path = GenerateAndSaveSelfSignedCertificate(createNew: true);
             var outputFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
 

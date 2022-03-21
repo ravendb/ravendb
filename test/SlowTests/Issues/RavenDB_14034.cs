@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -114,7 +115,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 // put compare exchange value
 
@@ -479,7 +480,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanGetLastCmpXchgIndexForDatabase()
+        public async Task CanGetLastCmpXchgIndexForDatabase()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -537,7 +538,7 @@ namespace SlowTests.Issues
                             .GetCompareExchangeValues<string>(keys)
                             .Max(cmpxchg => cmpxchg.Value.Index);
 
-                        var documentDatabase = GetDocumentDatabaseInstanceFor(store).Result;
+                        var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                         using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
                         using (transactionContext.OpenReadTransaction())
                         {

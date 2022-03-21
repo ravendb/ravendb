@@ -48,7 +48,7 @@ namespace SlowTests.Server.Replication
 
                 //since we have only Raft clusters, it is enough to create database only on one server
                 var databaseResult = master.Maintenance.Server.Send(new CreateDatabaseOperation(doc, 2));
-                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecutor();
                 using (var session = master.OpenSession())

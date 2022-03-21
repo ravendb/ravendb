@@ -325,7 +325,7 @@ namespace SlowTests.Client.Attachments
                     ModifyDatabaseName = s => $"{s}_store1"
                 }))
                 {
-                    await SetDatabaseId(store1, dbId);
+                    await Databases.SetDatabaseId(store1, dbId);
 
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
                     {
@@ -370,7 +370,7 @@ namespace SlowTests.Client.Attachments
                     ModifyDatabaseName = s => $"{s}_store2"
                 }))
                 {
-                    await SetDatabaseId(store2, dbId2);
+                    await Databases.SetDatabaseId(store2, dbId2);
 
                     var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     var importResult = (SmugglerResult)importOperation.WaitForCompletion();
@@ -428,7 +428,7 @@ namespace SlowTests.Client.Attachments
                     ModifyDatabaseName = s => $"{s}_store1"
                 }))
                 {
-                    await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
+                    await Databases.SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
                     {
                         configuration.Collections["Users"].PurgeOnDelete = false;
@@ -460,7 +460,7 @@ namespace SlowTests.Client.Attachments
                 }))
                 {
                     var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
-                    await SetDatabaseId(store2, dbId);
+                    await Databases.SetDatabaseId(store2, dbId);
 
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 

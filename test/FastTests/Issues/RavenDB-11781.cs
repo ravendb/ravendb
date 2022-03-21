@@ -28,7 +28,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new MapReduce().Execute(store);
             }
@@ -49,7 +49,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfIndexes);

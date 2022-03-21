@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 // let's force to clean the reader
                 indexInstance.IndexPersistence.Clean(IndexCleanup.All);
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
 
                 // after the indexing batch has been run we'll get the entries count directly from the storage so no need to recreate the index reader
 
-                Assert.Equal(1, WaitForEntriesCount(store, index.IndexName, 1));
+                Assert.Equal(1, Indexes.WaitForEntriesCount(store, index.IndexName, 1));
 
                 Assert.Null((indexInstance.IndexPersistence as LuceneIndexPersistence)?._lastReader);
             }

@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                 firstDate = DateTime.Parse(metadata.GetString(Constants.Documents.Metadata.LastModified));
             }
 
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
             using (var session = store.OpenSession())
             {

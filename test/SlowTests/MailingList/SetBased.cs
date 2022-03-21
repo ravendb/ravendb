@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
                 }
 
                 new Index1().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store
                     .Operations

@@ -71,7 +71,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(company2);
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
                 await expiredDocumentsCleaner.CleanupExpiredDocs();
@@ -118,7 +118,7 @@ namespace SlowTests.Issues
 
             await RefreshHelper.SetupExpiration(store, Server.ServerStore, config);
 
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             return database.ExpiredDocumentsCleaner != null;
         }
 
@@ -132,7 +132,7 @@ namespace SlowTests.Issues
 
             await RefreshHelper.SetupExpiration(store, Server.ServerStore, config);
 
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             return database.ExpiredDocumentsCleaner != null;
         }
 
@@ -146,7 +146,7 @@ namespace SlowTests.Issues
 
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
 
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             return database.ExpiredDocumentsCleaner != null;
         }
 
@@ -160,7 +160,7 @@ namespace SlowTests.Issues
 
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
 
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             return database.ExpiredDocumentsCleaner != null;
         }
     }

@@ -26,7 +26,7 @@ namespace SlowTests.Client.Attachments
             using (var store = GetDocumentStore())
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
-                await SetDatabaseId(store, dbId1);
+                await Databases.SetDatabaseId(store, dbId1);
 
                 using (var session = store.OpenSession())
                 {
@@ -283,7 +283,7 @@ namespace SlowTests.Client.Attachments
             using (var store = GetDocumentStore())
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
-                await SetDatabaseId(store, dbId1);
+                await Databases.SetDatabaseId(store, dbId1);
 
                 using (var session = store.OpenSession())
                 {

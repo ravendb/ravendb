@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                 new Users_ByName().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var sw = Stopwatch.StartNew();
                 var op = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
@@ -80,7 +80,7 @@ namespace SlowTests.Issues
 
                 new Users_ByName().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var sw = Stopwatch.StartNew();
                 var op = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users') UPDATE { this.Test = 'abc'; } " },

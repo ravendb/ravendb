@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                         AmountDone = -160.9m
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     // WaitForUserToContinueTheTest(store);
 
                     var query = session.Advanced.RawQuery<PaymentAll.Result>("from index 'PaymentAll' where AmountLeft == 0 select __all_stored_fields").ToList();

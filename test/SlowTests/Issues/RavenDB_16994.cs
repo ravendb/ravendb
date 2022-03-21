@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     autoIndexName = stats.IndexName;
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var staticIndexPath = database.IndexStore.GetIndex(staticIndexName)._environment.Options.BasePath;
                 var autoIndexPath = database.IndexStore.GetIndex(autoIndexName)._environment.Options.BasePath;
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
                 IOExtensions.DeleteFile(autoIndexPath.Combine(Constants.DatabaseFilename).FullPath);
                 IOExtensions.DeleteDirectory(autoIndexPath.Combine("Journals").FullPath);
 
-                database = await GetDocumentDatabaseInstanceFor(store);
+                database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 Assert.Equal(2, database.IndexStore.Count);
                 Assert.True(database.IndexStore.GetIndexes().All(x => x is FaultyInMemoryIndex));
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, record.Etag));
 
-                database = await GetDocumentDatabaseInstanceFor(store);
+                database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 Assert.Equal(2, database.IndexStore.Count);
                 Assert.True(database.IndexStore.GetIndexes().All(x => x is FaultyInMemoryIndex == false));

@@ -48,7 +48,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var results = session.Query<Activity_ByMonth.Result, Activity_ByMonth>().OrderBy(x => x.Users).ToList();
 

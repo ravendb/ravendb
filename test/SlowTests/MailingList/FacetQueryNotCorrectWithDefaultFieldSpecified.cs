@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
             {
                 SetupTestData(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 //Act
                 var result = ExecuteTest(store);
@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
             {
                 SetupTestData(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 //Act
                 var result = ExecuteTest(store);

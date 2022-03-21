@@ -43,7 +43,7 @@ update
 }
 ")).WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var entriesCount = WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("Auto/Users/ByName")).EntriesCount, 0);
 

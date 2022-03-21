@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                 var index = new DocumentsIndex();
                 await new DocumentsIndex().ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, _companyName1, _employeesCount);
 
                 var batchCount = 0;
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, _companyName1, 0);
                 await AssertCount(store, _companyName2, _employeesCount);
                 Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
@@ -126,7 +126,7 @@ namespace SlowTests.Issues
                 var index = new DocumentsIndex();
                 await new DocumentsIndex().ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, _companyName1, _employeesCount);
 
                 var batchCount = 0;
@@ -156,7 +156,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, _companyName1, _employeesCount);
                 await AssertCount(store, _companyName2, 0);
 
@@ -197,7 +197,7 @@ namespace SlowTests.Issues
                 var index = new DocumentsIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, _companyName1, _employeesCount);
 
                 var batchCount = 0;
@@ -217,7 +217,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, _companyName1, 0);
                 Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
 
@@ -258,7 +258,7 @@ namespace SlowTests.Issues
                 var index = new DocumentsIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCount(store, _companyName1, _employeesCount);
                 await AssertCount(store, _companyName2, 0);
@@ -319,7 +319,7 @@ namespace SlowTests.Issues
                 var index = new DocumentsWithCompareExchangeIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCompaniesCount(store, GetItemsCount, _employeesCount, 0);
 
@@ -388,7 +388,7 @@ namespace SlowTests.Issues
                 var index = new TimeSeriesIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCompaniesCount(store, GetItemsCount, _employeesCount, 0);
 
@@ -452,7 +452,7 @@ namespace SlowTests.Issues
                 var index = new TimeSeriesWithCompareExchangeIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCompaniesCount(store, GetItemsCount, _employeesCount, 0);
 
@@ -521,7 +521,7 @@ namespace SlowTests.Issues
                 var index = new TimeSeriesMapReduceIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCompaniesCount(store, GetItemsCount, _employeesCount, 0);
 
@@ -585,7 +585,7 @@ namespace SlowTests.Issues
                 var index = new CountersIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCompaniesCount(store, GetItemsCount, _employeesCount, 0);
 
@@ -643,7 +643,7 @@ namespace SlowTests.Issues
                 var index = new CountersWithCompareExchangeIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCompaniesCount(store, GetItemsCount, _employeesCount, 0);
 
@@ -707,7 +707,7 @@ namespace SlowTests.Issues
                 var index = new MapReduceCountersIndex();
                 await index.ExecuteAsync(store);
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
 
                 await AssertCompaniesCount(store, GetItemsCount, _employeesCount, 0);
 

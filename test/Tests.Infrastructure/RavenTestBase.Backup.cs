@@ -18,11 +18,17 @@ namespace FastTests
 {
     public abstract partial class RavenTestBase
     {
+        public readonly BackupTestBase Backup;
+
         public class BackupTestBase
         {
+            private readonly RavenTestBase _parent;
             private readonly int _reasonableTimeout = Debugger.IsAttached ? 60000 : 15000;
 
-            internal static readonly Lazy<BackupTestBase> Instance = new Lazy<BackupTestBase>(() => new BackupTestBase());
+            public BackupTestBase(RavenTestBase parent)
+            {
+                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            }
 
             /// <summary>
             /// Run backup with provided task id and wait for completion. Full backup by default.
@@ -227,7 +233,7 @@ namespace FastTests
                 var operation = store.Maintenance.Server.Send(restoreOperation);
                 operation.WaitForCompletion(timeout ?? TimeSpan.FromMilliseconds(_reasonableTimeout * 2));
 
-                return EnsureDatabaseDeletion(config.DatabaseName, store);
+                return _parent.Databases.EnsureDatabaseDeletion(config.DatabaseName, store);
             }
 
             public IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreBackupConfigurationBase config, TimeSpan? timeout = null)
@@ -237,7 +243,7 @@ namespace FastTests
                 var operation = store.Maintenance.Server.Send(restoreOperation);
                 operation.WaitForCompletion(timeout ?? TimeSpan.FromMilliseconds(_reasonableTimeout * 2));
 
-                return EnsureDatabaseDeletion(config.DatabaseName, store);
+                return _parent.Databases.EnsureDatabaseDeletion(config.DatabaseName, store);
             }
 
             public long GetBackupOperationId(IDocumentStore store, long taskId) => AsyncHelpers.RunSync(() => GetBackupOperationIdAsync(store, taskId));

@@ -43,7 +43,7 @@ namespace FastTests.Graph
                 mutate?.Invoke(store);
                 if (parameters.WaitForIndexing)
                 {
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var s = store.OpenSession())
@@ -64,7 +64,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDogDataWithoutEdges(store);
+                Samples.CreateDogDataWithoutEdges(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -85,7 +85,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDogDataWithoutEdges(store);
+                Samples.CreateDogDataWithoutEdges(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as a)-[Likes]->(Dogs as f)<-[Likes]-(Dogs as b)").ToList();
@@ -99,7 +99,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Movie>("match ()-[HasRated select Movie]->(Movies as m) select m").ToList();
@@ -113,7 +113,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as v)").ToList();
@@ -127,7 +127,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as u)-[HasRated select Movie]->(_ as m)").ToList();
@@ -143,7 +143,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as v)").ToList();
@@ -163,7 +163,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -182,7 +182,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -200,7 +200,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateSimpleData(store);
+                Samples.CreateSimpleData(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.RawQuery<JObject>(@"match (Entities as e)-[References as r]->(Entities as e2)").ToList();

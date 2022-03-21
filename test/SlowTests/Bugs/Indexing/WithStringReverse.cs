@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -32,7 +33,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Fact]
-        public void GivenSomeUsers_QueryWithAnIndex_ReturnsUsersWithNamesReversed()
+        public async Task GivenSomeUsers_QueryWithAnIndex_ReturnsUsersWithNamesReversed()
         {
             using (var store = GetDocumentStore())
             {
@@ -61,7 +62,7 @@ namespace SlowTests.Bugs.Indexing
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                    var db = GetDocumentDatabaseInstanceFor(store).Result;
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                     Assert.Equal(errorsCount, 0);
@@ -73,7 +74,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Fact]
-        public void CanQueryInReverse()
+        public async Task CanQueryInReverse()
         {
             using (var store = GetDocumentStore())
             {
@@ -104,7 +105,7 @@ namespace SlowTests.Bugs.Indexing
                         .As<User>()
                         .ToList();
 
-                    var db = GetDocumentDatabaseInstanceFor(store).Result;
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                     Assert.Equal(errorsCount, 0);

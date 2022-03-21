@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = "Index2", Maps = { "from doc in docs let x = 0 select new { Total = 4/x };" } } }));
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = "Index3", Maps = { "from doc in docs let x = 0 select new { Total = 5/x };" } } }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexingErrors(store, new [] { "Index1", "Index2", "Index3" });
+                Indexes.WaitForIndexingErrors(store, new [] { "Index1", "Index2", "Index3" });
 
                 store.Maintenance.Send(new StopIndexingOperation());
 

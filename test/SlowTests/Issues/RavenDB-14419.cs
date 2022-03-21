@@ -66,7 +66,7 @@ select new
                     s.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {

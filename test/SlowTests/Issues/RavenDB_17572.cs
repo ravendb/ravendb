@@ -39,7 +39,7 @@ namespace SlowTests.Issues
 
                 new JavaScriptIndexWithGroupByOnDouble().Execute(store);
                 new IndexWithGroupByOnDouble().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var client = new HttpClient();
                 var jsRes = await client.PostAsync($"{store.Urls[0]}/databases/{store.Database}/queries?debug=entries&addTimeSeriesNames=true&addSpatialProperties=true&metadataOnly=false&ignoreLimit=true", new StringContent($"{{\"Query\":\"from index 'JavaScriptIndexWithGroupByOnDouble'\",\"Start\":0,\"PageSize\":101,\"QueryParameters\":{{}}}}"));

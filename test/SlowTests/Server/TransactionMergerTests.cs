@@ -83,7 +83,7 @@ namespace SlowTests.Server
                 await session.SaveChangesAsync();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             
             using var tokenSource = new AutoCancellationTokenSource();
             
@@ -100,7 +100,7 @@ namespace SlowTests.Server
                 await session.StoreAsync(new TestObj { Prop = prop}, $"testObjs/1");
                 await session.SaveChangesAsync();
             }
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -135,7 +135,7 @@ namespace SlowTests.Server
             var amre = new AsyncManualResetEvent();
             var failingTasks = RunFailingTasks(store, amre, tokenSource.Token);
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             await amre.WaitAsync();
             var operation = await store.Operations.SendAsync(new PatchByQueryOperation(@"
 from TestObjs as o where o.Prop = null update 
@@ -152,7 +152,7 @@ from TestObjs as o where o.Prop = null update
 
             using (var session = store.OpenAsyncSession())
             {
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 var patchCount = await session.Query<TestObj>().Where(o => o.Prop == "Changed").CountAsync();
                 Assert.Equal(docCount, patchCount);
             }

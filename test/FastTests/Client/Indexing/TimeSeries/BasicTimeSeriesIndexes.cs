@@ -60,7 +60,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -82,7 +82,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -125,7 +125,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -151,7 +151,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -171,7 +171,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
@@ -184,7 +184,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -249,7 +249,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -277,7 +277,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -304,7 +304,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
@@ -329,7 +329,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex(indexName);
@@ -350,7 +350,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(0, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 0));
 
@@ -423,7 +423,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -467,7 +467,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -519,7 +519,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -558,7 +558,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -638,7 +638,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                     store.Maintenance.Send(new StartIndexingOperation());
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.False(staleness.IsStale);
@@ -676,7 +676,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                     store.Maintenance.Send(new StartIndexingOperation());
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.False(staleness.IsStale);
@@ -701,7 +701,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                     store.Maintenance.Send(new StartIndexingOperation());
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                     Assert.Equal(1, terms.Length);
@@ -725,7 +725,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                     store.Maintenance.Send(new StartIndexingOperation());
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var database = await GetDatabase(store.Database);
                     var index = database.IndexStore.GetIndex(indexName);
@@ -785,7 +785,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                              "}"
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 WaitForUserToContinueTheTest(store);
 
@@ -835,7 +835,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "}" }
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
@@ -851,7 +851,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
@@ -890,7 +890,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                         "}" }
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 
@@ -933,7 +933,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     Priority = IndexPriority.High
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 
@@ -997,7 +997,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                              "}"
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 
@@ -1062,7 +1062,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     Priority = IndexPriority.High
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 
@@ -1113,7 +1113,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1140,7 +1140,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1173,7 +1173,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1205,7 +1205,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1234,7 +1234,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1292,7 +1292,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1326,7 +1326,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1361,7 +1361,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1393,7 +1393,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1416,7 +1416,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1437,7 +1437,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
@@ -1544,7 +1544,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 AssertIndex(store, indexDefinition, "Heart Rate");
             }
 
-            static void AssertIndex(IDocumentStore store, IndexDefinition definition, string timeSeriesName)
+            void AssertIndex(IDocumentStore store, IndexDefinition definition, string timeSeriesName)
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -1569,7 +1569,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
                 Assert.False(staleness.IsStale);
@@ -1591,7 +1591,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
                 Assert.False(staleness.IsStale);
@@ -1612,7 +1612,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
                 Assert.False(staleness.IsStale);

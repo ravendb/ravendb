@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                     await StoreDataAsync(store, session);
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

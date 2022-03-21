@@ -33,7 +33,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     CreateTestRecords(session, "mb1123", "mbriggs", true);
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     CreateTestRecords(session, "mb1123", "mbriggs", false);
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())

@@ -309,7 +309,7 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_exportStore"
                 }))
                 {
-                    var database = await GetDocumentDatabaseInstanceFor(exportStore);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(exportStore);
 
                     using (var session = exportStore.OpenAsyncSession())
                     {
@@ -951,7 +951,7 @@ namespace SlowTests.Smuggler
 
                         await session.SaveChangesAsync();
                     }
-                    var db = await GetDocumentDatabaseInstanceFor(store1);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
                     await store1.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                     using (var session = store1.OpenAsyncSession())

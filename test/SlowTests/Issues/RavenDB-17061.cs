@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     userId = user.Id;
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 QueryStatistics stats;
 
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
                     userId = user.Id;
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -196,7 +196,7 @@ namespace SlowTests.Issues
                     userId = user.Id;
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

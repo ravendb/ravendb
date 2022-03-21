@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                 }
             }))
             {
-                await CreateLegacyNorthwindDatabase(store);
+                await Samples.CreateLegacyNorthwindDatabaseAsync(store);
 
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
             }
