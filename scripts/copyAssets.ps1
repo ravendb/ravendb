@@ -67,8 +67,8 @@ function CopyWindowsServiceScripts ( $projectDir, $targetDir, $packOpts ) {
     Copy-Item $uninstallServicePs1Path $uninstallServicePs1TargetPath
 
     if ($packOpts.VersionInfo.BuildType.ToLower() -ne 'custom') {
-        write-host "Signing $uninstallServicePs1TargetPath"
-        SignFile $projectDir $uninstallServicePs1TargetPath $packOpts.DryRunSign
+        write-host "Signing $startAsServicePs1TargetPath"
+        SignFile $projectDir $startAsServicePs1TargetPath $packOpts.DryRunSign
 
         write-host "Signing $uninstallServicePs1TargetPath"
         SignFile $projectDir $uninstallServicePs1TargetPath $packOpts.DryRunSign
