@@ -52,6 +52,11 @@ namespace Raven.Server.Documents
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
 
+        private static readonly Slice DocsBucketAndEtagSlice;
+        internal static readonly Slice GlobalBucketStatsSlice;
+        internal static readonly Slice GlobalBucketsTreeSlice;
+
+
         public static readonly TableSchema DocsSchema = new TableSchema
         {
             TableType = (byte)TableType.Documents
@@ -64,6 +69,7 @@ namespace Raven.Server.Documents
 
         public static readonly TableSchema TombstonesSchema = new TableSchema();
         public static readonly TableSchema CollectionsSchema = new TableSchema();
+        public static TableSchema BucketStatsSchema = new TableSchema();
 
         public readonly DocumentDatabase DocumentDatabase;
 
@@ -85,18 +91,26 @@ namespace Raven.Server.Documents
         public enum DocumentsTable
         {
             LowerId = 0,
-            Etag = 1,
-            Id = 2, // format of lazy string id is detailed in GetLowerIdSliceAndStorageKey
-            Data = 3,
-            ChangeVector = 4,
-            LastModified = 5,
-            Flags = 6,
-            TransactionMarker = 7
+            Bucket = 1,
+            Etag = 2,
+            Id = 3, // format of lazy string id is detailed in GetLowerIdSliceAndStorageKey
+            Data = 4,
+            ChangeVector = 5,
+            LastModified = 6,
+            Flags = 7,
+            TransactionMarker = 8
         }
 
         public enum CollectionsTable
         {
             Name = 0,
+        }
+
+        public enum BucketStatsTable
+        {
+            BucketId,
+            Size,
+            LastAccessed
         }
 
         static DocumentsStorage()
@@ -109,6 +123,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "Docs", ByteStringType.Immutable, out DocsSlice);
                 Slice.From(ctx, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
                 Slice.From(ctx, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
+                Slice.From(ctx, "DocsBucketAndEtag", ByteStringType.Immutable, out DocsBucketAndEtagSlice);
                 Slice.From(ctx, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
                 Slice.From(ctx, "Collections", ByteStringType.Immutable, out CollectionsSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
@@ -117,6 +132,9 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
+
+                Slice.From(ctx, "GlobalBucketStats", ByteStringType.Immutable, out GlobalBucketStatsSlice);
+                Slice.From(ctx, "GlobalBucketsTree", ByteStringType.Immutable, out GlobalBucketsTreeSlice);
             }
             /*
             Collection schema is:
@@ -161,11 +179,19 @@ namespace Raven.Server.Documents
                 Name = DeletedEtagsSlice
             });
 
+            BucketStatsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)BucketStatsTable.BucketId, 
+                IsGlobal = true, 
+                Name = GlobalBucketStatsSlice
+            });
+
             void DefineIndexesForDocsSchema(TableSchema docsSchema)
             {
                 docsSchema.DefineKey(new TableSchema.IndexDef { StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice });
                 docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice });
                 docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice });
+                docsSchema.DefineIndex(new TableSchema.SchemaIndexDef { StartIndex = (int)DocumentsTable.Bucket, Count = 2, IsGlobal = true, Name = DocsBucketAndEtagSlice });
             }
         }
 
@@ -308,8 +334,10 @@ namespace Raven.Server.Documents
 
                     tx.CreateTree(TableSchema.CompressionDictionariesSlice);
                     tx.CreateTree(DocsSlice);
+                    tx.CreateTree(DocsBucketAndEtagSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
+                    tx.CreateTree(GlobalBucketsTreeSlice);
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
@@ -1040,6 +1068,21 @@ namespace Raven.Server.Documents
                         yield break;
 
                     yield return document;
+                }
+            }
+        }
+
+        public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            using (GetBucketAndEtagPrefixSlice(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(DocsSchema.Indexes[DocsBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    yield return TableValueToDocument(context, ref result.Result.Reader);
                 }
             }
         }
@@ -2546,6 +2589,17 @@ namespace Raven.Server.Documents
             }
 
             return result;
+        }
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBucketAndEtagPrefixSlice(
+            ByteStringContext allocator, int bucket, long etag,
+            out ByteString buffer)
+        {
+            var scope = allocator.Allocate(sizeof(int) + sizeof(long), out buffer);
+            *(int*)buffer.Ptr = bucket;
+            *(long*)(buffer.Ptr + sizeof(int)) = Bits.SwapBytes(etag);
+
+            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
