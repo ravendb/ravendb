@@ -6,9 +6,11 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
@@ -23,7 +25,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void shouldnt_reset_index_when_non_meaningful_change()
+        public async Task shouldnt_reset_index_when_non_meaningful_change()
         {
             using (var store = GetDocumentStore())
             {
@@ -33,18 +35,18 @@ namespace SlowTests.Issues
                 var indexName = new Users_ByName().IndexName;
                 var indexDef = store.Maintenance.Send(new GetIndexOperation(indexName));
 
-                var indexInstance1 = GetDocumentDatabaseInstanceFor(store).Result.IndexStore.GetIndex(indexName);
+                var indexInstance1 = (await Databases.GetDocumentDatabaseInstanceFor(store)).IndexStore.GetIndex(indexName);
 
                 
                 indexDef.Maps = new HashSet<string> { "   " + indexDef.Maps.First().Replace(" ", "  \t ") + "   " };
                 store.Maintenance.Send(new PutIndexesOperation(indexDef));
 
-                var indexInstance2 = GetDocumentDatabaseInstanceFor(store).Result.IndexStore.GetIndex(indexName);
+                var indexInstance2 = (await Databases.GetDocumentDatabaseInstanceFor(store)).IndexStore.GetIndex(indexName);
                 Assert.Same(indexInstance1, indexInstance2);
             }
         }
 
-        private static void Setup(IDocumentStore store)
+        private void Setup(IDocumentStore store)
         {
             new Users_ByName().Execute(store);
             using (var session = store.OpenSession())
@@ -56,7 +58,7 @@ namespace SlowTests.Issues
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             store.Maintenance.Send(new StopIndexingOperation());
         }
     }

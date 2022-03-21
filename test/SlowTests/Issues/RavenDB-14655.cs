@@ -21,7 +21,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-12);
                 using (var session = store.OpenSession())
                 {
@@ -102,7 +102,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-17);
 
                 await database.TombstoneCleaner.ExecuteCleanup();
@@ -116,7 +116,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-15);
                 using (var session = store.OpenSession())
                 {
@@ -158,7 +158,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-12);
                 using (var session = store.OpenSession())
                 {
@@ -188,7 +188,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-30);
                 using (var session = store.OpenSession())
                 {
@@ -232,7 +232,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 using (var session = store.OpenSession())
                 {

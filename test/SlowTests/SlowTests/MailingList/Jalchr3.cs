@@ -58,7 +58,7 @@ namespace SlowTests.SlowTests.MailingList
                     }
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 int count;
                 // Warm-up
@@ -76,7 +76,7 @@ namespace SlowTests.SlowTests.MailingList
                     count = query.Count();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var orderedList = list.OrderBy(x => x.CreatedDate).ToList();
                 using (var session = store.OpenSession())

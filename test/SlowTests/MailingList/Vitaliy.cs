@@ -100,7 +100,7 @@ namespace SlowTests.MailingList
                 }
 
                 new CgcAndProductionIndex().Execute(documentStore);
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 using (var documentSession = documentStore.OpenSession())
                 {

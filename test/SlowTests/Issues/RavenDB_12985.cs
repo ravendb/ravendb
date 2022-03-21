@@ -48,14 +48,14 @@ namespace SlowTests.Issues
 
                 AssertCompanies(store, 0 + 2 + 5, 6, "patch2"); // previous patch bumped 2 etags
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 operation = store.Operations.Send(new PatchByQueryOperation("from index 'Companies/ByName' as c order by Name update { c.Fax = 'patch3' } limit 7,1"));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 AssertCompaniesByIndex(store, 7, 1, "patch3");
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 operation = store.Operations.Send(new PatchByQueryOperation("from index 'Companies/ByName' as c order by Name update { c.Fax = 'patch4' } limit 9,3"));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
@@ -95,7 +95,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void AssertDeleteByIndex(IDocumentStore store, int start, int take, int count)
+        private void AssertDeleteByIndex(IDocumentStore store, int start, int take, int count)
         {
             using (var session = store.OpenSession(new SessionOptions
             {
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                 NoCaching = true
             }))
             {
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var preCompanies = session.Query<Company>().OrderBy(x => x.Name).Select(x => x.Id).ToList();
                 Assert.Equal(count, preCompanies.Count);
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation($"from index 'Companies/ByName' order by Name limit {start},{take}"));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var postCompanies = session.Query<Company>().OrderBy(x => x.Name).Select(x => x.Id).ToList();
                 Assert.Equal(count - take, postCompanies.Count);

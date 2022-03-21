@@ -354,7 +354,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 await session.SaveChangesAsync();
             }
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}/ETL : {src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}";
-            var database = await GetDocumentDatabaseInstanceFor(src);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(src);
 
             var err = await AssertWaitForNotNullAsync(() =>
             {
@@ -1777,7 +1777,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(src);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(src);
                 long lastEtag;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())

@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     }
 
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var facets = new List<Facet>
                     {
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
                         new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets },
                         null);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     using (var session = store.OpenSession())
                     {
@@ -229,7 +229,7 @@ namespace SlowTests.Issues
                     }
 
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var facets = new List<Facet>
                     {
@@ -271,7 +271,7 @@ namespace SlowTests.Issues
                         new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets },
                         null);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     using (var session = store.OpenAsyncSession())
                     {

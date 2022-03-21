@@ -43,7 +43,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
 
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var s = store.OpenAsyncSession())
                 {
                     var ids = await s.Query<JavaScriptIndexWithIdMethod.Result, JavaScriptIndexWithIdMethod>().ToListAsync();
@@ -82,7 +82,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     await s.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var s = store.OpenAsyncSession())
                 {
                     var ids = await s.Query<Company, JavaScriptIndexWithGetMetadataMethod>().ProjectInto<JavaScriptIndexWithGetMetadataMethod.Result>().ToListAsync();

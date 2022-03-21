@@ -157,7 +157,7 @@ namespace SlowTests.MailingList
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var result = session.Query<ResourceViewModel, ResourceViewModels_ByTag>().ToList();
 

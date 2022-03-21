@@ -87,7 +87,7 @@ namespace Voron
 
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
-        private NativeMemory.ThreadStats _currentWriteTransactionHolder;
+        internal NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
@@ -757,7 +757,7 @@ namespace Voron
 
         private void ThrowCommittedAndFlushedTransactionNotFoundInActiveOnes(LowLevelTransaction llt)
         {
-            throw new InvalidOperationException($"The transaction with ID '{llt.Id}' got committed and flushed but it wasn't found in the {nameof(ActiveTransactions)}");
+            throw new InvalidOperationException($"The transaction with ID '{llt.Id}' got committed and flushed but it wasn't found in the {nameof(ActiveTransactions)}. (Debug details: tx id of {nameof(llt.ActiveTransactionNode)} - {llt.ActiveTransactionNode?.Value?.Id}");
         }
 
         internal void WriteTransactionStarted()
@@ -1441,6 +1441,21 @@ namespace Voron
         private static void ThrowSimulateFailureOnDbCreation()
         {
             throw new InvalidOperationException("Simulation of db creation failure");
+        }
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action ActionToCallDuringFullBackupRighAfterCopyHeaders;
         }
     }
     

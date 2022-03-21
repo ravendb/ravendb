@@ -29,9 +29,9 @@ namespace SlowTests.Bugs
                 };
                 store.Maintenance.Send(new PutIndexesOperation(new[] { indexDef }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
-                var stats = WaitForIndexingErrors(store, errorsShouldExists: false);
+                var stats = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                 Assert.Null(stats);
 
             }

@@ -34,12 +34,12 @@ namespace SlowTests.Issues
                     })).WaitForCompletion(TimeSpan.FromSeconds(300));
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var indexStats = store.Maintenance.Send(new GetIndexesStatisticsOperation());
 

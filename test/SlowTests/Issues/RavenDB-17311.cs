@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 
                 var deletion = await src.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(src.Database, hardDelete: true, fromNode: mentor,
                     timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
-                await WaitForRaftIndexToBeAppliedInCluster(deletion.RaftCommandIndex, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deletion.RaftCommandIndex, TimeSpan.FromSeconds(30));
 
                 using (var session = src.OpenSession())
                 {
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "John Doe", 30_000));
 
                 var addResult = await src.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(src.Database, node: mentor));
-                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addResult.RaftCommandIndex, TimeSpan.FromSeconds(30));
 
                 await WaitAndAssertForValueAsync(() => GetMembersCount(src), 3);
             }

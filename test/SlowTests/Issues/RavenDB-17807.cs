@@ -31,7 +31,7 @@ public class RavenDB_17807 : RavenTestBase
                 await commands.PutAsync("items/1", null, new { Name = "testname" },
                     new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Items" } });
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 var ids = new[] { "testname12", "testname1", "testname" };
                 var operation = store.Operations.Send(
                     new PatchByQueryOperation(
@@ -62,7 +62,7 @@ public class RavenDB_17807 : RavenTestBase
                 await commands.PutAsync("items/1", null, new { Name = "testname" },
                     new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Items" } });
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var ids = new[] { "testname12", "testname1", "testname" };
 
@@ -91,7 +91,7 @@ public class RavenDB_17807 : RavenTestBase
                 await commands.PutAsync("items/1", null, new { Name = "testname" },
                     new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Items" } });
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var ids = new[] { "testname12", "testname1", "testname" };
 

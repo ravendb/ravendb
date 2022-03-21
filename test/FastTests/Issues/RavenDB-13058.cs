@@ -225,7 +225,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -246,7 +246,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                var errors = WaitForIndexingErrors(store, timeout: TimeSpan.FromMinutes(1));
+                var errors = Indexes.WaitForIndexingErrors(store, timeout: TimeSpan.FromMinutes(1));
                 Assert.Single(errors);
             }
         }
@@ -272,7 +272,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -293,7 +293,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -314,7 +314,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

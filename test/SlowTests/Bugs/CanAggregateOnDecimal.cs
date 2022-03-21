@@ -69,7 +69,7 @@ namespace SlowTests.Bugs
                     });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
                 using (var session = store.OpenSession())
@@ -105,7 +105,7 @@ namespace SlowTests.Bugs
                     }
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.False(stats.Indexes.Any(i => i.State == IndexState.Error));
 

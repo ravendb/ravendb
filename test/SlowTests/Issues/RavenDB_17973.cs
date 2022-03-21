@@ -65,7 +65,7 @@ public class RavenDB_17973 : RavenTestBase
                     Types = new List<TShirtType> { new TShirtType { Color = "Blue", Size = "Small" }, new TShirtType { Color = "Gray", Size = "Large" } }
                 });
                 session.SaveChanges();
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var tshirtsquery = session.Query<TShirt, TShirtIndex>()
                     .ProjectInto<TShirtIndex.Result>()

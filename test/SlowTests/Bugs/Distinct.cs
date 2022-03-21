@@ -178,7 +178,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics qs;
@@ -217,7 +217,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
 

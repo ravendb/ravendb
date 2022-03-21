@@ -46,7 +46,7 @@ doc.Name
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Order>(indexName).ToList();
@@ -58,7 +58,7 @@ doc.Name
 
                 store.Maintenance.Send(new EnableIndexOperation(indexName));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Order>(indexName).ToList();

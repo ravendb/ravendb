@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionStorage : IDisposable, ILowMemoryHandler
     {
-        private readonly DocumentDatabase _db;
+        internal readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
         
         private readonly ConcurrentDictionary<long, SubscriptionConnectionsState> _subscriptions = new ();
@@ -101,8 +101,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionConnectionsState OpenSubscription(SubscriptionConnection connection)
         {
-            var subscriptionState = _subscriptions.GetOrAdd(connection.SubscriptionId,
-                subscriptionId => new SubscriptionConnectionsState(connection.Options.SubscriptionName, subscriptionId ,this, connection));
+            var subscriptionState = _subscriptions.GetOrAdd(connection.SubscriptionId, subId => new SubscriptionConnectionsState(subId, this));
+            subscriptionState.Initialize(connection);
             return subscriptionState;
         }
 
@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
         {
-            if (_subscriptions.TryRemove(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+            if (_subscriptions.TryGetValue(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return false;
 
             foreach (var subscriptionConnection in subscriptionConnectionsState.GetConnections())
@@ -689,7 +689,10 @@ namespace Raven.Server.Documents.Subscriptions
 
                 if (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
                 {
-                    _subscriptions.Remove(kvp.Key, out _);
+                    if (_subscriptions.TryRemove(kvp.Key, out var subsState))
+                    {
+                        subsState.Dispose();
+                    }
                 }
             }
         }
@@ -701,7 +704,10 @@ namespace Raven.Server.Documents.Subscriptions
                 if (state.Value.IsSubscriptionActive())
                     continue;
 
-                _subscriptions.Remove(state.Key, out _);
+                if (_subscriptions.TryRemove(state.Key, out var subsState))
+                {
+                    subsState.Dispose();
+                }
             }
         }
 

@@ -124,7 +124,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    var database = GetDocumentDatabaseInstanceFor(store).Result;
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
                     var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions { IncludeExpired = false }, path);

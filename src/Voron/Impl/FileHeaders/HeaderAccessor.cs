@@ -264,7 +264,7 @@ namespace Voron.Impl.FileHeaders
             return header->Hash == CalculateFileHeaderHash(header);
         }
 
-        public void CopyHeaders(CompressionLevel compressionLevel, ZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
+        public JournalInfo CopyHeaders(CompressionLevel compressionLevel, ZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
         {
             _locker.EnterReadLock(); //race between reading the headers while modifying them
             try
@@ -289,6 +289,8 @@ namespace Voron.Impl.FileHeaders
 
                 if (!success)
                     throw new InvalidDataException($"Failed to read both file headers (headers.one & headers.two) from path: {basePath}, possible corruption.");
+
+                return _theHeader->Journal;
             }
             finally
             {

@@ -64,11 +64,11 @@ namespace SlowTests.Issues
                 }
                 new User_Index().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {
-                    Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                    Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
                     var collection = s.Query<User, User_Index>().ToList();
                     Assert.NotEmpty(collection);
                 }

@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                 var index = new MyJSIndex(maxStepsForScript: null);
                 index.Execute(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var indexInstance1 = (MapIndex)database.IndexStore.GetIndex(index.IndexName);
                 var compiled1 = (JavaScriptIndex)indexInstance1._compiled;
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                 index = new MyJSIndex(maxStepsForScript);
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var indexInstance2 = (MapIndex)database.IndexStore.GetIndex(index.IndexName);
                 var compiled2 = (JavaScriptIndex)indexInstance2._compiled;
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }

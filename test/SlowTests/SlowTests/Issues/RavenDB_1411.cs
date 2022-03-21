@@ -109,13 +109,13 @@ namespace SlowTests.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new SingleMapIndex().Execute(store);
                 new MultiMapIndex().Execute(store);
                 new FooMapReduceIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -169,7 +169,7 @@ namespace SlowTests.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new SingleMapIndex().Execute(store);
 
@@ -207,7 +207,7 @@ namespace SlowTests.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new SingleMapIndex().Execute(store);
 

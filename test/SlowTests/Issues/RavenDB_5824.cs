@@ -32,7 +32,7 @@ namespace SlowTests.Issues
 
                 new Index().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(new Index().IndexName));
                 Assert.False(staleness.IsStale);
@@ -63,7 +63,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(new Index().IndexName));
                 Assert.False(staleness.IsStale);

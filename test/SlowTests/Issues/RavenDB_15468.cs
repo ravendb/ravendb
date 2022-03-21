@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     // from index 'Projects/Search' where SiteId = "site/322" order by site-322-portfolio as long
@@ -112,7 +112,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<Project>("Projects/Search")

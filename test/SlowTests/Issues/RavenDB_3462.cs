@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                     session.Store(entity);
                     session.SaveChanges();
 
-                    WaitForIndexing(documentStore);
+                    Indexes.WaitForIndexing(documentStore);
 
                     //Point(12.556675672531128 55.675285554217), corner of the bounding rectangle below
                     var nearbyPoints = session.Query<EntitySpatialIndex.Result, EntitySpatialIndex>()

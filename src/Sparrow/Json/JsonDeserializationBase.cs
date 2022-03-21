@@ -285,8 +285,12 @@ namespace Sparrow.Json
                     }
                 }
 
-                if (propertyType == typeof(List<string>) || propertyType == typeof(HashSet<string>))
+                var isReadOnlyListOfStrings = propertyType == typeof(IReadOnlyList<string>);
+                if (propertyType == typeof(List<string>) || propertyType == typeof(HashSet<string>) || isReadOnlyListOfStrings)
                 {
+                    if (isReadOnlyListOfStrings)
+                        propertyType = typeof(List<string>);
+
                     var method = typeof(JsonDeserializationBase).GetMethod(nameof(ToCollectionOfString), BindingFlags.NonPublic | BindingFlags.Static);
                     method = method.MakeGenericMethod(propertyType);
                     return Expression.Call(method, json, Expression.Constant(propertyName));

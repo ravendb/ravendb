@@ -62,7 +62,7 @@ namespace SlowTests.MailingList
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private void AssertMatches(IDocumentStore store, IEnumerable<string> idsToMatch, int expectedCount)

@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                         Amount = 3
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var query = session.Query<ReduceMe>(index.IndexName);
                     using (var stream = session.Advanced.Stream(query))
                     {

@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                 var deletion = await src.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(src.Database, hardDelete: true, fromNode: mentorTag,
                     timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
 
-                await WaitForRaftIndexToBeAppliedInCluster(deletion.RaftCommandIndex + 1, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deletion.RaftCommandIndex + 1, TimeSpan.FromSeconds(30));
                 await RavenDB_7912.WaitForDatabaseToBeDeleted(leader, src.Database, TimeSpan.FromSeconds(15), CancellationToken.None);
                 await WaitAndAssertForValueAsync(() => GetMembersCount(src), 2);
 
@@ -107,7 +107,7 @@ namespace SlowTests.Issues
                 Assert.Equal(2, addResult.Topology.Members.Count);
                 Assert.Equal(1, addResult.Topology.Promotables.Count);
 
-                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 var membersCount = await WaitForValueAsync(() => GetMembersCount(src), 3);
                 
                 Assert.True(membersCount == 3, await AddDebugInfoAsync(src, membersCount));

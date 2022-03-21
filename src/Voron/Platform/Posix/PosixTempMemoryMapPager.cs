@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Global;
@@ -102,10 +103,8 @@ namespace Voron.Platform.Posix
             PagerState newPagerState = CreatePagerState();
             if (newPagerState == null)
             {
-                var errorMessage = string.Format(
-                    "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
-                    (_totalAllocationSize + allocationSize));
-
+                var errorMessage =
+                    $"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size: {new Size((_totalAllocationSize + allocationSize), SizeUnit.Bytes)}";
                 throw new OutOfMemoryException(errorMessage);
             }
 

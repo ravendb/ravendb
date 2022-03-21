@@ -38,7 +38,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 var timeSeriesIndex = new MyTsIndex();
                 timeSeriesIndex.Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                
                 using (var session = store.OpenSession())
                 {

@@ -23,7 +23,7 @@ namespace SlowTests.Server.Replication
             using (var store2 = GetDocumentStore())
             {
                 string changeVector1;
-                var documentDatabase = await GetDocumentDatabaseInstanceFor(store1);
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 using (var session = store1.OpenSession())
                 {

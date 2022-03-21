@@ -143,6 +143,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 RecentSubscriptionStatuses.TryDequeue(out _);
             }
+
             RecentSubscriptionStatuses.Enqueue(message);
         }
 
@@ -225,6 +226,9 @@ namespace Raven.Server.Documents.TcpHandlers
                     CancellationTokenSource.Token);
 
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
+
+            // update the state if above data changed
+            _subscriptionConnectionsState.Initialize(this, afterSubscribe: true);
 
             await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
                 SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
@@ -395,7 +399,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         _logger.Info(
                             $"Finished processing subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}");
                     }
-
                     disposeOnDisconnect?.Dispose();
                 }
             }

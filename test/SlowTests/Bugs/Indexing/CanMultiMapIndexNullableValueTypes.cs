@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -28,7 +29,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Fact]
-        public void WillNotProduceAnyErrors()
+        public async Task WillNotProduceAnyErrors()
         {
             using (var store = GetDocumentStore())
             {
@@ -53,7 +54,7 @@ namespace SlowTests.Bugs.Indexing
                     Assert.Equal(results.Length, 4);
                 }
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.Equal(errorsCount, 0);

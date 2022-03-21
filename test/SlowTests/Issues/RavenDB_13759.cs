@@ -32,12 +32,12 @@ namespace SlowTests.Issues
                 var index = new Orders_ByOrderBy();
                 index.Execute(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance1 = database.IndexStore.GetIndex(index.IndexName);
 
                 Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, indexInstance1.Definition.Version);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var indexTimeFields = indexInstance1._indexStorage.ReadIndexTimeFields();
                 Assert.Empty(indexTimeFields);
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 indexTimeFields = indexInstance1._indexStorage.ReadIndexTimeFields();
                 Assert.Equal(1, indexTimeFields.Count);
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 indexTimeFields = indexInstance1._indexStorage.ReadIndexTimeFields();
                 Assert.Equal(2, indexTimeFields.Count);
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                 Assert.Contains("ShippedAt", indexTimeFields);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
-                database = await GetDocumentDatabaseInstanceFor(store);
+                database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var indexInstance2 = database.IndexStore.GetIndex(index.IndexName);
                 Assert.NotEqual(indexInstance1, indexInstance2);
@@ -109,7 +109,7 @@ namespace SlowTests.Issues
                         .ToList();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 indexStoragePath1 = database.IndexStore.GetIndex(index.IndexName)._environment.Options.BasePath.FullPath;
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
             {
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var indexInstance1 = database.IndexStore.GetIndex(index.IndexName);
                 var indexInstance2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession(new SessionOptions { NoCaching = true }))
                 {

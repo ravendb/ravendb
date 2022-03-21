@@ -40,7 +40,7 @@ namespace SlowTests.Smuggler
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -175,7 +175,7 @@ namespace SlowTests.Smuggler
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
+                    var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
                     var backups = periodicBackupRunner.PeriodicBackups;
 
                     Assert.Equal("Backup", backups.First().Configuration.Name);
@@ -246,7 +246,7 @@ namespace SlowTests.Smuggler
         public async Task CanMigrateDatabaseRecord()
         {
             var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -412,7 +412,7 @@ namespace SlowTests.Smuggler
                                                        DatabaseRecordItemType.SqlEtls |
                                                        DatabaseRecordItemType.RavenConnectionStrings |
                                                        DatabaseRecordItemType.Analyzers
-                    }, GetDocumentDatabaseInstanceFor(store2).Result);
+                    }, Databases.GetDocumentDatabaseInstanceFor(store2).Result);
 
                     WaitForValue(() =>
                     {
@@ -888,7 +888,7 @@ namespace SlowTests.Smuggler
 
                     int disabled = 0;
 
-                    var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
+                    var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
                     var backups = periodicBackupRunner.PeriodicBackups;
 
                     disabled = 0;
@@ -1002,7 +1002,7 @@ namespace SlowTests.Smuggler
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -1133,7 +1133,7 @@ namespace SlowTests.Smuggler
                         DatabaseName = databaseName,
                     }))
                     {
-                        var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
+                        var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                         var backups = periodicBackupRunner.PeriodicBackups;
 
                         Assert.Equal(2, backups.Count);

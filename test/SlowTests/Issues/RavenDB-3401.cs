@@ -25,7 +25,7 @@ namespace SlowTests.Issues
                     session.Store(new Customer { Name = "John", Address = "Tel Aviv" });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var customer = session.Query<Customer>(index.IndexName)
                         .Select(r => new

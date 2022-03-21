@@ -92,7 +92,7 @@ namespace SlowTests.MailingList
 
                 // Create index
                 new Wod_Search().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 for (int i = 1; i <= 5; i++)
                 {

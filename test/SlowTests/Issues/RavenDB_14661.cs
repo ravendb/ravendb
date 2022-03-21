@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 
                 var iq = new IndexQuery
                 {
@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                 }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
                 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 
                 operation = store.Operations.Send(new PatchByQueryOperation(iq, new QueryOperationOptions
                 {

@@ -185,11 +185,11 @@ namespace SlowTests.Server.Documents.Notifications
                 await observableWithTask.EnsureSubscribedNow();
 
                 new UsersIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 Assert.True(list.Count == 0);
 
                 new UsersIndexChanged().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(list.TryTake(out var indexChange, TimeSpan.FromSeconds(1)));
                 Assert.Equal("Users/All", indexChange.Name);

@@ -29,7 +29,7 @@ namespace SlowTests.Issues
 
         private RavenServer CreateSecuredServer(string fakePublicUrl = null, bool uniqueCerts = false)
         {
-            var certificates = GenerateAndSaveSelfSignedCertificate(createNew: uniqueCerts);
+            var certificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: uniqueCerts);
             var customSettings = new ConcurrentDictionary<string, string>();
 
             if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec), out var _) == false)

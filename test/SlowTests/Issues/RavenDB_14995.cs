@@ -46,7 +46,7 @@ namespace SlowTests.Issues
 
                 for (var i = 0; i < numberOfCompanies; i++)
                 {
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     RavenTestHelper.AssertNoIndexErrors(store);
                     AssertCompanies(numberOfCompanies - i);
 

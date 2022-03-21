@@ -223,7 +223,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

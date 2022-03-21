@@ -90,7 +90,7 @@ select new
                 s.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         [Fact]

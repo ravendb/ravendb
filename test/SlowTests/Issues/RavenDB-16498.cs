@@ -40,7 +40,7 @@ namespace SlowTests.Issues
             }
 
             await new User_Search().ExecuteAsync(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var s = store.OpenAsyncSession())
             {

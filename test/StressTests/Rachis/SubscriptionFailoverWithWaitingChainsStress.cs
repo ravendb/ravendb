@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Collections;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -142,7 +143,7 @@ namespace StressTests.Rachis
 
                 foreach (var cde in cdeArray.GetArray())
                 {
-                    await KeepDroppingSubscriptionsAndWaitingForCDE(databaseName, SubscriptionsCount, cluster, cde, cts.Token);
+                    await KeepDroppingSubscriptionsAndWaitingForCDE(databaseName, SubscriptionsCount, cluster, cde, dBGroupSize, cts.Token);
                 }
 
                 foreach (var curNode in cluster.Nodes)
@@ -219,7 +220,7 @@ namespace StressTests.Rachis
             var subscription = await GetSubscription(subsId, store.Database, nodes, token);
             Assert.NotNull(subscription);
 
-            await WaitForRaftIndexToBeAppliedOnClusterNodes(subscription.SubscriptionId, nodes);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(subscription.SubscriptionId, nodes);
 
             foreach (var cde in cdes)
             {
@@ -330,7 +331,7 @@ namespace StressTests.Rachis
                 {
                     for (var k = 0; k < DocsBatchSize; k++)
                     {
-                        var user = await session.LoadAsync<User>(ids[k]);
+                        var user = await session.LoadAsync<User>(ids[k], token);
                         user.Age++;
                     }
                     await session.SaveChangesAsync(token);
@@ -351,25 +352,24 @@ namespace StressTests.Rachis
             }
         }
 
-        private static async Task KeepDroppingSubscriptionsAndWaitingForCDE(string databaseName, int SubscriptionsCount, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, CountdownEvent mainSubscribersCDE, CancellationToken token)
+        private static async Task KeepDroppingSubscriptionsAndWaitingForCDE(string databaseName, int SubscriptionsCount,
+            (List<RavenServer> Nodes, RavenServer Leader) cluster, CountdownEvent mainSubscribersCDE, int dBGroupSize, CancellationToken token)
         {
-            var mainTcs = new TaskCompletionSource<bool>();
-
-            var mainTI = ThreadPool.RegisterWaitForSingleObject(mainSubscribersCDE.WaitHandle, (x, timedOut) =>
+            Dictionary<string, List<string>> res = null;
+            var dropResult = await WaitForValueAsync(async () =>
             {
-                if (!timedOut)
-                    mainTcs.SetResult(true);
-            }, null, 10000, true);
+                res = await DropSubscriptions(databaseName, SubscriptionsCount, cluster, dBGroupSize, token);
 
-            for (int i = 0; i < 20; i++)
-            {
-                await DropSubscriptions(databaseName, SubscriptionsCount, cluster, token);
+                if (WaitHandle.WaitAny(new[] { mainSubscribersCDE.WaitHandle }, 1000) == WaitHandle.WaitTimeout)
+                {
+                    return false;
+                }
 
-                if (await mainTcs.Task.WaitWithoutExceptionAsync(1000))
-                    break;
-            }
+                return true;
+            }, true, timeout: PlatformDetails.Is32Bits ? 5 * 60_000 : 60_000);
 
-            mainTI.Unregister(mainSubscribersCDE.WaitHandle);
+            var msg = "Dropped subscriptions, didn't signal CDE.";
+            Assert.True(dropResult, res == null ? msg : $"{msg}{Environment.NewLine}{string.Join(Environment.NewLine, res.Select(x=> $"{x.Key}: {string.Join(",", x.Value)}"))}");
         }
 
         private async Task WaitForRehab(string dbName, int index, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
@@ -444,10 +444,14 @@ namespace StressTests.Rachis
             }
         }
 
-        private static async Task DropSubscriptions(string databaseName, int SubscriptionsCount, (List<RavenServer> Nodes, RavenServer Leader) cluster, CancellationToken token)
+        private static async Task<Dictionary<string, List<string>>> DropSubscriptions(string databaseName, int SubscriptionsCount, (List<RavenServer> Nodes, RavenServer Leader) cluster, int dBGroupSize,
+            CancellationToken token)
         {
+            var res = new Dictionary<string, List<string>>();
+
             foreach (var curNode in cluster.Nodes)
             {
+                res.Add(curNode.ServerStore.NodeTag, new List<string>());
                 DocumentDatabase db;
                 try
                 {
@@ -455,6 +459,9 @@ namespace StressTests.Rachis
                 }
                 catch (DatabaseNotRelevantException)
                 {
+                    if (dBGroupSize == cluster.Nodes.Count)
+                        throw;
+
                     continue;
                 }
 
@@ -463,17 +470,24 @@ namespace StressTests.Rachis
                     using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
+                        var name = $"Subscription{k}";
                         var subscription = db
                             .SubscriptionStorage
-                            .GetRunningSubscription(context, null, "Subscription" + k, false);
+                            .GetRunningSubscription(context, null, name, false);
 
                         if (subscription == null)
+                        {
                             continue;
+                        }
+
+                        res[curNode.ServerStore.NodeTag].Add(name);
                         db.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
                             new SubscriptionClosedException("Dropped by Test"));
                     }
                 }
             }
+
+            return res;
         }
 
         internal static async Task<SubscriptionStorage.SubscriptionGeneralDataAndStats> GetSubscription(string name, string database, List<RavenServer> nodes, CancellationToken token = default)

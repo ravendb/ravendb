@@ -56,7 +56,7 @@ namespace SlowTests.Cluster
                     documentStore.Initialize();
 
                     var (raftIndex, _) = await CreateDatabaseInCluster(databaseName, 1, server.WebUrl);
-                    await WaitForRaftIndexToBeAppliedInCluster(raftIndex, TimeSpan.FromSeconds(10));
+                    await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(raftIndex, TimeSpan.FromSeconds(10));
 
                     var totalReadBeforeChanges = proxy.TotalRead;
                     var totalWriteBeforeChanges = proxy.TotalWrite;
@@ -107,7 +107,7 @@ namespace SlowTests.Cluster
                 leaderStore.Initialize();
 
                 var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //make sure we have updated topology --> more deterministic test
@@ -230,7 +230,7 @@ namespace SlowTests.Cluster
                 follower2.Initialize();
 
                 var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //make sure we have updated topology --> more deterministic test
@@ -328,7 +328,7 @@ namespace SlowTests.Cluster
                 follower2.Initialize();
 
                 var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //wait until all nodes in database cluster are members (and not promotables)
@@ -409,7 +409,7 @@ namespace SlowTests.Cluster
                 leaderStore.Initialize();
 
                 var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
 
                 using (var session = leaderStore.OpenSession())
                 {

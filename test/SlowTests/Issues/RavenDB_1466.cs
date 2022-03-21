@@ -56,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void DoTest(IDocumentStore store)
+        private void DoTest(IDocumentStore store)
         {
             new EmployeeByRegionAndSalary().Execute(store);
 
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
 
                 session.SaveChanges();
 
-                WaitForIndexing((DocumentStore)store);
+                Indexes.WaitForIndexing((DocumentStore)store);
 
                 var facets = new List<RangeFacet>
                 {

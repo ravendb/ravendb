@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
             await session.SaveChangesAsync();
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             WaitForUserToContinueTheTest(store);
 
             const int i = 1000;

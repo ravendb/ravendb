@@ -44,7 +44,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

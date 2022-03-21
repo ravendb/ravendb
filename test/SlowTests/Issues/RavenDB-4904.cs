@@ -32,11 +32,11 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put("companies/1", null, new { Name = "HR" }, null);
-                    Assert.Null(WaitForIndexingErrors(store, new[] { IndexName }, errorsShouldExists: false));
+                    Assert.Null(Indexes.WaitForIndexingErrors(store, new[] { IndexName }, errorsShouldExists: false));
 
                     store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
-                    WaitForIndexing(store);
-                    Assert.Equal(1, WaitForIndexingErrors(store, new[] { IndexName })[0].Errors.Length);
+                    Indexes.WaitForIndexing(store);
+                    Assert.Equal(1, Indexes.WaitForIndexingErrors(store, new[] { IndexName })[0].Errors.Length);
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
                     //{
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                     //});
 
                     SpinWait.SpinUntil(() => store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length == 2);
-                    Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                    Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
                 }
             }
         }
@@ -61,11 +61,11 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put("companies/1", null, new { Name = "HR" }, null);
-                    Assert.Null(WaitForIndexingErrors(store, new []{ IndexName }, errorsShouldExists: false));
+                    Assert.Null(Indexes.WaitForIndexingErrors(store, new []{ IndexName }, errorsShouldExists: false));
 
                     store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
-                    WaitForIndexing(store);
-                    Assert.Equal(1, WaitForIndexingErrors(store, new[] { IndexName })[0].Errors.Length);
+                    Indexes.WaitForIndexing(store);
+                    Assert.Equal(1, Indexes.WaitForIndexingErrors(store, new[] { IndexName })[0].Errors.Length);
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
                     //{
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                     //});
 
                     SpinWait.SpinUntil(() => store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length == 2);
-                    var errors = WaitForIndexingErrors(store);
+                    var errors = Indexes.WaitForIndexingErrors(store);
                     Assert.Equal(1, errors.Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
                     Assert.Equal(0, errors.Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
                 }
@@ -92,11 +92,11 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put("companies/1", null, new { Name = "HR" }, null);
-                    Assert.Null(WaitForIndexingErrors(store, new []{IndexName}, errorsShouldExists: false));
+                    Assert.Null(Indexes.WaitForIndexingErrors(store, new []{IndexName}, errorsShouldExists: false));
                     store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName,
                         Maps = { "from doc in docs select new { Total = 3/1 };" }} }));
-                    WaitForIndexing(store);
-                    Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                    Indexes.WaitForIndexing(store);
+                    Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
                     //{
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
                     //});
 
                     SpinWait.SpinUntil(() => store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length == 2);
-                    var errors = WaitForIndexingErrors(store);
+                    var errors = Indexes.WaitForIndexingErrors(store);
                     Assert.Equal(1, errors.Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
                     Assert.Equal(0, errors.Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
                 }

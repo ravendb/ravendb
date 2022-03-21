@@ -44,7 +44,7 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                var old = GetDocumentDatabaseInstanceFor(store).Result;
+                var old = await Databases.GetDocumentDatabaseInstanceFor(store);
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 using (var session = store.OpenAsyncSession())

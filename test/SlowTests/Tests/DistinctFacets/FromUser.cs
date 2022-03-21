@@ -27,7 +27,7 @@ namespace SlowTests.Tests.DistinctFacets
             using (var documentStore = GetDocumentStore())
             {
                 CreateSampleData(documentStore);
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {
