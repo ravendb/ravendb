@@ -3,6 +3,7 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Text;
 using Corax;
+using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
@@ -44,6 +45,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 buffer.Truncate(length);
                 entryWriter.Write(field, buffer.ToSpan(), longValue, doubleValue);
             }
+        }
+
+        public void Write(int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
+        {
+            using var scope = new BlittableWriterScope(reader);
+            scope.Write(field, ref entryWriter);
         }
     }
 }

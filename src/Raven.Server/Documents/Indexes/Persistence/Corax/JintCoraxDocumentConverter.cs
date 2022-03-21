@@ -68,7 +68,6 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
 
             object value;
             float? propertyBoost = null;
-            int numberOfCreatedFields;
             var actualValue = propertyDescriptor.Value;
             var isObject = IsObject(actualValue);
             if (isObject)
