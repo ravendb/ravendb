@@ -29,20 +29,6 @@ interface IndexesPageProps {
     reload: () => Promise<void>;
 }
 
-async function confirmDeleteIndexes(db: database, indexes: IndexSharedInfo[]): Promise<void> {
-    if (indexes.length > 0) {
-        const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
-        app.showBootstrapDialog(deleteIndexesVm);
-        deleteIndexesVm.deleteTask
-            .done((deleted: boolean) => {
-                if (deleted) {
-                    this.removeIndexesFromAllGroups(indexes); //todo
-                }
-            });
-        await deleteIndexesVm.deleteTask;
-    }
-}
-
 async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<boolean> {
     return new Promise(done => {
         viewHelpers.confirmationMessage("Reset index?",
@@ -178,6 +164,43 @@ export function IndexesPage(props: IndexesPageProps) {
     useEffect(() => {
         fetchStats(initialLocation);
     }, []);
+
+    const getSelectedIndexes = (): IndexSharedInfo[] => stats.indexes.filter(x => selectedIndexes.includes(x.name));
+    
+    const deleteSelectedIndexes = () => confirmDeleteIndexes(database, getSelectedIndexes())
+
+    const enableSelectedIndexes = async () => {
+        //TODO: add confirmation dialog!
+        const indexes = getSelectedIndexes();
+        while (indexes.length) {
+            await enableIndexing(indexes.pop());
+        }
+    }
+    
+    const disableSelectedIndexes = async () => {
+        //TODO: add confirmation dialog!
+        const indexes = getSelectedIndexes();
+        while (indexes.length) {
+            await disableIndexing(indexes.pop());
+        }
+    }
+    
+    const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
+        if (indexes.length > 0) {
+            const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
+            app.showBootstrapDialog(deleteIndexesVm);
+            deleteIndexesVm.deleteTask
+                .done((deleted: boolean) => {
+                    if (deleted) {
+                        dispatch({
+                            type: "DeleteIndexes",
+                            indexNames: indexes.map(x => x.name)
+                        });
+                    }
+                });
+            await deleteIndexesVm.deleteTask;
+        }
+    }
     
     const setIndexPriority = async (index: IndexSharedInfo, priority: IndexPriority) => {
         await indexesService.setPriority(index, priority, database);
@@ -250,9 +273,12 @@ export function IndexesPage(props: IndexesPageProps) {
     const resetIndex = async (index: IndexSharedInfo) => {
         const canReset = await confirmResetIndex(database, index);
         if (canReset) {
-            //TODO: eventsCollector.default.reportEvent("indexes", "reset");
+            eventsCollector.default.reportEvent("indexes", "reset");
             
-            await indexesService.resetIndex(index, database);
+            const locations = database.getLocations();
+            while (locations.length) {
+                await indexesService.resetIndex(index, database, locations.pop());
+            }
             
             /* TODO
              // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
@@ -334,7 +360,12 @@ export function IndexesPage(props: IndexesPageProps) {
                                 </div>
 
                                 <IndexFilter filter={filter} setFilter={setFilter} />
-                                <IndexToolbarActions />
+                                <IndexToolbarActions
+                                    selectedIndexes={selectedIndexes}
+                                    deleteSelectedIndexes={deleteSelectedIndexes}
+                                    enableSelectedIndexes={enableSelectedIndexes}
+                                    disableSelectedIndexes={disableSelectedIndexes}
+                                />
                             </div>
                         </div>
                         <IndexGlobalIndexing />
