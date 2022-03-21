@@ -76,8 +76,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         case MethodType.StartsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
-                            return _searcher.StartWithQuery(fieldName,
-                                GetFieldValue((ValueExpression)methodExpression.Arguments[1]).ToString(), scoreFunction, isNegated, fieldId);
+                            return _searcher.StartWithQuery(fieldName, 
+                                GetFieldValue((ValueExpression)methodExpression.Arguments[1])?.ToString() ??
+                                       throw new InvalidQueryException("Method startsWith() expects to get an argument of type String while it got Null")
+                                , scoreFunction, isNegated, fieldId);
                         case MethodType.EndsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
@@ -188,8 +190,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     field = (FieldExpression)expression.Left;
                     fieldName = GetField(field);
                     return isNegated
-                        ? _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName))
-                        : _searcher.UnaryQuery(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), value.GetValue(_query.QueryParameters).ToString(), UnaryMatchOperation.NotEquals);
+                        ? _searcher.TermQuery(fieldName, GetFieldValue(value).ToString(), GetFieldIdInIndex(fieldName))
+                        : _searcher.UnaryQuery(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), GetFieldValue(value).ToString(), UnaryMatchOperation.NotEquals);
             }
 
             if (expression.IsRangeOperation)
@@ -357,14 +359,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             return fieldName switch
             {
-                Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName => 0,
+                Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName or Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName => 0,
                 "score" => ScoreId,
                 _ => throw new InvalidDataException($"Field {fieldName} does not found in current index.")
             };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private object GetFieldValue(ValueExpression f) => f.GetValue(_query.QueryParameters);
+        private object GetFieldValue(ValueExpression f) => f.GetValue(_query.QueryParameters) switch
+        {
+            null => Client.Constants.Documents.Indexing.Fields.NullValue,
+            var value => value
+        };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsUnary(BinaryExpression binaryExpression) => binaryExpression is not null && binaryExpression.IsRangeOperation;

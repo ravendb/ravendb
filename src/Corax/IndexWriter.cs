@@ -441,11 +441,11 @@ namespace Corax
                 var numberOfEntries = llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
                 Debug.Assert(numberOfEntries >= 0);
             }
-
+            
             void DeleteField(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(fieldName);
-                if (fieldTree.TryGetValue(termValue, out var containerId) == false)
+                if (termValue.Length == 0 || fieldTree.TryGetValue(termValue, out var containerId) == false)
                     return;
 
                 if ((containerId & (long)TermIdMask.Set) != 0)

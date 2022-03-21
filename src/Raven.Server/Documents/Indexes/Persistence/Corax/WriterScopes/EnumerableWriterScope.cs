@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
@@ -15,15 +18,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         private readonly List<Memory<byte>> _stringValues;
         private readonly List<long> _longValues;
         private readonly List<double> _doubleValues;
-        private (int Strings, int Longs, int Doubles) _count;
+        private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
+        private (int Strings, int Longs, int Doubles, int Raws) _count;
 
 
-        public EnumerableWriterScope(List<Memory<byte>> stringValues, List<long> longValues, List<double> doubleValues, ByteStringContext allocator)
+        public EnumerableWriterScope(List<Memory<byte>> stringValues, List<long> longValues, List<double> doubleValues, List<BlittableJsonReaderObject> blittableJsonReaderObjects, ByteStringContext allocator)
         {
-            _count = (0, 0, 0);
+            _count = (0, 0, 0, 0);
             _doubleValues = doubleValues;
             _longValues = longValues;
             _stringValues = stringValues;
+            _blittableJsonReaderObjects = blittableJsonReaderObjects;
             _allocator = allocator;
         }
         
@@ -64,19 +69,46 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _count.Doubles++;
         }
 
+        public void Write(int field, BlittableJsonReaderObject reader, ref IndexEntryWriter entryWriter)
+        {
+            _blittableJsonReaderObjects.Add(reader);
+            _count.Raws++;
+        }
+
         public void Finish(int field, ref IndexEntryWriter entryWriter)
         {
+            if (_count.Raws > 0 && (_count.Longs | _count.Doubles | _count.Strings) != 0)
+            {
+                // This basically should not happen but I want to make sure on whole SlowTests.
+                throw new InvalidDataException($"{nameof(EnumerableWriterScope)}: Some raws were mixed with normal literal.");
+            }
+
             if (_count.Strings == _count.Doubles)
             {
                 entryWriter.Write(field, new StringArrayIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
-            }        
-            else
+            }
+
+            if (_count.Raws > 0)
+            {
+                if (_count.Raws == 1)
+                {
+                    using var blittScope = new BlittableWriterScope(_blittableJsonReaderObjects[0]);
+                    blittScope.Write(field, ref entryWriter);
+                }
+                else
+                {
+                    // Cannot imagine scenario for this. 
+                    throw new InvalidDataException($"{nameof(EnumerableWriterScope)}: More than one raws. ");
+                }
+            }
+            else 
             {
                 entryWriter.Write(field, new StringArrayIterator(_stringValues));
             }
             _stringValues.Clear();
             _longValues.Clear();
             _doubleValues.Clear();
+            _blittableJsonReaderObjects.Clear();
         }
         private struct StringArrayIterator : IReadOnlySpanEnumerator
         {

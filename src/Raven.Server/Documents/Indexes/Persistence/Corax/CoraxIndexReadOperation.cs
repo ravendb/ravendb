@@ -261,13 +261,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             var reader = _indexSearcher.GetReaderFor(ids[i]);
                             Span<byte> encoded = encodedBuffer;
                             Span<Token> tokens = tokensBuffer;
+                            var type = reader.GetFieldType(fieldId, out var intOffset);
 
-                            if (reader.TryReadMany(fieldId, out var iterator))
+                            if (type is IndexEntryFieldType.List)
                             {
+                                reader.TryReadMany(fieldId, out var iterator);
                                 List<string[]> map = new(8);
                                 while (iterator.ReadNext())
                                 {
                                     token.ThrowIfCancellationRequested();
+                                    encoded = encodedBuffer;
+                                    tokens = tokensBuffer;
                                     analyzer.Execute(iterator.Sequence, ref encoded, ref tokens);
                                     listItemInIndex ??= new(32);
                                     listItemInIndex.Clear();
@@ -277,14 +281,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                         var t = tokens[index];
                                         listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
                                     }
-
-                                    map.Add(listItemInIndex.ToArray());
                                 }
-
+                                map.Add(listItemInIndex.ToArray());
                                 doc[name] = map;
                             }
-                            else if (reader.Read(fieldId, out var value))
+                            else
                             {
+                                reader.Read(fieldId, out var value);    
+                                
                                 analyzer.Execute(value, ref encoded, ref tokens);
                                 if (tokens.Length > 1)
                                 {

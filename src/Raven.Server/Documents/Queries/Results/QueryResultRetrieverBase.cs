@@ -531,7 +531,7 @@ namespace Raven.Server.Documents.Queries.Results
             return anyExtracted;
         }
 
-        private bool TryExtractValueFromIndexCorax(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
+        private unsafe bool TryExtractValueFromIndexCorax(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
         {
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;
@@ -542,32 +542,10 @@ namespace Raven.Server.Documents.Queries.Results
                 return false;
 
             var id = FieldsToFetch.IndexFields[fieldToFetch.Name.Value].Id;
-            var type = retrieverInput.CoraxEntry.GetFieldType(id, out _);
+            if (TryGetValueFromCoraxIndex(_context, id, ref retrieverInput, out var value) == false)
+                return false;
 
-            //todo maciej: optimize this
-            switch (type)
-            {
-                case IndexEntryFieldType.Tuple:
-                    retrieverInput.CoraxEntry.Read(id, out var data);
-                    toFill[name] = Encodings.Utf8.GetString(data);
-                    break;
-                case IndexEntryFieldType.List:
-                    var iterator = retrieverInput.CoraxEntry.ReadMany(id);
-                    var array = new DynamicJsonArray();
-                    while (iterator.ReadNext())
-                        array.Add(Encodings.Utf8.GetString(iterator.Sequence));
-                    toFill[name] = array;
-                    break;
-                case IndexEntryFieldType.None:
-                    retrieverInput.CoraxEntry.Read(id, out data);
-                    toFill[name] = Encodings.Utf8.GetString(data);
-                    break;
-                case IndexEntryFieldType.Invalid:
-                    return false;
-                default:
-                    return false;
-            }
-
+            toFill[name] = value;
             return true;
         }
 
@@ -614,6 +592,41 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsArray;
             public bool IsJson;
             public bool IsNumeric;
+        }
+
+        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, int fieldId, ref RetrieverInput retrieverInput, out object value)
+        {
+            var type = retrieverInput.CoraxEntry.GetFieldType(fieldId, out var intOffset);
+            
+            switch (type)
+            {
+                case IndexEntryFieldType.Tuple:
+                    retrieverInput.CoraxEntry.Read(fieldId, out var data);
+                    value = Encodings.Utf8.GetString(data);
+                    break;
+                case IndexEntryFieldType.List:
+                    var iterator = retrieverInput.CoraxEntry.ReadMany(fieldId);
+                    var array = new DynamicJsonArray();
+                    while (iterator.ReadNext())
+                        array.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                    value = array;
+                    break;
+                case IndexEntryFieldType.Raw:
+                    retrieverInput.CoraxEntry.Read(fieldId, out Span<byte> blittableBinary);
+                    fixed (byte* ptr = &blittableBinary.GetPinnableReference())
+                        value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
+                    break;
+                case IndexEntryFieldType.None:
+                    retrieverInput.CoraxEntry.Read(fieldId, out data);
+                    
+                    value = Encodings.Utf8.GetString(data);
+                    break;
+                default:
+                    value = null;
+                    return false;
+            }
+            
+            return true;
         }
 
         private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)
@@ -777,6 +790,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
+                    object fieldValue = null;
                     switch (SearchEngineType)
                     {
                         case SearchEngineType.Lucene:
@@ -788,13 +802,20 @@ namespace Raven.Server.Documents.Queries.Results
                                     if (field == null)
                                         continue;
 
-                                    var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, retrieverInput.LuceneDocument), retrieverInput.State);
+                                    fieldValue = ConvertType(_context, field, GetFieldType(field.Name, retrieverInput.LuceneDocument), retrieverInput.State);
                                     _loadedDocumentIds.Add(fieldValue.ToString());
                                 }
                             }
                             break;
                         case SearchEngineType.Corax:
-                            throw new NotImplementedException("Extraction from Corax index is not supported yet.");
+                            if (indexFields.TryGetValue(fieldToFetch.QueryField.SourceAlias, out var fieldDefinition) == false ||
+                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Id, ref retrieverInput, out fieldValue) == false)
+                            {
+                                throw new InvalidDataException($"Field {fieldToFetch.QueryField.SourceAlias} not found in index");
+                            }
+                            _loadedDocumentIds.Add(fieldValue?.ToString());
+
+                            break;
                         case SearchEngineType.None:
                             throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
                     }

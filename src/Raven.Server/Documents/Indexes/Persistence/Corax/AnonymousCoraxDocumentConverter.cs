@@ -86,16 +86,8 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
-            unsafe
-            {
-                using (_allocator.Allocate(bjo.Size, out Span<byte> blittableBuffer))
-                {
-                    fixed (byte* bPtr = blittableBuffer)
-                        bjo.CopyTo(bPtr);
-
-                    scope.Write(_knownFields.Count - 1, blittableBuffer, ref entryWriter);
-                }
-            }
+            using (var blittableScope = new BlittableWriterScope(bjo))
+                blittableScope.Write(_knownFields.Count - 1, ref entryWriter);
         }
 
         entryWriter.Finish(out var output);
