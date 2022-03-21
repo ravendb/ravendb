@@ -4,6 +4,7 @@ import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { produce } from "immer";
+import { databaseLocationComparator } from "../../../utils/common";
 
 interface ActionStatsLoaded {
     location: databaseLocationSpecifier;
@@ -40,7 +41,27 @@ interface ActionEnableIndexing {
     type: "EnableIndexing";
 }
 
-type IndexesStatsReducerAction = ActionDeleteIndexes | ActionStatsLoaded | ActionSetIndexPriority | ActionSetIndexLockMode | ActionDisableIndexing | ActionEnableIndexing;
+interface ActionPauseIndexing {
+    indexName: string;
+    location: databaseLocationSpecifier;
+    type: "PauseIndexing";
+}
+
+interface ActionResumeIndexing {
+    indexName: string;
+    location: databaseLocationSpecifier;
+    type: "ResumeIndexing";
+}
+
+type IndexesStatsReducerAction =
+    ActionDeleteIndexes
+    | ActionStatsLoaded
+    | ActionSetIndexPriority
+    | ActionSetIndexLockMode
+    | ActionPauseIndexing
+    | ActionResumeIndexing
+    | ActionDisableIndexing
+    | ActionEnableIndexing;
 
 interface IndexesStatsState {
     indexes: IndexSharedInfo[];
@@ -140,16 +161,36 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
         case "EnableIndexing":
             return produce(state, draft => {
                 const index = draft.indexes.find(x => x.name === action.indexName);
-                const nodeInfo = index.nodesInfo.find(x => x.location.nodeTag === action.location.nodeTag && x.location.shardNumber === action.location.shardNumber);
-                nodeInfo.details.status = "Running";
-                nodeInfo.details.state = "Normal";
+                const nodeInfo = index.nodesInfo.find(x => databaseLocationComparator(x.location, action.location));
+                if (nodeInfo.details) {
+                    nodeInfo.details.status = "Running";
+                    nodeInfo.details.state = "Normal";
+                }
             });
         case "DisableIndexing":
             return produce(state, draft => {
                 const index = draft.indexes.find(x => x.name === action.indexName);
-                const nodeInfo = index.nodesInfo.find(x => x.location.nodeTag === action.location.nodeTag && x.location.shardNumber === action.location.shardNumber);
-                nodeInfo.details.status = "Disabled";
-                nodeInfo.details.state = "Disabled";
+                const nodeInfo = index.nodesInfo.find(x => databaseLocationComparator(x.location, action.location));
+                if (nodeInfo.details) {
+                    nodeInfo.details.status = "Disabled";
+                    nodeInfo.details.state = "Disabled";    
+                }
+            });
+        case "PauseIndexing":
+            return produce(state, draft => {
+                const index = draft.indexes.find(x => x.name === action.indexName);
+                const nodeInfo = index.nodesInfo.find(x => databaseLocationComparator(x.location, action.location));
+                if (nodeInfo.details) {
+                    nodeInfo.details.status = "Paused";
+                }
+            });
+        case "ResumeIndexing":
+            return produce(state, draft => {
+                const index = draft.indexes.find(x => x.name === action.indexName);
+                const nodeInfo = index.nodesInfo.find(x => databaseLocationComparator(x.location, action.location));
+                if (nodeInfo.details) {
+                    nodeInfo.details.status = "Running";
+                }
             });
         default:
             console.warn("Unhandled action: ", action)

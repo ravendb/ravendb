@@ -2,7 +2,7 @@
 import database from "models/resources/database";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import {
-    IndexFilterCriteria, IndexGroup,
+    IndexFilterCriteria, IndexGroup, IndexNodeInfo, IndexNodeInfoDetails,
     IndexSharedInfo, IndexStatus,
 } from "../../../models/indexes";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
@@ -78,18 +78,18 @@ function matchesAnyIndexStatus(index: IndexSharedInfo, status: IndexStatus[]): b
         return false;
     }
 
-    shardingTodo();
     /* TODO
     ADD : _.includes(status, "Stale") && this.isStale()
         || _.includes(status, "RollingDeployment") && this.rollingDeploymentInProgress()
      */
-    return true; 
-    /* TODO
-    return status.includes("Normal") && IndexUtils.isNormalState(index)
-        || status.includes("ErrorOrFaulty") && (IndexUtils.isErrorState(index) || IndexUtils.isFaulty(index))
-        || status.includes("Paused") && IndexUtils.isPausedState(index)
-        || status.includes("Disabled") && IndexUtils.isDisabledState(index)
-        || status.includes("Idle") && IndexUtils.isIdleState(index);*/
+    
+    const anyMatch = (index: IndexSharedInfo, predicate: (index: IndexNodeInfoDetails) => boolean) => index.nodesInfo.some(x => x.status === "loaded" && predicate(x.details));
+    
+    return status.includes("Normal") && anyMatch(index, IndexUtils.isNormalState)
+        || status.includes("ErrorOrFaulty") && (anyMatch(index, IndexUtils.isErrorState) || IndexUtils.isFaulty(index))
+        || status.includes("Paused") && anyMatch(index, IndexUtils.isPausedState)
+        || status.includes("Disabled") && anyMatch(index, IndexUtils.isDisabledState)
+        || status.includes("Idle") && anyMatch(index, IndexUtils.isIdleState);
 }
 
 function indexMatchesFilter(index: IndexSharedInfo, filter: IndexFilterCriteria): boolean {
@@ -186,6 +186,24 @@ export function IndexesPage(props: IndexesPageProps) {
             await disableIndexing(indexes.pop());
         }
     }
+
+    const resumeSelectedIndexes = async () => {
+        //TODO: add confirmation dialog!
+        //TODO: use list + single call per location
+        const indexes = getSelectedIndexes();
+        while (indexes.length) {
+            await resumeIndexing(indexes.pop());
+        }
+    }
+
+    const pauseSelectedIndexes = async () => {
+        //TODO: add confirmation dialog!
+        const indexes = getSelectedIndexes();
+        //TODO: send list of indexes - since call per location
+        while (indexes.length) {
+            await pauseIndexing(indexes.pop());
+        }
+    }
     
     const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
         if (indexes.length > 0) {
@@ -266,6 +284,32 @@ export function IndexesPage(props: IndexesPageProps) {
             await indexesService.disable(index, database, location);
             dispatch({
                 type: "DisableIndexing",
+                indexName: index.name,
+                location
+            });
+        }
+    }
+    
+    const pauseIndexing = async (index: IndexSharedInfo) => {
+        const locations = database.getLocations();
+        while (locations.length > 0) {
+            const location = locations.pop();
+            await indexesService.pause([index], database, location); 
+            dispatch({
+                type: "PauseIndexing",
+                indexName: index.name,
+                location
+            });
+        }
+    }
+
+    const resumeIndexing = async (index: IndexSharedInfo) => {
+        const locations = database.getLocations();
+        while (locations.length > 0) {
+            const location = locations.pop();
+            await indexesService.resume([index], database, location);
+            dispatch({
+                type: "ResumeIndexing",
                 indexName: index.name,
                 location
             });
@@ -367,10 +411,12 @@ export function IndexesPage(props: IndexesPageProps) {
                                     deleteSelectedIndexes={deleteSelectedIndexes}
                                     enableSelectedIndexes={enableSelectedIndexes}
                                     disableSelectedIndexes={disableSelectedIndexes}
+                                    pauseSelectedIndexes={pauseSelectedIndexes}
+                                    resumeSelectedIndexes={resumeSelectedIndexes}
                                 />
                             </div>
                         </div>
-                        <IndexGlobalIndexing />
+                        { /*  TODO  <IndexGlobalIndexing /> */ }
                     </div>
                 )}
                 <IndexFilterDescription filter={filter} groups={groups} />
@@ -390,6 +436,8 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 resetIndex={() => resetIndex(index)}
                                                 enableIndexing={() => enableIndexing(index)}
                                                 disableIndexing={() => disableIndexing(index)}
+                                                pauseIndexing={() => pauseIndexing(index)}
+                                                resumeIndexing={() => resumeIndexing(index)}
                                                 index={index}
                                                 deleteIndex={() => confirmDeleteIndexes(database, [index])}
                                                 selected={selectedIndexes.includes(index.name)}

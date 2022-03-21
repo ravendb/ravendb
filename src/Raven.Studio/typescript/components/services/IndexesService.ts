@@ -10,6 +10,7 @@ import resetIndexCommand from "commands/database/index/resetIndexCommand";
 import enableIndexCommand from "commands/database/index/enableIndexCommand";
 import disableIndexCommand from "commands/database/index/disableIndexCommand";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
+import togglePauseIndexingCommand from "commands/database/index/togglePauseIndexingCommand";
 
 export default class IndexesService {
     
@@ -42,6 +43,16 @@ export default class IndexesService {
 
     async disable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
         await new disableIndexCommand(index.name, db, location)
+            .execute();
+    }
+
+    async pause(indexes: IndexSharedInfo[], db: database, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(false, db, { name: indexes.map(x => x.name) }, location)
+            .execute();
+    }
+
+    async resume(indexes: IndexSharedInfo[], db: database, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(true, db, { name: indexes.map(x => x.name) }, location)
             .execute();
     }
 }

@@ -13,6 +13,8 @@ interface IndexPanelProps {
     setLockMode: (lockMode: IndexLockMode) => Promise<void>;
     enableIndexing: () => Promise<void>;
     disableIndexing: () => Promise<void>;
+    pauseIndexing: () => Promise<void>;
+    resumeIndexing: () => Promise<void>;
     deleteIndex: () => Promise<void>;
     resetIndex: () => Promise<void>;
     selected: boolean;
@@ -69,6 +71,28 @@ export function IndexPanel(props: IndexPanelProps) {
         setUpdatingState(true);
         try {
             await props.disableIndexing();
+        } finally {
+            setUpdatingState(false);
+        }
+    }
+
+    const pauseIndexing = async (e: MouseEvent) => {
+        e.preventDefault();
+        eventsCollector.reportEvent("indexes", "pause");
+        setUpdatingState(true);
+        try {
+            await props.pauseIndexing();
+        } finally {
+            setUpdatingState(false);
+        }
+    }
+
+    const resumeIndexing = async (e: MouseEvent) => {
+        e.preventDefault();
+        eventsCollector.reportEvent("indexes", "pause");
+        setUpdatingState(true);
+        try {
+            await props.resumeIndexing();
         } finally {
             setUpdatingState(false);
         }
@@ -245,27 +269,25 @@ export function IndexPanel(props: IndexPanelProps) {
                                         </button>
                                         <ul className="dropdown-menu">
                                             <li data-bind="visible: canBeEnabled()">
-                                                <a href="#" onClick={e => enableIndexing(e)} title="Enable indexing on ALL cluster nodes">
+                                                <a href="#" onClick={enableIndexing} title="Enable indexing on ALL cluster nodes">
                                                     <i className="icon-play" />
                                                     <span>Enable indexing</span>
                                                 </a>
                                             </li>
                                             <li data-bind="visible: canBeDisabled()">
-                                                <a href="#" onClick={e => disableIndexing(e)} title="Disable indexing on ALL cluster nodes">
+                                                <a href="#" onClick={disableIndexing} title="Disable indexing on ALL cluster nodes">
                                                     <i className="icon-cancel"/>
                                                     <span>Disable indexing</span>
                                                 </a>
                                             </li>
                                             <li data-bind="visible: canBePaused()">
-                                                <a href="#" className="text-warning" data-bind="click: $root.pauseUntilRestart"
-                                                   title="Pause until restart">
+                                                <a href="#" onClick={pauseIndexing} className="text-warning" title="Pause until restart">
                                                     <i className="icon-pause"/>
                                                     <span>Pause indexing until restart</span>
                                                 </a>
                                             </li>
                                             <li data-bind="visible: canBeResumed()">
-                                                <a href="#" className="text-success" data-bind="click: $root.resumeIndexing"
-                                                   title="Resume indexing">
+                                                <a href="#" onClick={resumeIndexing} className="text-success" title="Resume indexing">
                                                     <i className="icon-play"/>
                                                     <span>Resume indexing</span>
                                                 </a>

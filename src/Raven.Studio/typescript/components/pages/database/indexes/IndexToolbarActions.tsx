@@ -8,13 +8,15 @@ interface IndexToolbarActionProps {
     deleteSelectedIndexes: () => Promise<void>;
     enableSelectedIndexes: () => Promise<void>;
     disableSelectedIndexes: () => Promise<void>;
+    pauseSelectedIndexes: () => Promise<void>;
+    resumeSelectedIndexes: () => Promise<void>;
 }
 
 export default function IndexToolbarAction(props: IndexToolbarActionProps) {
     const urls = useAppUrls();
     const newIndexUrl = urls.newIndex();
     
-    const { selectedIndexes, deleteSelectedIndexes, enableSelectedIndexes, disableSelectedIndexes } = props;
+    const { selectedIndexes, deleteSelectedIndexes, enableSelectedIndexes, disableSelectedIndexes, pauseSelectedIndexes, resumeSelectedIndexes } = props;
     
     return (
         <div className="indexesToolbar-actions" data-bind="requiredAccess: 'DatabaseReadWrite'">
@@ -47,16 +49,14 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                             </a>
                         </li>
                         <li className="divider"/>
-                        <li data-bind="click: resumeSelectedIndexes,
-                                                       attr: { title: 'Resume indexing on node ' + localNodeTag() }">
-                            <a href="#">
+                        <li title="Resume indexing">
+                            <a href="#" onClick={withPreventDefault(resumeSelectedIndexes)}>
                                 <i className="icon-play"/>
                                 <span>Resume</span>
                             </a>
                         </li>
-                        <li data-bind="click: pauseSelectedIndexes,
-                                                       attr: { title: 'Pause indexing on node ' + localNodeTag() }">
-                            <a href="#">
+                        <li title="Pause indexing">
+                            <a href="#" onClick={withPreventDefault(pauseSelectedIndexes)}>
                                 <i className="icon-pause"/>
                                 <span>Pause</span>
                             </a>
