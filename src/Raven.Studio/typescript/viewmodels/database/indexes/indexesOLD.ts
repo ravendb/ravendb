@@ -15,8 +15,6 @@ class indexes {
     localNodeTag = ko.observable<string>();
     isCluster: KnockoutComputed<boolean>;
 
-
-
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
     resetsInProgress = new Set<string>();
@@ -54,23 +52,7 @@ class indexes {
             return _.sum(this.indexGroups().map(x => x.indexes().length));
         });
     }
-    private getAllIndexes(): index[] {
-        const all: index[] = [];
-        this.indexGroups().forEach(g => all.push(...g.indexes()));
-
-        all.forEach(idx => {
-            if (idx.replacement()) {
-                all.push(idx.replacement());
-            }
-        });
-
-        return _.uniq(all);
-    }
-
-    private getSelectedIndexes(): Array<index> {
-        const selectedIndexes = this.selectedIndexesName();
-        return this.getAllIndexes().filter(x => _.includes(selectedIndexes, x.name));
-    }
+  
 
     private initObservables() {
         this.localNodeTag = this.clusterManager.localNodeTag;

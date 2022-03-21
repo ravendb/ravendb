@@ -9,6 +9,7 @@ import IndexUtils from "../utils/IndexUtils";
 import resetIndexCommand from "commands/database/index/resetIndexCommand";
 import enableIndexCommand from "commands/database/index/enableIndexCommand";
 import disableIndexCommand from "commands/database/index/disableIndexCommand";
+import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 
 export default class IndexesService {
     
@@ -22,7 +23,7 @@ export default class IndexesService {
             .execute();
     }
     
-    async getStats(db: database, location: databaseLocationSpecifier) {
+    async getStats(db: database, location: databaseLocationSpecifier): Promise<IndexStats[]> {
         const stats = await new getIndexesStatsCommand(db, location)
             .execute();
         
