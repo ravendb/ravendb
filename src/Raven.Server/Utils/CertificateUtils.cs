@@ -13,6 +13,7 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Logging;
@@ -170,7 +171,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder, out byte[] certBytes, DateTime notAfter)
+        public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, LetsEncryptUtils.CertificateHolder certificateHolder, out byte[] certBytes, DateTime notAfter)
         {
             var serverCertBytes = certificateHolder.Certificate.Export(X509ContentType.Cert);
             var readCertificate = new X509CertificateParser().ReadCertificate(serverCertBytes);
@@ -209,7 +210,7 @@ namespace Raven.Server.Utils
                 throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
         }
 
-        public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)
+        public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, LetsEncryptUtils.CertificateHolder certificateHolder)
         {
             var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
 

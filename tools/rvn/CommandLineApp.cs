@@ -60,7 +60,7 @@ namespace rvn
             }
         }
 
-        private static async Task ConfigureSetupPackage()
+        private static Task ConfigureSetupPackage()
         {
             _app.Command("create-setup-package", cmd =>
             {
@@ -72,10 +72,9 @@ namespace rvn
                 var configureInsecureSetup = ConfigureInsecureSetup(cmd);
                 var packageOutputFile = ConfigurePackageOutputFile(cmd);
 
-                cmd.OnExecute(() =>
+                cmd.OnExecuteAsync(async token =>
                 {
-                    var value = configureInsecureSetup.Value();
-                    if (File.Exists(setupParameters.Value()) == false)
+                    if (File.Exists(setupParameters?.Value()) == false)
                         return ExitWithError("Path to setup params has not found", cmd);
 
                     using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
@@ -134,6 +133,7 @@ namespace rvn
                     return 0;
                 });
             });
+            return Task.CompletedTask;
         }
 
         private static void ConfigureLogsCommand()
@@ -438,7 +438,7 @@ namespace rvn
 
         private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
         {
-            return cmd.Option("-s|--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
+            return cmd.Option("--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)

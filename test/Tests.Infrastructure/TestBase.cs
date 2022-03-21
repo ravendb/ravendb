@@ -182,6 +182,122 @@ namespace FastTests
             _doNotReuseServer = true;
         }
 
+        protected static TestCertificatesHolder _selfSignedCertificates;
+
+        protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false, [CallerMemberName] string caller = null)
+        {
+            if (createNew)
+                return ReturnCertificatesHolder(Generate(caller, Interlocked.Increment(ref _counter)));
+
+            var selfSignedCertificates = _selfSignedCertificates;
+            if (selfSignedCertificates != null)
+                return ReturnCertificatesHolder(selfSignedCertificates);
+
+            lock (typeof(TestBase))
+            {
+                selfSignedCertificates = _selfSignedCertificates;
+                if (selfSignedCertificates == null)
+                    _selfSignedCertificates = selfSignedCertificates = Generate(caller);
+
+                return ReturnCertificatesHolder(selfSignedCertificates);
+            }
+
+            TestCertificatesHolder ReturnCertificatesHolder(TestCertificatesHolder certificates)
+            {
+                return new TestCertificatesHolder(certificates, GetTempFileName);
+            }
+
+            TestCertificatesHolder Generate(string caller, int gen = 0)
+            {
+                var log = new StringBuilder();
+                byte[] certBytes;
+                string serverCertificatePath = null;
+
+                serverCertificatePath = Path.Combine(Path.GetTempPath(), $"Server-{gen}-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}.pfx");
+
+                if (File.Exists(serverCertificatePath) == false)
+                {
+                    try
+                    {
+                        certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new CryptographicException($"Unable to generate the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
+                    }
+
+                    if (certBytes.Length == 0)
+                        throw new CryptographicException($"Test certificate length is 0 bytes. Machine: '{Environment.MachineName}', Log: {log}");
+
+                    try
+                    {
+                        File.WriteAllBytes(serverCertificatePath, certBytes);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
+                                                            $"tempFileName = {serverCertificatePath}" +
+                                                            $"certBytes.Length = {certBytes.Length}" +
+                                                            $"MachineName = {Environment.MachineName}.", e);
+                    }
+                }
+                else
+                {
+                    certBytes = File.ReadAllBytes(serverCertificatePath);
+                }
+                X509Certificate2 serverCertificate;
+                try
+                {
+                    serverCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                }
+                catch (Exception e)
+                {
+                    throw new CryptographicException($"Unable to load the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
+                }
+
+                SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
+                SecretProtection.ValidateKeyUsages(serverCertificatePath, serverCertificate, validateKeyUsages: true);
+
+                var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
+                var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk);
+                var clientCertificate3Path = GenerateClientCertificate(3, serverCertificate, pk);
+
+                return new TestCertificatesHolder(serverCertificatePath, clientCertificate1Path, clientCertificate2Path, clientCertificate3Path);
+            }
+
+            string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
+            {
+                string name = $"{Environment.MachineName}_CC_{RavenVersionAttribute.Instance.Build}_{index}_{DateTime.Today:yyyy-MM-dd}";
+                string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
+
+                if (File.Exists(clientCertificatePath) == false)
+                {
+                    CertificateUtils.CreateSelfSignedClientCertificate(
+                        name,
+                        new LetsEncryptUtils.CertificateHolder
+                        {
+                            Certificate = serverCertificate,
+                            PrivateKey = pk
+                        },
+                        out var certBytes, DateTime.UtcNow.Date.AddYears(5));
+
+                    try
+                    {
+                        File.WriteAllBytes(clientCertificatePath, certBytes);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
+                                                            $"tempFileName = {clientCertificatePath}" +
+                                                            $"certBytes.Length = {certBytes.Length}" +
+                                                            $"MachineName = {Environment.MachineName}.", e);
+                    }
+                }
+
+                return clientCertificatePath;
+            }
+        }
+
         protected string GetTempFileName()
         {
             var tmp = Path.GetTempFileName();

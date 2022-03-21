@@ -527,12 +527,12 @@ namespace Raven.Server.Web.System
                 if (setupInfo.Port == 0)
                     setupInfo.Port = 8080;
 
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => LetsEncryptUtils.IpAddressToUrl(ip, setupInfo.Port)));
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
                 if (setupInfo.TcpPort == 0)
                     setupInfo.TcpPort = 38888;
 
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => LetsEncryptUtils.IpAddressToUrl(ip, setupInfo.TcpPort)));
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
                 if (setupInfo.EnableExperimentalFeatures)
                 {
@@ -555,7 +555,7 @@ namespace Raven.Server.Web.System
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
                 var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
-                SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
+                LetsEncryptUtils.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
             }
 
             NoContentStatus();
@@ -778,7 +778,13 @@ namespace Raven.Server.Web.System
             throw new AuthorizationException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
         }
 
-
+        private static string IpAddressToUrl(string address, int port, string scheme = "http")
+        {
+            var url = scheme + "://" + address;
+            if (port != 80)
+                url += ":" + port;
+            return url;
+        }
 
         private static string GeneralDomainRegistrationError = "Registration error.";
         private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later.";
