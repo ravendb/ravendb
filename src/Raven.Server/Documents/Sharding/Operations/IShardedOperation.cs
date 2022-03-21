@@ -40,13 +40,4 @@ namespace Raven.Server.Documents.Sharding.Operations
         CombinedStreamResult IShardedOperation<StreamResult, CombinedStreamResult>.Combine(Memory<StreamResult> results) =>
             new CombinedStreamResult { Results = results };
     }
-
-    public interface IShardedOperation : IShardedOperation<object>
-    {
-        object IShardedOperation<object, object>.Combine(Memory<object> results) => null;
-
-        object IShardedOperation<object, object>.CombineCommands(Memory<RavenCommand<object>> commands, Memory<object> results) => null;
-
-        RavenCommand<object> IShardedOperation<object, object>.CreateCommandForShard(int shard) => CreateCommandForShard(shard);
-    }
 }
