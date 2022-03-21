@@ -18,7 +18,10 @@ namespace Raven.Server.Documents.Indexes.Static.Counters.V8
 
         public override InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            return _engine.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderCounterEntryObjectInstance(), keepAlive: keepAlive);
+            var jsBinder = _engine.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderCounterEntryObjectInstance(), keepAlive: keepAlive);
+            var binder = (ObjectBinder)jsBinder.Object;
+            binder.ShouldDisposeBoundObject = true;
+            return jsBinder;
         }
 
         public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engineEx, ref string propertyName)

@@ -16,7 +16,10 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 
         public override InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            return _engine.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderAttachmentObjectInstance(), keepAlive: keepAlive);
+            var jsBinder = _engine.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderAttachmentObjectInstance(), keepAlive: keepAlive);
+            var binder = (ObjectBinder)jsBinder.Object;
+            binder.ShouldDisposeBoundObject = true;
+            return jsBinder;
         }
 
         public AttachmentObjectInstanceV8(V8EngineEx engineEx, DynamicAttachment attachment) : base(engineEx)
