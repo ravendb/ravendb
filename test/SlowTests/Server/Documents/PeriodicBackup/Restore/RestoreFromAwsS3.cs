@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
@@ -54,6 +54,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         
         [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore() => await can_backup_and_restore_internal();
+        [AmazonS3Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_no_ascii() => await can_backup_and_restore_internal("żżżרייבן");
         [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot() => await can_backup_and_restore_snapshot_internal();
         [AmazonS3Fact, Trait("Category", "Smuggler")]

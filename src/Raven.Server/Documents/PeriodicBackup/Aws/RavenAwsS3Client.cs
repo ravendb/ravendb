@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
@@ -368,7 +369,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return;
 
             foreach (var kvp in metadata)
-                collection[kvp.Key] = kvp.Value;
+                collection[Uri.EscapeDataString(kvp.Key)] = Uri.EscapeDataString(kvp.Value);
         }
 
         private static IDictionary<string, string> ConvertMetadata(MetadataCollection collection)

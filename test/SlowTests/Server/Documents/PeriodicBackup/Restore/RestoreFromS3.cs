@@ -27,12 +27,21 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             _remoteFolderName = GetRemoteFolder(GetType().Name);
         }
 
-        protected async Task can_backup_and_restore_internal()
+        protected async Task can_backup_and_restore_internal(string dbName = null)
         {
             var s3Settings = GetS3Settings();
-
-            using (var store = GetDocumentStore())
+            Options options = null;
+            if (dbName != null)
             {
+                options = new Options()
+                {
+                    ModifyDatabaseName = s => s + dbName
+                };
+            }
+
+            using (var store = GetDocumentStore(options: options))
+            {
+                
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" }, "users/1");

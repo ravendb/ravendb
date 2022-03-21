@@ -107,22 +107,22 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var key = $"{blobs[0]}";
             if (testBlobKeyAsFolder)
                 key += "/";
-
+            
             var progress = new Progress();
             using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, progress))
             {
                 client.MaxUploadPutObject = new Sparrow.Size(10, SizeUnit.Megabytes);
                 client.MinOnePartUploadSizeLimit = new Sparrow.Size(7, SizeUnit.Megabytes);
-
+            
                 var value1 = Guid.NewGuid().ToString();
                 var value2 = Guid.NewGuid().ToString();
-
+            
                 var sb = new StringBuilder();
                 for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
                 {
                     sb.Append("a");
                 }
-
+            
                 long streamLength;
                 using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                 {
@@ -135,19 +135,76 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                 {"property2", value2}
                         });
                 }
+            
+                var @object = await client.GetObjectAsync(key);
+                Assert.NotNull(@object);
+            
+                using (var reader = new StreamReader(@object.Data))
+                    Assert.Equal(sb.ToString(), reader.ReadToEnd());
+            
+                var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
+                var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
+            
+                Assert.Equal(value1, @object.Metadata[property1]);
+                Assert.Equal(value2, @object.Metadata[property2]);
+            
+                Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
+                Assert.Equal(uploadType, progress.UploadProgress.UploadType);
+                Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
+                Assert.Equal(streamLength, progress.UploadProgress.UploadedInBytes);
+            }
+        }
+
+        [AmazonS3Theory]
+        [InlineData(11, UploadType.Chunked)]
+        [InlineData(5, UploadType.Regular)]
+        [InlineData(11, UploadType.Chunked)]
+        [InlineData(11, UploadType.Chunked)]
+        public async Task put_object_not_ascii(int sizeInMB, UploadType uploadType)
+        {
+            var settings = GetS3Settings();
+            var blobs = GenerateBlobNames(settings, 1, out _);
+            Assert.Equal(1, blobs.Count);
+
+            string dateStr = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+            var key = $"{dateStr}.ravendb-żżżרייבן-A-backup/{dateStr}.ravendb-full-backup";
+            var property = "Description-żżרייבן";
+            var value = "ravendb-żżżרייבן-A-backup";
+
+            var metadata = new Dictionary<string, string> {{ property, value },};
+
+
+            var progress = new Progress();
+            using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, progress))
+            {
+                client.MaxUploadPutObject = new Sparrow.Size(10, SizeUnit.Megabytes);
+                client.MinOnePartUploadSizeLimit = new Sparrow.Size(7, SizeUnit.Megabytes);
+
+                var sb = new StringBuilder();
+                for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
+                {
+                    sb.Append("a");
+                }
+
+                long streamLength;
+                using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
+                {
+                    streamLength = memoryStream.Length;
+                    client.PutObject(key, memoryStream, metadata);
+                }
 
                 var @object = await client.GetObjectAsync(key);
                 Assert.NotNull(@object);
 
                 using (var reader = new StreamReader(@object.Data))
+                {
                     Assert.Equal(sb.ToString(), reader.ReadToEnd());
+                }
 
-                var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
-                var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
+                Console.WriteLine(@object.Metadata.Keys);
+                var property1 = @object.Metadata.Keys.Single(x => x.Contains(Uri.EscapeDataString(property).ToLower()));
 
-                Assert.Equal(value1, @object.Metadata[property1]);
-                Assert.Equal(value2, @object.Metadata[property2]);
-
+                Assert.Equal(Uri.EscapeDataString(value), @object.Metadata[property1]);
                 Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
                 Assert.Equal(uploadType, progress.UploadProgress.UploadType);
                 Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
