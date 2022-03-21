@@ -28,7 +28,7 @@ public class BlittableWriterScope : IDisposable
             _currentIndex = (int)writeStream.Position;
         }
         
-        writer.Write(field, new Span<byte> (_reader.BasePointer, _reader.Size), _buffer.AsSpan(0, _currentIndex));
+        writer.WriteRaw(field, new Span<byte> (_reader.BasePointer, _reader.Size));
     }
 
     public void Dispose()
