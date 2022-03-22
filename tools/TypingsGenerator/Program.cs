@@ -280,7 +280,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
             scripter.AddType(typeof(IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
-            scripter.AddType(typeof(StudioDatabaseTasksHandler.IndexDefaults));
+            scripter.AddType(typeof(IndexDefaults));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
