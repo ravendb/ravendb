@@ -130,9 +130,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 else
                 {
                     key = $"{blobs[0]}";
-                    if (testBlobKeyAsFolder)
-                        key += "/";
                 }
+                if (testBlobKeyAsFolder)
+                    key += "/";
 
 
                 var sb = new StringBuilder();
