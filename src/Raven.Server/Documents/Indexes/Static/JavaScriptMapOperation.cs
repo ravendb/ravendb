@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Static
             jsRes.Dispose();
 
             _engineHandle.ForceGarbageCollection();
-            if (_engineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
+            if (isMemorySnapshotMade)
             {
                 _engineHandle.CheckForMemoryLeaks(memorySnapshotName);
             }
