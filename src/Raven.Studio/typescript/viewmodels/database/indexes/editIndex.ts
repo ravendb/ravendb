@@ -326,7 +326,7 @@ class editIndex extends viewModelBase {
             .execute();
     }
     
-    private fetchIndexDefaults(): JQueryPromise<Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults> {
+    private fetchIndexDefaults(): JQueryPromise<Raven.Server.Web.Studio.Processors.IndexDefaults> {
         return new getIndexDefaultsCommand(this.activeDatabase())
             .execute();
     }

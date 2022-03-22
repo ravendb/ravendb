@@ -8,9 +8,9 @@ class getIndexDefaultsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults> {
+    execute(): JQueryPromise<Raven.Server.Web.Studio.Processors.IndexDefaults> {
         const url = endpoints.databases.studioDatabaseTasks.studioTasksIndexesConfigurationDefaults;
-        return this.query<Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults>(url, null, this.db)
+        return this.query<Raven.Server.Web.Studio.Processors.IndexDefaults>(url, null, this.db)
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to get index defaults!", response.responseText, response.statusText);
             });
