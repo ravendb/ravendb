@@ -155,6 +155,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [AmazonS3Theory]
+        [InlineData(null)]
+        [InlineData("https://some-url.com")]
+        public void can_use_custom_region(string customUrl)
+        {
+            var settings = GetS3Settings();
+            settings.AwsRegionName = "fr-par";
+            settings.CustomServerUrl = customUrl;
+            using (new RavenAwsS3Client(settings, DefaultConfiguration))
+            {
+            }
+        }
+
         [AmazonGlacierTheory]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
