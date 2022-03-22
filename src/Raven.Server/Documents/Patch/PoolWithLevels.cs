@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Patch
         // targetLevel can be exceeded in case all the values are used up to or over the target level
         public PoolWithLevels(int targetLevel, int maxCapacity)
         {
-            _targetLevel = targetLevel;
+            _targetLevel = targetLevel > 0 ? targetLevel : -1;
             _maxCapacity = maxCapacity;
         }
 
@@ -52,26 +52,46 @@ namespace Raven.Server.Documents.Patch
         {
             lock (_Lock)
             {
-                TValue obj = default;
-                using (var it = _listByLevel.GetEnumerator())
+                TValue obj = null;
+                if (_targetLevel > 0)
                 {
-                    // TODO for now the value with the minimum level is selected, but the closest to the target from below should be selected
-                    while (it.MoveNext())
+                    // the value being the closest to the target from below should be selected
+                    var level = _targetLevel - 1;
+                    do
                     {
-                        var (level, set) = it.Current;
-                        if (set.Count >= 1)
+                        if (_listByLevel.TryGetValue(level, out var set))
                         {
-                            obj = (level >= _targetLevel && ValueCount < _maxCapacity) ? new TValue() : set.First();
+                            if (set.Count >= 1)
+                            {
+                                obj = set.First();
+                            }
+                        }
+                        level--;
+                    } while (obj == null && level >= 0);
+                }
+
+                if (obj == null)
+                {
+                    // the value with the minimum level is selected
+                    using (var it = _listByLevel.GetEnumerator())
+                    {
+                        while (it.MoveNext())
+                        {
+                            var (level, set) = it.Current;
+                            if (set.Count >= 1)
+                            {
+                                obj = (_targetLevel > 0 && level >= _targetLevel && ValueCount < _maxCapacity) ? new TValue() : set.First();
+                            }
                         }
                     }
-
-                    if (obj == null)
-                    {
-                        obj = new TValue();
-                    }
-
-                    return new PooledValue(obj, this);
                 }
+                
+                if (obj == null)
+                {
+                    obj = new TValue();
+                }
+
+                return new PooledValue(obj, this);
             }
         }
 
