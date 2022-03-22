@@ -226,7 +226,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-13104")]
+        [Fact]
         public async Task SubscriptionShouldFailoverIfNodeIsDownButShardIsAvailable()
         {
             int rf = 2;

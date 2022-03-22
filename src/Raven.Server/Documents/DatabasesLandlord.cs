@@ -865,6 +865,13 @@ namespace Raven.Server.Documents
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
+        public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
+        {
+            return ShardHelper.IsShardedName(name) ? 
+                new ShardedDocumentDatabase(name, configuration, serverStore, addToInitLog) : 
+                new DocumentDatabase(name, configuration, serverStore, addToInitLog);
+        }
+
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
         {
             void AddToInitLog(string txt)
@@ -889,7 +896,8 @@ namespace Raven.Server.Documents
                 AddToInitLog("Starting database initialization");
 
                 var sp = Stopwatch.StartNew();
-                documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
+
+                documentDatabase = CreateDocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
 
                 if (ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
                     Thread.Sleep(ForTestingPurposes.HoldDocumentDatabaseCreation.Value);

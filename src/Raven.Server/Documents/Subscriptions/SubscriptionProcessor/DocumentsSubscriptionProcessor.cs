@@ -62,17 +62,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         public List<string> ItemsToRemoveFromResend = new List<string>();
         public List<DocumentRecord> BatchItems = new List<DocumentRecord>();
 
-        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch)
-        {
-            return Database.SubscriptionStorage.RecordBatchDocuments(
-                SubscriptionConnectionsState.SubscriptionId,
-                SubscriptionConnectionsState.SubscriptionName,
-                BatchItems,
-                ItemsToRemoveFromResend,
-                SubscriptionConnectionsState.PreviouslyRecordedChangeVector,
-                lastChangeVectorSentInThisBatch,
-                Connection.ShardName);
-        }
+        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => 
+            SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
 
         public override async Task AcknowledgeBatch(long batchId)
         {

@@ -76,35 +76,22 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionName = connection.Options.SubscriptionName ?? _subscriptionId.ToString();
             _subscriptionState = connection.SubscriptionState;
             Query = connection.SubscriptionState.Query;
-            
+
             // update the subscription data only on new concurrent connection or regular connection
             if (afterSubscribe && _connections.Count == 1)
             {
                 using (var old = _disposableNotificationsRegistration)
                 {
-            _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
+                    _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
                 }
 
+                SetLastChangeVectorSent(connection);
 
-            if (string.IsNullOrEmpty(connection.ShardName) == false)
-            {
-                if (connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard == null || connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(connection.ShardName, out string cv) == false)
-                {
-                    LastChangeVectorSent = null;
-                }
-                else
-                {
-                    LastChangeVectorSent = cv;
-                }
+                PreviouslyRecordedChangeVector = LastChangeVectorSent;
             }
-            else
-            {
-                LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
-            }
+        }
 
-            PreviouslyRecordedChangeVector = LastChangeVectorSent;
-        }
-        }
+        protected virtual void SetLastChangeVectorSent(SubscriptionConnection connection) => LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
         {
@@ -199,13 +186,98 @@ namespace Raven.Server.Documents.Subscriptions
 
         public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, List<DocumentRecord> addDocumentsToResend)
         {
-            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                SubscriptionId,
-                SubscriptionName,
+            return AcknowledgeBatchProcessed(
                 connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 batchId,
-                addDocumentsToResend,
-                connection.ShardName);
+                addDocumentsToResend);
+        }
+
+        protected virtual AcknowledgeSubscriptionBatchCommand GetAcknowledgeSubscriptionBatchCommand(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        {
+            var serverStore = DocumentDatabase.ServerStore;
+            return new AcknowledgeSubscriptionBatchCommand(DocumentDatabase.Name, RaftIdGenerator.NewId())
+            {
+                ChangeVector = changeVector,
+                NodeTag = serverStore.NodeTag,
+                HasHighlyAvailableTasks = serverStore.LicenseManager.HasHighlyAvailableTasks(),
+                SubscriptionId = SubscriptionId,
+                SubscriptionName = SubscriptionName,
+                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                BatchId = batchId,
+                DocumentsToResend = docsToResend,
+            };
+        }
+
+        protected virtual UpdateSubscriptionClientConnectionTime GetUpdateSubscriptionClientConnectionTime()
+        {
+            var serverStore = DocumentDatabase.ServerStore;
+            return new UpdateSubscriptionClientConnectionTime(DocumentDatabase.Name, RaftIdGenerator.NewId())
+            {
+                NodeTag = serverStore.NodeTag,
+                HasHighlyAvailableTasks = serverStore.LicenseManager.HasHighlyAvailableTasks(),
+                SubscriptionName = SubscriptionName,
+                LastClientConnectionTime = DateTime.UtcNow,
+            };
+        }
+
+        public async Task UpdateClientConnectionTime()
+        {
+            var serverStore = DocumentDatabase.ServerStore;
+            var command = GetUpdateSubscriptionClientConnectionTime();
+            var (etag, _) = await serverStore.SendToLeaderAsync(command);
+            await DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, serverStore.Engine.OperationTimeout);
+        }
+
+        public async Task AcknowledgeBatchProcessed(string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        {
+            var serverStore = DocumentDatabase.ServerStore;
+            var command = GetAcknowledgeSubscriptionBatchCommand(changeVector, batchId, docsToResend);
+            
+            var (etag, _) = await serverStore.SendToLeaderAsync(command);
+            await DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, serverStore.Engine.OperationTimeout);
+        }
+
+
+        public async Task<long> RecordBatchRevisions(List<RevisionRecord> list, string lastRecordedChangeVector)
+        {
+            var serverStore = DocumentDatabase.ServerStore;
+            var command = new RecordBatchSubscriptionDocumentsCommand(
+                DocumentDatabase.Name, 
+                SubscriptionId, 
+                SubscriptionName, 
+                list, 
+                PreviouslyRecordedChangeVector, 
+                lastRecordedChangeVector, 
+                serverStore.NodeTag, 
+                serverStore.LicenseManager.HasHighlyAvailableTasks(), 
+                RaftIdGenerator.NewId());
+
+            return await RecordBatchInternal(command);
+        }
+
+        public async Task<long> RecordBatchDocuments(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
+        {
+            var serverStore = DocumentDatabase.ServerStore;
+            var command = new RecordBatchSubscriptionDocumentsCommand(
+                DocumentDatabase.Name, 
+                SubscriptionId, 
+                SubscriptionName, 
+                list, 
+                PreviouslyRecordedChangeVector, 
+                lastRecordedChangeVector, 
+                serverStore.NodeTag, 
+                serverStore.LicenseManager.HasHighlyAvailableTasks(), 
+                RaftIdGenerator.NewId());
+
+            command.Deleted = deleted;
+            return await RecordBatchInternal(command);
+        }
+
+        protected virtual async Task<long> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)
+        {
+            var (etag, _) = await DocumentDatabase.ServerStore.SendToLeaderAsync(command);
+            await DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, DocumentDatabase.ServerStore.Engine.OperationTimeout);
+            return etag;
         }
 
         public long GetLastEtagSent()
@@ -492,7 +564,7 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var connection in _connections)
             {
                 var batch = connection.CurrentBatchId;
-                if (batch == SubscriptionConnection.NonExistentBatch)
+                if (batch == SubscriptionConnectionBase.NonExistentBatch)
                     continue;
 
                 set.Add(batch);

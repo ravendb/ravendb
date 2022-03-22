@@ -234,11 +234,21 @@ namespace Raven.Server.Documents.Subscriptions
             Info
         }
 
-        protected abstract (string DbNameStr, string ClientType, string SubsType) GetStatusMessageDetails();
+        public class StatusMessageDetails
+        {
+            public string DatabaseName;
+            public string ClientType;
+            public string SubscriptionType;
+        }
+
+        protected abstract StatusMessageDetails GetStatusMessageDetails();
 
         protected string CreateStatusMessage(ConnectionStatus status, string info = null)
         {
-           var (dbNameStr, clientType, subsType) = GetStatusMessageDetails();
+            var message = GetStatusMessageDetails();
+            var dbNameStr = message.DatabaseName;
+            var clientType = message.ClientType;
+            var subsType = message.SubscriptionType;
 
             string m = null;
             switch (status)

@@ -312,7 +312,7 @@ namespace Raven.Server.Web.System
                     Logger.Info(msg);
             });
 
-            using (var documentDatabase = new DocumentDatabase(databaseRecord.DatabaseName, databaseConfiguration, ServerStore, addToInitLog))
+            using (var documentDatabase = DatabasesLandlord.CreateDocumentDatabase(databaseRecord.DatabaseName, databaseConfiguration, ServerStore, addToInitLog))
             {
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
                 documentDatabase.Initialize(options);

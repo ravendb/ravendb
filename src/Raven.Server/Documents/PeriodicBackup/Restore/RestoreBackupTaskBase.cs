@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         .DatabasesLandlord
                         .CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord);
 
-                    using (var database = new DocumentDatabase(databaseName, configuration, _serverStore, addToInitLog))
+                    using (var database = DatabasesLandlord.CreateDocumentDatabase(databaseName, configuration, _serverStore, addToInitLog))
                     {
                         // smuggler needs an existing document database to operate
                         var options = InitializeOptions.SkipLoadingDatabaseRecord;
