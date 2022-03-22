@@ -8,11 +8,115 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Server.Documents.Indexes.Static.Linq;
 
 namespace Raven.Server.Documents.Indexes.Static.Extensions
 {
     public static class LinqOnDynamic
     {
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic First(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.First(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic FirstOrDefault(this IGrouping<dynamic, dynamic> self)
+        {
+            return DynamicEnumerable.FirstOrDefault(self);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic FirstOrDefault(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.FirstOrDefault(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Last(this IGrouping<dynamic, dynamic> self)
+        {
+            return DynamicEnumerable.Last(self);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Last(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.Last(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic LastOrDefault(this IGrouping<dynamic, dynamic> self)
+        {
+            return DynamicEnumerable.LastOrDefault(self);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic LastOrDefault(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.LastOrDefault(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Single(this IGrouping<dynamic, dynamic> self)
+        {
+            return DynamicEnumerable.Single(self);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Single(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.Single(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic SingleOrDefault(this IGrouping<dynamic, dynamic> self)
+        {
+            return DynamicEnumerable.SingleOrDefault(self);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic SingleOrDefault(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.SingleOrDefault(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic ElementAt(this IGrouping<dynamic, dynamic> self, int index)
+        {
+            return DynamicEnumerable.ElementAt(self, index);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic ElementAtOrDefault(this IGrouping<dynamic, dynamic> self, int index)
+        {
+            return DynamicEnumerable.ElementAtOrDefault(self, index);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Min(this IGrouping<dynamic, dynamic> self)
+        {
+            return DynamicEnumerable.Min(self);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Min(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.Min(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Max(this IGrouping<dynamic, dynamic> self, Func<dynamic, bool> predicate)
+        {
+            return DynamicEnumerable.Max(self, predicate);
+        }
+        
+        [Obsolete("This method should never be used directly.")]
+        public static dynamic Max(this IGrouping<dynamic, dynamic> self)
+        {
+            return DynamicEnumerable.Max(self);
+        }
+        
         [Obsolete("This method should never be used directly.")]
         public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector)
         {
