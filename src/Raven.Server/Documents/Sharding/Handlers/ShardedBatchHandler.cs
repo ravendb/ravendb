@@ -70,13 +70,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     var shardedBatchCommands = new Dictionary<int, SingleNodeShardedBatchCommand>(); // TODO sharding : consider cache those
                     foreach (var command in batch)
                     {
-                        var shardIndex = command.Shard;
-                        var requestExecutor = DatabaseContext.RequestExecutors[shardIndex];
+                        var shardNumber = command.ShardNumber;
+                        var requestExecutor = DatabaseContext.RequestExecutors[shardNumber];
 
-                        if (shardedBatchCommands.TryGetValue(shardIndex, out var shardedBatchCommand) == false)
+                        if (shardedBatchCommands.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
                         {
                             shardedBatchCommand = new SingleNodeShardedBatchCommand(this, requestExecutor.ContextPool);
-                            shardedBatchCommands.Add(shardIndex, shardedBatchCommand);
+                            shardedBatchCommands.Add(shardNumber, shardedBatchCommand);
                         }
 
                         shardedBatchCommand.AddCommand(command);
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
     public class SingleShardedCommand
     {
-        public int Shard;
+        public int ShardNumber;
         public Stream AttachmentStream;
         public Stream CommandStream;
         public int PositionInResponse;
@@ -257,7 +257,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                         bjro.TryGet(nameof(ICommandData.ChangeVector), out string expectedChangeVector);
 
-                        var shardId = _databaseContext.GetShardIndex(_context, id);
+                        var shardId = _databaseContext.GetShardNumber(_context, id);
                         if (idsByShard.TryGetValue(shardId, out var list) == false)
                         {
                             list = new List<(string Id, string ChangeVector)>();
@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     {
                         yield return new SingleShardedCommand
                         {
-                            Shard = kvp.Key,
+                            ShardNumber = kvp.Key,
                             CommandStream = bufferedCommand.ModifyBatchPatchStream(kvp.Value),
                             PositionInResponse = positionInResponse
                         };
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     continue;
                 }
 
-                var shard = _databaseContext.GetShardIndex(_context, cmd.Id);
+                var shard = _databaseContext.GetShardNumber(_context, cmd.Id);
                 var commandStream = bufferedCommand.CommandStream;
                 var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
 
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 yield return new SingleShardedCommand
                 {
-                    Shard = shard,
+                    ShardNumber = shard,
                     AttachmentStream = stream,
                     CommandStream = commandStream,
                     PositionInResponse = positionInResponse++

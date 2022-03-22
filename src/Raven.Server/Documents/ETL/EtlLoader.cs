@@ -692,8 +692,7 @@ namespace Raven.Server.Documents.ETL
 
         public void HandleDatabaseValueChanged(DatabaseRecord record)
         {
-            var dbName = record.DatabaseName;
-            ShardHelper.TryGetShardIndexAndDatabaseName(ref dbName);
+            var dbName = ShardHelper.ToDatabaseName(record.DatabaseName);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

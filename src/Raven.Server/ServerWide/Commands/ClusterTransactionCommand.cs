@@ -405,16 +405,16 @@ namespace Raven.Server.ServerWide.Commands
                 Array.Clear(_counts);
             }
 
-            public ArraySegment<BlittableJsonReaderObject> GetCommandPerShard(int shardIndex) 
-                => new ArraySegment<BlittableJsonReaderObject>(_commands[shardIndex], 0, _counts[shardIndex]);
-            public Span<string> GetIdsPerShard(int shardIndex) => _ids[shardIndex].AsSpan(0, _counts[shardIndex]);
-            public int GetCountPerShard(int shardIndex) => _counts[shardIndex];
+            public ArraySegment<BlittableJsonReaderObject> GetCommandPerShard(int shardNumber) 
+                => new ArraySegment<BlittableJsonReaderObject>(_commands[shardNumber], 0, _counts[shardNumber]);
+            public Span<string> GetIdsPerShard(int shardNumber) => _ids[shardNumber].AsSpan(0, _counts[shardNumber]);
+            public int GetCountPerShard(int shardNumber) => _counts[shardNumber];
             
-            public void Add(string id, BlittableJsonReaderObject command, int shardIndex)
+            public void Add(string id, BlittableJsonReaderObject command, int shardNumber)
             {
-                var currentIndex = _counts[shardIndex]++;
-                _commands[shardIndex][currentIndex] = command;
-                _ids[shardIndex][currentIndex] = id;
+                var currentIndex = _counts[shardNumber]++;
+                _commands[shardNumber][currentIndex] = command;
+                _ids[shardNumber][currentIndex] = id;
             }
             
             private T[][] RentArrays<T>()
@@ -470,8 +470,11 @@ namespace Raven.Server.ServerWide.Commands
                     if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
                         throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
 
-                    var shardIndex = ShardedDatabaseContext.GetShardIndex(context, rawRecord.ShardAllocations, id);
-                    perShard.Add(id, command, shardIndex);
+                    var bucket = ShardHelper.GetBucket(context, id);
+
+                    var shardNumber = ShardHelper.GetShardNumber(rawRecord.ShardBucketRanges, bucket);
+
+                    perShard.Add(id, command, shardNumber);
                 }
 
                 for (int i = 0; i < rawRecord.Shards.Length; i++)
@@ -524,7 +527,7 @@ namespace Raven.Server.ServerWide.Commands
             RawDatabaseRecord rawRecord,
             BlittableJsonReaderObject command,
             string id,
-            int shardIndex,
+            int shardNumber,
             long currentCommandCount,
             long index)
         {
@@ -556,7 +559,7 @@ namespace Raven.Server.ServerWide.Commands
                             $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.PUT} but got {type}");
             }
 
-            var databaseId = rawRecord.Shards[shardIndex].DatabaseTopologyIdBase64;
+            var databaseId = rawRecord.Shards[shardNumber].DatabaseTopologyIdBase64;
             var changeVector = BatchHandler.ClusterTransactionMergedCommand.GetClusterWideChangeVector(databaseId, currentCommandCount, Options.DisableAtomicDocumentWrites == false, index, rawRecord.GetClusterTransactionId());
 
             result[Constants.Documents.Metadata.ChangeVector] = changeVector;

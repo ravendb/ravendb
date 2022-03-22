@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Replication
             MigrationIndex = migrationIndex;
         }
 
-        public bool ForBucketMigration(BucketMigration migration)
+        public bool ForBucketMigration(ShardBucketMigration migration)
         {
             if (migration.MigrationIndex != MigrationIndex)
                 return false;

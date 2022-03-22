@@ -21,8 +21,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             At = at;
 
-            var shard = ShardHelper.TryGetShardIndexAndDatabaseName(ref DatabaseName);
-            if (shard != -1)
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref DatabaseName, out var shard))
                 Shard = shard;
         }
 

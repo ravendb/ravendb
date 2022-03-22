@@ -167,8 +167,8 @@ loadToOrders(orderData);
                     for (int i = 0; i < ids.Length; i++)
                     {
                         var id = ids[i];
-                        var shardIndex = shardedCtx.GetShardIndex(context, id);
-                        Assert.Equal(i, shardIndex);
+                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        Assert.Equal(i, shardNumber);
                     }
                 }
 
@@ -241,8 +241,8 @@ loadToOrders(orderData);
                     for (int i = 0; i < ids.Length; i++)
                     {
                         var id = ids[i];
-                        var shardIndex = shardedCtx.GetShardIndex(context, id);
-                        Assert.Equal(i, shardIndex);
+                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        Assert.Equal(i, shardNumber);
                     }
                 }
 
@@ -1149,8 +1149,8 @@ person.addCounter(loadCounter('down'));
                     for (int i = 0; i < ids.Length; i++)
                     {
                         var id = ids[i];
-                        var shardIndex = shardedCtx.GetShardIndex(context, id);
-                        Assert.Equal(i, shardIndex);
+                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        Assert.Equal(i, shardNumber);
                     }
                 }
 

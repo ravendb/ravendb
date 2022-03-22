@@ -89,8 +89,7 @@ namespace Raven.Server.Documents.ETL
 
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
-            var databaseName = database.Name;
-            ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
+            var databaseName = ShardHelper.ToDatabaseName(database.Name);
 
             using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

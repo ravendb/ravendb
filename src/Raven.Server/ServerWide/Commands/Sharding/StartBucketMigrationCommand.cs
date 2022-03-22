@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -25,9 +26,9 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (record.BucketMigrations.Count > 0)
+            if (record.ShardBucketMigrations.Count > 0)
             {
-                foreach (var migration in record.BucketMigrations)
+                foreach (var migration in record.ShardBucketMigrations)
                 {
                     if (migration.Value.Status < MigrationStatus.OwnershipTransferred)
                         throw new InvalidOperationException(
@@ -38,7 +39,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            record.BucketMigrations.Add(Bucket, new BucketMigration
+            record.ShardBucketMigrations.Add(Bucket, new ShardBucketMigration
             {
                 Bucket = Bucket,
                 DestinationShard = DestinationShard,

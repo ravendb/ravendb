@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
@@ -20,17 +21,17 @@ namespace SlowTests.Sharding.BucketMigration
         {
         }
 
-        private List<DatabaseRecord.ShardRangeAssignment> PopulateRanges(int shards, int? seed = null)
+        private List<ShardBucketRange> PopulateRanges(int shards, int? seed = null)
         {
             var rnd = new Random(seed ?? 357);
-            var list = new List<DatabaseRecord.ShardRangeAssignment>();
+            var list = new List<ShardBucketRange>();
             var start = 0;
             while (true)
             {
-                var range = new DatabaseRecord.ShardRangeAssignment();
-                range.Shard = rnd.Next(0, shards);
+                var range = new ShardBucketRange();
+                range.ShardNumber = rnd.Next(0, shards);
                 start += rnd.Next(0, 10 * 1024);
-                range.RangeStart = start;
+                range.BucketRangeStart = start;
                 if (start > ShardHelper.NumberOfBuckets)
                     return list;
 
@@ -38,16 +39,16 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        private List<DatabaseRecord.ShardRangeAssignment> PopulateRangesEvenly(int shards)
+        private List<ShardBucketRange> PopulateRangesEvenly(int shards)
         {
-            var list = new List<DatabaseRecord.ShardRangeAssignment>();
+            var list = new List<ShardBucketRange>();
             var start = 0;
             for (int i = 0; i < shards; i++)
             {
-                var range = new DatabaseRecord.ShardRangeAssignment
+                var range = new ShardBucketRange
                 {
-                    Shard = i,
-                    RangeStart = start
+                    ShardNumber = i,
+                    BucketRangeStart = start
                 };
                 list.Add(range);
                 start += ShardHelper.NumberOfBuckets / shards;
@@ -64,16 +65,16 @@ namespace SlowTests.Sharding.BucketMigration
 
             for (int bucket = 0; bucket < ShardHelper.NumberOfBuckets; bucket++)
             {
-                var shardIndex = ShardHelper.GetShardIndex(record.ShardAllocations, bucket);
-                shards[shardIndex] ??= new ShardReport
+                var shardNumber = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
+                shards[shardNumber] ??= new ShardReport
                 {
-                    Shard = shardIndex,
+                    Shard = shardNumber,
                     ReportPerBucket = new Dictionary<BucketNumber, BucketReport>()
                 };
 
-                shards[shardIndex].ReportPerBucket[bucket] = new BucketReport
+                shards[shardNumber].ReportPerBucket[bucket] = new BucketReport
                 {
-                    Size = (shardIndex + 1) * rnd.NextInt64(10*1024,1024*1024),
+                    Size = (shardNumber + 1) * rnd.NextInt64(10*1024,1024*1024),
                     NumberOfDocuments = rnd.Next(10,1000)
                 };
             }
@@ -98,11 +99,11 @@ namespace SlowTests.Sharding.BucketMigration
                         new DatabaseTopology(),
                         new DatabaseTopology(),
                     },
-                BucketMigrations = new Dictionary<int, Raven.Client.ServerWide.BucketMigration>()
+                ShardBucketMigrations = new Dictionary<int, ShardBucketMigration>()
             };
             
             //record.ShardAllocations = PopulateRanges(record.Shards.Length);
-            record.ShardAllocations = PopulateRangesEvenly(record.Shards.Length);
+            record.ShardBucketRanges = PopulateRangesEvenly(record.Shards.Length);
             var reports = CreateShardReports(record);
             var totalMovedBytes = 0L;
             Console.WriteLine($"Inital:");
@@ -134,7 +135,7 @@ namespace SlowTests.Sharding.BucketMigration
                 if (moves % 100 == 0)
                 {
                     Console.WriteLine($"After {moves} moves");
-                    Console.WriteLine($"ranges: {record.ShardAllocations.Count}");
+                    Console.WriteLine($"ranges: {record.ShardBucketRanges.Count}");
                     Console.WriteLine($"So far moved: {new Size(totalMovedBytes, SizeUnit.Bytes)}");
                     Console.WriteLine(string.Join(Environment.NewLine,reports.Select(r=>$"{r.Shard}:{new Size(r.TotalSize, SizeUnit.Bytes)}")));
                 }

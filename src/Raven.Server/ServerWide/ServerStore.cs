@@ -35,6 +35,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -852,18 +853,18 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        if (addDatabase.Record.ShardAllocations == null ||
-                            addDatabase.Record.ShardAllocations.Count == 0)
+                        if (addDatabase.Record.ShardBucketRanges == null ||
+                            addDatabase.Record.ShardBucketRanges.Count == 0)
                         {
-                            addDatabase.Record.ShardAllocations = new List<DatabaseRecord.ShardRangeAssignment>();
+                            addDatabase.Record.ShardBucketRanges = new List<ShardBucketRange>();
                             var start = 0;
                             var step = (1024*1024) / addDatabase.Record.Shards.Length;
                             for (int i = 0; i < addDatabase.Record.Shards.Length; i++)
                             {
-                                addDatabase.Record.ShardAllocations.Add(new DatabaseRecord.ShardRangeAssignment
+                                addDatabase.Record.ShardBucketRanges.Add(new ShardBucketRange
                                 {
-                                    Shard = i,
-                                    RangeStart = start
+                                    ShardNumber = i,
+                                    BucketRangeStart = start
                                 });
                                 start += step;
                             }

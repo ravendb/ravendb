@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -144,19 +145,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Dictionary<int, BucketMigration> _bucketMigrations;
+        private Dictionary<int, ShardBucketMigration> _bucketMigrations;
 
-        public Dictionary<int, BucketMigration> BucketMigrations
+        public Dictionary<int, ShardBucketMigration> BucketMigrations
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.BucketMigrations;
+                    return _materializedRecord.ShardBucketMigrations;
 
                 if (_bucketMigrations == null)
                 {
-                    _bucketMigrations = new Dictionary<int, BucketMigration>();
-                    if (_record.TryGet(nameof(DatabaseRecord.BucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
+                    _bucketMigrations = new Dictionary<int, ShardBucketMigration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.ShardBucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < obj.Count; i++)
@@ -221,29 +222,29 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        private List<DatabaseRecord.ShardRangeAssignment> _shardAllocations;
+        private List<ShardBucketRange> _shardBucketRanges;
 
-        public List<DatabaseRecord.ShardRangeAssignment> ShardAllocations
+        public List<ShardBucketRange> ShardBucketRanges
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.ShardAllocations;
+                    return _materializedRecord.ShardBucketRanges;
 
-                if (_shardAllocations != null)
-                    return _shardAllocations;
+                if (_shardBucketRanges != null)
+                    return _shardBucketRanges;
 
-                if (_record.TryGet(nameof(DatabaseRecord.ShardAllocations), out BlittableJsonReaderArray array) == false || array == null)
+                if (_record.TryGet(nameof(DatabaseRecord.ShardBucketRanges), out BlittableJsonReaderArray array) == false || array == null)
                     return null;
 
-                _shardAllocations = new List<DatabaseRecord.ShardRangeAssignment>(array.Length);
+                _shardBucketRanges = new List<ShardBucketRange>(array.Length);
                 for (var index = 0; index < array.Length; index++)
                 {
                     var shardAllocation = (BlittableJsonReaderObject)array[index];
-                    _shardAllocations.Add(JsonDeserializationCluster.ShardRangeAssignment(shardAllocation));
+                    _shardBucketRanges.Add(JsonDeserializationCluster.ShardRangeAssignment(shardAllocation));
                 }
 
-                return _shardAllocations;
+                return _shardBucketRanges;
             }
         }
 
@@ -278,7 +279,7 @@ namespace Raven.Server.ServerWide
             {
                 [nameof(DatabaseRecord.DatabaseName)] = shardName,
                 [nameof(DatabaseRecord.Topology)] = shardedTopology,
-                [nameof(DatabaseRecord.ShardAllocations)] = null,
+                [nameof(DatabaseRecord.ShardBucketRanges)] = null,
                 [nameof(DatabaseRecord.Shards)] = null,
                 [nameof(DatabaseRecord.Settings)] = DynamicJsonValue.Convert(settings)
             };

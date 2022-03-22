@@ -433,13 +433,13 @@ namespace SlowTests.Sharding.ETL
 
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
                 var shardedCtx = new ShardedDatabaseContext(srcNodes.Servers[0].ServerStore, dbRecord);
-                var shardIndex = 0;
+                var shardNumber = 0;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    shardIndex = shardedCtx.GetShardIndex(context, id);
+                    shardNumber = shardedCtx.GetShardNumber(context, id);
                 }
 
-                var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation($"{name}${shardIndex}", OngoingTaskType.RavenEtl));
+                var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation($"{name}${shardNumber}", OngoingTaskType.RavenEtl));
 
                 var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
 
@@ -452,7 +452,7 @@ namespace SlowTests.Sharding.ETL
                 id = "users/5";
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    Assert.Equal(shardIndex, shardedCtx.GetShardIndex(context, id));
+                    Assert.Equal(shardNumber, shardedCtx.GetShardNumber(context, id));
                 }
 
                 using (var session = src.OpenSession())

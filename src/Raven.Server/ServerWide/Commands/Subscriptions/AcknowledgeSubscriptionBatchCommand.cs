@@ -53,7 +53,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
-            var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.TryGetShardIndex(ShardName)];
+            var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.GetShardNumber(ShardName)];
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
             if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))

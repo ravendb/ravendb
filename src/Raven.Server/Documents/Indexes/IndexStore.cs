@@ -1003,8 +1003,8 @@ namespace Raven.Server.Documents.Indexes
             ValidateAutoIndex(definition);
             definition.DeploymentMode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
-            var name = _documentDatabase.Name;
-            ShardHelper.TryGetShardIndexAndDatabaseName(ref name);
+            var name = ShardHelper.ToDatabaseName(_documentDatabase.Name);
+
             var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBaseServerSide)definition, name, raftRequestId, _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode);
 
             long index = 0;

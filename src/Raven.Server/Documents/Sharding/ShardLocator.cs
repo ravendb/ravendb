@@ -1,20 +1,24 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Sharding
 {
     public static class ShardLocator
     {
-        public static DocumentIdsByShardIndex GroupIdsByShardIndex(IEnumerable<Slice> ids, ShardedDatabaseContext databaseContext)
+        public static DocumentIdsByShardNumber GroupIdsByShardNumber(IEnumerable<Slice> ids, ShardedDatabaseContext shardedDatabaseContext, TransactionOperationContext context)
         {
-            var result = new DocumentIdsByShardIndex();
+            var result = new DocumentIdsByShardNumber();
 
             foreach (var id in ids)
             {
-                var shardIndex = databaseContext.GetShardIndex(id);
-                result.Add(shardIndex, id);
+                var bucket = ShardHelper.GetBucket(context, id);
+
+                var shardNumber = shardedDatabaseContext.GetShardNumber(bucket);
+                result.Add(shardNumber, id);
             }
 
             return result;
@@ -28,35 +32,35 @@ namespace Raven.Server.Documents.Sharding
             for (var i = 0; i < ids.Count; i++)
             {
                 var id = ids[i];
-                var shardId = ShardedDatabaseContext.GetShardId(context, id);
-                var index = databaseContext.GetShardIndex(shardId);
 
-                if (result.TryGetValue(index, out var shardIds) == false)
+                var shardNumber = databaseContext.GetShardNumber(context, id);
+
+                if (result.TryGetValue(shardNumber, out var shardNumbers) == false)
                 {
-                    shardIds = new List<int>();
-                    result.Add(index, shardIds);
+                    shardNumbers = new List<int>();
+                    result.Add(shardNumber, shardNumbers);
                 }
 
-                shardIds.Add(i);
+                shardNumbers.Add(i);
             }
 
             return result;
         }
 
-        public class DocumentIdsByShardIndex : IEnumerable<(int ShardId, List<Slice> DocumentIds)>
+        public class DocumentIdsByShardNumber : IEnumerable<(int ShardId, List<Slice> DocumentIds)>
         {
             private readonly Dictionary<int, List<Slice>> _dictionary;
 
-            public DocumentIdsByShardIndex()
+            public DocumentIdsByShardNumber()
             {
                 _dictionary = new Dictionary<int, List<Slice>>();
             }
 
-            public void Add(int shardIndex, Slice documentId)
+            public void Add(int shardNumber, Slice documentId)
             {
-                if (_dictionary.TryGetValue(shardIndex, out var idsInShard) == false)
+                if (_dictionary.TryGetValue(shardNumber, out var idsInShard) == false)
                 {
-                    _dictionary[shardIndex] = idsInShard = new List<Slice>();
+                    _dictionary[shardNumber] = idsInShard = new List<Slice>();
                 }
 
                 idsInShard.Add(documentId);

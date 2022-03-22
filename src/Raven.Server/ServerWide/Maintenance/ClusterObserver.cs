@@ -1749,8 +1749,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public void AddState(DatabaseObservationState state)
             {
-                var shard = ShardHelper.TryGetShardIndex(state.Name);
-                if (shard == -1)
+                if (ShardHelper.TryGetShardNumber(state.Name, out var shardNumber) == false)
                 {
                     // handle not sharded database
                     if (_isShardedState)
@@ -1761,9 +1760,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 if (_isShardedState == false)
-                    throw new InvalidOperationException($"The database {state.Name} is sharded (shard: {shard}), but was initialized as a regular one.");
+                    throw new InvalidOperationException($"The database {state.Name} is sharded (shard: {shardNumber}), but was initialized as a regular one.");
 
-                States[shard] = state;
+                States[shardNumber] = state;
             }
 
             public readonly DatabaseObservationState[] States;

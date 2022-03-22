@@ -53,8 +53,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string GetItemId()
         {
-            var databaseName = DatabaseName;
-            ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
+            var databaseName = ShardHelper.ToDatabaseName(DatabaseName);
 
             return EtlProcessState.GenerateItemName(databaseName, ConfigurationName, TransformationName);
         }

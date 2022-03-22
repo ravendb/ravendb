@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = DatabaseContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedHeadCommand(this, Headers.IfNoneMatch);
 
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = DatabaseContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.None);
                 await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     id = clusterId;
                 }
                 
-                var index = DatabaseContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardNumber(context, id);
                 var cmd = new ShardedCommand(this, Headers.IfMatch, content: doc);
                 await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var patch = await context.ReadForMemoryAsync(RequestBodyStream(), "ScriptedPatchRequest");
 
-                var index = DatabaseContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.IfMatch, content: patch);
 
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = DatabaseContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.IfMatch);
                 await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = DatabaseContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.None);
                 await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);

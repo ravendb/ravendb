@@ -19,7 +19,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog) : 
         base(name, configuration, serverStore, addToInitLog)
     {
-        ShardNumber = ShardHelper.TryGetShardIndex(name);
+        ShardNumber = ShardHelper.GetShardNumber(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
     }
 

@@ -39,10 +39,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
             var hiloDocId = HiLoHandler.RavenHiloIdPrefix + tag;
-            var shardIndex = DatabaseContext.GetShardIndex(context, hiloDocId);
+            var shardNumber = DatabaseContext.GetShardNumber(context, hiloDocId);
 
             var cmd = new ShardedCommand(this, Headers.None);
-            await DatabaseContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context);
+            await DatabaseContext.RequestExecutors[shardNumber].ExecuteAsync(cmd, context);
             
             HttpContext.Response.StatusCode = (int)cmd.StatusCode;
             HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
