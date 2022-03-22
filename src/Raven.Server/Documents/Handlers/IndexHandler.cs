@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/history", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetIndexHistory()
         {
-            using (var processor = new IndexHandlerProcessorForGetIndexHistory(this))
+            using (var processor = new IndexHandlerProcessorForGetIndexHistory<DocumentsOperationContext>(this, ContextPool, Database.Name))
                 await processor.ExecuteAsync();
         }
 
