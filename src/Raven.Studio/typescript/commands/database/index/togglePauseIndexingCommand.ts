@@ -46,13 +46,8 @@ class togglePauseIndexingCommand extends commandBase {
         }
 
         const url = basicUrl + (args ? this.urlEncodeArgs(args) : "");
-        return this.post(url, null, this.db, { dataType: undefined })
-            .done(() => {
-                const state = this.start ? "Resumed" : "Paused until restart";
-                const indexNameMessage = this.names ? this.names[0] : "Indexing";
-                this.reportSuccess(`${indexNameMessage} was ${state}`);
-             })
-            .fail((response: JQueryXHR) => this.reportError("Failed to toggle indexing status", response.responseText));
+        //TODO: report messages!
+        return this.post(url, null, this.db, { dataType: undefined });
     }
 
 }

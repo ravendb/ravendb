@@ -10,13 +10,26 @@ interface IndexToolbarActionProps {
     disableSelectedIndexes: () => Promise<void>;
     pauseSelectedIndexes: () => Promise<void>;
     resumeSelectedIndexes: () => Promise<void>;
+    unlockSelectedIndexes: () => Promise<void>;
+    lockSelectedIndexes: () => Promise<void>;
+    lockErrorSelectedIndexes: () => Promise<void>;
 }
 
 export default function IndexToolbarAction(props: IndexToolbarActionProps) {
     const urls = useAppUrls();
     const newIndexUrl = urls.newIndex();
-    
-    const { selectedIndexes, deleteSelectedIndexes, enableSelectedIndexes, disableSelectedIndexes, pauseSelectedIndexes, resumeSelectedIndexes } = props;
+
+    const {
+        selectedIndexes,
+        deleteSelectedIndexes,
+        enableSelectedIndexes,
+        disableSelectedIndexes,
+        pauseSelectedIndexes,
+        resumeSelectedIndexes,
+        lockErrorSelectedIndexes,
+        lockSelectedIndexes,
+        unlockSelectedIndexes
+    } = props;
     
     return (
         <div className="indexesToolbar-actions" data-bind="requiredAccess: 'DatabaseReadWrite'">
@@ -74,20 +87,20 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                         <span className="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul className="dropdown-menu">
-                        <li data-bind="click: unlockSelectedIndexes">
-                            <a href="#" title="Unlock selected indexes">
+                        <li>
+                            <a href="#" title="Unlock selected indexes" onClick={withPreventDefault(unlockSelectedIndexes)}>
                                 <i className="icon-unlock"/>
                                 <span>Unlock</span>
                             </a>
                         </li>
-                        <li data-bind="click: lockSelectedIndexes">
-                            <a href="#" title="Lock selected indexes">
+                        <li>
+                            <a href="#" title="Lock selected indexes" onClick={withPreventDefault(lockSelectedIndexes)}>
                                 <i className="icon-lock"/>
                                 <span>Lock</span>
                             </a>
                         </li>
-                        <li data-bind="click: lockErrorSelectedIndexes">
-                            <a href="#" title="Lock (Error) selected indexes">
+                        <li>
+                            <a href="#" title="Lock (Error) selected indexes" onClick={withPreventDefault(lockErrorSelectedIndexes)}>
                                 <i className="icon-lock-error"/>
                                 <span>Lock (Error)</span>
                             </a>

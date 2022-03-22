@@ -11,7 +11,6 @@ import appUrl from "common/appUrl";
 import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
 import app from "durandal/app";
 import IndexFilter, { IndexFilterDescription } from "./IndexFilter";
-import IndexGlobalIndexing from "./IndexGlobalIndexing";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexToolbarActions from "./IndexToolbarActions";
 import { useServices } from "../../../hooks/useServices";
@@ -19,10 +18,10 @@ import { indexesStatsReducer, indexesStatsReducerInitializer } from "./IndexesSt
 import collection from "models/database/documents/collection";
 import IndexUtils from "../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
-import { shardingTodo } from "common/developmentHelper";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import { CheckboxTriple } from "../../../common/CheckboxTriple";
 import { useEventsCollector } from "../../../hooks/useEventsCollector";
+import bulkIndexOperationConfirm from "viewmodels/database/indexes/bulkIndexOperationConfirm";
 
 interface IndexesPageProps {
     database: database;
@@ -169,39 +168,72 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const getSelectedIndexes = (): IndexSharedInfo[] => stats.indexes.filter(x => selectedIndexes.includes(x.name));
     
-    const deleteSelectedIndexes = () => confirmDeleteIndexes(database, getSelectedIndexes())
+    const deleteSelectedIndexes = () => {
+        eventsCollector.reportEvent("indexes", "delete-selected");
+        return confirmDeleteIndexes(database, getSelectedIndexes());
+    }
 
-    const enableSelectedIndexes = async () => {
-        //TODO: add confirmation dialog!
+    const toggleDisableSelectedIndexes = async (enableIndex: boolean) => {
+        const indexes = getSelectedIndexes();
+        
+        const confirmation = enableIndex ? bulkIndexOperationConfirm.forEnable(indexes) : bulkIndexOperationConfirm.forDisable(indexes);
+        
+        confirmation.result
+            .done(result => {
+                if (result.can) {
+                    //TODO: add locations selector!
+                    eventsCollector.reportEvent("index", "toggle-status", status);
+                    indexes.forEach(i => enableIndex ? enableIndexing(i) : disableIndexing(i));
+                }
+            });
+
+        app.showBootstrapDialog(confirmation);
+        
+    }
+    
+    const enableSelectedIndexes = () => toggleDisableSelectedIndexes(true);
+    
+    const disableSelectedIndexes = () => toggleDisableSelectedIndexes(false);
+
+    const togglePauseSelectedIndexes = async (resume: boolean) => {
+        const indexes = getSelectedIndexes();
+
+        const confirmation = resume ? bulkIndexOperationConfirm.forResume(indexes) : bulkIndexOperationConfirm.forPause(indexes);
+
+        confirmation.result
+            .done(result => {
+                if (result.can) {
+                    eventsCollector.reportEvent("index", "toggle-status", status);
+
+                    indexes.forEach(i => resume ? resumeIndexing(i) : pauseIndexing(i));
+                }
+            });
+
+        app.showBootstrapDialog(confirmation);
+    }
+    
+    const resumeSelectedIndexes = () => togglePauseSelectedIndexes(true);
+
+    const pauseSelectedIndexes = () => togglePauseSelectedIndexes(false);
+    
+    const lockErrorSelectedIndexes = async () => {
         const indexes = getSelectedIndexes();
         while (indexes.length) {
-            await enableIndexing(indexes.pop());
+            await setIndexLockMode(indexes.pop(), "LockedError");
         }
     }
     
-    const disableSelectedIndexes = async () => {
-        //TODO: add confirmation dialog!
+    const lockSelectedIndexes = async () => {
         const indexes = getSelectedIndexes();
         while (indexes.length) {
-            await disableIndexing(indexes.pop());
+            await setIndexLockMode(indexes.pop(), "LockedIgnore");
         }
     }
-
-    const resumeSelectedIndexes = async () => {
-        //TODO: add confirmation dialog!
-        //TODO: use list + single call per location
+    
+    const unlockSelectedIndexes = async () => {
         const indexes = getSelectedIndexes();
         while (indexes.length) {
-            await resumeIndexing(indexes.pop());
-        }
-    }
-
-    const pauseSelectedIndexes = async () => {
-        //TODO: add confirmation dialog!
-        const indexes = getSelectedIndexes();
-        //TODO: send list of indexes - since call per location
-        while (indexes.length) {
-            await pauseIndexing(indexes.pop());
+            await setIndexLockMode(indexes.pop(), "Unlock");
         }
     }
     
@@ -254,12 +286,15 @@ export function IndexesPage(props: IndexesPageProps) {
         }
     }
     
-    const loadMissing = () => { //TODO: temp
-        stats.indexes[0].nodesInfo.forEach(nodeInfo => {
+    const loadMissing = async () => {
+        const tasks = stats.indexes[0].nodesInfo.map(nodeInfo => {
             if (nodeInfo.status === "notLoaded") {
-                fetchStats(nodeInfo.location);
+                return fetchStats(nodeInfo.location);
             }
-        })
+            return undefined;
+        });
+        
+        await Promise.all(tasks);
     }
     
     const enableIndexing = async (index: IndexSharedInfo) => {
@@ -292,6 +327,7 @@ export function IndexesPage(props: IndexesPageProps) {
     
     const pauseIndexing = async (index: IndexSharedInfo) => {
         const locations = database.getLocations();
+        
         while (locations.length > 0) {
             const location = locations.pop();
             await indexesService.pause([index], database, location); 
@@ -413,6 +449,9 @@ export function IndexesPage(props: IndexesPageProps) {
                                     disableSelectedIndexes={disableSelectedIndexes}
                                     pauseSelectedIndexes={pauseSelectedIndexes}
                                     resumeSelectedIndexes={resumeSelectedIndexes}
+                                    lockSelectedIndexes={lockSelectedIndexes}
+                                    unlockSelectedIndexes={unlockSelectedIndexes}
+                                    lockErrorSelectedIndexes={lockErrorSelectedIndexes}
                                 />
                             </div>
                         </div>

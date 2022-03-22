@@ -19,11 +19,8 @@ class toggleDisableIndexingCommand extends commandBase {
             DatabaseNames: [this.db.name]
         };
 
-        return this.post(url, JSON.stringify(payload))
-            .done(() => {
-                const state = this.start ? "Enabled" : "Disabled";
-                this.reportSuccess(`Indexing is ${state}`);
-            }).fail((response: JQueryXHR) => this.reportError("Failed to toggle indexing status", response.responseText));
+        //TODO: report messages!
+        return this.post(url, JSON.stringify(payload));
     }
 }
 
