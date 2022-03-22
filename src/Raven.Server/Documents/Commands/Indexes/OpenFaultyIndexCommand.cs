@@ -4,7 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Commands;
+namespace Raven.Server.Documents.Commands.Indexes;
 
 public class OpenFaultyIndexCommand : RavenCommand
 {

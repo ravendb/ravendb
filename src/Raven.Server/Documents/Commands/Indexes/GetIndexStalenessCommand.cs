@@ -5,7 +5,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Commands;
+namespace Raven.Server.Documents.Commands.Indexes;
 
 public class GetIndexStalenessCommand : RavenCommand<GetIndexStalenessCommand.IndexStaleness>
 {

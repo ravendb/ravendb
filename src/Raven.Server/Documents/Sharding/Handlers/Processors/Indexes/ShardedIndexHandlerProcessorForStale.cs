@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands;
+using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.ServerWide.Context;
 

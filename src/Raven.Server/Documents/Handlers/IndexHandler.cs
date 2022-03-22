@@ -388,24 +388,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GenerateCSharpIndexDefinition()
         {
-            var indexName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var index = Database.IndexStore.GetIndex(indexName);
-            if (index == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            if (index.Type.IsAuto())
-                throw new InvalidOperationException("Can't create C# index definition from auto indexes");
-
-            var indexDefinition = index.GetIndexDefinition();
-
-            await using (var writer = new StreamWriter(ResponseBodyStream()))
-            {
-                var text = new IndexDefinitionCodeGenerator(indexDefinition).Generate();
-                await writer.WriteAsync(text);
-            }
+            using (var processor = new IndexProcessorForGenerateCSharpIndexDefinition(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/status", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

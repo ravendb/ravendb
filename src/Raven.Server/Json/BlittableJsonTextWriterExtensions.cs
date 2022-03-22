@@ -17,6 +17,7 @@ using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands;
+using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
