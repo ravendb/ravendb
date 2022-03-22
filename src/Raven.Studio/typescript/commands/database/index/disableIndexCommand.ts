@@ -17,12 +17,8 @@ class disableIndexCommand extends commandBase {
         
         const url = endpoints.databases.adminIndex.adminIndexesDisable + this.urlEncodeArgs(args);
         
-        return this.post(url, null, this.db, { dataType: undefined })
-            .done(() => {
-                const location = ""; //TODO: this.clusterWide ? "cluster wide" : "on local node";
-                this.reportSuccess(`${this.indexName} was Disabled ${location}`);
-             })
-            .fail((response: JQueryXHR) => this.reportError("Failed to disable index", response.responseText));
+        //tODO: report messages
+        return this.post(url, null, this.db, { dataType: undefined });
     }
 }
 

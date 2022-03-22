@@ -225,17 +225,6 @@ class indexes {
         });
     }
 
-    private putIndexIntoGroups(i: index): void {
-        const targetGroupName = i.getGroupName();
-        
-        // group name might change so clear all items in different groups 
-        // i.e. Faulty Index has group 'Other' but after refresh it goes to valid group 
-        
-        this.removeIndexesFromAllGroups(this.findIndexesByName(i.name), targetGroupName);
-        
-        this.putIndexIntoGroupNamed(i, targetGroupName);
-    }
-
     private putIndexIntoGroupNamed(i: index, groupName: string): void {
         const group = this.indexGroups().find(g => g.entityName === groupName);
         if (group) {
@@ -437,33 +426,6 @@ class indexes {
         });
     }
 
-    private findIndexesByName(indexName: string): index[] {
-        const result: Array<index> = [];
-        this.indexGroups().forEach(g => {
-            g.indexes().forEach(i => {
-                if (i.name === indexName) {
-                    result.push(i);
-                }
-            });
-        });
-
-        return result;
-    }
-
-    private promptDeleteIndexes(indexes: index[]) {
-        if (indexes.length > 0) {
-            const deleteIndexesVm = new deleteIndexesConfirm(indexes, this.activeDatabase());
-            app.showBootstrapDialog(deleteIndexesVm); 
-            deleteIndexesVm.deleteTask
-                .done((deleted: boolean) => {
-                    if (deleted) {
-                        this.removeIndexesFromAllGroups(indexes);
-                    }
-                });
-        }
-    }
-
-
     private setIndexPriority(idx: index, newPriority: Raven.Client.Documents.Indexes.IndexPriority) {
         const originalPriority = idx.priority();
         if (originalPriority !== newPriority) {
@@ -536,71 +498,6 @@ class indexes {
             });
     }
 
-    disableSelectedIndexes(clusterWide: boolean) {
-        this.toggleDisableSelectedIndexes(false, clusterWide);
-    }
-
-    enableSelectedIndexes(clusterWide: boolean) {
-        this.toggleDisableSelectedIndexes(true, clusterWide);
-    }
-
-    private toggleDisableSelectedIndexes(enableIndex: boolean, clusterWide: boolean) {
-        const selectedIndexes = this.getSelectedIndexes();
-        const nodeTag = this.localNodeTag();
-
-        const confirmation = clusterWide
-            ? (enableIndex ? bulkIndexOperationConfirm.forClusterWideEnable(selectedIndexes) : bulkIndexOperationConfirm.forClusterWideDisable(selectedIndexes))
-            : (enableIndex ? bulkIndexOperationConfirm.forEnable(selectedIndexes, nodeTag) : bulkIndexOperationConfirm.forDisable(selectedIndexes, nodeTag));
-        
-        confirmation.result
-            .done(result => {
-                if (result.can) {
-                    eventsCollector.default.reportEvent("index", "toggle-status", status);
-
-                    this.spinners.globalLockChanges(true);
-
-                    selectedIndexes.forEach(i => enableIndex ? this.enableIndex(i, clusterWide) : this.disableIndex(i, clusterWide));
-                }
-            })
-            .always(() => this.spinners.globalLockChanges(false));
-
-        app.showBootstrapDialog(confirmation);
-    }
-
-    pauseSelectedIndexes() {
-        this.togglePauseSelectedIndexes(false);
-    }
-
-    resumeSelectedIndexes() {
-        this.togglePauseSelectedIndexes(true);
-    }
-
-    private togglePauseSelectedIndexes(resume: boolean) {
-        const selectedIndexes = this.getSelectedIndexes();
-        const nodeTag = this.localNodeTag();
-        const confirmation = resume 
-            ? bulkIndexOperationConfirm.forResume(selectedIndexes, nodeTag) 
-            : bulkIndexOperationConfirm.forPause(selectedIndexes, nodeTag);
-        
-        confirmation.result
-            .done(result => {
-                if (result.can) {
-                    eventsCollector.default.reportEvent("index", "toggle-status", status);
-
-                    this.spinners.globalLockChanges(true);
-
-                    selectedIndexes.forEach(i => resume ? this.resumeIndexing(i) : this.pauseUntilRestart(i));
-                }
-            })
-            .always(() => this.spinners.globalLockChanges(false));
-
-        app.showBootstrapDialog(confirmation);
-    }
-
-    deleteSelectedIndexes() {
-        eventsCollector.default.reportEvent("indexes", "delete-selected");
-        this.promptDeleteIndexes(this.getSelectedIndexes());
-    }
 
     startIndexing(): void {
         this.confirmationMessage("Are you sure?", "Do you want to <strong>resume</strong> indexing?", {
