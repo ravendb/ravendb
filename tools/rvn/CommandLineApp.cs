@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
@@ -187,22 +188,65 @@ namespace rvn
             {
                 throw new InvalidOperationException($"{nameof(setupInfo.License)} must be set");
             }
-            
+
+            if (setupInfo.License.Keys is null || setupInfo.License.Keys.Any() == false)
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License.Keys)} must be set");
+            }
+
+            if (string.IsNullOrEmpty(setupInfo.License.Id.ToString()))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License.Id)} must be set");
+            }
+
+            if (string.IsNullOrEmpty(setupInfo.License.Name))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License.Name)} must be set");
+            }
+
             if (string.IsNullOrEmpty(setupInfo.Email))
             {
                 throw new InvalidOperationException($"{nameof(setupInfo.Email)} must be set");
             }
-            
+
             if (string.IsNullOrEmpty(setupInfo.Domain))
             {
                 throw new InvalidOperationException($"{nameof(setupInfo.Domain)} must be set");
             }
-            
+
             if (string.IsNullOrEmpty(setupInfo.RootDomain))
             {
                 throw new InvalidOperationException($"{nameof(setupInfo.RootDomain)} must be set");
             }
-            
+
+            if (setupInfo.NodeSetupInfos is null || setupInfo.NodeSetupInfos.Any() == false)
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.NodeSetupInfos)} must be set");
+            }
+
+            foreach (var tag in setupInfo.NodeSetupInfos.Keys.Where(tag => IsValidNodeTag(tag) == false))
+            {
+                throw new InvalidOperationException($"{tag} - node tag must contain only capital letters. Maximum length should be up to 4 characters");
+            }
+
+            foreach (var nodeInfoNode in setupInfo.NodeSetupInfos.Values)
+            {
+                if (nodeInfoNode?.Addresses is null)
+                {
+                    throw new InvalidOperationException($"Addresses must be set inside {nameof(setupInfo.NodeSetupInfos)}");
+                }
+
+                if (nodeInfoNode.Port == 0)
+                {
+                    nodeInfoNode.Port = Raven.Client.Constants.Network.DefaultSecuredRavenDbHttpPort;
+                }
+
+                if (nodeInfoNode.TcpPort == 0)
+                {
+                    nodeInfoNode.TcpPort = Raven.Client.Constants.Network.DefaultSecuredRavenDbTcpPort;
+                }
+            }
+
             parameters.PackageOutputPath ??= setupInfo.Domain;
 
             if (string.IsNullOrEmpty(parameters.CertPassword) == false)
@@ -608,6 +652,12 @@ namespace rvn
                 default: throw new InvalidOperationException($"{parameters.Mode} mode is invalid{Environment.NewLine}-m|--mode option must be set. Please use either '{OwnCertificate}' or '{LetsEncrypt}'");
             }
         }
+        
+        private static bool IsValidNodeTag(string str)
+        {
+            return Regex.IsMatch(str, @"^[A-Z]{1,4}$");
+        }
+        
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
         {
             try
