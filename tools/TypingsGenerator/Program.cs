@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -97,7 +96,6 @@ using Raven.Server.Utils.IoMetrics;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
-using Raven.Server.Web.System.Processors;
 using Raven.Server.Web.System.Processors.CompareExchange;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -280,7 +278,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexesProgress));
             scripter.AddType(typeof(IndexErrors));
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
-            scripter.AddType(typeof(StudioIndexHandlerForPostIndexType<>.IndexTypeInfo));
+            scripter.AddType(typeof(IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
             scripter.AddType(typeof(StudioDatabaseTasksHandler.IndexDefaults));
 
