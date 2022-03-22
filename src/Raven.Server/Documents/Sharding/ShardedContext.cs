@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.ServerWide;
@@ -27,15 +28,16 @@ namespace Raven.Server.Documents.Sharding
 
         private readonly ServerStore _serverStore;
         private readonly long _lastClientConfigurationIndex;
-        private readonly ShardExecutor _shardExecutor;
 
         private DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
         public QueryMetadataCache QueryMetadataCache = new();
         private readonly Logger _logger;
 
-        public ShardExecutor ShardExecutor => _shardExecutor;
+        public readonly ShardExecutor ShardExecutor;
         public DatabaseRecord DatabaseRecord => _record;
+
+        public RavenConfiguration Configuration { get; internal set; }
 
 
         public int[] FullRange;
@@ -47,7 +49,10 @@ namespace Raven.Server.Documents.Sharding
 
             _serverStore = serverStore;
             _record = record;
-            Indexes = new ShardedIndexesCache(this, serverStore, record);
+
+            UpdateConfiguration(record.Settings);
+
+            Indexes = new ShardedIndexesCache(this, serverStore);
             _logger = LoggingSource.Instance.GetLogger<ShardedContext>(DatabaseName);
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
@@ -65,7 +70,7 @@ namespace Raven.Server.Documents.Sharding
             }
 
             FullRange = Enumerable.Range(0, _record.Shards.Length).ToArray();
-            _shardExecutor = new ShardExecutor(this);
+            ShardExecutor = new ShardExecutor(this);
             Streaming = new ShardedStreaming();
         }
 
@@ -73,6 +78,8 @@ namespace Raven.Server.Documents.Sharding
 
         public void UpdateDatabaseRecord(RawDatabaseRecord record)
         {
+            UpdateConfiguration(record.Settings);
+
             Indexes.Update(record);
 
             Interlocked.Exchange(ref _record, record);
@@ -89,7 +96,7 @@ namespace Raven.Server.Documents.Sharding
         public int ShardCount => _record.Shards.Length;
 
         public DatabaseTopology[] ShardsTopology => _record.Shards;
-        
+
         /// <summary>
         /// The shard id is a hash of the document id, lower case, reduced to
         /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming
@@ -136,7 +143,7 @@ namespace Raven.Server.Documents.Sharding
             var shardId = GetShardId(lowerId);
             return GetShardIndex(shardId);
         }
-        
+
         private static int GetShardIndex(List<DatabaseRecord.ShardRangeAssignment> shardAllocations, int shardId)
         {
             for (int i = 0; i < shardAllocations.Count - 1; i++)
@@ -156,7 +163,7 @@ namespace Raven.Server.Documents.Sharding
             var shardId = GetShardId(context, key);
             return GetShardIndex(shardAllocations, shardId);
         }
-        
+
         public bool HasTopologyChanged(long etag)
         {
             // TODO fix this
@@ -168,6 +175,11 @@ namespace Raven.Server.Documents.Sharding
             var lastClientConfigurationIndex = _record.Client?.Etag ?? 0;
             var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
             return actual > clientConfigurationEtag;
+        }
+
+        private void UpdateConfiguration(Dictionary<string, string> settings)
+        {
+            Configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, DatabaseName, settings);
         }
 
         public void Dispose()

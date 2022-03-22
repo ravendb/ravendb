@@ -22,4 +22,11 @@ public class ShardedStudioIndexHandler : ShardedRequestHandler
         using (var processor = new StudioIndexHandlerForPostIndexType<TransactionOperationContext>(this, ContextPool))
             await processor.ExecuteAsync();
     }
+
+    [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task PostIndexFields()
+    {
+        using (var processor = new ShardedStudioIndexHandlerForPostIndexFields(this))
+            await processor.ExecuteAsync();
+    }
 }
