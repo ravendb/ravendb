@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations
         private readonly DocumentStoreBase _store;
         private readonly string _nodeTag;
         private readonly int? _shardNumber;
-        private readonly string _databaseName;
+        internal readonly string _databaseName;
         private RequestExecutor _requestExecutor;
         private ServerOperationExecutor _serverOperationExecutor;
 
