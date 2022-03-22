@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Json;
@@ -31,7 +32,7 @@ internal class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
             return; // never hit
         }
 
-        Result = JsonDeserializationServer.IndexesProgress(response).Results;
+        Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexesProgress>(response).Results;
     }
 
     public override bool IsReadRequest => true;
