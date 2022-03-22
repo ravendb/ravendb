@@ -978,8 +978,8 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CanQueryWithLoadWithStringParameterFromSelectWithoutProjection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1044,7 +1044,7 @@ namespace SlowTests.Issues
                         , query.ToString());
 
                     var queryResult = query.ToList();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, queryResult.Count);
                     Assert.Equal(new[] { "buildDownloads/1-A", "buildDownloads/2-A" },
                         queryResult[0].DownloadsIds);

@@ -8,6 +8,7 @@ using Corax;
 using Corax.Queries;
 using Google.Protobuf.WellKnownTypes;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Primitives;
 using Nest;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -76,10 +77,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         case MethodType.StartsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
-                            return _searcher.StartWithQuery(fieldName, 
-                                GetFieldValue((ValueExpression)methodExpression.Arguments[1])?.ToString() ??
-                                       throw new InvalidQueryException("Method startsWith() expects to get an argument of type String while it got Null")
-                                , scoreFunction, isNegated, fieldId);
+                            var value = GetFieldValue((ValueExpression)methodExpression.Arguments[1]);
+                            if (value is Client.Constants.Documents.Indexing.Fields.NullValue)
+                                throw new InvalidQueryException("Method startsWith() expects to get an argument of type String while it got Null");
+                            
+                            return _searcher.StartWithQuery(fieldName, value.ToString(), scoreFunction, isNegated, fieldId);
                         case MethodType.EndsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
@@ -269,11 +271,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             var values = new List<string>();
             foreach (ValueExpression v in list)
-                values.Add(v.Token.Value);
+            {
+                var value = GetFieldValue(v);
+                if (value is BlittableJsonReaderArray bjra)
+                {
+                    BlittableArrayToListOfString(values, bjra);
+                }
+                else
+                {
+                    values.Add(value.ToString());
+                }
+            }
 
+            var field = GetField(f);
+            var fieldId = GetFieldIdInIndex(field);
             return scoreFunction is NullScoreFunction
-                ? _searcher.InQuery(f.FieldValue, values)
-                : _searcher.InQuery(f.FieldValue, values, scoreFunction);
+                ? _searcher.InQuery(field, values, fieldId)
+                : _searcher.InQuery(field, values, scoreFunction, fieldId);
         }
 
         private (ValueTokenType ValueType, object FieldValue) GetValue(ValueExpression expr)
@@ -368,6 +382,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private object GetFieldValue(ValueExpression f) => f.GetValue(_query.QueryParameters) switch
         {
+            LazyStringValue {Length: 0} or Sparrow.StringSegment {Length: 0} => Client.Constants.Documents.Indexing.Fields.EmptyString,
             null => Client.Constants.Documents.Indexing.Fields.NullValue,
             var value => value
         };
@@ -702,6 +717,44 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _ => throw new InvalidQueryException("Maximum amount of comparers in ORDER BY clause is 8.")
             };
         }
+
+        private void BlittableArrayToListOfString(List<string> values, BlittableJsonReaderArray bjra)
+        {
+            using (var itr = new BlittableJsonReaderArray.BlittableJsonArrayEnumerator(bjra))
+            {
+                while (itr.MoveNext())
+                {
+                    switch (itr.Current)
+                    {
+                        //todo maciej
+                        // case BlittableJsonReaderObject item:
+                        //     var clone = item.CloneOnTheSameContext();
+                        //     builder.WriteEmbeddedBlittableDocument(clone.BasePointer, clone.Size);
+                        //     break;
+
+                        case LazyStringValue item:
+                            values.Add(item);
+                            break;
+
+                        case long item:
+                            values.Add(item.ToString(CultureInfo.InvariantCulture));
+                            break;
+
+                        case LazyNumberValue item:
+                            values.Add(item);
+                            break;
+
+                        case LazyCompressedStringValue item:
+                            values.Add(item);
+                            break;
+
+                        default:
+                            throw new InvalidDataException($"Actual value type is {itr.Current.GetType()}. Should be known serialized type and should not happen. ");
+                    }
+                }
+            }
+        }
+        
         
         public void Dispose()
         {

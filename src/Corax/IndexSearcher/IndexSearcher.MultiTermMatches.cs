@@ -67,11 +67,15 @@ public partial class IndexSearcher
         return MultiTermMatchBuilder<TScoreFunction, ExistsTermProvider>(field, null, scoreFunction, false, Constants.IndexSearcher.NonAnalyzer);
     }
 
-    public MultiTermMatch InQuery(string field, List<string> inTerms)
+    public MultiTermMatch InQuery(string field, List<string> inTerms, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
         // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        if (fields is null)
+            return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
         var terms = fields.CompactTreeFor(field);
+
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
@@ -79,12 +83,12 @@ public partial class IndexSearcher
         {
             var stack = new BinaryMatch[inTerms.Count / 2];
             for (int i = 0; i < inTerms.Count / 2; i++)
-                stack[i] = Or(TermQuery(terms, inTerms[i * 2]), TermQuery(terms, inTerms[i * 2 + 1]));
+                stack[i] = Or(TermQuery(terms, inTerms[i * 2], fieldId), TermQuery(terms, inTerms[i * 2 + 1], fieldId));
 
             if (inTerms.Count % 2 == 1)
             {
                 // We need even values to make the last work. 
-                stack[^1] = Or(stack[^1], TermQuery(terms, inTerms[^1]));
+                stack[^1] = Or(stack[^1], TermQuery(terms, inTerms[^1], fieldId));
             }
 
             int currentTerms = stack.Length;
@@ -105,10 +109,10 @@ public partial class IndexSearcher
             return MultiTermMatch.Create(stack[0]);
         }
 
-        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, inTerms)));
+        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, inTerms, fieldId)));
     }
 
-    public MultiTermMatch InQuery<TScoreFunction>(string field, List<string> inTerms, TScoreFunction scoreFunction)
+    public MultiTermMatch InQuery<TScoreFunction>(string field, List<string> inTerms, TScoreFunction scoreFunction, int fieldId = Constants.IndexSearcher.NonAnalyzer)
         where TScoreFunction : IQueryScoreFunction
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
@@ -121,15 +125,15 @@ public partial class IndexSearcher
             var stack = new BinaryMatch[inTerms.Count / 2];
             for (int i = 0; i < inTerms.Count / 2; i++)
             {
-                var term1 = Boost(TermQuery(terms, inTerms[i * 2]), scoreFunction);
-                var term2 = Boost(TermQuery(terms, inTerms[i * 2 + 1]), scoreFunction);
+                var term1 = Boost(TermQuery(terms, inTerms[i * 2], fieldId), scoreFunction);
+                var term2 = Boost(TermQuery(terms, inTerms[i * 2 + 1], fieldId), scoreFunction);
                 stack[i] = Or(term1, term2);
             }
 
             if (inTerms.Count % 2 == 1)
             {
                 // We need even values to make the last work. 
-                var term = Boost(TermQuery(terms, inTerms[^1]), scoreFunction);
+                var term = Boost(TermQuery(terms, inTerms[^1], fieldId), scoreFunction);
                 stack[^1] = Or(stack[^1], term);
             }
 
@@ -153,7 +157,7 @@ public partial class IndexSearcher
 
         return MultiTermMatch.Create(
             MultiTermBoostingMatch<InTermProvider>.Create(
-                this, new InTermProvider(this, field, inTerms), scoreFunction));
+                this, new InTermProvider(this, field, inTerms, fieldId), scoreFunction));
     }
 
     private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction, bool isNegated,

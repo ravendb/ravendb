@@ -260,8 +260,10 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
             case ValueType.BoostedValue:
                 throw new InvalidParameterException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
+            case ValueType.EmptyString:
+                scope.Write(field.Id, Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.EmptyString), ref entryWriter);
+                return;
             case ValueType.Stream:
-
             default:
                 throw new NotImplementedException();
         }
