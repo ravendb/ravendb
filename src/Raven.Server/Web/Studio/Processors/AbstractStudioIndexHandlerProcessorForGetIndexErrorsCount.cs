@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands;
+using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Sparrow.Json;

@@ -4,7 +4,7 @@ using Raven.Client.Http;
 using Raven.Server.Json;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Commands;
+namespace Raven.Server.Documents.Commands.Indexes;
 
 internal class GetIndexErrorsCountCommand : RavenCommand<GetIndexErrorsCountCommand.IndexErrorsCount[]>
 {

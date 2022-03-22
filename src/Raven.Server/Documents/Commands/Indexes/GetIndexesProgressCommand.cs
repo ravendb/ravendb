@@ -2,10 +2,9 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
-using Raven.Server.Json;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Commands;
+namespace Raven.Server.Documents.Commands.Indexes;
 
 internal class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
 {

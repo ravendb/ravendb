@@ -129,6 +129,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedIndexHandlerProcessorForDelete(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
+        public async Task GenerateCSharpIndexDefinition()
+        {
+            using (var processor = new ShardedIndexProcessorForGenerateCSharpIndexDefinition(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
 
