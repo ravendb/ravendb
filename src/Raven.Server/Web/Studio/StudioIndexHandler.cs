@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
@@ -27,33 +28,8 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexType()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                using (var json = await context.ReadForMemoryAsync(RequestBodyStream(), "map"))
-                {
-                    var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
-
-                    var indexType = indexDefinition.DetectStaticIndexType();
-                    var indexSourceType = indexDefinition.DetectStaticIndexSourceType();
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName(nameof(IndexTypeInfo.IndexType));
-                        writer.WriteString(indexType.ToString());
-                        writer.WriteComma();
-                        writer.WritePropertyName(nameof(IndexTypeInfo.IndexSourceType));
-                        writer.WriteString(indexSourceType.ToString());
-                        writer.WriteEndObject();
-                    }
-                }
-            }
-        }
-
-        public class IndexTypeInfo
-        {
-            public IndexType IndexType { get; set; }
-            public IndexSourceType IndexSourceType { get; set; }
+            using (var processor = new StudioIndexHandlerForPostIndexType<DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]

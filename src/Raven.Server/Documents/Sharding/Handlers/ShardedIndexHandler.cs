@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -140,7 +142,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/indexes/history", "GET")]
         public async Task GetIndexHistory()
         {
-            using (var processor = new ShardedIndexHandlerProcessorForGetIndexHistory(this))
+            using (var processor = new IndexHandlerProcessorForGetIndexHistory<TransactionOperationContext>(this, ContextPool, ShardedContext.DatabaseName))
                 await processor.ExecuteAsync();
         }
     }
