@@ -71,21 +71,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             }
         }
 
-        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch)
-        {
-            return Database.SubscriptionStorage.RecordBatchRevisions(
-                SubscriptionConnectionsState.SubscriptionId,
-                SubscriptionConnectionsState.SubscriptionName,
-                BatchItems,
-                SubscriptionConnectionsState.PreviouslyRecordedChangeVector,
-                lastChangeVectorSentInThisBatch,
-                Connection.ShardName);
-        }
+        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => 
+            SubscriptionConnectionsState.RecordBatchRevisions(BatchItems, lastChangeVectorSentInThisBatch);
 
-        public override Task AcknowledgeBatch(long batchId)
-        {
-            return SubscriptionConnectionsState.AcknowledgeBatch(Connection, batchId, null);
-        }
+        public override Task AcknowledgeBatch(long batchId) => 
+            SubscriptionConnectionsState.AcknowledgeBatch(Connection, batchId, null);
 
         public override long GetLastItemEtag(DocumentsOperationContext context, string collection)
         {

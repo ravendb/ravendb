@@ -92,7 +92,6 @@ namespace Raven.Server.Documents
 
         public string DatabaseGroupId;
         public string ClusterTransactionId;
-        public string ShardedDatabaseId;
 
         private readonly Lazy<RequestExecutor> _requestExecutor;
 
@@ -104,10 +103,6 @@ namespace Raven.Server.Documents
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
-            // check if sharded 
-            string originalName = Name;
-            var index = ShardHelper.TryGetShardIndexAndDatabaseName(ref originalName);
-            ShardedDatabaseName = index != -1 ? originalName : null;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
@@ -119,8 +114,6 @@ namespace Raven.Server.Documents
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
-            CheckIfShardAndFindItsNumber();
-            
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             try
@@ -128,40 +121,11 @@ namespace Raven.Server.Documents
                 if (configuration.Initialized == false)
                     throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
 
-                var databaseName = Name;
-                IsSharded = ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName) != -1;
-
                 if (Configuration.Core.RunInMemory == false)
                 {
                     _addToInitLog("Creating db.lock file");
                     _fileLocker = new FileLocker(Configuration.Core.DataDirectory.Combine("db.lock").FullPath);
                     _fileLocker.TryAcquireWriteLock(_logger);
-                }
-
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    MasterKey = serverStore.GetSecretKey(ctx, Name);
-
-                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(ctx, Name))
-                    {
-                        if (rawRecord != null)
-                        {
-                            var isEncrypted = rawRecord.IsEncrypted;
-                            // can happen when we are in the process of restoring a database
-
-                            if (isEncrypted && MasterKey == null)
-                            {
-                                if (index != -1)
-                                    MasterKey = serverStore.GetSecretKey(ctx, originalName);
-
-                                if (MasterKey == null)
-                                    throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                            }
-                            if (isEncrypted == false && MasterKey != null)
-                                throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
-                        }
-                    }
                 }
 
                 QueryMetadataCache = new QueryMetadataCache();
@@ -203,30 +167,35 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void CheckIfShardAndFindItsNumber()
-        {
-            int separationIndex = Name.IndexOf('$');
-            if (separationIndex < 0)
-                return;
+        protected virtual byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, Name);
 
-            var start = separationIndex + 1;
-            int.TryParse(Name.AsSpan(start, Name.Length - start), out var shardNumber);
-            
-            _shardProperties = new ShardProperties
+        private void EnsureValidSecretKey()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
             {
-                Number = shardNumber,
-                DatabaseName = Name[..separationIndex]
-            };
+                MasterKey = ReadSecretKey(ctx);
+
+                var record = _serverStore.Cluster.ReadRawDatabaseRecord(ctx, Name);
+                if (record == null)
+                    return;
+
+                var isEncrypted = record.IsEncrypted;
+                // can happen when we are in the process of restoring a database
+                if (isEncrypted && MasterKey == null)
+                    throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                if (isEncrypted == false && MasterKey != null)
+                    throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+            }
         }
 
         public void SetIds(RawDatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
         public void SetIds(DatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
 
-        private void SetIds(DatabaseTopology topology, string shardedDatabaseId)
+        protected virtual void SetIds(DatabaseTopology topology, string shardedDatabaseId)
         {
             DatabaseGroupId = topology.DatabaseTopologyIdBase64;
             ClusterTransactionId = topology.ClusterTransactionIdBase64;
-            ShardedDatabaseId = shardedDatabaseId;
         }
 
         public ServerStore ServerStore => _serverStore;
@@ -246,18 +215,8 @@ namespace Raven.Server.Documents
 
         public SubscriptionStorage SubscriptionStorage { get; }
 
-        public string ShardedDatabaseName { get; }
         public string Name { get; }
 
-        private class ShardProperties
-        {
-            public int Number;
-            public string DatabaseName;
-        }
-
-        private ShardProperties _shardProperties;
-        private bool IsShard => _shardProperties != null;
-        
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
         public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? "";
@@ -308,7 +267,7 @@ namespace Raven.Server.Documents
 
         public readonly RachisLogIndexNotifications RachisLogIndexNotifications;
 
-        public readonly byte[] MasterKey;
+        public byte[] MasterKey { get; private set; }
 
         public char IdentityPartsSeparator { get; private set; }
 
@@ -317,8 +276,6 @@ namespace Raven.Server.Documents
         public StudioConfiguration StudioConfiguration { get; private set; }
 
         public bool Is32Bits { get; }
-
-        public bool IsSharded { get; }
 
         private long _lastDatabaseRecordChangeIndex;
 
@@ -342,10 +299,17 @@ namespace Raven.Server.Documents
 
         public long LastTransactionId => DocumentsStorage.Environment.CurrentReadTransactionId;
 
+        protected virtual void InitializeSubscriptionStorage()
+        {
+            SubscriptionStorage.Initialize(Name);
+        }
+
         public void Initialize(InitializeOptions options = InitializeOptions.None, DateTime? wakeup = null)
         {
             try
             {
+                EnsureValidSecretKey();
+
                 Configuration.CheckDirectoryPermissions();
 
                 _addToInitLog("Initializing NotificationCenter");
@@ -373,7 +337,7 @@ namespace Raven.Server.Documents
 
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
-
+                
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
@@ -401,8 +365,7 @@ namespace Raven.Server.Documents
                 }
 
                 DatabaseShutdown.ThrowIfCancellationRequested();
-
-                SubscriptionStorage.Initialize();
+                InitializeSubscriptionStorage();
                 _addToInitLog("Initializing SubscriptionStorage completed");
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
@@ -484,7 +447,7 @@ namespace Raven.Server.Documents
             _hasClusterTransaction.Set();
         }
 
-        private long? _nextClusterCommand;
+        protected long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
         public bool IsEncrypted => MasterKey != null;
@@ -526,12 +489,12 @@ namespace Raven.Server.Documents
                 }
             }
         }
-
-        private struct ClusterTransactionBatchCollector : IDisposable
+        protected class ClusterTransactionBatchCollector : IDisposable
         {
             private readonly int _maxSize;
             private readonly ClusterTransactionCommand.SingleClusterDatabaseCommand[] _data;
             public int Count = 0;
+            public bool AllCommandsBeenProcessed;
 
             public ClusterTransactionBatchCollector(int maxSize)
             {
@@ -557,42 +520,24 @@ namespace Raven.Server.Documents
                 _data[Count++] = command;
             }
 
-            public void Dispose() => ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Return(_data);
+            public virtual void Dispose() => ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Return(_data);
         }
-        
+
+        protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(TransactionOperationContext context, int take)
+        {
+            var batchCollector = new ClusterTransactionBatchCollector(take);
+            var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take);
+            batchCollector.Add(readCommands);
+            return batchCollector;
+        }
+
         public async Task ExecuteClusterTransaction(TransactionOperationContext context)
         {
             const int takeCount = 256;
+            using var batchCollector = CollectCommandsBatch(context, takeCount);
 
-            using var batchCollector = new ClusterTransactionBatchCollector(takeCount);
-
-            long maxRaftIndex = -1;
-            long maxCommandCount = -1;
-            if (IsShard == false)
-            {
-                var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: takeCount);
-                batchCollector.Add(readCommands);
-                if (batchCollector.Count == 0)
-                    return;
-            }
-            else
-            {
-                var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, _shardProperties.DatabaseName, fromCount: _nextClusterCommand, take: takeCount);
-                
-                foreach (var command in readCommands)
-                {
-                    maxRaftIndex = command.Index; 
-                    maxCommandCount = command.PreviousCount + command.Commands.Length; 
-                    if(command.ShardNumber == _shardProperties.Number)
-                        batchCollector.Add(command);
-                }
-                
-                if (batchCollector.Count == 0)
-                {
-                    NotifyIndexIfNeeded(maxRaftIndex, maxCommandCount);
-                    return;
-                }
-            }
+            if (batchCollector.Count == 0)
+                return;
 
             var batch = batchCollector.GetData();
             var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
@@ -601,6 +546,7 @@ namespace Raven.Server.Documents
                 //If we get a database shutdown while we process a cluster tx command this
                 //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
                 await TxMerger.Enqueue(mergedCommands);
+                batchCollector.AllCommandsBeenProcessed = true;
             }
             catch (Exception e)
             {
@@ -608,24 +554,14 @@ namespace Raven.Server.Documents
                     _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
 
                 if (await ExecuteClusterTransactionOneByOne(batch))
-                    NotifyIndexIfNeeded(maxRaftIndex, maxCommandCount);
-                return;
+                    batchCollector.AllCommandsBeenProcessed = true;
             }
             foreach (var command in batch)
             {
                 OnClusterTransactionCompletion(command, mergedCommands);
             }
-            
-            NotifyIndexIfNeeded(maxRaftIndex, maxCommandCount);
         }
-        void NotifyIndexIfNeeded(long index, long count)
-        {
-            if (index >= 0)
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                _nextClusterCommand = count;
-            }
-        }
+      
         private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
             for (int i = 0; i < batch.Count; i++)
@@ -656,7 +592,6 @@ namespace Raven.Server.Documents
 
                     await Task.Delay(_clusterTransactionDelayOnFailure, DatabaseShutdown);
                     _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
-
                     return false;
                 }
             }

@@ -20,15 +20,17 @@ namespace Raven.Server.Documents.Replication.Senders
     {
         public const string MigrationTag = "MOVE";
         public readonly BucketMigrationReplication Destination;
+        public readonly ShardedDocumentDatabase Database;
         public MigrationReplicationDocumentSender(Stream stream, OutgoingMigrationReplicationHandler parent, Logger log) : base(stream, parent, log)
         {
             Destination = parent.BucketMigrationNode;
+            Database = (ShardedDocumentDatabase)parent._parent.Database;
         }
 
         protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
         {
             // TODO : temporary, waiting for RavenDB-17760
-            var migrationId = ctx.DocumentDatabase.ShardedDatabaseId;
+            var migrationId = Database.ShardedDatabaseId;
             using var helper = new DocumentInfoHelper();
             foreach (var item in base.GetReplicationItems(ctx, etag, stats, caseInsensitiveCounters))
             {

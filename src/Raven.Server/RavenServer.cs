@@ -2401,7 +2401,7 @@ namespace Raven.Server
                         break;
                     }
 
-                    SubscriptionConnection.SendSubscriptionDocuments(ServerStore, tcp, bufferToCopy);
+                    SubscriptionConnection.CreateSubscriptionConnection(ServerStore, tcp, bufferToCopy);
                     break;
 
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:

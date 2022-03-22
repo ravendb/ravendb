@@ -8,7 +8,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
@@ -88,12 +87,14 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             }
         }
 
-        protected override (string DbNameStr, string ClientType, string SubsType) GetStatusMessageDetails()
+        protected override StatusMessageDetails GetStatusMessageDetails()
         {
-            string dbNameStr = $"for sharded database '{Database}' on '{_serverStore.NodeTag}'";
-            string clientType = $"'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
-            string subsType = $"sharded subscription '{_options.SubscriptionName}', id '{SubscriptionId}'";
-            return (dbNameStr, clientType, subsType);
+            return new StatusMessageDetails
+            {
+                DatabaseName = $"for sharded database '{Database}' on '{_serverStore.NodeTag}'",
+                ClientType = $"'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'",
+                SubscriptionType = $"sharded subscription '{_options.SubscriptionName}', id '{SubscriptionId}'"
+            };
         }
 
         public override async Task ParseSubscriptionOptionsAsync()

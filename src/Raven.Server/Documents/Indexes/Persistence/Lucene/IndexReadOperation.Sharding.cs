@@ -10,7 +10,7 @@ public partial class IndexReadOperation
     {
         // * for sharded queries, we'll send the order by fields separately
         // * for a map-reduce index, it's fields are the ones that are used for sorting
-        if (_index.DocumentDatabase.IsSharded == false || query.Metadata.OrderBy?.Length > 0 == false || _indexType.IsMapReduce())
+        if (_index.DocumentDatabase is ShardedDocumentDatabase == false || query.Metadata.OrderBy?.Length > 0 == false || _indexType.IsMapReduce())
             return;
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "review after Corax is merged");
