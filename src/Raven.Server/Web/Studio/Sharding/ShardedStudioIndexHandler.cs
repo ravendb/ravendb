@@ -16,14 +16,14 @@ public class ShardedStudioIndexHandler : ShardedRequestHandler
             await processor.ExecuteAsync();
     }
 
-    [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    [RavenShardedAction("/databases/*/studio/index-type", "POST")]
     public async Task PostIndexType()
     {
         using (var processor = new StudioIndexHandlerForPostIndexType<TransactionOperationContext>(this, ContextPool))
             await processor.ExecuteAsync();
     }
 
-    [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    [RavenShardedAction("/databases/*/studio/index-fields", "POST")]
     public async Task PostIndexFields()
     {
         using (var processor = new ShardedStudioIndexHandlerForPostIndexFields(this))
