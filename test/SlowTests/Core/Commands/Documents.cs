@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -147,10 +148,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public async Task CanDeleteAndUpdateDocumentByIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanDeleteAndUpdateDocumentByIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {

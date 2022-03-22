@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -16,10 +17,11 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJavaScriptIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersByName());
                 using (var session = store.OpenSession())
@@ -38,10 +40,11 @@ namespace FastTests.Client.Indexing
         }
 
 
-        [Fact]
-        public void CanIndexTimeSpan()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIndexTimeSpan(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new TeemoByDuration());
                 using (var session = store.OpenSession())
@@ -65,10 +68,11 @@ namespace FastTests.Client.Indexing
             public TimeSpan Duration { get; set; }
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithAdditionalSources()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJavaScriptIndexWithAdditionalSources(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersByNameWithAdditionalSources());
                 using (var session = store.OpenSession())
@@ -86,10 +90,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexArrayProperties()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIndexArrayProperties(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersByPhones());
                 using (var session = store.OpenSession())
@@ -116,10 +121,11 @@ namespace FastTests.Client.Indexing
             public int[] Numbers { get; set; }
         }
 
-        [Fact]
-        public void CanIndexMapWithFanout()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIndexMapWithFanout(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new FanoutByNumbers());
                 using (var session = store.OpenSession())
@@ -146,10 +152,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new FanoutByPaymentsWithReduce());
                 using (var session = store.OpenSession())
@@ -177,10 +184,11 @@ namespace FastTests.Client.Indexing
                 }
             }
         }
-        [Fact]
-        public void CanIndexMapReduceWithFanout()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIndexMapReduceWithFanout(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new FanoutByNumbersWithReduce());
                 using (var session = store.OpenSession())
@@ -207,10 +215,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithDynamicFields()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJavaScriptIndexWithDynamicFields(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersByNameAndAnalyzedName());
                 using (var session = store.OpenSession())
@@ -230,10 +239,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseJavaScriptMultiMapIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJavaScriptMultiMapIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersAndProductsByName());
                 using (var session = store.OpenSession())
@@ -256,21 +266,23 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithLoadDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJavaScriptIndexWithLoadDocument(string jsEngineType)
         {
-            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>();
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>(jsEngineType);
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithExternalLoadDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJavaScriptIndexWithExternalLoadDocument(string jsEngineType)
         {
-            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>();
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>(jsEngineType);
         }
 
-        private void CanUseJavaScriptIndexWithLoadInternal<T>() where T : AbstractJavaScriptIndexCreationTask, new()
+        private void CanUseJavaScriptIndexWithLoadInternal<T>(string jsEngineType) where T : AbstractJavaScriptIndexCreationTask, new()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var index = new T();
                 store.ExecuteIndex(index);
@@ -295,10 +307,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanElivateSimpleFunctions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanElivateSimpleFunctions(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersByNameAndIsActive());
                 using (var session = store.OpenSession())
@@ -316,10 +329,11 @@ namespace FastTests.Client.Indexing
 
             }
         }
-        [Fact]
-        public void CanUseJavaScriptMapReduceIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJavaScriptMapReduceIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersAndProductsByNameAndCount());
                 using (var session = store.OpenSession())
@@ -341,22 +355,24 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseSpatialFields()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseSpatialFields(string jsEngineType)
         {
             var kalab = 10;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new Spatial());
                 CanUseSpatialFieldsInternal(kalab, store, "Spatial");
             }
         }
 
-        [Fact]
-        public void CanUseDynamicSpatialFields()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseDynamicSpatialFields(string jsEngineType)
         {
             var kalab = 10;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new DynamicSpatial());
                 CanUseSpatialFieldsInternal(kalab, store, "DynamicSpatial");
@@ -388,11 +404,12 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanReduceNullValues()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanReduceNullValues(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store2 = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 ReduceNullValuesInternal(store);
             }
@@ -415,10 +432,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanReduceWithReturnSyntax()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanReduceWithReturnSyntax(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersReducedByNameReturnSyntax());
                 using (var session = store.OpenSession())
@@ -438,10 +456,11 @@ namespace FastTests.Client.Indexing
             }
         }
         
-        [Fact]
-        public void CanUseJsIndexWithArrowObjectFunctionInMap()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseJsIndexWithArrowObjectFunctionInMap(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new UsersByNameMapArrowSyntax());
                 using (var session = store.OpenSession())
@@ -463,21 +482,23 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store2 = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 ReduceNullValuesInternal(store);
                 ReduceNullValuesInternal(store2);
             }
         }
 
-        [Fact]
-        public void OutputReduceToCollection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void OutputReduceToCollection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new Products_ByCategory());
                 using (var session = store.OpenSession())
@@ -499,10 +520,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void DateCheckMapReduce()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DateCheckMapReduce(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new Product_Sales_ByMonth());
                 using (var session = store.OpenSession())
@@ -548,8 +570,9 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanQueryBySubObjectAsString()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanQueryBySubObjectAsString(string jsEngineType)
         {
             var address = new Address
             {
@@ -557,7 +580,7 @@ namespace FastTests.Client.Indexing
                 Line2 = "sweet home"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new Users_ByAddress());
                 using (var session = store.OpenSession())
@@ -570,18 +593,19 @@ namespace FastTests.Client.Indexing
                 }
             }
         }
-        private class ProductsWarrentyResult
+        private class ProductsWarrantyResult
         {
             public string Warranty { get; set; }
             public int Duration { get; set; }
         }
 
-        [Fact]
-        public void CanIndexSwitchCases()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIndexSwitchCases(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
-                store.ExecuteIndex(new ProductsWarrenty());
+                store.ExecuteIndex(new ProductsWarranty());
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product
@@ -621,7 +645,7 @@ namespace FastTests.Client.Indexing
                     });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
-                    var res = session.Query<ProductsWarrentyResult>("ProductsWarrenty").Where(u => u.Duration > 20).ProjectInto<Product>().Single();
+                    var res = session.Query<ProductsWarrantyResult>("ProductsWarranty").Where(u => u.Duration > 20).ProjectInto<Product>().Single();
                     Assert.Equal(res.Name, "p3");
                 }
             }
@@ -935,9 +959,9 @@ map('Users', function (u){ return { Name: u.Name, Count: 1, Product: GetProductN
             }
         }
 
-        private class ProductsWarrenty : AbstractJavaScriptIndexCreationTask
+        private class ProductsWarranty : AbstractJavaScriptIndexCreationTask
         {
-            public ProductsWarrenty()
+            public ProductsWarranty()
             {
                 Maps = new HashSet<string>
                 {
@@ -962,7 +986,7 @@ map('Products', prod => {
                     result.Duration = 6;
                 }
 
-                if (prod.Mode == Refurbished)
+                if (prod.Mode == 'Refurbished')
                     result.Duration /= 2;
 
                 return result;
@@ -1119,7 +1143,7 @@ map('Products', prod => {
                             order.Lines.forEach(l => {
                                 res.push({
                                     Product: l.Product,
-                                    Month: new Date( (new Date(order.OrderedAt)).getFullYear(),(new Date(order.OrderedAt)).getMonth(),1),
+                                    Month: new Date( Date.UTC((new Date(order.OrderedAt)).getFullYear(),(new Date(order.OrderedAt)).getMonth(),1)),
                                     Count: 1,
                                 })
                             });

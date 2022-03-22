@@ -20,6 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
+        // TODO [shlomo] temporary switched off the test as it sometimes causes hanging (but not always)
         [MultiplatformFact(RavenArchitecture.AllX64)]
         public  Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
         {
