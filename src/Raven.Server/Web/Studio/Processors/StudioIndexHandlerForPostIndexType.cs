@@ -39,10 +39,10 @@ internal class StudioIndexHandlerForPostIndexType<TOperationContext> : AbstractH
             }
         }
     }
+}
 
-    public class IndexTypeInfo
-    {
-        public IndexType IndexType { get; set; }
-        public IndexSourceType IndexSourceType { get; set; }
-    }
+public class IndexTypeInfo
+{
+    public IndexType IndexType { get; set; }
+    public IndexSourceType IndexSourceType { get; set; }
 }
