@@ -9,15 +9,17 @@ class indexStalenessReasons extends dialogViewModelBase {
     private db: database;
     indexName: string;
     reasons = ko.observable<indexStalenessReasonsResponse>();
+    location: databaseLocationSpecifier;
     
-    constructor(db: database, indexName: string) {
+    constructor(db: database, indexName: string, location?: databaseLocationSpecifier) {
         super();
         this.db = db;
         this.indexName = indexName;
+        this.location = location;
     }
     
     activate() {
-        return new getIndexStalenessReasonsCommand(this.indexName, this.db)
+        return new getIndexStalenessReasonsCommand(this.indexName, this.db, this.location)
             .execute()
             .done(reasons => {
                 this.reasons(reasons);

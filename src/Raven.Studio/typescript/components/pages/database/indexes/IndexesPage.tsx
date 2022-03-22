@@ -1,8 +1,8 @@
-﻿import React, { useCallback, useEffect, useMemo, useReducer, useState } from "react"
+﻿import React, { useEffect, useMemo, useReducer, useState } from "react"
 import database from "models/resources/database";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import {
-    IndexFilterCriteria, IndexGroup, IndexNodeInfo, IndexNodeInfoDetails,
+    IndexFilterCriteria, IndexGroup, IndexNodeInfoDetails,
     IndexSharedInfo, IndexStatus,
 } from "../../../models/indexes";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
@@ -238,6 +238,7 @@ export function IndexesPage(props: IndexesPageProps) {
     }
     
     const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
+        eventsCollector.reportEvent("indexes", "delete");
         if (indexes.length > 0) {
             const deleteIndexesVm = new deleteIndexesConfirm(indexes, db);
             app.showBootstrapDialog(deleteIndexesVm);
@@ -478,6 +479,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                 pauseIndexing={() => pauseIndexing(index)}
                                                 resumeIndexing={() => resumeIndexing(index)}
                                                 index={index}
+                                                database={database}
                                                 deleteIndex={() => confirmDeleteIndexes(database, [index])}
                                                 selected={selectedIndexes.includes(index.name)}
                                                 toggleSelection={() => toggleSelection(index)}

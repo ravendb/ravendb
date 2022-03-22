@@ -2,7 +2,6 @@ class indexes {
     
     /* TODO
     hasAnyStateFilter: KnockoutComputed<boolean>;
-    lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
     indexProgressInterval: number;
@@ -69,20 +68,6 @@ class indexes {
         });
 
 
-        this.lockModeCommon = ko.pureComputed(() => {
-            const selectedIndexes = this.getSelectedIndexes();
-            if (selectedIndexes.length === 0)
-                return "None";
-
-            const firstLockMode = selectedIndexes[0].lockMode();
-            for (let i = 1; i < selectedIndexes.length; i++) {
-                if (selectedIndexes[i].lockMode() !== firstLockMode) {
-                    return "Mixed";
-                }
-            }
-            return firstLockMode;
-        });
-        
         this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
             const selectedCount = this.selectedIndexesName().length;
             const indexesCount = this.getAllIndexes().length;
@@ -225,23 +210,7 @@ class indexes {
         });
     }
 
-    private putIndexIntoGroupNamed(i: index, groupName: string): void {
-        const group = this.indexGroups().find(g => g.entityName === groupName);
-        if (group) {
-            const oldIndex = group.indexes().find((cur: index) => cur.name === i.name);
-            if (oldIndex) {
-                oldIndex.updateWith(i);
-            } else {
-                group.indexes.push(i);
-            }
-        } else {
-            this.indexGroups.push({
-                entityName: groupName,
-                indexes: ko.observableArray([i]),
-                groupHidden: ko.observable<boolean>(false)
-            });
-        }
-    }
+
 
     private filterIndexes(passive: boolean) {
         if (passive && !this.autoRefresh()) {
@@ -368,15 +337,6 @@ class indexes {
             });
     }
 
-    resetIndex(i: index) {
-        
-    }
-
-    deleteIndex(i: index) {
-        eventsCollector.default.reportEvent("indexes", "delete");
-        this.promptDeleteIndexes([i]);
-        this.resetsInProgress.delete(i.name);
-    }
 
     private processIndexEvent(e: Raven.Client.Documents.Changes.IndexChange) {
         if (!this.autoRefresh()) {
@@ -474,8 +434,6 @@ class indexes {
    
 
     private setLockModeSelectedIndexes(lockModeString: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
-        if (this.lockModeCommon() === lockModeString)
-            return;
 
         this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(lockModeStrForTitle)}</strong> selected indexes?</br>Note: Static-indexes only will be set, 'Lock Mode' is not relevant for auto-indexes.`, {
             html: true
@@ -603,13 +561,6 @@ class indexes {
                 })
                 .always(() => this.spinners.localState.remove(idx.name));
         }
-    }
-
-
-    showStaleReasons(idx: index) {
-        const view = new indexStalenessReasons(this.activeDatabase(), idx.name);
-        eventsCollector.default.reportEvent("indexes", "show-stale-reasons");
-        app.showBootstrapDialog(view);
     }
     
     forceParallelDeployment(progress: indexProgress) {

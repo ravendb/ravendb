@@ -19,7 +19,7 @@ internal class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
 
         return new HttpRequestMessage
         {
-            Method = HttpMethod.Post
+            Method = HttpMethod.Get
         };
     }
 

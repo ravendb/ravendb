@@ -6,8 +6,13 @@ import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { useAppUrls } from "../../../hooks/useAppUrls";
 import IndexUtils from "../../../utils/IndexUtils";
 import { useEventsCollector } from "../../../hooks/useEventsCollector";
+import { withPreventDefault } from "../../../utils/common";
+import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessReasons";
+import database = require("models/resources/database");
+import app from "durandal/app";
 
 interface IndexPanelProps {
+    database: database;
     index: IndexSharedInfo;
     setPriority: (priority: IndexPriority) => Promise<void>;
     setLockMode: (lockMode: IndexLockMode) => Promise<void>;
@@ -22,7 +27,7 @@ interface IndexPanelProps {
 }
 
 export function IndexPanel(props: IndexPanelProps) {
-    const { index, selected, toggleSelection } = props;
+    const { index, selected, toggleSelection, database } = props;
     
     const eventsCollector = useEventsCollector();
 
@@ -101,6 +106,12 @@ export function IndexPanel(props: IndexPanelProps) {
     const deleteIndex = async (e: MouseEvent) => {
         e.preventDefault();
         return props.deleteIndex();
+    }
+    
+    const showStaleReasons = (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
+        const view = new indexStalenessReasons(database, index.name, location);
+        eventsCollector.reportEvent("indexes", "show-stale-reasons");
+        app.showBootstrapDialog(view);
     }
     
     const resetIndex = () => props.resetIndex();
@@ -358,9 +369,20 @@ export function IndexPanel(props: IndexPanelProps) {
                                 <>
                                     <span className="margin-right">Errors: {nodeInfo.details.errorCount}</span>
                                     <span className="margin-right">Entries: {nodeInfo.details.entriesCount}</span>
-                                    <span className={classNames("badge", badgeClass(index, nodeInfo.details))}>
+                                    <span className={classNames("badge margin-right", badgeClass(index, nodeInfo.details))}>
                                         {badgeText(index, nodeInfo.details)}
                                     </span>
+                                    {nodeInfo.details.stale ? (
+                                        <span className="set-size">
+                                            <a title="Show stale reason" href="#" className="text-warning" onClick={withPreventDefault(() => showStaleReasons(index, nodeInfo.location))}>
+                                                <span>Stale</span>&nbsp;&nbsp;<i className="icon-help" />
+                                            </a>
+                                        </span>
+                                    ) : (
+                                        <span className="set-size">
+                                            <i className="icon-check" /><span>Up to date</span>
+                                        </span>
+                                    )}
                                 </>
                             )}
                         </div>

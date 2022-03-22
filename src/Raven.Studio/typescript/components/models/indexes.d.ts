@@ -33,6 +33,7 @@ export interface IndexNodeInfoDetails {
     entriesCount: number;
     status: Raven.Client.Documents.Indexes.IndexRunningStatus;
     state: Raven.Client.Documents.Indexes.IndexState;
+    stale: boolean;
 }
 
 export interface IndexFilterCriteria {
