@@ -95,6 +95,7 @@ using Raven.Server.SqlMigration.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Raven.Server.Web.Studio;
+using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
 using Raven.Server.Web.System.Processors;
 using Raven.Server.Web.System.Processors.CompareExchange;
@@ -279,7 +280,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexesProgress));
             scripter.AddType(typeof(IndexErrors));
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
-            scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
+            scripter.AddType(typeof(StudioIndexHandlerForPostIndexType<>.IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
             scripter.AddType(typeof(StudioDatabaseTasksHandler.IndexDefaults));
 

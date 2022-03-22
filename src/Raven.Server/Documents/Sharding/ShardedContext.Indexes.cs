@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.ServerWide;
-using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Indexes.Static;
@@ -20,11 +19,10 @@ public partial class ShardedContext
 
     public class ShardedIndexesCache
     {
-        private readonly ServerStore _serverStore;
+        private readonly ShardedContext _context;
         private Dictionary<string, IndexDefinition> _cachedStaticIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         private Dictionary<string, AutoIndexDefinition> _cachedAutoIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         private readonly ScriptRunnerCache _scriptRunnerCache;
-        private RavenConfiguration _configuration;
 
         public ScriptRunnerCache ScriptRunnerCache => _scriptRunnerCache;
 
@@ -36,40 +34,31 @@ public partial class ShardedContext
 
         public readonly ShardedIndexDeleteProcessor Delete;
 
-        public ShardedIndexesCache(ShardedContext context, ServerStore serverStore, DatabaseRecord record)
+        public ShardedIndexesCache([NotNull] ShardedContext context, ServerStore serverStore)
         {
-            _serverStore = serverStore;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
 
             LockMode = new ShardedIndexLockModeProcessor(context, serverStore);
             Priority = new ShardedIndexPriorityProcessor(context, serverStore);
             State = new ShardedIndexStateProcessor(context, serverStore);
             Delete = new ShardedIndexDeleteProcessor(context, serverStore);
 
-            _configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, record.DatabaseName, record.Settings);
-            _scriptRunnerCache = new ScriptRunnerCache(database: null, _configuration);
+            _scriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
 
-            UpdateConfiguration(record.DatabaseName, record.Settings);
-
-            UpdateStaticIndexes(record.Indexes
+            UpdateStaticIndexes(context.DatabaseRecord.Indexes
                 .ToDictionary(x => x.Key, x => x.Value));
 
-            UpdateAutoIndexes(record.AutoIndexes
+            UpdateAutoIndexes(context.DatabaseRecord.AutoIndexes
                 .ToDictionary(x => x.Key, x => x.Value));
         }
 
         public void Update(RawDatabaseRecord record)
         {
-            UpdateConfiguration(record.DatabaseName, record.Settings);
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for updated configuration (for projections)");
+            _scriptRunnerCache.UpdateConfiguration(_context.Configuration);
+
             UpdateStaticIndexes(record.Indexes);
             UpdateAutoIndexes(record.AutoIndexes);
-        }
-
-        private void UpdateConfiguration(string databaseName, Dictionary<string, string> settings)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for updated configuration (for projections)");
-
-            _configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, databaseName, settings);
-            _scriptRunnerCache.UpdateConfiguration(_configuration);
         }
 
         private void UpdateStaticIndexes(Dictionary<string, IndexDefinition> indexDefinitions)
@@ -109,7 +98,7 @@ public partial class ShardedContext
             if (indexDefinition.Type.IsMapReduce() == false)
                 throw new InvalidOperationException($"Index '{indexName}' is not a map-reduce index");
 
-            return IndexCompilationCache.GetIndexInstance(indexDefinition, _configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+            return IndexCompilationCache.GetIndexInstance(indexDefinition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
         }
 
         public bool TryGetAutoMapReduceIndexDefinition(string indexName, out AutoIndexDefinition autoIndexDefinition)
