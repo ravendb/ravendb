@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
@@ -27,6 +28,7 @@ namespace Raven.Client.Documents.Operations.Indexes
         {
             private readonly int _start;
             private readonly int _pageSize;
+            private readonly string _indexName;
 
             public GetIndexesCommand(int start, int pageSize)
                 : this(start, pageSize, nodeTag: null)
@@ -39,10 +41,21 @@ namespace Raven.Client.Documents.Operations.Indexes
                 _pageSize = pageSize;
                 SelectedNodeTag = nodeTag;
             }
+            
+            internal GetIndexesCommand(string indexName, string nodeTag)
+            {
+                _indexName = indexName;
+                SelectedNodeTag = nodeTag;
+            }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes?start={_start}&pageSize={_pageSize}";
+                url = $"{node.Url}/databases/{node.Database}/indexes";
+
+                if (_indexName != null)
+                    url += $"?name={Uri.EscapeDataString(_indexName)}";
+                else
+                    url += $"?start={_start}&pageSize={_pageSize}";
 
                 return new HttpRequestMessage
                 {
