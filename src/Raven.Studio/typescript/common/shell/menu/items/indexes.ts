@@ -19,7 +19,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             shardingMode: "allShardsOnly",
             route: "databases/indexes",
-            moduleId: require("viewmodels/database/indexes/indexes"),
+            moduleId: require("viewmodels/database/indexes/indexes").indexes,
             css: 'icon-indexing',
             dynamicHash: appUrls.indexes
         }),

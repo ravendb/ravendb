@@ -91,7 +91,8 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
             errorCount: stats.ErrorsCount,
             entriesCount: stats.EntriesCount,
             state: stats.State,
-            status: stats.Status
+            status: stats.Status,
+            stale: stats.IsStale
         }
     }
 }
