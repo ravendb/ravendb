@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
-using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -22,6 +20,7 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -66,14 +65,9 @@ namespace Raven.Client.ServerWide
 
         public DatabaseTopology[] Shards;
 
-        public List<ShardRangeAssignment> ShardAllocations = new List<ShardRangeAssignment>();
-        public class ShardRangeAssignment
-        {
-            public int RangeStart;
-            public int Shard;
-        }
+        public List<ShardBucketRange> ShardBucketRanges = new List<ShardBucketRange>();
 
-        public Dictionary<int, BucketMigration> BucketMigrations;
+        public Dictionary<int, ShardBucketMigration> ShardBucketMigrations;
 
         // change vectors with a MOVE element below this will be considered as permanent
         // pointers with the migration index below this one will be purged
@@ -511,68 +505,6 @@ namespace Raven.Client.ServerWide
         No,
         SoftDelete,
         HardDelete
-    }
-
-    public enum MigrationStatus
-    {
-        None,
-
-        // source is in progress of sending the bucket
-        Moving,
-        
-        // the source has completed to send everything he has
-        // and the destinations member nodes start confirm having all docs
-        // at this stage writes will still go to the source shard
-        Moved,
-        
-        // all member nodes confirmed receiving the bucket
-        // the mapping is updated so any traffic will go now to the destination
-        // the source will start the cleanup process
-        OwnershipTransferred
-    }
-
-    public class BucketMigration : IDatabaseTask
-    {
-        public MigrationStatus Status;
-        public int Bucket;
-        public int SourceShard;
-        public int DestinationShard;
-        public long MigrationIndex;
-        public long? ConfirmationIndex;
-        public string LastSourceChangeVector;
-
-        public List<string> ConfirmedDestinations = new List<string>();
-        public List<string> ConfirmedSourceCleanup = new List<string>();
-
-        public string MentorNode;
-        public override string ToString()
-        {
-            return $"Bucket '{Bucket}' is migrated from '{SourceShard}' to '{DestinationShard}' at status '{Status}'.{Environment.NewLine}" +
-                   $"Migrations index '{MigrationIndex}', Last change vector from source '{LastSourceChangeVector}', " +
-                   $"Propagated to {string.Join(", ", ConfirmedDestinations)} and confirmed at {ConfirmationIndex}, Cleaned up at {string.Join(", ",ConfirmedSourceCleanup)}";
-        }
-
-        private ulong? _hashCode;
-
-        public ulong GetTaskKey()
-        {
-            if (_hashCode.HasValue)
-                return _hashCode.Value;
-
-            var hash = Hashing.Combine((ulong)SourceShard, (ulong)DestinationShard);
-            hash = Hashing.Combine(hash, (ulong)Bucket);
-            _hashCode = Hashing.Combine(hash, (ulong)MigrationIndex);
-
-            return _hashCode.Value;
-        }
-
-        public string GetMentorNode() => MentorNode;
-
-        public string GetDefaultTaskName() => GetTaskName();
-
-        public string GetTaskName() => $"Bucket '{Bucket}' migration from '{SourceShard}' to '{DestinationShard}' @ {MigrationIndex}";
-
-        public bool IsResourceIntensive() => false;
     }
 
     public class DocumentsCompressionConfiguration : IDynamicJson

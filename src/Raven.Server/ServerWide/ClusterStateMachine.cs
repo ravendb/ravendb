@@ -1455,7 +1455,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
                 var databaseName = remove.DatabaseName;
-                int shardIndex = ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
+                var isSharded = ShardHelper.TryGetShardNumberAndDatabaseName(ref databaseName, out var shardNumber);
                 var databaseNameLowered = databaseName.ToLowerInvariant();
                 using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
                 using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
@@ -1474,13 +1474,13 @@ namespace Raven.Server.ServerWide
 
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
 
-                    if (shardIndex == -1) // not sharded
+                    if (isSharded == false) // not sharded
                     {
                         remove.UpdateDatabaseRecord(databaseRecord, index);
                     }
                     else //sharded
                     {
-                        remove.UpdateShardedDatabaseRecord(databaseRecord, shardIndex, index);
+                        remove.UpdateShardedDatabaseRecord(databaseRecord, shardNumber, index);
                     }
 
 
@@ -3406,29 +3406,33 @@ namespace Raven.Server.ServerWide
         public RawDatabaseRecord ReadRawDatabaseRecord<TTransaction>(TransactionOperationContext<TTransaction> context, string name, out long etag)
             where TTransaction : RavenTransaction
         {
-            int shardIndex = ShardHelper.TryGetShardIndexAndDatabaseName(ref name);
-            var rawRecord = Read(context, "db/" + name.ToLowerInvariant(), out etag);
-            if (rawRecord == null)
+            BlittableJsonReaderObject databaseRecord;
+
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref name, out var shardNumber))
+            {
+                databaseRecord = BuildShardedDatabaseRecord(context, Read(context, "db/" + name.ToLowerInvariant(), out etag), shardNumber);
+            }
+            else
+            {
+                databaseRecord = Read(context, "db/" + name.ToLowerInvariant(), out etag);
+            }
+            if (databaseRecord == null)
                 return null;
-            var databaseRecord = BuildShardedDatabaseRecord(context, rawRecord, shardIndex);
+
             return new RawDatabaseRecord(context, databaseRecord);
         }
         
-        private static BlittableJsonReaderObject BuildShardedDatabaseRecord(JsonOperationContext context, BlittableJsonReaderObject rawRecord, int shardIndex)
+        private static BlittableJsonReaderObject BuildShardedDatabaseRecord(JsonOperationContext context, BlittableJsonReaderObject rawRecord, int shardNumber)
         {
             if (rawRecord == null)
                 return null;
 
-            if (shardIndex != -1)
-            {
-                rawRecord = new RawDatabaseRecord(context, rawRecord)
-                    .GetShardedDatabaseRecord(shardIndex)
-                    .Raw;
-            }
+            rawRecord = new RawDatabaseRecord(context, rawRecord)
+                .GetShardedDatabaseRecord(shardNumber)
+                .Raw;
 
             return rawRecord;
         }
-
 
         public RawDatabaseRecord ReadRawDatabaseRecord<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
@@ -3440,7 +3444,7 @@ namespace Raven.Server.ServerWide
         public bool DatabaseExists<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
-            ShardHelper.TryGetShardIndexAndDatabaseName(ref name);
+            name = ShardHelper.ToDatabaseName(name);
 
             var dbKey = "db/" + name.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);

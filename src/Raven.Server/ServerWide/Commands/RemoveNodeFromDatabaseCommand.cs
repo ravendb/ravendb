@@ -57,10 +57,10 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public string UpdateShardedDatabaseRecord(DatabaseRecord record, int shardIndex, long etag)
+        public string UpdateShardedDatabaseRecord(DatabaseRecord record, int shardNumber, long etag)
         {
-            record.Shards[shardIndex].RemoveFromTopology(NodeTag);
-            record.DeletionInProgress?.Remove($"{NodeTag}${shardIndex}");
+            record.Shards[shardNumber].RemoveFromTopology(NodeTag);
+            record.DeletionInProgress?.Remove($"{NodeTag}${shardNumber}");
 
             if (DatabaseId == null)
                 return null;

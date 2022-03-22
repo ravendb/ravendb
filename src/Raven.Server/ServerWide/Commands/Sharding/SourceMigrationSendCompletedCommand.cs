@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding
@@ -24,7 +25,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (record.BucketMigrations.TryGetValue(Bucket, out var migration) == false)
+            if (record.ShardBucketMigrations.TryGetValue(Bucket, out var migration) == false)
                 throw new InvalidOperationException($"Bucket '{Bucket}' not found in the migration buckets");
 
             if (migration.MigrationIndex != MigrationIndex)

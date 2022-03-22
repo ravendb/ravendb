@@ -961,7 +961,8 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleMigrationReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
-            var myShard = ShardHelper.TryGetShardIndex(newRecord.DatabaseName);
+            if (ShardHelper.TryGetShardNumber(newRecord.DatabaseName, out var myShard) == false)
+                return;
             
             // remove
             foreach (var handler in OutgoingHandlers)
@@ -969,7 +970,7 @@ namespace Raven.Server.Documents.Replication
                 if (handler is not OutgoingMigrationReplicationHandler migrationHandler)
                     continue;
 
-                if (newRecord.BucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
+                if (newRecord.ShardBucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
                 {
                     RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
                     continue;
@@ -996,7 +997,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             // add
-            foreach (var migration in newRecord.BucketMigrations)
+            foreach (var migration in newRecord.ShardBucketMigrations)
             {
                 var process = migration.Value;
 

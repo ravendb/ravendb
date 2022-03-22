@@ -331,8 +331,7 @@ namespace Raven.Server.Documents
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
         {
-            var index = ShardHelper.TryGetShardIndex(dbName);
-            var tag = index == -1 ? _serverStore.NodeTag : $"{_serverStore.NodeTag}${index}";
+            var tag = ShardHelper.TryGetShardNumber(dbName, out var shardNumber) ? $"{_serverStore.NodeTag}${shardNumber}" : _serverStore.NodeTag;
 
             var deletionInProgress = DeletionInProgressStatus.No;
             var directDelete = rawRecord.DeletionInProgress?.TryGetValue(tag, out deletionInProgress) == true &&

@@ -79,20 +79,20 @@ namespace Raven.Server.ServerWide.Commands
         }
 
         
-        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
+        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, string shardNumber, DeletionInProgressStatus deletionInProgressStatus)
         {
             var allNodes = topology.AllNodes.Distinct();
 
             foreach (var node in allNodes)
             {
                 if (ClusterNodes.Contains(node))
-                    record.DeletionInProgress[node + shardIndex] = deletionInProgressStatus;
+                    record.DeletionInProgress[node + shardNumber] = deletionInProgressStatus;
             }
 
             return new DatabaseTopology {Stamp = record.Topology?.Stamp, ReplicationFactor = 0};
         }
 
-        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
+        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, string shardNumber, DeletionInProgressStatus deletionInProgressStatus)
         {
             if (topology.RelevantFor(node) == false)
             {
@@ -109,7 +109,7 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             if (ClusterNodes.Contains(node))
-                record.DeletionInProgress[node + shardIndex] = deletionInProgressStatus;
+                record.DeletionInProgress[node + shardNumber] = deletionInProgressStatus;
         }
         public override void FillJson(DynamicJsonValue json)
         {

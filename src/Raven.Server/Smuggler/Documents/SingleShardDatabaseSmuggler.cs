@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _serverContextPool = database.ServerStore.ContextPool;
             _shardedRecord = _source.GetShardedDatabaseRecordAsync().Result;
-            _index = ShardHelper.TryGetShardIndex(database.Name);
+            _index = ShardHelper.GetShardNumber(database.Name);
             if (_index < _shardedRecord.Shards.Length - 1)
                 options.OperateOnTypes = options.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnLastShardOnly;
             else
@@ -59,8 +59,10 @@ namespace Raven.Server.Smuggler.Documents
             {
                 using (_serverContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    var docShardIndex = ShardHelper.GetShardForId(context, _shardedRecord.ShardAllocations, docId);
-                    return docShardIndex != _index;
+                    var bucket = ShardHelper.GetBucket(context, docId);
+                    var shardNumber = ShardHelper.GetShardNumber(_shardedRecord.ShardBucketRanges, bucket);
+
+                    return shardNumber != _index;
                 }
             }
             return _lastShard == false;

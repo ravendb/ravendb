@@ -1167,8 +1167,7 @@ namespace Raven.Server.Web.System
                             RavenEtlConfiguration ravenEtl;
                             if (sharded)
                             {
-                                var taskName = name;
-                                ShardHelper.TryGetShardIndexAndDatabaseName(ref taskName);
+                                var taskName = ShardHelper.ToDatabaseName(name);
                                 ravenEtl = record.RavenEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase));
                             }
                             else

@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.TryGetShardIndex(ShardName)];
+            var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.GetShardNumber(ShardName)];
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
 

@@ -18,6 +18,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -57,7 +58,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseTopology> DatabaseTopology = GenerateJsonDeserializationRoutine<DatabaseTopology>();
       
-        public static readonly Func<BlittableJsonReaderObject, DatabaseRecord.ShardRangeAssignment> ShardRangeAssignment = GenerateJsonDeserializationRoutine<DatabaseRecord.ShardRangeAssignment>();
+        public static readonly Func<BlittableJsonReaderObject, ShardBucketRange> ShardRangeAssignment = GenerateJsonDeserializationRoutine<ShardBucketRange>();
 
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
 
@@ -138,7 +139,7 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
         public static Func<BlittableJsonReaderObject, PostgreSqlConfiguration> PostgreSqlConfiguration = GenerateJsonDeserializationRoutine<PostgreSqlConfiguration>();
-        public static Func<BlittableJsonReaderObject, BucketMigration> BucketMigration = GenerateJsonDeserializationRoutine<BucketMigration>();
+        public static Func<BlittableJsonReaderObject, ShardBucketMigration> BucketMigration = GenerateJsonDeserializationRoutine<ShardBucketMigration>();
 
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {

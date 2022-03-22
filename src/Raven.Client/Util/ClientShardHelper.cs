@@ -6,8 +6,8 @@
         {
             var name = ToDatabaseName(database);
 
-            int shardIndex = name.IndexOf('$');
-            if (shardIndex == -1)
+            int shardNumberPosition = name.IndexOf('$');
+            if (shardNumberPosition == -1)
                 return $"{name}${shardNumber}";
 
             return name;
@@ -15,11 +15,11 @@
 
         public static string ToDatabaseName(string shardName)
         {
-            int shardIndex = shardName.IndexOf('$');
-            if (shardIndex == -1)
+            int shardNumberPosition = shardName.IndexOf('$');
+            if (shardNumberPosition == -1)
                 return shardName;
 
-            return shardName.Substring(0, shardIndex);
+            return shardName.Substring(0, shardNumberPosition);
         }
     }
 }

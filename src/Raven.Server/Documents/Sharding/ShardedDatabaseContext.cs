@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.ServerWide;
@@ -97,71 +98,13 @@ namespace Raven.Server.Documents.Sharding
 
         public DatabaseTopology[] ShardsTopology => _record.Shards;
 
-        /// <summary>
-        /// The shard id is a hash of the document id, lower case, reduced to
-        /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming
-        /// perfect distribution of data, each shard is going to have about 1MB of data
-        /// per TB of overall db size. That means that even for *very* large databases, the
-        /// size of the shard is still going to be manageable.
-        /// </summary>
-        public static int GetShardId<TTransaction>(TransactionOperationContext<TTransaction> context, string key) where TTransaction : RavenTransaction
+        public int GetShardNumber(int shardBucket) => ShardHelper.GetShardNumber(_record.ShardBucketRanges, shardBucket);
+
+        public int GetShardNumber(TransactionOperationContext context, string id)
         {
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
-            {
-                return GetShardId(lowerId);
-            }
-        }
+            var bucket = ShardHelper.GetBucket(context, id);
 
-        private static unsafe int GetShardId(Slice lowerId)
-        {
-            byte* buffer = lowerId.Content.Ptr;
-            int size = lowerId.Size;
-
-            AdjustAfterSeparator((byte)'$', ref buffer, ref size);
-
-            if (size == 0)
-                throw new ArgumentException("Key '" + lowerId + "', has a shard id length of 0");
-
-            var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
-            return (int)(hash % NumberOfShards);
-        }
-
-        private static unsafe void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
-        {
-            for (int i = len - 1; i > 0; i--)
-            {
-                if (ptr[i] != expected)
-                    continue;
-                ptr += i + 1;
-                len -= i + 1;
-                break;
-            }
-        }
-
-        public int GetShardIndex(Slice lowerId)
-        {
-            var shardId = GetShardId(lowerId);
-            return GetShardIndex(shardId);
-        }
-
-        private static int GetShardIndex(List<DatabaseRecord.ShardRangeAssignment> shardAllocations, int shardId)
-        {
-            for (int i = 0; i < shardAllocations.Count - 1; i++)
-            {
-                if (shardId < shardAllocations[i + 1].RangeStart)
-                    return shardAllocations[i].Shard;
-            }
-
-            return shardAllocations[^1].Shard;
-        }
-        public int GetShardIndex(int shardId) => GetShardIndex(_record.ShardAllocations, shardId);
-        public int GetShardIndex(TransactionOperationContext context, string key) => GetShardIndex(context, _record.ShardAllocations, key);
-
-        public static int GetShardIndex<TTransaction>(TransactionOperationContext<TTransaction> context, List<DatabaseRecord.ShardRangeAssignment> shardAllocations, string key)
-            where TTransaction : RavenTransaction
-        {
-            var shardId = GetShardId(context, key);
-            return GetShardIndex(shardAllocations, shardId);
+            return ShardHelper.GetShardNumber(_record.ShardBucketRanges, bucket);
         }
 
         public bool HasTopologyChanged(long etag)

@@ -85,7 +85,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_parent.ServerStore, _context.Allocator, _parent.DatabaseContext.DatabaseName);
             if (ids != null)
             {
-                GenerateLoadByIdQueries(ids, _commands);
+                GenerateLoadByIdQueries(ids, _commands, _context);
                 return;
             }
         }
@@ -177,11 +177,11 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
     }
 
-    private void GenerateLoadByIdQueries(IEnumerable<Slice> ids, Dictionary<int, ShardedQueryCommand> cmds)
+    private void GenerateLoadByIdQueries(IEnumerable<Slice> ids, Dictionary<int, ShardedQueryCommand> cmds, TransactionOperationContext context)
     {
         const string listParameterName = "p0";
                 
-        var shards = ShardLocator.GroupIdsByShardIndex(ids, _parent.DatabaseContext);
+        var shards = ShardLocator.GroupIdsByShardNumber(ids, _parent.DatabaseContext, context);
         var sb = new StringBuilder();
         sb.Append("from '").Append(_query.Metadata.CollectionName).AppendLine("'")
             .AppendLine($"where id() in (${listParameterName})");
@@ -218,12 +218,12 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
     {
         var tasks = new List<Task>();
 
-        foreach (var (shardIndex, cmd) in _commands)
+        foreach (var (shardNumber, cmd) in _commands)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
 
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            var task = _parent.DatabaseContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context);
+            var task = _parent.DatabaseContext.RequestExecutors[shardNumber].ExecuteAsync(cmd, context);
             tasks.Add(task);
         }
 
@@ -277,15 +277,15 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             return lowerId;
         });
 
-        GenerateLoadByIdQueries(missingAsSlice, includeCommands);
+        GenerateLoadByIdQueries(missingAsSlice, includeCommands, _context);
         toDispose?.Dispose();
 
         var tasks = new List<Task>();
-        foreach (var (shardIndex, cmd) in includeCommands)
+        foreach (var (shardNumber, cmd) in includeCommands)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            tasks.Add(_parent.DatabaseContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context));
+            tasks.Add(_parent.DatabaseContext.RequestExecutors[shardNumber].ExecuteAsync(cmd, context));
         }
 
         await Task.WhenAll(tasks);

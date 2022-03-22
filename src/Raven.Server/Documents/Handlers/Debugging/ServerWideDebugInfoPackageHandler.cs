@@ -57,8 +57,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.TimeSeries),
 
             nameof(DatabaseRecord.Shards),
-            nameof(DatabaseRecord.ShardAllocations),
-            nameof(DatabaseRecord.BucketMigrations),
+            nameof(DatabaseRecord.ShardBucketRanges),
+            nameof(DatabaseRecord.ShardBucketMigrations),
             nameof(DatabaseRecord.MigrationCutOffIndex),
             nameof(DatabaseRecord.ShardedDatabaseId),
         };
