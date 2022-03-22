@@ -353,29 +353,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/staleness", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Stale()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            using (var context = QueryOperationContext.Allocate(Database, index))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                var stalenessReasons = new List<string>();
-                var isStale = index.IsStale(context, stalenessReasons: stalenessReasons);
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName("IsStale");
-                writer.WriteBool(isStale);
-                writer.WriteComma();
-
-                writer.WriteArray("StalenessReasons", stalenessReasons);
-
-                writer.WriteEndObject();
-            }
+            using (var processor = new IndexHandlerProcessorForStale(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
