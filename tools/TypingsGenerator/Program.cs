@@ -64,6 +64,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Spatial;

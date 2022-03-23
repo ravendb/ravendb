@@ -24,15 +24,41 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public OperationState Combine(Memory<OperationState> results)
         {
-            var combined = new OperationState
-            {
-                Result = new SmugglerResult()
-            };
+            var combined = new OperationState();
+
+            OperationMultipleExceptionsResult operationExceptionsResult = null;
+            SmugglerResult smugglerResult = null;
 
             var span = results.Span;
+
             for (int i = 0; i < results.Length; i++)
             {
-                GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, span[i].Result);
+                var result = span[i].Result;
+
+                switch (result)
+                {
+                    case OperationExceptionResult operationException:
+                        if (operationExceptionsResult == null)
+                        {
+                            operationExceptionsResult = new OperationMultipleExceptionsResult("Operation has failed with multiple errors");
+                            combined.Result = operationExceptionsResult;
+                        }
+
+                        operationExceptionsResult.Exceptions.Add(operationException);
+
+                        break;
+                    case SmugglerResult smuggler:
+                        if (smugglerResult == null)
+                        {
+                            smugglerResult = new SmugglerResult();
+                            combined.Result = smugglerResult;
+                        }
+
+                        GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, smuggler);
+                        break;
+                    default:
+                        throw new ArgumentException($"Not supported type {result.GetType()}");
+                }
             }
 
             return combined;

@@ -114,7 +114,7 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
         this.operationFailed.subscribe(v => failureHandler(v));
     }
     
-    private nextTask(): JQueryPromise<resultsDto<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData>> {
+    private nextTask(): JQueryPromise<resultsDto<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData>> {
         if (this.items.length === 0) {
             return null;
         }
@@ -125,7 +125,7 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
                 Type: "CompareExchangeDELETE",
                 Id: item.Key,
                 Index: item.Index
-            } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData;
+            } as Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData;
         }), this.db, "ClusterWide").execute();
     }
 }

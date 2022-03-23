@@ -8,6 +8,8 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Json;
+using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -16,7 +18,7 @@ using Sparrow.Json.Parsing;
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
 internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TBatchCommand : BatchHandler.IBatchCommand
+    where TBatchCommand : IBatchCommand
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
@@ -33,7 +35,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     protected abstract char GetIdentityPartsSeparator();
 
-    protected abstract BatchRequestParser.AbstractBatchCommandBuilder<TBatchCommand, TOperationContext> GetCommandBuilder();
+    protected abstract AbstractBatchCommandsReader<TBatchCommand, TOperationContext> GetCommandsReader();
 
     protected abstract AbstractClusterTransactionRequestProcessor<TRequestHandler, TBatchCommand> GetClusterTransactionRequestProcessor();
 
@@ -43,7 +45,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
         var waitForIndexThrow = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
         var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
 
-        var commandBuilder = GetCommandBuilder();
+        var commandsReader = GetCommandsReader();
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {
             var contentType = HttpContext.Request.ContentType;
@@ -52,12 +54,12 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandBuilder.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator());
+                    await commandsReader.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator());
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                          contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandBuilder.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator());
+                    await commandsReader.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator());
                 }
                 else
                     ThrowNotSupportedType(contentType);
@@ -66,13 +68,13 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
             {
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
-                    var log = BatchTrafficWatch(commandBuilder.Commands);
+                    var log = BatchTrafficWatch(commandsReader.Commands);
                     // add sb to httpContext
                     RequestHandler.AddStringToHttpContext(log, TrafficWatchChangeType.BulkDocs);
                 }
             }
 
-            using (var command = await commandBuilder.GetCommandAsync(context))
+            using (var command = await commandsReader.GetCommandAsync(context))
             {
                 if (command.IsClusterTransaction)
                 {

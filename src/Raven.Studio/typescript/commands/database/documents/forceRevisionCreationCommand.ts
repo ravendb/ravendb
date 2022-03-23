@@ -9,12 +9,12 @@ class forceRevisionCreationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<saveDocumentResponseDto> {
-        const toBulkDoc: Partial<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = {
+        const toBulkDoc: Partial<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData> = {
             Id: this.id,
             Type: "ForceRevisionCreation"
         };
         
-        const commands: Array<Partial<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData>> = [ toBulkDoc ];
+        const commands: Array<Partial<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData>> = [ toBulkDoc ];
 
         const args = ko.toJSON({ Commands: commands });
         const url = endpoints.databases.batch.bulk_docs;

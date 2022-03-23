@@ -8,7 +8,7 @@ class deleteDocumentsCommand extends executeBulkDocsCommand {
         super(bulkDocs, db);
     }
 
-    private static createDeleteDocument(id: string): Partial<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> {
+    private static createDeleteDocument(id: string): Partial<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData> {
         return {
             Id: id,
             Type: "DELETE",

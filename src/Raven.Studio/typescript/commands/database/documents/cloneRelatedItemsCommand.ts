@@ -12,7 +12,7 @@ class cloneRelatedItemsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const commands: Array<Partial<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData>> = [
+        const commands: Array<Partial<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData>> = [
         ];
 
         this.attachmentsToClone.forEach(attachment => {

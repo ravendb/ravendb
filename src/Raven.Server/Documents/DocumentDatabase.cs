@@ -23,6 +23,8 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -541,7 +543,7 @@ namespace Raven.Server.Documents
                 return;
 
             var batch = batchCollector.GetData();
-            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
+            var mergedCommands = new ClusterTransactionMergedCommand(this, batch);
             try
             {
                 //If we get a database shutdown while we process a cluster tx command this
@@ -569,7 +571,7 @@ namespace Raven.Server.Documents
             {
                 var command = batch[i];
                 var singleCommand = batch.Slice(i, 1);
-                var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
+                var mergedCommand = new ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
                     await TxMerger.Enqueue(mergedCommand);
@@ -600,8 +602,7 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
-            BatchHandler.ClusterTransactionMergedCommand mergedCommands)
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, ClusterTransactionMergedCommand mergedCommands)
         {
             try
             {
@@ -636,7 +637,7 @@ namespace Raven.Server.Documents
         }
 
         private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
-            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception)
+            ClusterTransactionMergedCommand mergedCommands, Exception exception)
         {
             try
             {
