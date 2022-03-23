@@ -1,12 +1,14 @@
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import indexProgress = require("models/database/index/indexProgress");
+import indexProgress = require("models/database/index/indexProgressOLD");
 import finishRollingCommand = require("commands/database/index/finishRollingCommand");
 
 class forceParallelDeploymentConfirm extends dialogViewModelBase {
-
     view = require("views/database/indexes/forceParallelDeploymentConfirm.html");
+    /*
+
+    TODO:
     
     localNodeTag: string;
     indexName: string;
@@ -29,7 +31,7 @@ class forceParallelDeploymentConfirm extends dialogViewModelBase {
 
     cancel() {
         dialog.close(this);
-    }
+    }*/
 }
 
 export = forceParallelDeploymentConfirm;
