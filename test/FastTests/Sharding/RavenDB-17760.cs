@@ -526,7 +526,8 @@ namespace FastTests.Sharding
 
             using (var session = store.OpenAsyncSession())
             {
-
+                // generate some timeseries
+                
                 for (int i = 10; i < 30; i++)
                 {
                     var id = $"users/{i}${suffix}";
@@ -567,10 +568,10 @@ namespace FastTests.Sharding
                     var expected = 20;
                     Assert.Equal(expected, segments.Count);
 
-                    for (int i = 0; i < segments.Count; i++)
+                    var expectedNumberOfEntries = 100;
+                    foreach (var item in segments)
                     {
-                        var expectedNumberOfEntries = 100;
-                        Assert.Equal(expectedNumberOfEntries, segments[i].Segment.NumberOfEntries);
+                        Assert.Equal(expectedNumberOfEntries, item.Segment.NumberOfEntries);
                     }
 
                     var fromEtag = segments[10].Etag;

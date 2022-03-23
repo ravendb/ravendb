@@ -219,7 +219,6 @@ namespace Raven.Server.Documents
             _name = DocumentDatabase.Name;
             _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
             _addToInitLog = addToInitLog;
-            _isSharded = ShardHelper.IsShardedName(_name);
         }
         public StorageEnvironment Environment { get; private set; }
 
@@ -231,7 +230,6 @@ namespace Raven.Server.Documents
         public TimeSeriesStorage TimeSeriesStorage;
         public DocumentPutAction DocumentPut;
         private readonly Action<string> _addToInitLog;
-        private readonly bool _isSharded;
 
         // this is used to remember the metadata about collections / documents for
         // common operations. It always points to the latest valid transaction and is updated by
@@ -2625,7 +2623,6 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long TableValueToEtag(int index, ref TableValueReader tvr)
         {
@@ -2694,13 +2691,6 @@ namespace Raven.Server.Documents
         {
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int TableValueToInt(int index, ref TableValueReader tvr)
-        {
-            var ptr = tvr.Read(index, out _);
-            return *(int*)ptr;
         }
 
         [IndexEntryKeyGenerator]

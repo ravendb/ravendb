@@ -35,7 +35,7 @@ namespace Raven.Server.Documents
         public static readonly Slice AttachmentsEtagSlice;
         private static readonly Slice AttachmentsHashSlice;
         private static readonly Slice AttachmentsTombstonesSlice;
-        public static readonly Slice AttachmentsBucketAndEtagSlice;
+        private static readonly Slice AttachmentsBucketAndEtagSlice;
 
         internal static readonly TableSchema AttachmentsSchema = new TableSchema();
         public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
@@ -1390,7 +1390,6 @@ namespace Raven.Server.Documents
                 }
             }
         }
-
 
         [IndexEntryKeyGenerator]
         private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice) =>

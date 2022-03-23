@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Revisions
         private static readonly Slice RevisionsTombstonesSlice;
         private static readonly Slice RevisionsPrefix;
         public static Slice ResolvedFlagByEtagSlice;
-        public static Slice RevisionsBucketAndEtagSlice;
+        private static readonly Slice RevisionsBucketAndEtagSlice;
 
         public static readonly string RevisionsTombstones = "Revisions.Tombstones";
 

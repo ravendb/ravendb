@@ -222,7 +222,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchItem> GetCountersByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool caseInsensitiveNames = true)
+        public IEnumerable<ReplicationBatchItem> GetCountersByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
@@ -232,18 +232,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var result in table.SeekForwardFromPrefix(CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], keySlice, prefix, 0))
                 {
-                    var countersItem = CreateReplicationBatchItem(context, ref result.Result.Reader);
-
-                    if (caseInsensitiveNames)
-                    {
-                        yield return countersItem;
-                        continue;
-                    }
-
-                    // 4.2 replication destination
-                    // need to change the CounterGroup document to match 4.2 format
-                    var converted = ConvertToCaseSensitiveFormat(context, countersItem);
-                    yield return converted;
+                    yield return CreateReplicationBatchItem(context, ref result.Result.Reader);
                 }
             }
         }
