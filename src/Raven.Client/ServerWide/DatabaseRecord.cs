@@ -472,7 +472,7 @@ namespace Raven.Client.ServerWide
             return set.ToList();
         }
 
-        public string GetClusterTransactionId()
+        internal string GetClusterTransactionId()
         {
             Debug.Assert(Shards.All(s => s.ClusterTransactionIdBase64.Equals(Shards[0].ClusterTransactionIdBase64)));
             return Shards[0].ClusterTransactionIdBase64;

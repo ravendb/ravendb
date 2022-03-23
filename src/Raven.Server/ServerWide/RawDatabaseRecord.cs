@@ -21,6 +21,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Json;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -261,7 +262,7 @@ namespace Raven.Server.ServerWide
         {
             _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
             var shardedTopology = (BlittableJsonReaderObject)array[index];
-            var shardName = DatabaseName + "$" + index;
+            var shardName = ShardHelper.ToShardName(DatabaseName, index);
 
             var settings = new Dictionary<string, string>();
             foreach (var setting in Settings)
