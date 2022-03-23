@@ -13,11 +13,11 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
-using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Analysis;
@@ -28,7 +28,6 @@ using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -86,6 +85,8 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly DatabaseIndexDeleteProcessor Delete;
 
+        public readonly DatabaseIndexCreateProcessor Create;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -95,6 +96,7 @@ namespace Raven.Server.Documents.Indexes
             Priority = new DatabaseIndexPriorityProcessor(documentDatabase);
             State = new DatabaseIndexStateProcessor(documentDatabase);
             Delete = new DatabaseIndexDeleteProcessor(documentDatabase);
+            Create = new DatabaseIndexCreateProcessor(documentDatabase);
 
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
@@ -309,7 +311,7 @@ namespace Raven.Server.Documents.Indexes
                 var existingIndex = GetIndex(name);
                 IndexDefinitionCompareDifferences differences = IndexDefinitionCompareDifferences.None;
                 if (existingIndex != null)
-                    creationOptions = GetIndexCreationOptions(definition, existingIndex, out differences);
+                    creationOptions = GetIndexCreationOptions(definition, existingIndex.ToIndexContext(), _documentDatabase.Configuration, out differences);
 
                 if (creationOptions == IndexCreationOptions.Noop)
                 {
@@ -585,7 +587,7 @@ namespace Raven.Server.Documents.Indexes
                 IndexDefinitionCompareDifferences currentDifferences = IndexDefinitionCompareDifferences.None;
 
                 if (currentIndex != null)
-                    creationOptions = GetIndexCreationOptions(definition, currentIndex, out currentDifferences);
+                    creationOptions = GetIndexCreationOptions(definition, currentIndex.ToIndexContext(), _documentDatabase.Configuration, out currentDifferences);
 
                 var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
 
@@ -655,7 +657,7 @@ namespace Raven.Server.Documents.Indexes
 
                     if (replacementIndex != null)
                     {
-                        creationOptions = GetIndexCreationOptions(definition, replacementIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
+                        creationOptions = GetIndexCreationOptions(definition, replacementIndex.ToIndexContext(), _documentDatabase.Configuration, out IndexDefinitionCompareDifferences sideBySideDifferences);
                         if (creationOptions == IndexCreationOptions.Noop)
                             return null;
 
@@ -897,89 +899,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<long> CreateIndexInternal(IndexDefinition definition, string raftRequestId, string source = null)
-        {
-            if (definition == null)
-                throw new ArgumentNullException(nameof(definition));
-
-            ValidateStaticIndex(definition);
-
-            var command = new PutIndexCommand(
-                definition,
-                _documentDatabase.Name,
-                source,
-                _documentDatabase.Time.GetUtcNow(),
-                raftRequestId,
-                _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber,
-                _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode
-            );
-
-            long index = 0;
-            try
-            {
-                index = (await _serverStore.SendToLeaderAsync(command)).Index;
-            }
-            catch (Exception e)
-            {
-                ThrowIndexCreationException("static", definition.Name, e, "the cluster is probably down", _serverStore);
-            }
-
-            try
-            {
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
-            }
-            catch (TimeoutException toe)
-            {
-                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.", _serverStore);
-            }
-
-            return index;
-        }
-
         public async Task<Index> CreateIndex(IndexDefinition definition, string raftRequestId, string source = null)
         {
-            await CreateIndexInternal(definition, raftRequestId, source);
+            await Create.CreateIndexInternalAsync(definition, raftRequestId, source);
 
             return GetIndex(definition.Name);
-        }
-
-        private bool NeedToCheckIfCollectionEmpty(IndexDefinition definition)
-        {
-            var currentIndex = GetIndex(definition.Name);
-            var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
-            var replacementIndex = GetIndex(replacementIndexName);
-            if (currentIndex == null && replacementIndex == null)
-            {
-                // new index
-                return true;
-            }
-
-            if (currentIndex == null)
-            {
-                // we deleted the in memory index but didn't delete the replacement yet
-                return true;
-            }
-
-            var creationOptions = GetIndexCreationOptions(definition, currentIndex, out var _);
-            IndexCreationOptions replacementCreationOptions;
-            if (replacementIndex != null)
-            {
-                replacementCreationOptions = GetIndexCreationOptions(definition, replacementIndex, out var _);
-            }
-            else
-            {
-                // the replacement index doesn't exist
-                return IsCreateOrUpdate(creationOptions);
-            }
-
-            return IsCreateOrUpdate(creationOptions) ||
-                   IsCreateOrUpdate(replacementCreationOptions);
-        }
-
-        private static bool IsCreateOrUpdate(IndexCreationOptions creationOptions)
-        {
-            return creationOptions == IndexCreationOptions.Create ||
-                   creationOptions == IndexCreationOptions.Update;
         }
 
         public bool CanUseIndexBatch()
@@ -1039,40 +963,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void ValidateStaticIndex(IndexDefinition definition)
-        {
-            if (IsValidIndexName(definition.Name, true, out var errorMessage) == false)
-            {
-                throw new ArgumentException((errorMessage));
-            }
-
-            _serverStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(definition);
-
-            var safeFileSystemIndexName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(definition.Name);
-
-            var indexWithFileSystemNameCollision = GetIndexes().FirstOrDefault(x =>
-                x.Name.Equals(definition.Name, StringComparison.OrdinalIgnoreCase) == false &&
-                safeFileSystemIndexName.Equals(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(x.Name), StringComparison.OrdinalIgnoreCase));
-
-            if (indexWithFileSystemNameCollision != null)
-                throw new IndexCreationException(
-                    $"Could not create index '{definition.Name}' because it would result in directory name collision with '{indexWithFileSystemNameCollision.Name}' index");
-
-            definition.RemoveDefaultValues();
-            ValidateAnalyzers(definition);
-
-            var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion); // pre-compile it and validate
-
-            if (definition.Type == IndexType.MapReduce)
-            {
-                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
-
-                if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
-                    OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
-            }
-
-        }
-
         public bool HasChanged(IndexDefinition definition)
         {
             if (definition == null)
@@ -1087,7 +977,7 @@ namespace Raven.Server.Documents.Indexes
             if (existingIndex == null)
                 return true;
 
-            var creationOptions = GetIndexCreationOptions(definition, existingIndex, out IndexDefinitionCompareDifferences _);
+            var creationOptions = GetIndexCreationOptions(definition, existingIndex.ToIndexContext(), _documentDatabase.Configuration, out IndexDefinitionCompareDifferences _);
             return creationOptions != IndexCreationOptions.Noop;
         }
 
@@ -1195,7 +1085,7 @@ namespace Raven.Server.Documents.Indexes
                 existingIndex.SetPriority(definition.Priority.Value);
         }
 
-        internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
+        internal static IndexCreationOptions GetIndexCreationOptions(object indexDefinition, IndexContext existingIndex, RavenConfiguration databaseConfiguration, out IndexDefinitionCompareDifferences differences)
         {
             differences = IndexDefinitionCompareDifferences.All;
             if (existingIndex == null)
@@ -1242,7 +1132,7 @@ namespace Raven.Server.Documents.Indexes
                 if (currentConfiguration == null) // should not happen
                     return IndexCreationOptions.Update;
 
-                var newConfiguration = new SingleIndexConfiguration(indexDef.Configuration, _documentDatabase.Configuration);
+                var newConfiguration = new SingleIndexConfiguration(indexDef.Configuration, databaseConfiguration);
                 var configurationResult = currentConfiguration.CalculateUpdateType(newConfiguration);
                 switch (configurationResult)
                 {
@@ -2073,27 +1963,6 @@ namespace Raven.Server.Documents.Indexes
                 Directory.CreateDirectory(path.FullPath);
         }
 
-        private void ValidateAnalyzers(IndexDefinition definition)
-        {
-            if (definition.Fields == null)
-                return;
-
-            foreach (var kvp in definition.Fields)
-            {
-                if (string.IsNullOrWhiteSpace(kvp.Value.Analyzer))
-                    continue;
-
-                try
-                {
-                    IndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, _documentDatabase.Name);
-                }
-                catch (Exception e)
-                {
-                    throw new IndexCompilationException(e.Message, e);
-                }
-            }
-        }
-
         public void ReplaceIndexes(string oldIndexName, string replacementIndexName, CancellationToken token)
         {
             var indexLock = GetIndexLock(oldIndexName);
@@ -2376,7 +2245,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_command == null)
                     _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
-                _store.ValidateStaticIndex(definition);
+                _store.Create.ValidateStaticIndex(definition);
 
                 _command.Static.Add(definition);
             }

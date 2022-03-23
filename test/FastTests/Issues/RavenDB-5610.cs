@@ -25,26 +25,26 @@ namespace FastTests.Issues
                 var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
                 Assert.NotNull(index);
 
-                var options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
+                var options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexContext(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.Noop, options);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
+                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexContext(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle)] = "10";
 
-                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
+                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexContext(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle)] = "20";
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
+                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexContext(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
             }
         }

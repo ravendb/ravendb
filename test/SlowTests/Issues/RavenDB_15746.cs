@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
                 var index = database.IndexStore.GetIndex(indexDef.IndexName);
 
-                var options = database.IndexStore.GetIndexCreationOptions(indexDefWithThrottling.CreateIndexDefinition(), index, out var _);
+                var options = IndexStore.GetIndexCreationOptions(indexDefWithThrottling.CreateIndexDefinition(), index.ToIndexContext(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
             }
         }

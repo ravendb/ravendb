@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
         private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
         {
-            return await Database.IndexStore.CreateIndexInternal(args.IndexDefinition, $"{args.RaftRequestId}/{args.IndexDefinition.Name}", args.Source);
+            return await Database.IndexStore.Create.CreateIndexInternalAsync(args.IndexDefinition, $"{args.RaftRequestId}/{args.IndexDefinition.Name}", args.Source);
         }
 
         internal static async Task PutInternal(PutIndexParameters parameters)
