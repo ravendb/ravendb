@@ -29,12 +29,14 @@ namespace SlowTests.Server.Documents.ETL
         [InlineData(1024, "V8")]
         public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest(int count, string jsEngineType)
         {
-            const string script = @"
+            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+            string script = @$"
 var doc = loadToUsers(this);
 var counters = this['@metadata']['@counters'];
-for (var i = 0; i < counters.length; i++) {
+for (var i = 0; i < counters{optChaining}.length{zeroIfNull}; i++) {{
     doc.addCounter(loadCounter(counters[i]));
-}";
+}}";
             var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, "Users", script, srcOptions:_options);
 
             var entity = new User();
@@ -79,12 +81,14 @@ for (var i = 0; i < counters.length; i++) {
         [InlineData(1024, "V8")]
         public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest2(int count, string jsEngineType)
         {
-            const string script = @"
+            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+            string script = @$"
 var doc = loadToUsers(this);
 var counters = this['@metadata']['@counters'];
-for (var i = 0; i < counters.length; i++) {
+for (var i = 0; i < counters{optChaining}.length{zeroIfNull}; i++) {{
     doc.addCounter(loadCounter(counters[i]));
-}";
+}}";
             var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, "Users", script, srcOptions: _options);
 
             var entity = new User();
