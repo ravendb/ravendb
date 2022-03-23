@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
@@ -35,6 +36,19 @@ public class ShardedIndexCreateProcessor : AbstractIndexCreateProcessor
         foreach (var index in _context.Indexes.GetIndexes())
             yield return index.Name;
     }
+
+    protected override async ValueTask<long> GetCollectionCountAsync(string collection)
+    {
+        var op = new ShardedCollectionHandler.ShardedCollectionStatisticsOperation();
+
+        var stats = await _context.ShardExecutor.ExecuteParallelForAllAsync(op);
+
+        return stats.Collections.TryGetValue(collection, out var collectionCount) 
+            ? collectionCount 
+            : 0;
+    }
+
+    protected override IEnumerable<IndexContext> GetIndexes() => _context.Indexes.GetIndexes();
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)
     {
