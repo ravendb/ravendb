@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
@@ -10,9 +11,31 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes;
 
+public class StaticIndexContext : IndexContext
+{
+    public StaticIndexContext([NotNull] IndexDefinitionBaseServerSide definition, [NotNull] IndexingConfiguration configuration, AbstractStaticIndexBase staticIndex)
+        : base(definition, configuration)
+    {
+        Compiled = staticIndex;
+    }
+
+    public StaticIndexContext([NotNull] Index index)
+        : base(index)
+    {
+        Compiled = index switch
+        {
+            MapIndex mapIndex => mapIndex._compiled,
+            MapReduceIndex mapReduceIndex => mapReduceIndex._compiled,
+            _ => throw new ArgumentOutOfRangeException(nameof(index))
+        };
+    }
+
+    public readonly AbstractStaticIndexBase Compiled;
+}
+
 public class IndexContext
 {
-    public IndexContext([NotNull] IndexDefinitionBaseServerSide definition, [NotNull] IndexingConfiguration configuration)
+    protected IndexContext([NotNull] IndexDefinitionBaseServerSide definition, [NotNull] IndexingConfiguration configuration)
     {
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
         Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -20,7 +43,7 @@ public class IndexContext
         Type = DetectIndexType(definition);
     }
 
-    public IndexContext([NotNull] Index index)
+    protected IndexContext([NotNull] Index index)
     {
         if (index == null)
             throw new ArgumentNullException(nameof(index));
@@ -38,6 +61,28 @@ public class IndexContext
     public readonly IndexingConfiguration Configuration;
 
     public readonly IndexType Type;
+
+    public static IndexContext CreateFor(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration, AbstractStaticIndexBase staticIndex = null)
+    {
+        if (definition is MapIndexDefinition or MapReduceIndexDefinition)
+            return new StaticIndexContext(definition, configuration, staticIndex);
+
+        Debug.Assert(staticIndex == null, "staticIndex == null");
+        return new IndexContext(definition, configuration);
+    }
+
+    public static IndexContext CreateFor(Index index)
+    {
+        switch (index.Type)
+        {
+            case IndexType.Map:
+            case IndexType.MapReduce:
+                return new StaticIndexContext(index);
+
+            default:
+                return new IndexContext(index);
+        }
+    }
 
     private static IndexType DetectIndexType(IndexDefinitionBaseServerSide definition)
     {
@@ -62,5 +107,8 @@ public class IndexContext
 
 public static class IndexContextExtensions
 {
-    public static IndexContext ToIndexContext(this Index index) => new IndexContext(index);
+    public static IndexContext ToIndexContext(this Index index)
+    {
+        return IndexContext.CreateFor(index);
+    }
 }

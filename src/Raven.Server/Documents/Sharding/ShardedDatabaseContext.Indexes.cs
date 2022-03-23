@@ -9,7 +9,6 @@ using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
@@ -21,7 +20,7 @@ public partial class ShardedDatabaseContext
     public class ShardedIndexesContext
     {
         private readonly ShardedDatabaseContext _context;
-        private Dictionary<string, IndexContext> _indexes = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, IndexContext> _indexes;
         private readonly ScriptRunnerCache _scriptRunnerCache;
 
         public ScriptRunnerCache ScriptRunnerCache => _scriptRunnerCache;
@@ -78,6 +77,22 @@ public partial class ShardedDatabaseContext
 
             foreach ((string indexName, IndexDefinition definition) in indexDefinitions)
             {
+                IndexContext indexContext = null;
+
+                if (_indexes.TryGetValue(indexName, out var existingIndex))
+                {
+                    var creationOptions = IndexStore.GetIndexCreationOptions(definition, existingIndex, _context.Configuration, out _);
+                    if (creationOptions == IndexCreationOptions.Noop)
+                        indexContext = existingIndex;
+                }
+
+                indexContext ??= CreateContext(definition);
+
+                indexes[indexName] = indexContext;
+            }
+
+            IndexContext CreateContext(IndexDefinition definition)
+            {
                 IndexContext indexContext;
                 switch (definition.Type)
                 {
@@ -88,10 +103,10 @@ public partial class ShardedDatabaseContext
                         indexContext = MapReduceIndex.CreateContext(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException(nameof(definition.Type));
                 }
 
-                indexes[indexName] = indexContext;
+                return indexContext;
             }
         }
 
@@ -100,24 +115,20 @@ public partial class ShardedDatabaseContext
             foreach ((string indexName, AutoIndexDefinition definition) in indexDefinitions)
             {
                 var indexDefinition = IndexStore.CreateAutoDefinition(definition, _context.Configuration.Indexing.AutoIndexDeploymentMode);
-                indexes[indexName] = new IndexContext(indexDefinition, _context.Configuration.Indexing);
+
+                IndexContext indexContext = null;
+
+                if (_indexes.TryGetValue(indexName, out var existingIndex))
+                {
+                    var creationOptions = IndexStore.GetIndexCreationOptions(indexDefinition, existingIndex, _context.Configuration, out _);
+                    if (creationOptions == IndexCreationOptions.Noop)
+                        indexContext = existingIndex;
+                }
+
+                indexContext ??= IndexContext.CreateFor(indexDefinition, _context.Configuration.Indexing);
+
+                indexes[indexName] = indexContext;
             }
-        }
-
-        public AbstractStaticIndexBase GetCompiledMapReduceIndex(string indexName, TransactionOperationContext context)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-                "cache the compiled JavaScript indexes - in a concurrent queue since they are single threaded and are not cached in IndexCompilationCache");
-
-            if (_indexes.TryGetValue(indexName, out var index) == false)
-                return null;
-
-            if (index.Type.IsStaticMapReduce() == false)
-                throw new InvalidOperationException($"Index '{indexName}' is not a map-reduce index");
-
-            var indexDefinition = (MapReduceIndexDefinition)index.Definition;
-
-            return IndexCompilationCache.GetIndexInstance(indexDefinition.IndexDefinition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
         }
 
         public IndexContext GetIndex(string name)

@@ -328,7 +328,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var mapReduceIndexDefinition = CreateIndexDefinition(definition, configuration, indexVersion, out staticIndex);
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
-            return new IndexContext(mapReduceIndexDefinition, indexConfiguration);
+            return IndexContext.CreateFor(mapReduceIndexDefinition, indexConfiguration, staticIndex);
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
