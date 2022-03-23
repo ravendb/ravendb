@@ -162,6 +162,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/advanced/databaseIDs',
             moduleId: require('viewmodels/database/advanced/databaseIDs'),
+            shardingMode: "allShardsOnly",
             title: 'Unused Database IDs',
             nav: true,
             css: 'icon-database-id',

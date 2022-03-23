@@ -1,12 +1,14 @@
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import accessManager = require("common/shell/accessManager");
-import getDatabaseDetailedStatsCommand = require("commands/resources/getDatabaseDetailedStatsCommand");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
+import getDatabaseStatsCommand from "commands/resources/getDatabaseStatsCommand";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
-class databaseIDs extends viewModelBase {
+class databaseIDs extends shardViewModelBase {
 
     view = require("views/database/advanced/databaseIDs.html");
 
@@ -24,8 +26,8 @@ class databaseIDs extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList");
     }
 
@@ -60,7 +62,7 @@ class databaseIDs extends viewModelBase {
 
                     return $.when<any>(fetchStatsTask, fetchUnusedIDsTask)
                         .then(() => deferred.resolve({ can: true }))
-                        .fail(() => deferred.resolve({ redirect: appUrl.forStatus(this.activeDatabase()) }));
+                        .fail(() => deferred.resolve({ redirect: appUrl.forStatus(this.db) }));
                 }
 
                 return deferred;
@@ -80,16 +82,18 @@ class databaseIDs extends viewModelBase {
     }
 
     private fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
-        return new getDatabaseDetailedStatsCommand(this.activeDatabase())
+        const db = this.db;
+        const localNode = clusterTopologyManager.default.localNodeTag();
+        return new getDatabaseStatsCommand(db, db.getFirstLocation(localNode))
             .execute()
-            .done((stats: Raven.Client.Documents.Operations.DetailedDatabaseStatistics) => {
+            .done((stats: Raven.Client.Documents.Operations.DatabaseStatistics) => {
                 this.databaseChangeVector(stats.DatabaseChangeVector.split(","));
                 this.databaseID(stats.DatabaseId);
             });
     }
     
     private fetchUnusedDatabaseIDs() {
-        return new getDatabaseRecordCommand(this.activeDatabase())
+        return new getDatabaseRecordCommand(this.db)
             .execute()
             .done((document) => {
                 this.unusedDatabaseIDs((document as any)["UnusedDatabaseIds"]);
@@ -99,7 +103,7 @@ class databaseIDs extends viewModelBase {
     saveUnusedDatabaseIDs() {
         this.spinners.save(true);
         
-        new saveUnusedDatabaseIDsCommand(this.unusedDatabaseIDs(), this.activeDatabase().name)
+        new saveUnusedDatabaseIDsCommand(this.unusedDatabaseIDs(), this.db.name)
             .execute()
             .done(() => this.dirtyFlag().reset())
             .always(() => this.spinners.save(false));
