@@ -10,6 +10,7 @@ import { withPreventDefault } from "../../../utils/common";
 import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessReasons";
 import database = require("models/resources/database");
 import app from "durandal/app";
+import { IndexProgress } from "./IndexProgress";
 
 interface IndexPanelProps {
     database: database;
@@ -385,6 +386,7 @@ export function IndexPanel(props: IndexPanelProps) {
                                     )}
                                 </>
                             )}
+                            <IndexProgress progress={nodeInfo.progress} nodeDetails={nodeInfo.details}/>
                         </div>
                     ))}
                 </div>

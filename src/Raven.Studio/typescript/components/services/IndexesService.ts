@@ -11,8 +11,14 @@ import enableIndexCommand from "commands/database/index/enableIndexCommand";
 import disableIndexCommand from "commands/database/index/disableIndexCommand";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import togglePauseIndexingCommand from "commands/database/index/togglePauseIndexingCommand";
+import getIndexesProgressCommand from "commands/database/index/getIndexesProgressCommand";
 
 export default class IndexesService {
+    
+    async getProgress(db: database, location: databaseLocationSpecifier) {
+        return new getIndexesProgressCommand(db, location)
+            .execute();
+    }
     
     async setLockMode(indexes: IndexSharedInfo[], lockMode: IndexLockMode, db: database) {
         await new saveIndexLockModeCommand(indexes, lockMode, db, IndexUtils.formatLockMode(lockMode))

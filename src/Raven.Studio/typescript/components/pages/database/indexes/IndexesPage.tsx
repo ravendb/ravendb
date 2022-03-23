@@ -153,6 +153,16 @@ export function IndexesPage(props: IndexesPageProps) {
     
     const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
     
+    const fetchProgress = async (location: databaseLocationSpecifier) => {
+        const progress = await indexesService.getProgress(database, location);
+        
+        dispatch({
+            type: "ProgressLoaded",
+            progress,
+            location
+        });
+    }
+    
     const fetchStats = async (location: databaseLocationSpecifier) => {
         const stats = await indexesService.getStats(database, location);
         dispatch({
@@ -165,6 +175,14 @@ export function IndexesPage(props: IndexesPageProps) {
     useEffect(() => {
         fetchStats(initialLocation);
     }, []);
+    
+    useEffect(() => {
+        const progressTimer = setInterval(() => {
+            database.getLocations().forEach(location => fetchProgress(location));
+        }, 10_000);
+        
+        return () => clearInterval(progressTimer);
+    })
 
     const getSelectedIndexes = (): IndexSharedInfo[] => stats.indexes.filter(x => selectedIndexes.includes(x.name));
     
@@ -289,6 +307,9 @@ export function IndexesPage(props: IndexesPageProps) {
     
     const loadMissing = async () => {
         const tasks = stats.indexes[0].nodesInfo.map(nodeInfo => {
+            //TODO: find better place for that
+            fetchProgress(nodeInfo.location);
+            
             if (nodeInfo.status === "notLoaded") {
                 return fetchStats(nodeInfo.location);
             }
