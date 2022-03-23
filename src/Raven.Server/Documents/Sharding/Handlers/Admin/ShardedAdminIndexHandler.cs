@@ -1,12 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Handlers.Admin;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands.Indexes;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
@@ -15,31 +10,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         [RavenShardedAction("/databases/*/admin/indexes", "PUT")]
         public async Task Put()
         {
-            var isReplicated = GetBoolValueQueryString("is-replicated", required: false);
-            if (isReplicated.HasValue && isReplicated.Value)
-            {
-                throw new NotSupportedException("Legacy replication of indexes isn't supported in a sharded environment");
-            }
-
-            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true,
-                ContextPool, DatabaseContext.DatabaseName, DatabaseContext.Indexes.Create.CreateIndexAsync, async args =>
-                {
-                    await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }));
+            using (var processor = new ShardedAdminIndexHandlerProcessorForStaticPut(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/indexes", "PUT")]
         public async Task PutJavaScript()
         {
-            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: false,
-                ContextPool, DatabaseContext.DatabaseName, DatabaseContext.Indexes.Create.CreateIndexAsync, async args =>
-                {
-                    await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }));
+            using (var processor = new ShardedAdminIndexHandlerProcessorForJavaScriptPut(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/indexes/stop", "POST")]
