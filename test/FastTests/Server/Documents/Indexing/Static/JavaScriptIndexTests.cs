@@ -20,8 +20,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             public int Fax { get; set; }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUseIdMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -60,8 +60,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
-        [RavenData]        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
         public async Task CanUseGetMetadataMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

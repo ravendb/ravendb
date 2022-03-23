@@ -221,13 +221,9 @@ namespace SlowTests.Core.Indexing
 
                     session.SaveChanges();
                 }
-
-<<<<<<< HEAD
+                
                 Indexes.WaitForIndexing(store);
 
-=======
-                WaitForIndexing(store);
->>>>>>> 415acd0ec7 (RavenDB-17966 Tests)
                 using (var session = store.OpenSession())
                 {
                     // address from LoadDocument will be null so the City value will not get into index

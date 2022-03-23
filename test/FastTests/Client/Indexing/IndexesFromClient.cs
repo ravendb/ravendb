@@ -29,8 +29,8 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanReset(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -50,8 +50,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanDelete(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -70,8 +70,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanStopAndStart(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -126,8 +126,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task SetLockModeAndSetPriorityForAutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -173,8 +173,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task GetErrors(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -238,8 +238,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task GetDefinition(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -303,7 +303,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task GetTerms(Options options)
         {
@@ -340,8 +340,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Performance(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -392,8 +392,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task GetIndexNames(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -425,7 +425,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task CanExplain(Options options)
         {
@@ -468,7 +468,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task MoreLikeThis(Options options)
         {

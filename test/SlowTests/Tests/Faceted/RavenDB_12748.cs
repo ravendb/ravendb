@@ -255,7 +255,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanCorrectlyAggregate_Ranges(Options options)
         {
             using (var store = GetDocumentStore(options))

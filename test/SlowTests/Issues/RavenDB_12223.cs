@@ -31,7 +31,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUsePhrases(Options options)
         {
             using (var store = GetDocumentStore(options))

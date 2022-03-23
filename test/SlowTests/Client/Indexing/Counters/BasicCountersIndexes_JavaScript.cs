@@ -742,7 +742,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -889,7 +889,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanMapAllCountersFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1154,8 +1154,8 @@ return ({
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task BasicMultiMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

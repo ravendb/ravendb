@@ -39,7 +39,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void EmptyParameterListShouldNotMatchSimple(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -82,8 +82,8 @@ where
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void EmptyParameterListShouldNotMatch(Options options)
         {
             using (var store = GetDocumentStore(options))

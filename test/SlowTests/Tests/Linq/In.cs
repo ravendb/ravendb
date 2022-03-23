@@ -58,7 +58,7 @@ namespace SlowTests.Tests.Linq
 
         private readonly Guid userId = new Guid("dc89a428-7eb2-428c-bc97-99763db25f9a");
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WithNotEmptyObjectsArray(Options options)
         {
@@ -96,7 +96,7 @@ namespace SlowTests.Tests.Linq
 
         private readonly string[] _users = { "a-A 1", " -", "- " };
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryEvilDashStrings(Options options)
         {
@@ -116,7 +116,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WithNotEmptyGuidsArray(Options options)
         {
@@ -152,7 +152,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WithEmptyObjectsArray(Options options)
         {
@@ -188,7 +188,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WithEmptyGuidsArray(Options options)
         {

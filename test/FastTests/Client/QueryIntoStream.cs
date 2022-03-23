@@ -19,8 +19,8 @@ namespace FastTests.Client
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryWithToStream(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -46,8 +46,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void DocumentQueryWithToStream(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -73,8 +73,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueryWithToStreamAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -100,8 +100,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task DocumentQueryWithToStreamAsync(Options options)
         {
             using (var store = GetDocumentStore(options))

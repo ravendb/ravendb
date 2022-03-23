@@ -994,7 +994,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanMapAllCountersFromCollection(Options options)
         {

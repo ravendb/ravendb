@@ -30,7 +30,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanPutUpdateAndDeleteMapIndex(Options options)
         {
@@ -60,8 +60,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanGetTermsForIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -97,8 +97,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanGetTermsForIndex_WithPaging(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -134,8 +134,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanQueryForMetadataAndIndexEntriesOnly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -193,8 +193,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task CanGetIndexNames(Options options)
         {
             var index1 = new Users_ByName();
@@ -211,8 +211,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task CanResetIndex(Options options)
         {
             var index = new Users_ByName();

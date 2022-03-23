@@ -15,8 +15,8 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanIndexDictionaryDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -57,8 +57,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapReduceIndexDictionaryDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -99,8 +99,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -199,8 +199,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -273,8 +273,8 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(Options options)
         {
             using (var store = GetDocumentStore(options))

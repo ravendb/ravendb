@@ -429,7 +429,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanQueryWithLoadFromSelectAndProjectWhereAsync(Options options)
         {

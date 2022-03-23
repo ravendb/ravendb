@@ -16,8 +16,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task LazyQueryCachingTest(Options options)
         {
             using (var store = GetDocumentStore(options))
