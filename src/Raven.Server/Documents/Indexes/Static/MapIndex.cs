@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
-            return new IndexContext(staticMapIndexDefinition, indexConfiguration);
+            return IndexContext.CreateFor(staticMapIndexDefinition, indexConfiguration, staticIndex);
         }
     }
 }

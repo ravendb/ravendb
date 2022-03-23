@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
@@ -36,7 +37,10 @@ public class ShardedMapReduceQueryResultsMerger
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Make sure that we have the auto map index in the orchestrator");
 
         var index = _indexesContext.GetIndex(_indexName);
-        if (index != null && index.Type.IsAutoMapReduce())
+        if (index == null)
+            IndexDoesNotExistException.ThrowFor(_indexName);
+
+        if (index.Type.IsAutoMapReduce())
         {
             var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.Definition;
             var aggregateOn = ReduceMapResultsOfAutoIndex.AggregateOn(_currentResults, autoMapReduceIndexDefinition, _context, null, CancellationToken.None);
@@ -48,9 +52,11 @@ public class ShardedMapReduceQueryResultsMerger
             throw new InvalidOperationException($"Failed to get {_indexName} index for the reduce part in the orchestrator");
         }
 
-        var compiled = _indexesContext.GetCompiledMapReduceIndex(_indexName, _context);
-        if (compiled == null)
-            throw new IndexDoesNotExistException($"Index {_indexName} doesn't exist");
+        if (index.Type.IsStaticMapReduce() == false)
+            throw new InvalidOperationException($"Index '{_indexName}' is not a map-reduce index");
+
+
+        var compiled = ((StaticIndexContext)index).Compiled;
 
         var reducingFunc = compiled.Reduce;
         var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
