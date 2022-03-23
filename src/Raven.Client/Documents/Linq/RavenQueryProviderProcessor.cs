@@ -3134,10 +3134,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.ListInitSupport.Instance,
                 MemberInitAsJson.ForAllTypes,
                 new JavascriptConversionExtensions.TimeSeriesSupport<T>(this),
-                JavascriptConversionExtensions.MemberExpressionSupport.Instance,
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
-                JavascriptConversionExtensions.DateOnlySupport.Instance
+                JavascriptConversionExtensions.DateOnlySupport.Instance,
 #endif
+                JavascriptConversionExtensions.MemberExpressionSupport.Instance
             };
 
             if (loadArg == false)
