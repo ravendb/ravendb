@@ -162,7 +162,16 @@ namespace Raven.Server.Documents.Indexes
         private long _indexVersion;
         private int? _cachedHashCode;
 
-        internal IndexDefinitionBaseServerSide(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion, IndexDeploymentMode? deploymentMode, ClusterState clusterState)
+        internal IndexDefinitionBaseServerSide(
+            string name,
+            IEnumerable<string> collections,
+            IndexLockMode lockMode,
+            IndexPriority priority,
+            IndexState state,
+            T[] mapFields,
+            long indexVersion,
+            IndexDeploymentMode? deploymentMode,
+            ClusterState clusterState)
         {
             Name = name;
             DeploymentMode = deploymentMode ?? IndexDeploymentMode.Parallel;

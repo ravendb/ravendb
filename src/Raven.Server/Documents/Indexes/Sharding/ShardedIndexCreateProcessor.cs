@@ -27,12 +27,13 @@ public class ShardedIndexCreateProcessor : AbstractIndexCreateProcessor
 
     protected override IndexContext GetIndex(string name)
     {
-        throw new System.NotImplementedException();
+        return _context.Indexes.GetIndex(name);
     }
 
     protected override IEnumerable<string> GetIndexNames()
     {
-        throw new System.NotImplementedException();
+        foreach (var index in _context.Indexes.GetIndexes())
+            yield return index.Name;
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)

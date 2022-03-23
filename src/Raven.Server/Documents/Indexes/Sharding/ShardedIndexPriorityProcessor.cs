@@ -20,7 +20,7 @@ public class ShardedIndexPriorityProcessor : AbstractIndexPriorityProcessor
 
     protected override void ValidateIndex(string name, IndexPriority priority)
     {
-        if (_context.Indexes.TryGetIndexDefinition(name, out var indexDefinition) == false)
+        if (_context.Indexes.GetIndex(name) == null)
             IndexDoesNotExistException.ThrowFor(name);
     }
 

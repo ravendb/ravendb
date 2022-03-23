@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -51,7 +52,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         _result = new ShardedQueryResult();
         _parent = parent;
         _query = query;
-        _isMapReduceIndex = _query.Metadata.IndexName != null && _parent.DatabaseContext.Indexes.IsMapReduceIndex(_query.Metadata.IndexName);
+        _isMapReduceIndex = _query.Metadata.IndexName != null && (_parent.DatabaseContext.Indexes.GetIndex(_query.Metadata.IndexName)?.Type.IsMapReduce() ?? false);
         _isAutoMapReduceQuery = _query.Metadata.IsDynamic && _query.Metadata.IsGroupBy;
         _commands = new Dictionary<int, ShardedQueryCommand>();
 
@@ -89,8 +90,8 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
                 return;
             }
         }
-                
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, 
+
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
             "Use a single rewrite method in order to avoid cloning the query twice");
 
         // * For paging queries, we modify the limits on the query to include all the results from all
@@ -180,7 +181,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
     private void GenerateLoadByIdQueries(IEnumerable<Slice> ids, Dictionary<int, ShardedQueryCommand> cmds, TransactionOperationContext context)
     {
         const string listParameterName = "p0";
-                
+
         var shards = ShardLocator.GroupIdsByShardNumber(ids, _parent.DatabaseContext, context);
         var sb = new StringBuilder();
         sb.Append("from '").Append(_query.Metadata.CollectionName).AppendLine("'")
@@ -207,7 +208,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
                 [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
                 {
                     [listParameterName] = documentIds
-                }, 
+                },
                 [nameof(IndexQuery.Query)] = query
             };
             cmds[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"), null);
@@ -234,7 +235,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             _result.ResultEtag = Hashing.Combine(_result.ResultEtag, cmd.Result.ResultEtag);
         }
     }
-            
+
     public ValueTask HandleIncludes()
     {
         HashSet<string> missing = null;
@@ -379,50 +380,50 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         {
             case OrderByFieldType.Implicit:
             case OrderByFieldType.String:
-            {
-                x.TryGet(order.Name, out string xVal);
-                y.TryGet(order.Name, out string yVal);
-                return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
-            }
+                {
+                    x.TryGet(order.Name, out string xVal);
+                    y.TryGet(order.Name, out string yVal);
+                    return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
+                }
             case OrderByFieldType.Long:
-            {
-                var hasX = x.TryGetWithoutThrowingOnError(order.Name, out long xLng);
-                var hasY = y.TryGetWithoutThrowingOnError(order.Name, out long yLng);
-                if (hasX == false && hasY == false)
-                    return 0;
-                if (hasX == false)
-                    return 1;
-                if (hasY == false)
-                    return -1;
-                return xLng.CompareTo(yLng);
-            }
+                {
+                    var hasX = x.TryGetWithoutThrowingOnError(order.Name, out long xLng);
+                    var hasY = y.TryGetWithoutThrowingOnError(order.Name, out long yLng);
+                    if (hasX == false && hasY == false)
+                        return 0;
+                    if (hasX == false)
+                        return 1;
+                    if (hasY == false)
+                        return -1;
+                    return xLng.CompareTo(yLng);
+                }
             case OrderByFieldType.Double:
-            {
-                var hasX = x.TryGetWithoutThrowingOnError(order.Name, out double xDbl);
-                var hasY = y.TryGetWithoutThrowingOnError(order.Name, out double yDbl);
-                if (hasX == false && hasY == false)
-                    return 0;
-                if (hasX == false)
-                    return 1;
-                if (hasY == false)
-                    return -1;
-                return xDbl.CompareTo(yDbl);
-            }
+                {
+                    var hasX = x.TryGetWithoutThrowingOnError(order.Name, out double xDbl);
+                    var hasY = y.TryGetWithoutThrowingOnError(order.Name, out double yDbl);
+                    if (hasX == false && hasY == false)
+                        return 0;
+                    if (hasX == false)
+                        return 1;
+                    if (hasY == false)
+                        return -1;
+                    return xDbl.CompareTo(yDbl);
+                }
             case OrderByFieldType.AlphaNumeric:
-            {
-                x.TryGet(order.Name, out string xVal);
-                y.TryGet(order.Name, out string yVal);
-                if(xVal == null && yVal == null)
-                    return 0;
-                if (xVal== null)
-                    return 1;
-                if (yVal== null)
-                    return -1;
-                return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
-            }
+                {
+                    x.TryGet(order.Name, out string xVal);
+                    y.TryGet(order.Name, out string yVal);
+                    if (xVal == null && yVal == null)
+                        return 0;
+                    if (xVal == null)
+                        return 1;
+                    if (yVal == null)
+                        return -1;
+                    return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
+                }
             case OrderByFieldType.Random:
                 return Random.Shared.Next(0, int.MaxValue);
-                 
+
             case OrderByFieldType.Custom:
                 throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
             case OrderByFieldType.Score:

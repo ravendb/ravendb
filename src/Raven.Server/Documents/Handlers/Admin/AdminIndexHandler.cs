@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 return;
             }
 
-            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: true, Database.ServerStore.ContextPool, Database.Name, PutIndexTask));
+            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: true, Database.ServerStore.ContextPool, Database.Name, Database.IndexStore.Create.CreateIndexAsync));
         }
 
         [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
@@ -50,12 +50,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     throw new AuthorizationException("Deployments of JavaScript indexes has been restricted to admin users only");
             }
 
-            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: false, Database.ServerStore.ContextPool, Database.Name, PutIndexTask));
-        }
-
-        private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
-        {
-            return await Database.IndexStore.Create.CreateIndexInternalAsync(args.IndexDefinition, $"{args.RaftRequestId}/{args.IndexDefinition.Name}", args.Source);
+            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: false, Database.ServerStore.ContextPool, Database.Name, Database.IndexStore.Create.CreateIndexAsync));
         }
 
         internal static async Task PutInternal(PutIndexParameters parameters)
@@ -102,7 +97,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await parameters.PutIndexTask((indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source));
+                    var index = await parameters.PutIndexTask(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
                     raftIndexIds.Add(index);
 
                     createdIndexes.Add(new PutIndexResult
@@ -130,7 +125,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         internal class PutIndexParameters
         {
             public PutIndexParameters(RequestHandler requestHandler, bool validatedAsAdmin, TransactionContextPool contextPool,
-                string databaseName, Func<(IndexDefinition IndexDefinition, string RaftRequestId, string Source), Task<long>> putIndexTask,
+                string databaseName, Func<IndexDefinition, string, string, ValueTask<long>> putIndexTask,
                 Func<(JsonOperationContext Context, List<long> RaftIndexIds), Task> waitForIndexNotification = null)
             {
                 RequestHandler = requestHandler;
@@ -149,7 +144,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             public string DatabaseName { get; }
 
-            public Func<(IndexDefinition IndexDefinition, string RaftRequestId, string Source), Task<long>> PutIndexTask { get; }
+            public Func<IndexDefinition, string, string, ValueTask<long>> PutIndexTask { get; }
 
             public Func<(JsonOperationContext, List<long>), Task> WaitForIndexNotification { get; }
         }

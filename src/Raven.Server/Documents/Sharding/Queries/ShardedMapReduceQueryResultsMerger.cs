@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
@@ -18,15 +17,15 @@ namespace Raven.Server.Documents.Sharding.Queries;
 public class ShardedMapReduceQueryResultsMerger
 {
     private readonly List<BlittableJsonReaderObject> _currentResults;
-    private readonly ShardedDatabaseContext.ShardedIndexesCache _indexesCache;
+    private readonly ShardedDatabaseContext.ShardedIndexesContext _indexesContext;
     private readonly string _indexName;
     private readonly bool _isAutoMapReduceQuery;
     private readonly TransactionOperationContext _context;
 
-    public ShardedMapReduceQueryResultsMerger(List<BlittableJsonReaderObject> currentResults, ShardedDatabaseContext.ShardedIndexesCache indexesCache, string indexName, bool isAutoMapReduceQuery, TransactionOperationContext context)
+    public ShardedMapReduceQueryResultsMerger(List<BlittableJsonReaderObject> currentResults, ShardedDatabaseContext.ShardedIndexesContext indexesContext, string indexName, bool isAutoMapReduceQuery, TransactionOperationContext context)
     {
         _currentResults = currentResults;
-        _indexesCache = indexesCache;
+        _indexesContext = indexesContext;
         _indexName = indexName;
         _isAutoMapReduceQuery = isAutoMapReduceQuery;
         _context = context;
@@ -36,11 +35,12 @@ public class ShardedMapReduceQueryResultsMerger
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Make sure that we have the auto map index in the orchestrator");
 
-        if (_indexesCache.TryGetAutoMapReduceIndexDefinition(_indexName, out var autoIndexDefinition))
+        var index = _indexesContext.GetIndex(_indexName);
+        if (index != null && index.Type.IsAutoMapReduce())
         {
-            var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)IndexStore.CreateAutoDefinition(autoIndexDefinition, IndexDeploymentMode.Parallel);
-            var aggegation = ReduceMapResultsOfAutoIndex.AggregateOn(_currentResults, autoMapReduceIndexDefinition, _context, null, CancellationToken.None);
-            return aggegation.GetOutputsToStore().ToList();
+            var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.Definition;
+            var aggregateOn = ReduceMapResultsOfAutoIndex.AggregateOn(_currentResults, autoMapReduceIndexDefinition, _context, null, CancellationToken.None);
+            return aggregateOn.GetOutputsToStore().ToList();
         }
 
         if (_isAutoMapReduceQuery)
@@ -48,7 +48,7 @@ public class ShardedMapReduceQueryResultsMerger
             throw new InvalidOperationException($"Failed to get {_indexName} index for the reduce part in the orchestrator");
         }
 
-        var compiled = _indexesCache.GetCompiledMapReduceIndex(_indexName, _context);
+        var compiled = _indexesContext.GetCompiledMapReduceIndex(_indexName, _context);
         if (compiled == null)
             throw new IndexDoesNotExistException($"Index {_indexName} doesn't exist");
 
