@@ -66,6 +66,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using (Stats.ConvertStats.Start())
                 data = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId);
 
+            if (data.IsEmpty)
+                return;
+            
             using (Stats.AddStats.Start())
                 _indexWriter.Index(lowerId, data, _knownFields);
 

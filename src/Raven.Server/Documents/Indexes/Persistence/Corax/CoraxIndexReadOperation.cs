@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 var names = MapIndexIdentifiers();
                 var allDocsInIndex = _coraxQueryEvaluator.Search(query, new FieldsToFetch(query, _index.Definition));
-                totalResults.Value = Convert.ToInt32(allDocsInIndex.Count);
+                totalResults.Value = Convert.ToInt32(allDocsInIndex is SortingMatch ? 0 : allDocsInIndex.Count);
                 ids = ArrayPool<long>.Shared.Rent(BufferSize);
 
                 var read = 0;
@@ -284,6 +284,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 }
                                 map.Add(listItemInIndex.ToArray());
                                 doc[name] = map;
+                            }
+                            else if (type is IndexEntryFieldType.Raw or IndexEntryFieldType.RawList)
+                            {
+                                doc[name] = $"BINARY_VALUE";
                             }
                             else
                             {

@@ -28,12 +28,15 @@ namespace Corax
     [Flags]
     public enum IndexEntryFieldType : byte
     {
+        Null = 0, // Helper for list writer.
         None = 1,
         
         Tuple = 1 << 2,
         List = 1 << 3,
         Raw = 1 << 4,
         Invalid = 1 << 6,
+        
+        RawList = List | Raw
     }
 
     [StructLayout(LayoutKind.Explicit, Size = HeaderSize)]
@@ -77,6 +80,20 @@ namespace Corax
         // <65546 bytes we could use a single ushort
         // for the rest we will use a uint.
         private readonly Span<int> _knownFieldsLocations;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsEmpty()
+        {
+            foreach (var field in _knownFieldsLocations)
+            {
+                if (field != Invalid)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         // Current pointer.        
         private int _dataIndex;
@@ -215,7 +232,7 @@ namespace Corax
             _dataIndex = dataLocation;
         }
         
-        public void Write<TEnumerator>(int field, TEnumerator values) where TEnumerator : IReadOnlySpanEnumerator
+        public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) where TEnumerator : IReadOnlySpanEnumerator
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
@@ -229,7 +246,7 @@ namespace Corax
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the list metadata information. 
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.List, dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)(IndexEntryFieldType.List | type), dataLocation);
             dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
 
             // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).
@@ -802,6 +819,7 @@ namespace Corax
                 intOffset += length;
                 if ((type & IndexEntryFieldType.List) != 0)
                 {
+                    
                     int totalSize = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
                     if (elementIdx >= totalSize)
                     {

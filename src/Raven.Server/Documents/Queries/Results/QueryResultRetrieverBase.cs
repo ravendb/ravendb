@@ -184,23 +184,6 @@ namespace Raven.Server.Documents.Queries.Results
                         fields[kvp.Key] = kvp.Value;
                     }
                 }
-              
-                // else if (SearchEngineType is SearchEngineType.Corax)
-                // {
-                //     ref var reader = ref retrieverInput.CoraxEntry;
-                //     if (FieldsToFetch.ExtractAllFromIndex)
-                //     {
-                //         foreach (var field in retrieverInput.KnownFields.GetEnumerator())
-                //         {
-                //             switch (reader.GetFieldType(field.FieldId))
-                //             {
-                //                 case IndexEntryFieldType.None:
-                //                     reader.Read(field.FieldId, out object value);           
-                //             }
-                //         }
-                //     }
-                // }
-                
                 
                 if (fields is not null)
                 {
@@ -611,6 +594,16 @@ namespace Raven.Server.Documents.Queries.Results
                         array.Add(Encodings.Utf8.GetString(iterator.Sequence));
                     value = array;
                     break;
+                case IndexEntryFieldType.RawList:
+                    iterator = retrieverInput.CoraxEntry.ReadMany(fieldId);
+                    array = new DynamicJsonArray();
+                    while (iterator.ReadNext())
+                    {
+                        fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
+                            value = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, context);
+                    }
+                    value = array;
+                    break;
                 case IndexEntryFieldType.Raw:
                     retrieverInput.CoraxEntry.Read(fieldId, out Span<byte> blittableBinary);
                     fixed (byte* ptr = &blittableBinary.GetPinnableReference())
@@ -618,6 +611,19 @@ namespace Raven.Server.Documents.Queries.Results
                     break;
                 case IndexEntryFieldType.None:
                     retrieverInput.CoraxEntry.Read(fieldId, out data);
+                    if (data.Length is 10 or 12)
+                    {
+                        if (data.SequenceCompareTo(Encodings.Utf8.GetBytes(Constants.Documents.Indexing.Fields.NullValue)) == 0)
+                        {
+                            value = null;
+                            break;
+                        }
+                        if (data.SequenceCompareTo(Encodings.Utf8.GetBytes(Constants.Documents.Indexing.Fields.EmptyString)) == 0)
+                        {
+                            value = string.Empty;
+                            break;
+                        }
+                    }
                     
                     value = Encodings.Utf8.GetString(data);
                     break;

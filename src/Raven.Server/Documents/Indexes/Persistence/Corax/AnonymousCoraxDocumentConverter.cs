@@ -32,7 +32,8 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         //todo maciej boosting inside index
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
-
+        id = default;
+        
         IPropertyAccessor accessor;
 
         if (_isMultiMap == false)
@@ -44,13 +45,11 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         // https://github.com/ravendb/ravendb/pull/13730#discussion_r820661488
         using var _ = _allocator.Allocate(DocumentBufferSize, out ByteString buffer);
         var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
-
-        id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
+        
         var scope = new SingleEntryWriterScope(_allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
 
-        scope.Write(0, id.AsSpan(), ref entryWriter);
         foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
         {
             var value = property.Value;
@@ -82,14 +81,19 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
 
             InsertRegularField(field, value, indexContext, out var shouldSkip, ref entryWriter, scope);
         }
-
+        
+        if (entryWriter.IsEmpty())
+            return Span<byte>.Empty;
+        
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
             using (var blittableScope = new BlittableWriterScope(bjo))
                 blittableScope.Write(_knownFields.Count - 1, ref entryWriter);
         }
-
+        
+        id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
+        scope.Write(0, id.AsSpan(), ref entryWriter);
         entryWriter.Finish(out var output);
         return output;
     }

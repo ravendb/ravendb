@@ -189,8 +189,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
                 case OperatorType.NotEqual:
                     value = (ValueExpression)expression.Right;
-                    field = (FieldExpression)expression.Left;
-                    fieldName = GetField(field);
+                    fieldName = GetField(expression.Left);
                     return isNegated
                         ? _searcher.TermQuery(fieldName, GetFieldValue(value).ToString(), GetFieldIdInIndex(fieldName))
                         : _searcher.UnaryQuery(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), GetFieldValue(value).ToString(), UnaryMatchOperation.NotEquals);
