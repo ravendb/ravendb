@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.Handlers
                         foreach (BlittableJsonReaderObject blittableCommand in commands)
                         {
                             count++;
-                            var changeVector = GetClusterWideChangeVector(Database.DatabaseGroupId, count, options.DisableAtomicDocumentWrites == false, command.Index, Database.ClusterTransactionId);
+                            var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(Database.DatabaseGroupId, count, options.DisableAtomicDocumentWrites == false, command.Index, Database.ClusterTransactionId);
                             var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
@@ -553,21 +553,6 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Batch = _batch
                 };
-            }
-
-            public static string GetClusterWideChangeVector(string databaseId, long prevCountPerShard, bool addTrxAddition, long index, string clusterTransactionId)
-            {
-                var stringBuilder = new StringBuilder(ChangeVectorParser.RaftTag)
-                    .Append(':').Append(prevCountPerShard)
-                    .Append('-').Append(databaseId);
-                if (addTrxAddition)
-                {
-                    stringBuilder
-                        .Append(',').Append(ChangeVectorParser.TrxnTag)
-                        .Append(':').Append(index)
-                        .Append('-').Append(clusterTransactionId);
-                }
-                return stringBuilder.ToString();
             }
         }
 

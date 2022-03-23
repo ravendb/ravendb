@@ -398,5 +398,20 @@ namespace Raven.Server.Utils
 
             return newChangeVector.SerializeVector();
         }
+        
+        public static string GetClusterWideChangeVector(string databaseId, long prevCountPerShard, bool addTrxAddition, long index, string clusterTransactionId)
+        {
+            var stringBuilder = new StringBuilder(ChangeVectorParser.RaftTag)
+                .Append(':').Append(prevCountPerShard)
+                .Append('-').Append(databaseId);
+            if (addTrxAddition)
+            {
+                stringBuilder
+                    .Append(',').Append(ChangeVectorParser.TrxnTag)
+                    .Append(':').Append(index)
+                    .Append('-').Append(clusterTransactionId);
+            }
+            return stringBuilder.ToString();
+        }
     }
 }

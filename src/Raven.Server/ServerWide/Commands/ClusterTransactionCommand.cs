@@ -560,7 +560,7 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             var databaseId = rawRecord.Shards[shardNumber].DatabaseTopologyIdBase64;
-            var changeVector = BatchHandler.ClusterTransactionMergedCommand.GetClusterWideChangeVector(databaseId, currentCommandCount, Options.DisableAtomicDocumentWrites == false, index, rawRecord.GetClusterTransactionId());
+            var changeVector = ChangeVectorUtils.GetClusterWideChangeVector(databaseId, currentCommandCount, Options.DisableAtomicDocumentWrites == false, index, rawRecord.GetClusterTransactionId());
 
             result[Constants.Documents.Metadata.ChangeVector] = changeVector;
             return result;
