@@ -10,6 +10,10 @@ abstract class shardViewModelBase extends viewModelBase {
     
     protected constructor(db: database) {
         super();
+
+        if (!db) {
+            throw new Error("Database is required in " + this.constructor.name + " constructor. Did you forgot to set 'shardingMode' in router?");
+        }
         
         this.db = db;
 

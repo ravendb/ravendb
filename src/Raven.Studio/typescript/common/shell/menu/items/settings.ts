@@ -154,6 +154,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/advanced/databaseRecord',
             moduleId: require('viewmodels/database/advanced/databaseRecord'),
             title: 'Database Record',
+            shardingMode: "allShardsOnly",
             nav: true,
             css: 'icon-database-record',
             dynamicHash: appUrls.databaseRecord,
