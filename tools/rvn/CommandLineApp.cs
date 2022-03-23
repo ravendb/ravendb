@@ -645,6 +645,9 @@ namespace rvn
                 case LetsEncrypt when string.IsNullOrEmpty(parameters.CertificatePath) == false:
                     throw new InvalidOperationException($"-c|--cert-path option must be set only when using '{OwnCertificate}' mode.");
                 
+                case LetsEncrypt when string.IsNullOrEmpty(parameters.CertPassword) == false:
+                    throw new InvalidOperationException($"-p|--password option must be set only when using '{OwnCertificate}' mode.");
+
                 case LetsEncrypt: return;
 
                 case OwnCertificate: return;

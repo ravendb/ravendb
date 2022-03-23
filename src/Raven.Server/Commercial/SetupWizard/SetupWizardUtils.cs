@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -29,8 +30,13 @@ public static class SetupWizardUtils
                 var base64 = parameters.SetupInfo.Certificate;
                 serverCertBytes = Convert.FromBase64String(base64);
                 serverCert = new X509Certificate2(serverCertBytes, parameters.SetupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
-                var localNodeTag = parameters.SetupInfo.LocalNodeTag;
+    
+                var localNodeTag = parameters.SetupInfo.LocalNodeTag ?? parameters.SetupInfo.NodeSetupInfos.Keys.FirstOrDefault();
+                if (localNodeTag is null)
+                {
+                    throw new InvalidOperationException($"Could not determine {nameof(localNodeTag)}");
+                }
+                
                 publicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
                     parameters.SetupInfo,
                     localNodeTag,
@@ -41,7 +47,7 @@ public static class SetupWizardUtils
 
                 if (parameters.OnBeforeAddingNodesToCluster != null)
                     await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
-
+        
                 serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes,
                     parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages, parameters.Progress);
                 
@@ -65,7 +71,7 @@ public static class SetupWizardUtils
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Could not load the certificate in the local server.", e);
+                throw new InvalidOperationException("Failed to load and validate server certificate.", e);
             }
 
             parameters.Progress?.AddInfo("Generating the client certificate.");
@@ -95,7 +101,7 @@ public static class SetupWizardUtils
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Could not generate a client certificate for '{domain}'.", e);
+                throw new InvalidOperationException($"Failed to generate a client certificate for '{domain}'.", e);
             }
             
             parameters.RegisterClientCertInOs?.Invoke(parameters.OnProgress, parameters.Progress, clientCert);
