@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
@@ -63,6 +64,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
             else
             {
+                if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName) == false)
+                {
+                    // region for custom server url isn't mandatory
+                    config.RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.AwsRegionName);
+                }
+
                 _usingCustomServerUrl = true;
                 config.UseHttp = true;
                 config.ForcePathStyle = s3Settings.ForcePathStyle;
@@ -76,6 +83,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 credentials = new SessionAWSCredentials(s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsSessionToken);
 
             _client = new AmazonS3Client(credentials, config);
+
             _bucketName = s3Settings.BucketName;
             RemoteFolderName = s3Settings.RemoteFolderName;
             Region = s3Settings.AwsRegionName == null ? string.Empty : s3Settings.AwsRegionName.ToLower();
@@ -368,7 +376,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return;
 
             foreach (var kvp in metadata)
-                collection[kvp.Key] = kvp.Value;
+                collection[Uri.EscapeDataString(kvp.Key)] = Uri.EscapeDataString(kvp.Value);
         }
 
         private static IDictionary<string, string> ConvertMetadata(MetadataCollection collection)
