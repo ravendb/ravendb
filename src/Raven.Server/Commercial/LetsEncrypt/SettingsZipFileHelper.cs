@@ -127,9 +127,6 @@ public static class SettingsZipFileHelper
                 
                 string certPath = parameters.OnGetCertificatePath?.Invoke(certificateFileName);
 
-                if (string.IsNullOrEmpty(certPath))
-                    certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
-
                 if (parameters.SetupInfo.ModifyLocalServer)
                 {
                     await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
@@ -138,7 +135,7 @@ public static class SettingsZipFileHelper
                     } // we'll be flushing the directory when we'll write the settings.json
                 }
 
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath;
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath ?? certificateFileName;
                 if (string.IsNullOrEmpty(parameters.SetupInfo.Password) == false)
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = parameters.SetupInfo.Password;
 
