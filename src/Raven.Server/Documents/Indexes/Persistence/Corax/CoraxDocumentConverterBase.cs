@@ -5,7 +5,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using Amazon.SimpleNotificationService.Model;
 using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
@@ -24,6 +23,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public abstract class CoraxDocumentConverterBase : ConverterBase
 {
+    public static readonly Memory<byte> NullValue = Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.NullValue);
+    public static readonly Memory<byte> EmptyString = Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.EmptyString);
+    
+    //todo maciej
     protected const int DocumentBufferSize = 1024 * 1024 * 5;
     private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
     private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
@@ -60,7 +63,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public static IndexFieldsMapping GetKnownFields(ByteStringContext allocator, Index index)
     {
         var knownFields = new IndexFieldsMapping(allocator);
-        //todo maciej: will optimize it while doing static indexes.
+        //todo maciej: perf
         Slice.From(allocator, index.Type.IsMapReduce()
             ? Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
             : Constants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
@@ -251,17 +254,19 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var dynamicNull = (DynamicNullObject)value;
                 if (dynamicNull.IsExplicitNull || _indexImplicitNull)
                 {
-                    scope.Write(field.Id, Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.NullValue), ref entryWriter);
+                    scope.Write(field.Id, NullValue.Span, ref entryWriter);
                 }
                 return;
 
             case ValueType.Null:
-                scope.Write(field.Id, Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.NullValue), ref entryWriter);
+                scope.Write(field.Id, NullValue.Span, ref entryWriter);
                 return;
             case ValueType.BoostedValue:
-                throw new InvalidParameterException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
+                //todo maciej
+                //https://issues.hibernatingrhinos.com/issue/RavenDB-18146
+                throw new NotSupportedException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
             case ValueType.EmptyString:
-                scope.Write(field.Id, Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.EmptyString), ref entryWriter);
+                scope.Write(field.Id, EmptyString.Span, ref entryWriter);
                 return;
             case ValueType.Stream:
             default:
@@ -270,26 +275,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
         shouldSkip = true;
     }
-
-    object HandleStreamsAndConversionIntoJson(Stream streamValue, BlittableJsonReaderObject blittableValue)
-    {
-        if (blittableValue is not null)
-        {
-            //TODO PERF 
-            //TODO: Notice this is basic implementation. We've to create additional flag `Json` inside Corax for patching.
-            var blittableReader = Scope.GetBlittableReader();
-            var reader = blittableReader.GetTextReaderFor(blittableValue);
-            return reader.ReadToEnd();
-        }
-
-        if (streamValue is not null)
-        {
-            return ToArray(Scope, streamValue, out var streamLength);
-        }
-
-        throw new InvalidParameterException($"Got no data at {nameof(HandleStreamsAndConversionIntoJson)}");
-    }
-
+    
     void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
@@ -305,8 +291,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             InsertRegularField(field, itemToIndex, indexContext, out _, ref entryWriter, scope);
         }
     }
-
-    //todo maciej Discuss how we gonna handle nestedArrays. Now I skip them.
+    
     void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
@@ -317,7 +302,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
 
         _knownFields.GetByFieldId(field.Id).Analyzer = Analyzer.DefaultAnalyzer;
-        InsertRegularField(field, HandleStreamsAndConversionIntoJson(null, val), indexContext, out shouldSkip, ref entryWriter, scope, nestedArray);
+        InsertRegularField(field, val, indexContext, out shouldSkip, ref entryWriter, scope, nestedArray);
     }
 
     public override void Dispose()

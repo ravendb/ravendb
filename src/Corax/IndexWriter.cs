@@ -30,7 +30,7 @@ namespace Corax
         Small = 1,
         Set = 2
     }
-    
+
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         public const int MaxTermLength = 1024;
@@ -156,7 +156,7 @@ namespace Corax
                 //       that will ensure faster turnaround and more efficient execution. 
                 if (fieldType.HasFlag(IndexEntryFieldType.Raw))
                     return;
-                
+
                 var iterator = entryReader.ReadMany(tokenField);
                 while (iterator.ReadNext())
                 {
@@ -192,9 +192,9 @@ namespace Corax
                 {
                     return;
                 }
-                
+
                 entryReader.Read(tokenField, out var value);
-                
+
                 var words = new Span<byte>(tempWordsSpace, bufferSize);
                 var tokens = new Span<Token>(tempTokenSpace, tokenSize);
                 analyzer.Execute(value, ref words, ref tokens);
@@ -224,7 +224,7 @@ namespace Corax
             _suggestionsAccumulator ??= new Dictionary<int, Dictionary<Slice, int>>();
 
             if (_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd) == false)
-            {             
+            {
                 suggestionsToAdd = new Dictionary<Slice, int>();
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
@@ -238,7 +238,7 @@ namespace Corax
             while (idx < keysCount)
             {
                 var key = new Slice(bsc.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
-                if (suggestionsToAdd.TryGetValue(key, out int counter) == false) 
+                if (suggestionsToAdd.TryGetValue(key, out int counter) == false)
                     counter = 0;
 
                 counter++;
@@ -253,7 +253,7 @@ namespace Corax
                 _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
 
             if (_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd) == false)
-            {                
+            {
                 suggestionsToAdd = new Dictionary<Slice, int>();
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
@@ -316,7 +316,7 @@ namespace Corax
             {
                 if (fieldType.HasFlag(IndexEntryFieldType.Raw))
                     return;
-                
+
                 entryReader.Read(tokenField, out var value);
                 using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
                 if (field.TryGetValue(slice, out var term) == false)
@@ -409,7 +409,7 @@ namespace Corax
                     {
                         if (fieldType.HasFlag(IndexEntryFieldType.Raw))
                             continue;
-                        
+
                         entryReader.Read(fieldId, out var termValue);
 
                         if (analyzer is null)
@@ -444,7 +444,7 @@ namespace Corax
                 var numberOfEntries = llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
                 Debug.Assert(numberOfEntries >= 0);
             }
-            
+
             void DeleteField(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(fieldName);
@@ -510,7 +510,7 @@ namespace Corax
 
             if ((id & (long)TermIdMask.Set) != 0 || (id & (long)TermIdMask.Small) != 0)
                 throw new InvalidDataException($"Cannot delete {term} in {key} because it's not {nameof(TermIdMask.Single)}.");
-            
+
             _entriesToDelete.Add(id);
             return true;
         }
@@ -610,7 +610,6 @@ namespace Corax
 
             if (_ownsTransaction)
                 Transaction.Commit();
-            
         }
 
         private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)

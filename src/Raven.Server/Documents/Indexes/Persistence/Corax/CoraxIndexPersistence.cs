@@ -1,13 +1,8 @@
 ﻿using System;
-using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.Counters;
-using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -44,9 +39,9 @@ public class CoraxIndexPersistence : IndexPersistenceBase
                         _converter = new JintCoraxDocumentConverter((MapIndex)index);
                         break;
                     case IndexSourceType.TimeSeries:
-                        throw new InvalidDataException($"Currently, {nameof(TimeSeries)} are not supported by Corax");
+                        throw new NotSupportedException($"Currently, {nameof(TimeSeries)} are not supported by Corax");
                     case IndexSourceType.Counters:
-                        throw new InvalidDataException($"Currently, {nameof(IndexSourceType.Counters)} are not supported by Corax");
+                        throw new NotSupportedException($"Currently, {nameof(IndexSourceType.Counters)} are not supported by Corax");
                 }
                 break;
             case IndexType.JavaScriptMapReduce:

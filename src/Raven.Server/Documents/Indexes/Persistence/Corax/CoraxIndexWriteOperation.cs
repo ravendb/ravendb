@@ -135,13 +135,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _converter.DoublesListForEnumerableScope = null;
                 _converter.LongsListForEnumerableScope = null;
                 _converter.StringsListForEnumerableScope = null;
+                _converter.BlittableJsonReaderObjectsListForEnumerableScope = null;
             }
             else
             {
-                //We want to make sure we didn't persist too much memory for our enumerable writer.
                 _converter.DoublesListForEnumerableScope?.Clear();
                 _converter.LongsListForEnumerableScope?.Clear();
                 _converter.StringsListForEnumerableScope?.Clear();
+                _converter.BlittableJsonReaderObjectsListForEnumerableScope?.Clear();
             }
         }
     }
