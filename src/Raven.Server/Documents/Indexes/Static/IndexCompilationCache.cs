@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -122,6 +123,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         internal static AbstractStaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration, IndexType type, long indexVersion)
         {
+            AbstractStaticIndexBase index;
             switch (type)
             {
                 case IndexType.None:
@@ -130,15 +132,26 @@ namespace Raven.Server.Documents.Indexes.Static
                 case IndexType.Map:
                 case IndexType.MapReduce:
                 case IndexType.Faulty:
-                    return IndexCompiler.Compile(definition);
-
+                    index = IndexCompiler.Compile(definition);
+                    break;
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    return AbstractJavaScriptIndex.Create(definition, configuration, indexVersion);
-
+                    index = AbstractJavaScriptIndex.Create(definition, configuration, indexVersion);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
+
+            if (configuration.Indexing.StaticIndexingEngineType is SearchEngineType.Corax)
+            {
+                if (index.HasDynamicFields)
+                    throw new IndexCreationException($"{nameof(Corax)} is not supporting dynamic fields yet. Please use Lucene engine.");
+                
+                if (index.HasBoostedFields)
+                    throw new IndexCreationException($"{nameof(Corax)} is not supporting boosting inside index yet. Please use Lucene engine.");
+            }
+
+            return index;
         }
 
         private class CacheKey : IEquatable<CacheKey>
