@@ -88,25 +88,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AmazonS3Theory]
-        [InlineData(5, false, UploadType.Regular)]
-        [InlineData(5, true, UploadType.Regular)]
-        [InlineData(11, false, UploadType.Chunked)]
-        [InlineData(11, true, UploadType.Chunked)]
+        [InlineData(5, false, UploadType.Regular, false)]
+        [InlineData(5, true, UploadType.Regular, false)]
+        [InlineData(11, false, UploadType.Chunked, false)]
+        [InlineData(11, true, UploadType.Chunked, false)]
+        [InlineData(5, false, UploadType.Regular, true)]
+        [InlineData(5, true, UploadType.Regular, true)]
+        [InlineData(11, false, UploadType.Chunked, true)]
+        [InlineData(11, true, UploadType.Chunked, true)]
         // ReSharper disable once InconsistentNaming
-        public async Task put_object_multipart(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
+        public async Task put_object_multipart(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType, bool noAsciiDbName)
         {
-            await PutObject(sizeInMB, testBlobKeyAsFolder, uploadType);
+            await PutObject(sizeInMB, testBlobKeyAsFolder, uploadType, noAsciiDbName);
         }
 
         // ReSharper disable once InconsistentNaming
-        private async Task PutObject(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
+        private async Task PutObject(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType, bool noAsciiDbName)
         {
             var settings = GetS3Settings();
             var blobs = GenerateBlobNames(settings, 1, out _);
             Assert.Equal(1, blobs.Count);
-            var key = $"{blobs[0]}";
-            if (testBlobKeyAsFolder)
-                key += "/";
+            var key = "";
 
             var progress = new Progress();
             using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, progress))
@@ -114,8 +116,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 client.MaxUploadPutObject = new Sparrow.Size(10, SizeUnit.Megabytes);
                 client.MinOnePartUploadSizeLimit = new Sparrow.Size(7, SizeUnit.Megabytes);
 
+                var property1 = "property1";
+                var property2 = "property2";
                 var value1 = Guid.NewGuid().ToString();
                 var value2 = Guid.NewGuid().ToString();
+                if (noAsciiDbName)
+                {
+                    string dateStr = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+                    key = $"{dateStr}.ravendb-żżżרייבן-A-backup/{dateStr}.ravendb-full-backup";
+                    property1 = "Description-żżרייבן";
+                    value1 = "ravendb-żżżרייבן-A-backup";
+                }
+                else
+                {
+                    key = $"{blobs[0]}";
+                }
+                if (testBlobKeyAsFolder)
+                    key += "/";
+
 
                 var sb = new StringBuilder();
                 for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
@@ -129,11 +147,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     streamLength = memoryStream.Length;
                     client.PutObject(key,
                         memoryStream,
-                        new Dictionary<string, string>
-                        {
-                                {"property1", value1},
-                                {"property2", value2}
-                        });
+                        new Dictionary<string, string> {{property1, value1}, {property2, value2}});
                 }
 
                 var @object = await client.GetObjectAsync(key);
@@ -142,16 +156,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var reader = new StreamReader(@object.Data))
                     Assert.Equal(sb.ToString(), reader.ReadToEnd());
 
-                var property1 = @object.Metadata.Keys.Single(x => x.Contains("property1"));
-                var property2 = @object.Metadata.Keys.Single(x => x.Contains("property2"));
+                var property1check = @object.Metadata.Keys.Single(x => x.Contains(Uri.EscapeDataString(property1).ToLower()));
+                var property2check = @object.Metadata.Keys.Single(x => x.Contains(property2));
 
-                Assert.Equal(value1, @object.Metadata[property1]);
-                Assert.Equal(value2, @object.Metadata[property2]);
+                Assert.Equal(Uri.EscapeDataString(value1), @object.Metadata[property1check]);
+                Assert.Equal(value2, @object.Metadata[property2check]);
 
                 Assert.Equal(UploadState.Done, progress.UploadProgress.UploadState);
                 Assert.Equal(uploadType, progress.UploadProgress.UploadType);
                 Assert.Equal(streamLength, progress.UploadProgress.TotalInBytes);
                 Assert.Equal(streamLength, progress.UploadProgress.UploadedInBytes);
+            }
+        }
+
+        [AmazonS3Theory]
+        [InlineData(null)]
+        [InlineData("https://some-url.com")]
+        public void can_use_custom_region(string customUrl)
+        {
+            var settings = GetS3Settings();
+            settings.AwsRegionName = "fr-par";
+            settings.CustomServerUrl = customUrl;
+            using (new RavenAwsS3Client(settings, DefaultConfiguration))
+            {
             }
         }
 

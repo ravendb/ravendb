@@ -256,7 +256,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -286,7 +286,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task SplitSegmentSpecialCaseShouldWork()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var store = GetDocumentStore())
             {
@@ -351,7 +351,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -383,7 +383,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -409,7 +409,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -441,7 +441,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -473,7 +473,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -513,7 +513,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -538,7 +538,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -570,7 +570,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -600,7 +600,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task ShouldThrowEntriesWhenSegmentIsFull()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var store = GetDocumentStore())
             {
@@ -649,7 +649,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task ShouldTakeLowerValueOnReplicationConflictWhenDecrementOperation()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -741,7 +741,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task ShouldTakeHigherValueOnReplicationConflictWhenIncrementOperation()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -834,7 +834,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact(Skip = "RavenDB-17557")]
         public async Task ReplicationShouldNotCollapseWhenSegmentReachedCapacity()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -951,7 +951,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task ShouldMergeEntriesForIncrementalTimeSeries()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var store = GetDocumentStore())
             {
@@ -1002,7 +1002,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task ShouldMergeEntriesForIncrementalTimeSeries2()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var store = GetDocumentStore())
             {
@@ -1062,7 +1062,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task ShouldMergeEntriesForIncrementalTimeSeries3()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var store = GetDocumentStore())
             {
@@ -1170,7 +1170,7 @@ namespace SlowTests.Client.TimeSeries
         [Fact]
         public async Task GetIncrementalTimeSeriesFullResultsShouldWork()
         {
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             using (var store = GetDocumentStore())
             {
@@ -1543,7 +1543,7 @@ namespace SlowTests.Client.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
