@@ -17,8 +17,8 @@ namespace FastTests.Client
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueryAsync_Simple(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -38,8 +38,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueryAsync_With_Where_Clause(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -65,8 +65,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueryAsync_By_Index(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -52,7 +52,7 @@ namespace SlowTests.Bugs.MapRedue
                                                           
                     session.SaveChanges();
                 }
-
+WaitForUserToContinueTheTest(store);
                 // index should return number of document equal to number of inserted
                 Assert.Equal(m_documentIds.Length,
                              NumberOfDocumentsInDbByIndex(store));

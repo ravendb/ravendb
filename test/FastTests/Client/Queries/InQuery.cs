@@ -14,7 +14,7 @@ namespace FastTests.Client.Queries
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryingUsingInShouldYieldDistinctResults(Options options)
         {
             using (var store = GetDocumentStore(options))

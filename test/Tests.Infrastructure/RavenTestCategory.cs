@@ -53,5 +53,6 @@ public enum RavenTestCategory : long
     Embedded = 1L << 38,
     ClusterTransactions = 1L << 39,
     Highlighting = 1L << 40,
-    Smuggler = 1L << 41
+    Smuggler = 1L << 41,
+    Lucene = 1L << 42
 }

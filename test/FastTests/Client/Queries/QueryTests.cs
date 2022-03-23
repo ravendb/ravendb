@@ -43,8 +43,8 @@ namespace FastTests.Client.Queries
             public bool IsDeleted { get; set; }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -93,8 +93,8 @@ namespace FastTests.Client.Queries
                 }
             }
         }
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -136,8 +136,8 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public  void Query_CreateClausesForQueryDynamically(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -182,8 +182,8 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -234,8 +234,8 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -262,8 +262,8 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(Options options)
         {
             using var store = GetDocumentStore(options);

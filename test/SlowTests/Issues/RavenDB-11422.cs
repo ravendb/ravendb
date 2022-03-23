@@ -111,7 +111,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void VerifyIndexScore_Map_SimpleProjection_AutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -201,7 +201,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void VerifyIndexScore_MapReduce_SimpleProjection_AutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -346,8 +346,8 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void VerifyIndexScore_Map_JsProjection_AutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -215,8 +215,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_use_custom_method_in_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -237,8 +237,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
         public void Will_throw_on_invalid_return_type(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -255,8 +255,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
         public void Will_throw_on_invalid_parameter_count(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -265,8 +265,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
         public void Can_use_arrow_function_with_static_parameter_in_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -287,8 +287,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
         public void Can_use_arrow_function_with_dynamic_parameter_in_index(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -309,8 +309,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
         public void Can_use_arrow_function_with_dynamic_and_static_parameter_in_index(Options options)
         {
             using (var store = GetDocumentStore(options))

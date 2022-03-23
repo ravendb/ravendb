@@ -14,8 +14,8 @@ namespace FastTests.Issues
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseLongCount(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -47,8 +47,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUseLongCountAsync(Options options)
         {
             using (var store = GetDocumentStore(options))

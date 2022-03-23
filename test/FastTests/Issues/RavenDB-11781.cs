@@ -16,7 +16,7 @@ namespace FastTests.Issues
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanDeployMapReduceIndexWithOutputReduceToCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -38,7 +38,7 @@ namespace FastTests.Issues
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanDeployMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

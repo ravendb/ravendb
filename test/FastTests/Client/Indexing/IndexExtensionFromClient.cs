@@ -25,7 +25,7 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
         public void CanCompileIndexWithExtensions(Options options)
@@ -46,8 +46,8 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUpdateIndexExtensions(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -89,8 +89,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_List(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -130,8 +130,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_Dictionary(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -185,8 +185,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_ICollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -230,8 +230,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_Hashset(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -275,8 +275,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_ListOfUsers(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -331,8 +331,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_Array(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -387,8 +387,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_MyList(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -428,8 +428,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_MyEnumerable(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -469,8 +469,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_DateTime(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -569,8 +569,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithIEnumerableReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -619,8 +619,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithIEnumerableParameterAndIEnumerableReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -663,8 +663,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithUintReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -702,8 +702,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithListReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -749,8 +749,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithHashsetReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -796,8 +796,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithArrayReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -844,8 +844,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithMyListReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -890,8 +890,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithMyEnumerableReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -936,8 +936,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithListParameterAndListReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -988,8 +988,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithValueTypeListReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1030,8 +1030,8 @@ namespace My.Crazy.Namespace
         }
 
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithVoidReturnType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1065,8 +1065,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithXmlComments(Options options)
         {
             using (var store = GetDocumentStore(options))

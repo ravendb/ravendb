@@ -308,7 +308,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             {                
                 var query = MultiTermBoostingMatch<InTermProvider>.Create(searcher, 
-                    new InTermProvider(searcher, "Content1", new List<string>() { "0", "1", "2", "3" }), 
+                    new InTermProvider(searcher, "Content1", new List<string>() { "0", "1", "2", "3" }, Content1), 
                     default(TermFrequencyScoreFunction));
                 var sortedMatch = searcher.OrderByScore(query);
 

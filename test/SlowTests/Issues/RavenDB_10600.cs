@@ -15,8 +15,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Replication)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task TransformScriptShouldWorkWhenAttachmentsArePresentAndShouldBeAbleToSkipDocumentsUsingThrow(Options options)
         {
             var exportPath = Path.Combine(NewDataPath(forceCreateDir: true), "export.ravendbdump");

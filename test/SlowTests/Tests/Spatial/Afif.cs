@@ -138,12 +138,8 @@ namespace SlowTests.Tests.Spatial
                 }
             }
             
-            [RavenTheory(RavenTestCategory.Spatial)]
-            // [RavenData(CultureInfo.InvariantCulture, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-            // [RavenData(CultureInfo.CurrentCulture, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-            // [RavenData(new CultureInfo("NL"), SearchEngineMode = RavenSearchEngineMode.Lucene)] // Uses comma instead of point: 12,34
-            // [RavenData(new CultureInfo("tr-TR"), SearchEngineMode = RavenSearchEngineMode.Lucene)] // "The Turkey Test"
-            [CultureTheory]
+            [Theory]
+            [CriticalCultures]
             public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)
             {
                 Initialize();

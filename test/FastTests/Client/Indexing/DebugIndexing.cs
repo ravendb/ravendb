@@ -27,8 +27,8 @@ namespace FastTests.Client.Indexing
             public string Name { get; set; }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueriesRunning(Options options)
         {
             using (var store = GetDocumentStore(options))

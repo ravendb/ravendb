@@ -39,8 +39,8 @@ namespace FastTests.Client
   
          */
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void RawQuery_with_transformation_function_should_work(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -122,8 +122,8 @@ namespace FastTests.Client
             }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void LinqQuery_with_transformation_function_should_work(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -199,8 +199,8 @@ namespace FastTests.Client
         }
 
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Query_Simple(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -220,8 +220,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Query_With_Where_Clause(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -252,8 +252,8 @@ namespace FastTests.Client
             }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork(Options options)
         {
             const string constStrToQuery = "Tarzan";
@@ -369,8 +369,8 @@ namespace FastTests.Client
             public string[] StrList { get; set; }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueryWithWhere_WhenUsingStringEqualsWhitParameterExpression_ShouldWork(Options options)
         {
             const string constStrToQuery = "Tarzan";
@@ -481,8 +481,8 @@ namespace FastTests.Client
             Assert.Equal(queryResult.Count, 1);
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task QueryWithWhere_WhenUsingNotSupportedExpressions_ShouldThrowNotSupported(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -543,8 +543,8 @@ namespace FastTests.Client
             });
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void Query_With_Customize(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -579,8 +579,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Query_Long_Request(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -601,8 +601,8 @@ namespace FastTests.Client
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Query_By_Index(Options options)
         {
             using (var store = GetDocumentStore(options))

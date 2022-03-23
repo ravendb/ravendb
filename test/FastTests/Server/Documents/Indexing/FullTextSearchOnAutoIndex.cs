@@ -15,8 +15,8 @@ namespace FastTests.Server.Documents.Indexing
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUseFullTextSearchInAutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -59,8 +59,8 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUseFullTextSearchInAutoMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

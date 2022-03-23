@@ -30,8 +30,8 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanSearchByMultipleTerms(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -86,8 +86,8 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanSearchByMultipleFields(Options options)
         {
             using (var store = GetDocumentStore(options))

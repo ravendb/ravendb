@@ -16,8 +16,8 @@ namespace FastTests.Issues
         }
 
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void MissingFieldsDataShouldBeCleared(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -53,8 +53,8 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void MissingFieldsDataShouldBeEvicted(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -101,8 +101,8 @@ namespace FastTests.Issues
             }
         }
         
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void MissingFieldDataShouldNotBeStoredDuringStreamingQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

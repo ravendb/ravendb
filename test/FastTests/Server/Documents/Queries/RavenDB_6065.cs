@@ -18,8 +18,8 @@ namespace FastTests.Server.Documents.Queries
             public int Age { get; set; }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryWithOrOperators(Options options)
         {
             using (var store = GetDocumentStore(options))

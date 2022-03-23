@@ -77,7 +77,7 @@ namespace SlowTests.Core.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseAsDocumentToIndexAllDocumentFields(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -17,7 +17,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Put(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -56,7 +56,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Put_And_Replace(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -110,7 +110,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Put_Replace_And_Back_To_Original(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -177,7 +177,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_start_and_stop_index(Options options)
         {
             using (var store = GetDocumentStore(options))

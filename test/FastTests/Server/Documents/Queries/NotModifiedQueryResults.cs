@@ -15,9 +15,9 @@ namespace FastTests.Server.Documents.Queries
         public NotModifiedQueryResults(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Theory]
-        [RavenData]
+        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -113,8 +113,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanStreamQueryResult(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -335,8 +335,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanGetSuggestions(Options options)
         {
             using (var store = GetDocumentStore(options))
