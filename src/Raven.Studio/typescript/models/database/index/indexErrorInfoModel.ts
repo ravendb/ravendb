@@ -49,9 +49,8 @@ class indexErrorInfoModel {
             const errorsDto = this.indexErrorsCountDto();
 
             if (errorsDto) {
-                for (let i = 0; i < errorsDto.length; i++) {
-                    const countToAdd = errorsDto[i].Errors.reduce((count, val) => val.NumberOfErrors + count, 0);
-                    count += countToAdd;
+                for (let error of errorsDto) {
+                    count += error.Errors.reduce((count, val) => val.NumberOfErrors + count, 0);
                 }
             }
 
@@ -72,15 +71,9 @@ class indexErrorInfoModel {
             return this.totalErrorCount() ? "state-danger" : "state-success";
         });
 
-        this.gridId = ko.pureComputed(() => `${this.location().nodeTag}${this.location().shardNumber || ""}`);
+        this.gridId = ko.pureComputed(() => `${this.location().nodeTag}-${this.location().shardNumber || ""}`);
         
-        this.clearErrorsBtnTooltip = ko.pureComputed(() => {
-            if (this.location().shardNumber !== undefined) {
-                return "Click to clear errors from this Shard";
-            } else {
-                return "Click to clear errors from this Node only";
-            }
-        });
+        this.clearErrorsBtnTooltip = ko.pureComputed(() => "Click to clear errors from " + generalUtils.formatLocation(this.location()));
         
         this.filteredIndexErrors.subscribe(() => {
             if (!this.gridWasInitialized) {
@@ -105,7 +98,7 @@ class indexErrorInfoModel {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.dbName()), "Document Id", "20%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.dbName()), "Document ID", "20%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
@@ -121,8 +114,8 @@ class indexErrorInfoModel {
             ]
         );
 
-        const gridTooltipClass = `.js-index-errors-tooltip${this.gridId()}`;
-        const gridContainerSelector = `.virtual-grid-class${this.gridId()}`;
+        const gridTooltipClass = `.js-index-errors-tooltip-${this.gridId()}`;
+        const gridContainerSelector = `.virtual-grid-class-${this.gridId()}`;
         
         this.columnPreview.install(gridContainerSelector, gridTooltipClass,
             (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject,

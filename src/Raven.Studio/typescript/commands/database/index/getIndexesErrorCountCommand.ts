@@ -1,6 +1,7 @@
 ﻿import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import genUtils from "common/generalUtils";
 
 class getIndexesErrorCountCommand extends commandBase {
 
@@ -9,10 +10,10 @@ class getIndexesErrorCountCommand extends commandBase {
     }
     
     execute(): JQueryPromise<{Results: indexErrorsCount[]}> {
-        const args = { ...this.location };
+        const args = this.location;
         const url = endpoints.databases.studioIndex.studioIndexesErrorsCount;
 
-        const locationText = `Node: ${this.location.nodeTag}` + (this.location.shardNumber !== undefined ? ` and Shard ${this.location.shardNumber}` : '');
+        const locationText = genUtils.formatLocation(this.location);
             
         return this.query<any>(url, args, this.db)
             .fail((result: JQueryXHR) => this.reportError(`Failed to get index errors count for ${locationText}`,

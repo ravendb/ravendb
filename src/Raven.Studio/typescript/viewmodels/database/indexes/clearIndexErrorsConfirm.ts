@@ -14,6 +14,10 @@ class clearIndexErrorsConfirm extends dialogViewModelBase {
     indexesToClear = ko.observableArray<string>();
     clearAllIndexes = ko.observable<boolean>();
     
+    spinners = {
+        clear: ko.observable<boolean>(false)
+    }
+    
     constructor(indexesToClear: Array<string>, private db: database, private locations: databaseLocationSpecifier[]) {
         super();
         this.indexesToClear(indexesToClear);
@@ -33,15 +37,23 @@ class clearIndexErrorsConfirm extends dialogViewModelBase {
         }
     }
 
-    clearIndexes() {
-        const arrayOfTasks = this.locations.map(location => this.clearTask(location));
-                
-        $.when<any>(...arrayOfTasks)
-            .always(() => {
-                messagePublisher.reportSuccess("Done clearing indexing errors.");
-                this.clearErrorsTask.resolve(true);
-                dialog.close(this);
-            });
+    async clearIndexes() {
+        const arrayOfTasks = this.locations.map(location => this.clearTask(location).promise());
+        
+        this.spinners.clear(true);
+        
+        const results = await Promise.allSettled(arrayOfTasks);
+        const rejectedCount = results.filter(x => x.status === "rejected").length;
+
+        if (rejectedCount === 0) {
+            messagePublisher.reportSuccess("Done clearing indexing errors.");
+        } else {
+            messagePublisher.reportError("Failed to clean indexes errors (" + rejectedCount + " / " + results.length + " failed)");
+        }
+        this.spinners.clear(false);
+
+        this.clearErrorsTask.resolve(true);
+        dialog.close(this);
     }
 
     private clearTask(location: databaseLocationSpecifier): JQueryPromise<any> {

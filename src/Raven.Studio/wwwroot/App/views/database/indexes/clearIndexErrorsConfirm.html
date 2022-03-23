@@ -25,7 +25,10 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="button" class="btn btn-danger" data-bind="click: clearIndexes">Clear Index Errors</button>
+            <button type="button" class="btn btn-danger" data-bind="click: clearIndexes, css: { 'btn-spinner': spinners.clear }">
+                <i class="icon-trash"></i>
+                <span>Clear Index Errors</span>
+            </button>
         </div>
     </div>
 </div>
