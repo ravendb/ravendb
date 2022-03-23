@@ -3,21 +3,15 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
-using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Smuggler.Migration;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -31,26 +25,15 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
-            var isReplicated = GetBoolValueQueryString("is-replicated", required: false);
-            if (isReplicated.HasValue && isReplicated.Value)
-            {
-                await HandleLegacyIndexesAsync();
-                return;
-            }
-
-            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: true, Database.ServerStore.ContextPool, Database.Name, Database.IndexStore.Create.CreateIndexAsync));
+            using (var processor = new AdminIndexHandlerProcessorForStaticPut(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutJavaScript()
         {
-            if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && Database.Configuration.Indexing.RequireAdminToDeployJavaScriptIndexes)
-            {
-                if (feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: true) == false)
-                    throw new AuthorizationException("Deployments of JavaScript indexes has been restricted to admin users only");
-            }
-
-            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: false, Database.ServerStore.ContextPool, Database.Name, Database.IndexStore.Create.CreateIndexAsync));
+            using (var processor = new AdminIndexHandlerProcessorForJavaScriptPut(this))
+                await processor.ExecuteAsync();
         }
 
         internal static async Task PutInternal(PutIndexParameters parameters)
@@ -149,22 +132,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             public Func<(JsonOperationContext, List<long>), Task> WaitForIndexNotification { get; }
         }
 
-        private async Task HandleLegacyIndexesAsync()
-        {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
-            await using (var stream = new ArrayStream(RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
-            using (var source = new StreamSource(stream, jsonOperationContext, Database.Name))
-            {
-                var destination = new DatabaseDestination(Database);
-                var options = new DatabaseSmugglerOptionsServerSide
-                {
-                    OperateOnTypes = DatabaseItemType.Indexes
-                };
 
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options);
-                await smuggler.ExecuteAsync();
-            }
-        }
 
         public static bool IsLocalRequest(HttpContext context)
         {
