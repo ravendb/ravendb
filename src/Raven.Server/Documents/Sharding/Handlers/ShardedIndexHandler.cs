@@ -11,7 +11,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedIndexHandler : ShardedRequestHandler
+    public class ShardedIndexHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/indexes", "GET")]
         public async Task GetAll()
@@ -67,12 +67,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (shard == null)
                 throw new InvalidOperationException("In a sharded environment you must provide a shard id");
 
-            if (ShardedContext.RequestExecutors.Length <= shard)
+            if (DatabaseContext.RequestExecutors.Length <= shard)
                 throw new InvalidOperationException($"Non existing shard id, {shard}");
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var executor = ShardedContext.RequestExecutors[shard.Value];
+                var executor = DatabaseContext.RequestExecutors[shard.Value];
                 var command = new GetIndexPerformanceStatisticsOperation.GetIndexPerformanceStatisticsCommand(null, (int)shard.Value);
                 await executor.ExecuteAsync(command, context);
 
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/indexes/history", "GET")]
         public async Task GetIndexHistory()
         {
-            using (var processor = new IndexHandlerProcessorForGetIndexHistory<TransactionOperationContext>(this, ContextPool, ShardedContext.DatabaseName))
+            using (var processor = new IndexHandlerProcessorForGetIndexHistory<TransactionOperationContext>(this, ContextPool, DatabaseContext.DatabaseName))
                 await processor.ExecuteAsync();
         }
     }

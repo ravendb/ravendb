@@ -2356,7 +2356,7 @@ namespace Raven.Server
             switch (result.DatabaseStatus)
             {
                 case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
-                    tcp.ShardedContext = result.ShardedContext;
+                    tcp.DatabaseContext = result.DatabaseContext;
                     break;
                 case DatabasesLandlord.DatabaseSearchResult.Status.Database:
                     var databaseLoadingTask = result.DatabaseTask;

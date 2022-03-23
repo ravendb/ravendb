@@ -16,12 +16,12 @@ namespace Raven.Server.Documents.Sharding.Operations
 {
     public readonly struct ShardedExportOperation : IShardedOperation<BlittableJsonReaderObject>
     {
-        private readonly ShardedRequestHandler _handler;
+        private readonly ShardedDatabaseRequestHandler _handler;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         private readonly AsyncBlittableJsonTextWriter _writer;
         private readonly long _operationId;
 
-        public ShardedExportOperation(ShardedRequestHandler handler, long operationId, DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer)
+        public ShardedExportOperation(ShardedDatabaseRequestHandler handler, long operationId, DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer)
         {
             _handler = handler;
             _options = options;
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             private readonly DatabaseSmugglerOptionsServerSide _options;
             private readonly AsyncBlittableJsonTextWriter _writer;
 
-            public ShardedExportCommand(ShardedRequestHandler handler, long operationId, DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer) : 
+            public ShardedExportCommand(ShardedDatabaseRequestHandler handler, long operationId, DatabaseSmugglerOptionsServerSide options, AsyncBlittableJsonTextWriter writer) : 
                 base(handler, content: null)
             {
                 _operationId = operationId;

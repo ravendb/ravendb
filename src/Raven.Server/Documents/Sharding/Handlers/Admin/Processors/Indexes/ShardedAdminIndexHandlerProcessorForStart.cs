@@ -7,9 +7,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
-internal class ShardedAdminIndexHandlerProcessorForStart : AbstractAdminIndexHandlerProcessorForStart<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedAdminIndexHandlerProcessorForStart : AbstractAdminIndexHandlerProcessorForStart<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminIndexHandlerProcessorForStart([NotNull] ShardedRequestHandler requestHandler)
+    public ShardedAdminIndexHandlerProcessorForStart([NotNull] ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }

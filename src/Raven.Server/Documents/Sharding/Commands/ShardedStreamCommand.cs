@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Sharding.Commands
 {
     public abstract class ShardedStreamCommand : ShardedCommand
     {
-        protected ShardedStreamCommand(ShardedRequestHandler handler, BlittableJsonReaderObject content) : base(handler, Commands.Headers.IfMatch, content)
+        protected ShardedStreamCommand(ShardedDatabaseRequestHandler handler, BlittableJsonReaderObject content) : base(handler, Commands.Headers.IfMatch, content)
         {
         }
 

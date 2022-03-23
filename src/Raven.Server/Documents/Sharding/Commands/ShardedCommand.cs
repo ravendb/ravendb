@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Sharding.Commands
             Result = response;
         }
 
-        public ShardedCommand(ShardedRequestHandler handler, Headers headers, BlittableJsonReaderObject content = null) : base(handler, headers, content)
+        public ShardedCommand(ShardedDatabaseRequestHandler handler, Headers headers, BlittableJsonReaderObject content = null) : base(handler, headers, content)
         {
         }
     }

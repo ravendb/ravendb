@@ -8,9 +8,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorForProgress<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedIndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorForProgress<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexHandlerProcessorForProgress([NotNull] ShardedRequestHandler requestHandler)
+    public ShardedIndexHandlerProcessorForProgress([NotNull] ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }

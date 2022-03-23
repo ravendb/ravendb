@@ -10,9 +10,9 @@ namespace Raven.Server.Documents.Indexes.Sharding;
 
 public class ShardedIndexDeleteProcessor : AbstractIndexDeleteProcessor
 {
-    private readonly ShardedContext _context;
+    private readonly ShardedDatabaseContext _context;
 
-    public ShardedIndexDeleteProcessor([NotNull] ShardedContext context, ServerStore serverStore)
+    public ShardedIndexDeleteProcessor([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         : base(serverStore)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));

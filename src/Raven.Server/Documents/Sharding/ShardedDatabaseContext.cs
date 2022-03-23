@@ -20,7 +20,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Sharding
 {
-    public partial class ShardedContext : IDisposable
+    public partial class ShardedDatabaseContext : IDisposable
     {
         public const int NumberOfShards = 1024 * 1024;
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Sharding
 
         public int[] FullRange;
 
-        public ShardedContext(ServerStore serverStore, DatabaseRecord record)
+        public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to refresh all this in case we will add/remove new shard");
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Sharding
             UpdateConfiguration(record.Settings);
 
             Indexes = new ShardedIndexesCache(this, serverStore);
-            _logger = LoggingSource.Instance.GetLogger<ShardedContext>(DatabaseName);
+            _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Sharding
         public void Dispose()
         {
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Disposing {nameof(ShardedContext)} of {DatabaseName}.");
+                _logger.Info($"Disposing {nameof(ShardedDatabaseContext)} of {DatabaseName}.");
 
             _databaseShutdown.Cancel();
 

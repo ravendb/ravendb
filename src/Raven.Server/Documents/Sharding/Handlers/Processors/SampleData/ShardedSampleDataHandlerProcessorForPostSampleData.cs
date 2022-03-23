@@ -10,15 +10,15 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
 {
-    internal class ShardedSampleDataHandlerProcessorForPostSampleData : AbstractSampleDataHandlerProcessorForPostSampleData<ShardedRequestHandler, TransactionOperationContext>
+    internal class ShardedSampleDataHandlerProcessorForPostSampleData : AbstractSampleDataHandlerProcessorForPostSampleData<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedSampleDataHandlerProcessorForPostSampleData([NotNull] ShardedRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedSampleDataHandlerProcessorForPostSampleData([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
 
         protected override string GetDatabaseName()
         {
-            return RequestHandler.ShardedContext.DatabaseName;
+            return RequestHandler.DatabaseContext.DatabaseName;
         }
 
         protected override async ValueTask WaitForIndexNotificationAsync(long index)
@@ -28,10 +28,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
 
         protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes)
         {
-            var record = RequestHandler.ShardedContext.DatabaseRecord;
+            var record = RequestHandler.DatabaseContext.DatabaseRecord;
 
             var smuggler = new ShardedDatabaseSmuggler(source, context, record,
-                RequestHandler.Server.ServerStore, RequestHandler.ShardedContext, RequestHandler,
+                RequestHandler.Server.ServerStore, RequestHandler.DatabaseContext, RequestHandler,
                 options: new DatabaseSmugglerOptionsServerSide
                 {
                     OperateOnTypes = operateOnTypes, 

@@ -5,7 +5,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedDatabaseNotificationCenterHandler : ShardedRequestHandler
+    public class ShardedDatabaseNotificationCenterHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/notification-center/watch", "GET")]
         public async Task Get()

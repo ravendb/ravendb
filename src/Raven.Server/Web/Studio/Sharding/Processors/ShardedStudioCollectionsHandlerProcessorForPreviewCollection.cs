@@ -22,9 +22,9 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<ShardedRequestHandler>
+public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<ShardedDatabaseRequestHandler>
 {
-    private readonly ShardedRequestHandler _requestHandler;
+    private readonly ShardedDatabaseRequestHandler _requestHandler;
     private IDisposable _releaseContext;
 
     private JsonOperationContext _context;
@@ -33,7 +33,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     private CombinedReadContinuationState _combinedReadState;
 
-    public ShardedStudioCollectionsHandlerProcessorForPreviewCollection(ShardedRequestHandler requestHandler)
+    public ShardedStudioCollectionsHandlerProcessorForPreviewCollection(ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler)
     {
         _requestHandler = requestHandler;
@@ -49,7 +49,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         var op = new ShardedCollectionPreviewOperation(RequestHandler, _continuationToken, _context);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-        _combinedReadState = await result.InitializeAsync(_requestHandler.ShardedContext, _requestHandler.AbortRequestToken);
+        _combinedReadState = await result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
     }
 
     protected override JsonOperationContext GetContext()
@@ -73,7 +73,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     protected override async ValueTask<long> GetTotalResultsAsync()
     {
-        var result = await _requestHandler.ShardedContext.Streaming.ReadCombinedLongAsync(_combinedReadState, nameof(PreviewCollectionResult.TotalResults));
+        var result = await _requestHandler.DatabaseContext.Streaming.ReadCombinedLongAsync(_combinedReadState, nameof(PreviewCollectionResult.TotalResults));
         var total = 0L;
         for (int i = 0; i < result.Span.Length; i++)
         {
@@ -92,11 +92,11 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
     }
 
     protected override IAsyncEnumerable<Document> GetDocumentsAsync() =>
-        RequestHandler.ShardedContext.Streaming.GetDocumentsAsync(_combinedReadState, _continuationToken);
+        RequestHandler.DatabaseContext.Streaming.GetDocumentsAsync(_combinedReadState, _continuationToken);
 
     protected override async ValueTask<List<string>> GetAvailableColumnsAsync()
     {
-        var result = await _requestHandler.ShardedContext.Streaming.ReadCombinedObjectAsync(_combinedReadState, nameof(PreviewCollectionResult.AvailableColumns), ShardResultConverter.BlittableToStringListConverter);
+        var result = await _requestHandler.DatabaseContext.Streaming.ReadCombinedObjectAsync(_combinedReadState, nameof(PreviewCollectionResult.AvailableColumns), ShardResultConverter.BlittableToStringListConverter);
         var total = new HashSet<string>();
         for (int i = 0; i < result.Span.Length; i++)
         {
@@ -119,10 +119,10 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     private readonly struct ShardedCollectionPreviewOperation : IShardedStreamableOperation
     {
-        private readonly ShardedRequestHandler _handler;
+        private readonly ShardedDatabaseRequestHandler _handler;
         private readonly ShardedPagingContinuation _token;
 
-        public ShardedCollectionPreviewOperation(ShardedRequestHandler handler, ShardedPagingContinuation token, JsonOperationContext context)
+        public ShardedCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, ShardedPagingContinuation token, JsonOperationContext context)
         {
             _handler = handler;
             _token = token;
@@ -135,7 +135,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         {
             public override bool IsReadRequest => true;
 
-            public ShardedCommandAsStream(ShardedRequestHandler handler, Headers headers) : base(handler, headers, content: null)
+            public ShardedCommandAsStream(ShardedDatabaseRequestHandler handler, Headers headers) : base(handler, headers, content: null)
             {
             }
 
@@ -155,7 +155,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         private class ShardedCollectionPreviewCommand : ShardedCommandAsStream
         {
-            public ShardedCollectionPreviewCommand(ShardedRequestHandler handler, int start, int pageSize) : base(handler, Documents.Sharding.Commands.Headers.IfNoneMatch)
+            public ShardedCollectionPreviewCommand(ShardedDatabaseRequestHandler handler, int start, int pageSize) : base(handler, Documents.Sharding.Commands.Headers.IfNoneMatch)
             {
                 var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
                 queryString[Web.RequestHandler.StartParameter] = start.ToString();

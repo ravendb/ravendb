@@ -12,9 +12,9 @@ public class ShardedPagingContinuation : ContinuationToken
 
     }
 
-    public ShardedPagingContinuation(ShardedContext shardedContext, int start, int pageSize)
+    public ShardedPagingContinuation(ShardedDatabaseContext databaseContext, int start, int pageSize)
     {
-        var shards = shardedContext.ShardCount;
+        var shards = databaseContext.ShardCount;
         var startPortion = start / shards;
         var remaining = start - startPortion * shards;
 

@@ -8,10 +8,10 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 {
-    internal class ShardedIndexHandlerProcessorForGetDatabaseIndexStatistics : AbstractIndexHandlerProcessorForGetDatabaseIndexStatistics<ShardedRequestHandler,
+    internal class ShardedIndexHandlerProcessorForGetDatabaseIndexStatistics : AbstractIndexHandlerProcessorForGetDatabaseIndexStatistics<ShardedDatabaseRequestHandler,
          TransactionOperationContext>
     {
-        public ShardedIndexHandlerProcessorForGetDatabaseIndexStatistics([NotNull] ShardedRequestHandler requestHandler) : base(requestHandler,
+        public ShardedIndexHandlerProcessorForGetDatabaseIndexStatistics([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler,
             requestHandler.ContextPool)
         {
         }

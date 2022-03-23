@@ -10,17 +10,17 @@ namespace Raven.Server.Documents.Sharding
 {
     public class ShardExecutor
     {
-        private readonly ShardedContext _shardedContext;
+        private readonly ShardedDatabaseContext _databaseContext;
         private Dictionary<int, Exception> _exceptions;
 
-        public ShardExecutor(ShardedContext shardedContext) 
+        public ShardExecutor(ShardedDatabaseContext databaseContext) 
         {
-            _shardedContext = shardedContext;
+            _databaseContext = databaseContext;
         }
 
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber)
         {
-            var executor = _shardedContext.RequestExecutors[shardNumber];
+            var executor = _databaseContext.RequestExecutors[shardNumber];
             using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 await executor.ExecuteAsync(command, ctx);
@@ -29,18 +29,18 @@ namespace Raven.Server.Documents.Sharding
         }
 
         public Task<TResult> ExecuteOneByOneForAllAsync<TResult>(IShardedOperation<TResult> operation)
-            => ExecuteForShardsAsync<OneByOneExecution, ThrowOnFailure, TResult>(new Memory<int>(_shardedContext.FullRange), operation);
+            => ExecuteForShardsAsync<OneByOneExecution, ThrowOnFailure, TResult>(new Memory<int>(_databaseContext.FullRange), operation);
 
         public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation)
-            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(new Memory<int>(_shardedContext.FullRange), operation);
+            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(new Memory<int>(_databaseContext.FullRange), operation);
 
         public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation)
-            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(new Memory<int>(_shardedContext.FullRange), operation);
+            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(new Memory<int>(_databaseContext.FullRange), operation);
 
         public Task<TResult> ExecuteForAllAsync<TExecutionMode, TFailureMode, TResult>(IShardedOperation<TResult> operation)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
-            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(new Memory<int>(_shardedContext.FullRange), operation);
+            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(new Memory<int>(_databaseContext.FullRange), operation);
 
         public Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation)
             where TExecutionMode : struct, IExecutionMode
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Sharding
                 commands[position].Shard = shard;
                 commands[position].Command = cmd;
 
-                var executor = _shardedContext.RequestExecutors[shard];
+                var executor = _databaseContext.RequestExecutors[shard];
                 var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 commands[position].ContextReleaser = release;
 

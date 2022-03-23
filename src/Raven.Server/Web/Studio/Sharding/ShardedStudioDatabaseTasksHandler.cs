@@ -5,7 +5,7 @@ using Raven.Server.Web.Studio.Sharding.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding;
 
-public class ShardedStudioDatabaseTasksHandler : ShardedRequestHandler
+public class ShardedStudioDatabaseTasksHandler : ShardedDatabaseRequestHandler
 {
     [RavenShardedAction("/databases/*/studio-tasks/indexes/configuration/defaults", "GET")]
     public async Task GetIndexDefaults()

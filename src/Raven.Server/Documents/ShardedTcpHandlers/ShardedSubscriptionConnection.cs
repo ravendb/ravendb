@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         public  AsyncManualResetEvent _mre;
 
         private ShardedSubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer buffer)
-            : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.ShardedContext.DatabaseName, tcpConnection.ShardedContext.DatabaseShutdown)
+            : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.DatabaseContext.DatabaseName, tcpConnection.DatabaseContext.DatabaseShutdown)
         {
             _mre = new AsyncManualResetEvent();
         }
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         */
         public static void SendShardedSubscriptionDocuments(ServerStore server, TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
         {
-            var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress($"ShardedSubscription_{tcpConnectionOptions.ShardedContext.DatabaseName}");
+            var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress($"ShardedSubscription_{tcpConnectionOptions.DatabaseContext.DatabaseName}");
             try
             {
                 var connection = new ShardedSubscriptionConnection(server, tcpConnectionOptions, tcpConnectionDisposable, buffer);
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             await base.ParseSubscriptionOptionsAsync();
 
             // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
-            _options.MaxDocsPerBatch = Math.Min(_options.MaxDocsPerBatch / TcpConnection.ShardedContext.ShardCount, _options.MaxDocsPerBatch);
+            _options.MaxDocsPerBatch = Math.Min(_options.MaxDocsPerBatch / TcpConnection.DatabaseContext.ShardCount, _options.MaxDocsPerBatch);
 
             // add to connections
             if (Connections.TryAdd(_options.SubscriptionName, this) == false)
@@ -142,10 +142,10 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Create));
 
-            for (int i = 0; i < TcpConnection.ShardedContext.ShardCount; i++)
+            for (int i = 0; i < TcpConnection.DatabaseContext.ShardCount; i++)
             {
-                var re = TcpConnection.ShardedContext.RequestExecutors[i];
-                var shard = ShardHelper.ToShardName(TcpConnection.ShardedContext.DatabaseName, i);
+                var re = TcpConnection.DatabaseContext.RequestExecutors[i];
+                var shard = ShardHelper.ToShardName(TcpConnection.DatabaseContext.DatabaseName, i);
                 var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
 
                 _shardWorkers.Add(shard, worker);
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         {
             throw new ShardedSubscriptionException(
                 $"Stopping sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' " +
-                $"for database '{TcpConnection.ShardedContext.DatabaseName}' because " +
+                $"for database '{TcpConnection.DatabaseContext.DatabaseName}' because " +
                 $"shard {string.Join(", ", result.Exceptions.Keys)} workers failed. " +
                 $"Additional Reason: {result.StoppingReason ?? string.Empty}",
                 result.Exceptions.Values);

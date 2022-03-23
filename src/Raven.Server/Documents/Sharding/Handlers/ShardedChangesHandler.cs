@@ -11,7 +11,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedChangesHandler : ShardedRequestHandler
+    public class ShardedChangesHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/changes", "GET")]
         public async Task GetChanges()

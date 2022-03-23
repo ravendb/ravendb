@@ -5,15 +5,15 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForSetLockMode : AbstractIndexHandlerProcessorForSetLockMode<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedIndexHandlerProcessorForSetLockMode : AbstractIndexHandlerProcessorForSetLockMode<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexHandlerProcessorForSetLockMode([NotNull] ShardedRequestHandler requestHandler) 
+    public ShardedIndexHandlerProcessorForSetLockMode([NotNull] ShardedDatabaseRequestHandler requestHandler) 
         : base(requestHandler, requestHandler.ContextPool)
     {
     }
 
     protected override AbstractIndexLockModeProcessor GetIndexLockModeProcessor()
     {
-        return RequestHandler.ShardedContext.Indexes.LockMode;
+        return RequestHandler.DatabaseContext.Indexes.LockMode;
     }
 }

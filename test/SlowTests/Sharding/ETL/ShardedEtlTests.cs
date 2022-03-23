@@ -159,7 +159,7 @@ loadToOrders(orderData);
 
                 var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
-                var shardedCtx = new ShardedContext(Server.ServerStore, dbRecord);
+                var shardedCtx = new ShardedDatabaseContext(Server.ServerStore, dbRecord);
                 var ids = new[] { "users/0", "users/4", "users/1" };
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -233,7 +233,7 @@ loadToOrders(orderData);
 
                 var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
-                var shardedCtx = new ShardedContext(Server.ServerStore, dbRecord);
+                var shardedCtx = new ShardedDatabaseContext(Server.ServerStore, dbRecord);
                 var ids = new[] { "users/0", "users/4", "users/1" };
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1141,7 +1141,7 @@ person.addCounter(loadCounter('down'));
 
                 var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
-                var shardedCtx = new ShardedContext(Server.ServerStore, dbRecord);
+                var shardedCtx = new ShardedDatabaseContext(Server.ServerStore, dbRecord);
                 var ids = new[] { "users/0", "users/4", "users/1" };
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

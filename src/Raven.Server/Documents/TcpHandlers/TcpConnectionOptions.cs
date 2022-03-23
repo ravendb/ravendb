@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public DocumentDatabase DocumentDatabase;
 
-        public ShardedContext ShardedContext;
-        public bool IsSharded => ShardedContext != null && DocumentDatabase == null;
+        public ShardedDatabaseContext DatabaseContext;
+        public bool IsSharded => DatabaseContext != null && DocumentDatabase == null;
 
         public TcpConnectionHeaderMessage.OperationTypes Operation;
 

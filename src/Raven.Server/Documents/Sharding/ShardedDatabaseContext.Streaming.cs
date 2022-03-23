@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding
 {
-    public partial class ShardedContext
+    public partial class ShardedDatabaseContext
     {
         public ShardedStreaming Streaming;
 

@@ -51,7 +51,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         _result = new ShardedQueryResult();
         _parent = parent;
         _query = query;
-        _isMapReduceIndex = _query.Metadata.IndexName != null && _parent.ShardedContext.Indexes.IsMapReduceIndex(_query.Metadata.IndexName);
+        _isMapReduceIndex = _query.Metadata.IndexName != null && _parent.DatabaseContext.Indexes.IsMapReduceIndex(_query.Metadata.IndexName);
         _isAutoMapReduceQuery = _query.Metadata.IsDynamic && _query.Metadata.IsGroupBy;
         _commands = new Dictionary<int, ShardedQueryCommand>();
 
@@ -61,7 +61,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         //    _filteredShardIndexes = new HashSet<int>();
         //    foreach (object item in filter)
         //    {
-        //        _filteredShardIndexes.Add(_parent.ShardedContext.GetShardIndex(_context, item.ToString()));
+        //        _filteredShardIndexes.Add(_parent.ShardedDatabaseContext.GetShardIndex(_context, item.ToString()));
         //    }
         //}
         //else
@@ -82,7 +82,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             // * For collection queries that specify ids, we can turn that into a set of loads that 
             //   will hit the known servers
 
-            (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_parent.ServerStore, _context.Allocator, _parent.ShardedContext.DatabaseName);
+            (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_parent.ServerStore, _context.Allocator, _parent.DatabaseContext.DatabaseName);
             if (ids != null)
             {
                 GenerateLoadByIdQueries(ids, _commands);
@@ -106,7 +106,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         // * For collection queries that specify startsWith by id(), we need to send to all shards
         // * For collection queries without any where clause, we need to send to all shards
         // * For indexes, we sent to all shards
-        for (int i = 0; i < _parent.ShardedContext.NumberOfShardNodes; i++)
+        for (int i = 0; i < _parent.DatabaseContext.NumberOfShardNodes; i++)
         {
             if (_filteredShardIndexes?.Contains(i) == false)
                 continue;
@@ -140,7 +140,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
         }
 
-        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_parent.ShardedContext.NumberOfShardNodes;
+        var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_parent.DatabaseContext.NumberOfShardNodes;
         if (limit > int.MaxValue) // overflow
             limit = int.MaxValue;
         modifiedArgs[limitToken] = limit;
@@ -181,7 +181,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
     {
         const string listParameterName = "p0";
                 
-        var shards = ShardLocator.GroupIdsByShardIndex(ids, _parent.ShardedContext);
+        var shards = ShardLocator.GroupIdsByShardIndex(ids, _parent.DatabaseContext);
         var sb = new StringBuilder();
         sb.Append("from '").Append(_query.Metadata.CollectionName).AppendLine("'")
             .AppendLine($"where id() in (${listParameterName})");
@@ -223,7 +223,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
 
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            var task = _parent.ShardedContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context);
+            var task = _parent.DatabaseContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context);
             tasks.Add(task);
         }
 
@@ -285,7 +285,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            tasks.Add(_parent.ShardedContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context));
+            tasks.Add(_parent.DatabaseContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context));
         }
 
         await Task.WhenAll(tasks);
@@ -436,7 +436,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
     {
         if (_isMapReduceIndex || _isAutoMapReduceQuery)
         {
-            var merger = new ShardedMapReduceQueryResultsMerger(_result.Results, _parent.ShardedContext.Indexes, _result.IndexName, _isAutoMapReduceQuery, _context);
+            var merger = new ShardedMapReduceQueryResultsMerger(_result.Results, _parent.DatabaseContext.Indexes, _result.IndexName, _isAutoMapReduceQuery, _context);
             _result.Results = merger.Merge();
         }
     }
@@ -449,8 +449,8 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             return;
 
         var fieldsToFetch = new FieldsToFetch(_query, null);
-        var retriever = new ShardedMapReduceResultRetriever(_parent.ShardedContext.Indexes.ScriptRunnerCache, _query, null, fieldsToFetch, null, _context, false, null, null, null,
-            _parent.ShardedContext.IdentitySeparator);
+        var retriever = new ShardedMapReduceResultRetriever(_parent.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, fieldsToFetch, null, _context, false, null, null, null,
+            _parent.DatabaseContext.IdentitySeparator);
 
         var currentResults = _result.Results;
         _result.Results = new List<BlittableJsonReaderObject>();

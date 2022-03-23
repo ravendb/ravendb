@@ -16,7 +16,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedQueriesHandler : ShardedRequestHandler
+    public class ShardedQueriesHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/queries", "POST")]
         public Task Post()
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                     var addSpatialProperties = GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
                     var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(),
-                        ShardedContext.QueryMetadataCache, database: null, addSpatialProperties);
+                        DatabaseContext.QueryMetadataCache, database: null, addSpatialProperties);
 
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {

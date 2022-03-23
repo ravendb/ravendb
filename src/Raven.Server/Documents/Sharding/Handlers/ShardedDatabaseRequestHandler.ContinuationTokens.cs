@@ -3,13 +3,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public partial class ShardedRequestHandler
+    public partial class ShardedDatabaseRequestHandler
     {
         public class ShardedContinuationTokensHandler
         {
-            private readonly ShardedRequestHandler _handler;
+            private readonly ShardedDatabaseRequestHandler _handler;
 
-            public ShardedContinuationTokensHandler(ShardedRequestHandler handler)
+            public ShardedContinuationTokensHandler(ShardedDatabaseRequestHandler handler)
             {
                 _handler = handler;
             }
@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var qToken = _handler.GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
                 var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ??
-                            new ShardedPagingContinuation(_handler.ShardedContext, _handler.GetStart(), _handler.GetPageSize());
+                            new ShardedPagingContinuation(_handler.DatabaseContext, _handler.GetStart(), _handler.GetPageSize());
                 return token;
             }
         }

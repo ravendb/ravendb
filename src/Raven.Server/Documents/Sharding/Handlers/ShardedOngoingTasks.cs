@@ -20,57 +20,57 @@ using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedOngoingTasksHandler : ShardedRequestHandler
+    public class ShardedOngoingTasksHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/connection-strings", "PUT")]
         public async Task PutConnectionString()
         {
-            await OngoingTasksHandler.PutConnectionString(ShardedContext.DatabaseName, this);
+            await OngoingTasksHandler.PutConnectionString(DatabaseContext.DatabaseName, this);
         }
 
 
         [RavenShardedAction("/databases/*/admin/connection-strings", "GET")]
         public async Task GetConnectionStrings()
         {
-            await OngoingTasksHandler.GetConnectionStrings(ShardedContext.DatabaseName, this);
+            await OngoingTasksHandler.GetConnectionStrings(DatabaseContext.DatabaseName, this);
 
         }
 
         [RavenShardedAction("/databases/*/admin/connection-strings", "DELETE")]
         public async Task RemoveConnectionString()
         {
-            await OngoingTasksHandler.RemoveConnectionString(ShardedContext.DatabaseName, this);
+            await OngoingTasksHandler.RemoveConnectionString(DatabaseContext.DatabaseName, this);
         }
 
         [RavenShardedAction("/databases/*/admin/etl", "PUT")]
         public async Task AddEtl()
         {
-            await OngoingTasksHandler.AddEtl(ShardedContext.DatabaseName, this);
+            await OngoingTasksHandler.AddEtl(DatabaseContext.DatabaseName, this);
         }
 
         [RavenShardedAction("/databases/*/admin/etl", "RESET")]
         public async Task ResetEtl()
         {
-            await OngoingTasksHandler.ResetEtl(ShardedContext.DatabaseName, this);
+            await OngoingTasksHandler.ResetEtl(DatabaseContext.DatabaseName, this);
         }
 
         [RavenShardedAction("/databases/*/admin/tasks", "DELETE")]
         public async Task DeleteOngoingTask()
         {
-            await OngoingTasksHandler.DeleteOngoingTask(ShardedContext.DatabaseName, this);
+            await OngoingTasksHandler.DeleteOngoingTask(DatabaseContext.DatabaseName, this);
         }
 
         [RavenShardedAction("/databases/*/admin/tasks/state", "POST")]
         public async Task ToggleTaskState()
         {
-            await OngoingTasksHandler.ToggleTaskState(ShardedContext.DatabaseName, this);
+            await OngoingTasksHandler.ToggleTaskState(DatabaseContext.DatabaseName, this);
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
         [RavenShardedAction("/databases/*/task", "GET")] 
         public async Task GetOngoingTaskInfo()
         {
-            if (ResourceNameValidator.IsValidResourceName(ShardedContext.DatabaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(DatabaseContext.DatabaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
             long key = 0;
             var taskId = GetLongQueryString("key", false);
@@ -87,9 +87,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 using (context.OpenReadTransaction())
                 {
-                    var record = ServerStore.Cluster.ReadDatabase(context, ShardedContext.DatabaseName);
+                    var record = ServerStore.Cluster.ReadDatabase(context, DatabaseContext.DatabaseName);
                     if (record == null)
-                        throw new DatabaseDoesNotExistException(ShardedContext.DatabaseName);
+                        throw new DatabaseDoesNotExistException(DatabaseContext.DatabaseName);
 
                     if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                         throw new ArgumentException($"Unknown task type: {type}", "type");
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                                 throw new ArgumentException($"ETL task '{name}' is sharded, you must specify the shard index, for example : '{name}$0'");
 
                             var cmd = new ShardedCommand(this, Headers.None);
-                            await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                            await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
 
                             HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                             HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;

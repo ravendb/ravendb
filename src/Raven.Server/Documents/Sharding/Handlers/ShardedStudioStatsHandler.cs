@@ -6,7 +6,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    internal class ShardedStudioStatsHandler : ShardedRequestHandler
+    internal class ShardedStudioStatsHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/studio/footer/stats", "GET")]
         public async Task GetFooterStats()

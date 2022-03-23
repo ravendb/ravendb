@@ -4,16 +4,15 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public partial class ShardedRequestHandler : RequestHandler
+    public partial class ShardedDatabaseRequestHandler : RequestHandler
     {
-        public ShardedContext ShardedContext;
+        public ShardedDatabaseContext DatabaseContext;
         public TransactionContextPool ContextPool;
         protected Logger Logger;
 
@@ -21,13 +20,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public string RelativeShardUrl;
         public string BaseShardUrl;
 
-        public ShardExecutor ShardExecutor => ShardedContext.ShardExecutor;
+        public ShardExecutor ShardExecutor => DatabaseContext.ShardExecutor;
 
         public ShardedContinuationTokensHandler ContinuationTokens;
 
         public ShardedClusterHandler Cluster;
 
-        public ShardedRequestHandler()
+        public ShardedDatabaseRequestHandler()
         {
             ContinuationTokens = new ShardedContinuationTokensHandler(this);
             Cluster = new ShardedClusterHandler(this);
@@ -36,19 +35,19 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public override void Init(RequestHandlerContext context)
         {
             base.Init(context);
-            ShardedContext = context.ShardedContext;
-            //TODO - sharding: We probably want to put it in the ShardedContext, not use the server one 
+            DatabaseContext = context.DatabaseContext;
+            //TODO - sharding: We probably want to put it in the ShardedDatabaseContext, not use the server one 
             ContextPool = context.RavenServer.ServerStore.ContextPool;
-            Logger = LoggingSource.Instance.GetLogger(ShardedContext.DatabaseName, GetType().FullName);
+            Logger = LoggingSource.Instance.GetLogger(DatabaseContext.DatabaseName, GetType().FullName);
 
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
-            if (topologyEtag.HasValue && ShardedContext.HasTopologyChanged(topologyEtag.Value))
+            if (topologyEtag.HasValue && DatabaseContext.HasTopologyChanged(topologyEtag.Value))
             {
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
             }
 
             var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
-            if (clientConfigurationEtag.HasValue && ShardedContext.HasClientConfigurationChanged(clientConfigurationEtag.Value))
+            if (clientConfigurationEtag.HasValue && DatabaseContext.HasClientConfigurationChanged(clientConfigurationEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
 
             var request = HttpContext.Request;
@@ -62,7 +61,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
         {
-            var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(ShardedContext.DatabaseName).ToList();
+            var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).ToList();
             if (dbs.Count == 0)
             {
                 await ServerStore.Cluster.WaitForIndexNotification(index);

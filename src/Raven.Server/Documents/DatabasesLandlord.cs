@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
-        private readonly ResourceCache<ShardedContext> _shardedDatabases = new ResourceCache<ShardedContext>();
+        private readonly ResourceCache<ShardedDatabaseContext> _shardedDatabases = new ResourceCache<ShardedDatabaseContext>();
 
         private readonly TimeSpan _concurrentDatabaseLoadTimeout;
         private readonly Logger _logger;
@@ -125,10 +125,10 @@ namespace Raven.Server.Documents
 
                             // we need to update this upon any shard topology change
                             // and upon migration completion
-                            if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var shardedContextTask))
+                            if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var databaseContextTask))
                             {
-                                var shardedContext = shardedContextTask.Result; // this isn't really a task
-                                shardedContext.UpdateDatabaseRecord(rawRecord);
+                                var databaseContext = databaseContextTask.Result; // this isn't really a task
+                                databaseContext.UpdateDatabaseRecord(rawRecord);
                             }
                         }
                         else
@@ -182,10 +182,10 @@ namespace Raven.Server.Documents
                 }
             }
         }
-        
-         private async Task HandleSpecificClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType,
-          TransactionOperationContext context,
-          RawDatabaseRecord rawRecord)
+
+        private async Task HandleSpecificClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType,
+         TransactionOperationContext context,
+         RawDatabaseRecord rawRecord)
         {
             if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                 return;
@@ -351,7 +351,7 @@ namespace Raven.Server.Documents
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 DeleteDatabase(dbName, deletionInProgress, record);
-            
+
             return true;
         }
 
@@ -583,11 +583,11 @@ namespace Raven.Server.Documents
 
             return false;
         }
-        
-         public struct DatabaseSearchResult
+
+        public struct DatabaseSearchResult
         {
             public Task<DocumentDatabase> DatabaseTask;
-            public ShardedContext ShardedContext;
+            public ShardedDatabaseContext DatabaseContext;
             public Status DatabaseStatus;
             public enum Status
             {
@@ -614,7 +614,7 @@ namespace Raven.Server.Documents
                 return new DatabaseSearchResult
                 {
                     DatabaseStatus = DatabaseSearchResult.Status.Sharded,
-                    ShardedContext = database.Result
+                    DatabaseContext = database.Result
                 };
             }
 
@@ -633,16 +633,32 @@ namespace Raven.Server.Documents
 
                 if (databaseRecord.Shards?.Length > 0)
                 {
-                    var shardedContext = new ShardedContext(_serverStore, databaseRecord);
-                    shardedContext = _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(shardedContext)).Result;
+                    var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
+                    var currentTask = _shardedDatabases.GetOrAdd(databaseName, newTask);
+
+                    ShardedDatabaseContext databaseContext;
+                    try
+                    {
+                        if (newTask == currentTask)
+                            currentTask.Start();
+
+                        databaseContext = currentTask.Result;
+                    }
+                    catch (Exception)
+                    {
+                        _shardedDatabases.TryRemove(databaseName, out _);
+
+                        throw;
+                    }
+
                     return new DatabaseSearchResult
                     {
                         DatabaseStatus = DatabaseSearchResult.Status.Sharded,
-                        ShardedContext = shardedContext
+                        DatabaseContext = databaseContext
                     };
                 }
             }
-            
+
             return new DatabaseSearchResult
             {
                 DatabaseStatus = DatabaseSearchResult.Status.Database,
@@ -838,28 +854,28 @@ namespace Raven.Server.Documents
 
         public void DeleteIfNeeded(StringSegment databaseName, bool fromReplication = false)
         {
-                try
+            try
+            {
+                using (_disposing.ReaderLock(_serverStore.ServerShutdown))
                 {
-                    using (_disposing.ReaderLock(_serverStore.ServerShutdown))
+                    if (_serverStore.ServerShutdown.IsCancellationRequested)
+                        return;
+
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
                     {
-                        if (_serverStore.ServerShutdown.IsCancellationRequested)
+                        if (rawRecord == null)
                             return;
 
-                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
-                        {
-                            if (rawRecord == null)
-                                return;
-
-                            ShouldDeleteDatabase(context, databaseName.Value, rawRecord, fromReplication);
-                        }
+                        ShouldDeleteDatabase(context, databaseName.Value, rawRecord, fromReplication);
                     }
                 }
-                catch
-                {
-                    // nothing we can do here
-                }
+            }
+            catch
+            {
+                // nothing we can do here
+            }
         }
 
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
@@ -867,8 +883,8 @@ namespace Raven.Server.Documents
 
         public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
-            return ShardHelper.IsShardedName(name) ? 
-                new ShardedDocumentDatabase(name, configuration, serverStore, addToInitLog) : 
+            return ShardHelper.IsShardedName(name) ?
+                new ShardedDocumentDatabase(name, configuration, serverStore, addToInitLog) :
                 new DocumentDatabase(name, configuration, serverStore, addToInitLog);
         }
 
@@ -1241,7 +1257,7 @@ namespace Raven.Server.Documents
                     RavenConfiguration currentConfiguration;
                     try
                     {
-                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
+                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true,
                             ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
                     }
                     catch (Exception e)
