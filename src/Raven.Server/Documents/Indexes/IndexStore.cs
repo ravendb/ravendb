@@ -2218,7 +2218,7 @@ namespace Raven.Server.Documents.Indexes
                 _defaultStaticDeploymentMode = store._documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode;
             }
 
-            public void AddIndex(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+            public async ValueTask AddIndexAsync(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
             {
                 if (_command == null)
                     _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
@@ -2228,7 +2228,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (definition is MapIndexDefinition indexDefinition)
                 {
-                    AddIndex(indexDefinition.IndexDefinition, source, createdAt, raftRequestId, revisionsToKeep);
+                    await AddIndexAsync(indexDefinition.IndexDefinition, source, createdAt, raftRequestId, revisionsToKeep);
                     return;
                 }
 
@@ -2240,12 +2240,12 @@ namespace Raven.Server.Documents.Indexes
                 _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
             }
 
-            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+            public async ValueTask AddIndexAsync(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
             {
                 if (_command == null)
                     _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
-                _store.Create.ValidateStaticIndex(definition);
+                await _store.Create.ValidateStaticIndexAsync(definition);
 
                 _command.Static.Add(definition);
             }

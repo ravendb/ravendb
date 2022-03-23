@@ -435,7 +435,7 @@ namespace Raven.Server.Web.System
                 return (newIndex, topology, nodeUrlsAddedTo);
             }
         }
-        
+
         private static void UpdateDatabaseTopology(DatabaseRecord databaseRecord, ClusterTopology clusterTopology, int replicationFactor)
         {
             var clusterTransactionId = Guid.NewGuid().ToBase64Unpadded();

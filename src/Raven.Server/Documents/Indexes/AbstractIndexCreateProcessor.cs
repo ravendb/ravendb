@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
@@ -36,13 +37,17 @@ public abstract class AbstractIndexCreateProcessor
 
     protected abstract IEnumerable<string> GetIndexNames();
 
+    protected abstract ValueTask<long> GetCollectionCountAsync(string collection);
+
+    protected abstract IEnumerable<IndexContext> GetIndexes();
+
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
-    public void ValidateStaticIndex(IndexDefinition definition)
+    public async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
     {
         if (IndexStore.IsValidIndexName(definition.Name, true, out var errorMessage) == false)
         {
-            throw new ArgumentException((errorMessage));
+            throw new ArgumentException(errorMessage);
         }
 
         ServerStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(definition);
@@ -65,8 +70,12 @@ public abstract class AbstractIndexCreateProcessor
 
         if (definition.Type == IndexType.MapReduce)
         {
-            // TODO [ppekrol]
-            //MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, databaseConfiguration, NeedToCheckIfCollectionEmpty(definition, databaseConfiguration));
+            await MapReduceIndex.ValidateReduceResultsCollectionNameAsync(
+                definition,
+                instance,
+                GetIndexes,
+                GetCollectionCountAsync,
+                NeedToCheckIfCollectionEmpty(definition, databaseConfiguration));
 
             if (string.IsNullOrEmpty(definition.PatternForOutputReduceToCollectionReferences) == false)
                 OutputReferencesPattern.ValidatePattern(definition.PatternForOutputReduceToCollectionReferences, out _);
@@ -78,7 +87,7 @@ public abstract class AbstractIndexCreateProcessor
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));
 
-        ValidateStaticIndex(definition);
+        await ValidateStaticIndexAsync(definition);
 
         var databaseName = GetDatabaseName();
         var databaseTime = GetDatabaseTime();

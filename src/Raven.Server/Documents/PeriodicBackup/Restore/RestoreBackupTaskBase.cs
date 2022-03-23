@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     try
                     {
                         index = Index.Open(indexPath, database, generateNewDatabaseId: true);
-        }
+                    }
                     catch (Exception e)
                     {
                         result.AddError($"Could not open index from path '{indexPath}'. Error: {e.Message}");

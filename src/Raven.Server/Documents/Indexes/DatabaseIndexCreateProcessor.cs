@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes;
 
@@ -36,6 +37,19 @@ public class DatabaseIndexCreateProcessor : AbstractIndexCreateProcessor
     {
         foreach (var index in _database.IndexStore.GetIndexes())
             yield return index.Name;
+    }
+
+    protected override ValueTask<long> GetCollectionCountAsync(string collection)
+    {
+        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+            return ValueTask.FromResult(_database.DocumentsStorage.GetCollection(collection, context).Count);
+    }
+
+    protected override IEnumerable<IndexContext> GetIndexes()
+    {
+        foreach (var index in _database.IndexStore.GetIndexes())
+            yield return index.ToIndexContext();
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)
