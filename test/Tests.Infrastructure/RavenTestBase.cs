@@ -982,9 +982,9 @@ namespace FastTests
                 _frozen = frozen;
             }
 
-            public static Options ForMode(RavenDatabaseMode mode, Options options = null)
+            public static Options ForMode(RavenDatabaseMode mode)
             {
-                options ??= new Options();
+                var options = new Options();
                 switch (mode)
                 {
                     case RavenDatabaseMode.Single:
