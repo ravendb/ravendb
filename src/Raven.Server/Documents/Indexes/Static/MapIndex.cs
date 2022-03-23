@@ -215,15 +215,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
             
-            if (configuration.Indexing.StaticIndexingEngineType is SearchEngineType.Corax)
-            {
-                if (staticIndex.HasDynamicFields)
-                    throw new IndexCreationException($"{nameof(Corax)} is not supporting dynamic fields yet. Please use Lucene engine.");
-                
-                if (staticIndex.HasBoostedFields)
-                    throw new IndexCreationException($"{nameof(Corax)} is not supporting boosting inside index yet. Please use Lucene engine.");
-            }
-            
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }
