@@ -8,6 +8,8 @@ using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes;
 
@@ -26,6 +28,8 @@ public class StaticIndexContext : IndexContext
         {
             MapIndex mapIndex => mapIndex._compiled,
             MapReduceIndex mapReduceIndex => mapReduceIndex._compiled,
+            MapTimeSeriesIndex mapTimeSeries => mapTimeSeries._compiled,
+            MapCountersIndex mapCountersIndex => mapCountersIndex._compiled,
             _ => throw new ArgumentOutOfRangeException(nameof(index))
         };
     }
