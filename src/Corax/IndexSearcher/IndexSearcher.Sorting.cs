@@ -22,18 +22,24 @@ public unsafe partial class IndexSearcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+    public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, SortingType sortingType = SortingType.Normal, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
     {
+        if (sortingType is SortingType.Alphanumerical)
+            return OrderBy<TInner, SortingMatch.AlphanumericAscendingMatchComparer>(in set, fieldId, entryFieldType, take);
+        
         return OrderBy<TInner, SortingMatch.AscendingMatchComparer>(in set, fieldId, entryFieldType, take);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+    public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, SortingType sortingType = SortingType.Normal, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
     {
+        if (sortingType is SortingType.Alphanumerical)
+            return OrderBy<TInner, SortingMatch.AlphanumericDescendingMatchComparer>(in set, fieldId, entryFieldType, take);
+        
         return OrderBy<TInner, SortingMatch.DescendingMatchComparer>(in set, fieldId, entryFieldType, take);
     }
 
@@ -47,16 +53,29 @@ public unsafe partial class IndexSearcher
             return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.AscendingMatchComparer>(this, set, new SortingMatch.AscendingMatchComparer(this, fieldId, entryFieldType),
                 take));
         }
-        else if (typeof(TComparer) == typeof(SortingMatch.DescendingMatchComparer))
+
+        if (typeof(TComparer) == typeof(SortingMatch.DescendingMatchComparer))
         {
             return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.DescendingMatchComparer>(this, set,
                 new SortingMatch.DescendingMatchComparer(this, fieldId, entryFieldType), take));
         }
-        else if (typeof(TComparer) == typeof(BoostingComparer))
+
+        if (typeof(TComparer) == typeof(BoostingComparer))
         {
             return SortingMatch.Create(new SortingMatch<TInner, BoostingComparer>(this, set, default(BoostingComparer), take));
         }
-        else if (typeof(TComparer) == typeof(SortingMatch.CustomMatchComparer))
+
+        if (typeof(TComparer) == typeof(SortingMatch.AlphanumericAscendingMatchComparer))
+        {
+            return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.AlphanumericAscendingMatchComparer>(this, set, new SortingMatch.AlphanumericAscendingMatchComparer(this, fieldId, entryFieldType), take));
+        }
+
+        if (typeof(TComparer) == typeof(SortingMatch.AlphanumericDescendingMatchComparer))
+        {
+            return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.AlphanumericDescendingMatchComparer>(this, set, new SortingMatch.AlphanumericDescendingMatchComparer(this, fieldId, entryFieldType), take));
+        }
+        
+        if (typeof(TComparer) == typeof(SortingMatch.CustomMatchComparer))
         {
             throw new ArgumentException($"Custom comparers can only be created through the {nameof(OrderByCustomOrder)}");
         }

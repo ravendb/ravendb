@@ -3,12 +3,19 @@ using System.Runtime.CompilerServices;
 
 namespace Corax.Queries
 {
+    public enum SortingType
+    {
+        Normal,
+        Alphanumerical
+    }
+    
     public enum MatchCompareFieldType
     {
         Sequence,
         Integer,
         Floating,
-        Score
+        Score,
+        Alphanumeric
     }
 
     public interface IMatchComparer

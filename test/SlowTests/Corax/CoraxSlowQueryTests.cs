@@ -12,6 +12,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -299,7 +300,41 @@ WaitForUserToContinueTheTest(store);
             WaitForUserToContinueTheTest(store);
         }
 
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void Alphanumerical(Options options)
+        {
+            var random = new Random(4532234);
+            var exampleStrings = new[] {"test", "sda", "asgsdf", "Sagaewds", "sdfw43tgdsfs", "asgfvadxce", "dsgwse3fdvcsd"};
+            using var coraxStore = GetDocumentStore(options);
+            using var luceneStore = GetDocumentStore();
+            
+            {
+                using var coraxBulk = coraxStore.BulkInsert();
+                using var luceneBulk = luceneStore.BulkInsert();
+                var data = Enumerable.Range(0, 100_000).Select(i => (i % 2  == 0 ? new SortingData($"{random.Next()}{exampleStrings[i % exampleStrings.Length]}") : new SortingData($"{exampleStrings[i % exampleStrings.Length]}{random.Next()}")));
+                foreach (var i in data)
+                {
+                    coraxBulk.Store(i);
+                    luceneBulk.Store(i);
+                }
+            }
+            {
+                using var coraxSession = coraxStore.OpenSession();
+                using var luceneSession = luceneStore.OpenSession();
 
+                var coraxResult = coraxSession.Query<SortingData>().OrderBy(p => p.data, OrderingType.AlphaNumeric).ToList();
+                var luceneResult = luceneSession.Query<SortingData>().OrderBy(p => p.data, OrderingType.AlphaNumeric).ToList();
+                
+                Assert.Equal(100_000, luceneResult.Count);
+                Assert.Equal(luceneResult.Count, coraxResult.Count);
+                for (var i = 0; i < luceneResult.Count; ++i)
+                    Assert.Equal(luceneResult[i], coraxResult[i]);
+            }
+        }
+
+        private record SortingData(string data);
+        
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void MaxSuggestionsShouldWork(Options options)
