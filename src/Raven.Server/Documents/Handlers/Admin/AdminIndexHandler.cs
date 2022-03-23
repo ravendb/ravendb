@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Raven.Client;
-using Raven.Client.Documents.Changes;
+﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -12,11 +6,8 @@ using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -34,121 +25,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (var processor = new AdminIndexHandlerProcessorForJavaScriptPut(this))
                 await processor.ExecuteAsync();
-        }
-
-        internal static async Task PutInternal(PutIndexParameters parameters)
-        {
-            using (parameters.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var createdIndexes = new List<PutIndexResult>();
-                var raftIndexIds = new List<long>();
-
-                var input = await context.ReadForMemoryAsync(parameters.RequestHandler.RequestBodyStream(), "Indexes");
-                if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
-                    ThrowRequiredPropertyNameInRequest("Indexes");
-
-                var raftRequestId = parameters.RequestHandler.GetRaftRequestIdFromQuery();
-                foreach (BlittableJsonReaderObject indexToAdd in indexes)
-                {
-                    var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
-                    indexDefinition.Name = indexDefinition.Name?.Trim();
-
-                    var source = IsLocalRequest(parameters.RequestHandler.HttpContext) ? Environment.MachineName : parameters.RequestHandler.HttpContext.Connection.RemoteIpAddress.ToString();
-
-                    if (LoggingSource.AuditLog.IsInfoEnabled)
-                    {
-                        var clientCert = parameters.RequestHandler.GetCurrentCertificate();
-
-                        var auditLog = LoggingSource.AuditLog.GetLogger(parameters.DatabaseName, "Audit");
-                        auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
-                    }
-
-                    if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
-                        throw new ArgumentException("Index must have a 'Maps' fields");
-
-                    indexDefinition.Type = indexDefinition.DetectStaticIndexType();
-
-                    // C# index using a non-admin endpoint
-                    if (indexDefinition.Type.IsJavaScript() == false && parameters.ValidatedAsAdmin == false)
-                    {
-                        throw new UnauthorizedAccessException($"Index {indexDefinition.Name} is a C# index but was sent through a non-admin endpoint using REST api, this is not allowed.");
-                    }
-
-                    if (indexDefinition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        throw new ArgumentException(
-                            $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
-                    }
-
-                    var index = await parameters.PutIndexTask(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
-                    raftIndexIds.Add(index);
-
-                    createdIndexes.Add(new PutIndexResult
-                    {
-                        Index = indexDefinition.Name,
-                        RaftCommandIndex = index
-                    });
-                }
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    parameters.RequestHandler.AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
-
-                if (parameters.WaitForIndexNotification != null)
-                    await parameters.WaitForIndexNotification((context, raftIndexIds));
-
-                parameters.RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, parameters.RequestHandler.ResponseBodyStream()))
-                {
-                    writer.WritePutIndexResponse(context, createdIndexes);
-                }
-            }
-        }
-
-        internal class PutIndexParameters
-        {
-            public PutIndexParameters(RequestHandler requestHandler, bool validatedAsAdmin, TransactionContextPool contextPool,
-                string databaseName, Func<IndexDefinition, string, string, ValueTask<long>> putIndexTask,
-                Func<(JsonOperationContext Context, List<long> RaftIndexIds), Task> waitForIndexNotification = null)
-            {
-                RequestHandler = requestHandler;
-                ValidatedAsAdmin = validatedAsAdmin;
-                ContextPool = contextPool;
-                DatabaseName = databaseName;
-                PutIndexTask = putIndexTask;
-                WaitForIndexNotification = waitForIndexNotification;
-            }
-
-            public RequestHandler RequestHandler { get; }
-
-            public bool ValidatedAsAdmin { get; }
-
-            public TransactionContextPool ContextPool { get; }
-
-            public string DatabaseName { get; }
-
-            public Func<IndexDefinition, string, string, ValueTask<long>> PutIndexTask { get; }
-
-            public Func<(JsonOperationContext, List<long>), Task> WaitForIndexNotification { get; }
-        }
-
-
-
-        public static bool IsLocalRequest(HttpContext context)
-        {
-            if (context.Connection.RemoteIpAddress == null && context.Connection.LocalIpAddress == null)
-            {
-                return true;
-            }
-            if (context.Connection.RemoteIpAddress.Equals(context.Connection.LocalIpAddress))
-            {
-                return true;
-            }
-            if (IPAddress.IsLoopback(context.Connection.RemoteIpAddress))
-            {
-                return true;
-            }
-            return false;
         }
 
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
