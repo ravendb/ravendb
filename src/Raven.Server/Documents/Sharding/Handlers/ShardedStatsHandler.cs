@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedStatsHandler : ShardedRequestHandler
+    public class ShardedStatsHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/stats", "GET")]
         public async Task Stats()

@@ -21,7 +21,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedDocumentHandler : ShardedRequestHandler
+    public class ShardedDocumentHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/docs", "HEAD")]
         public async Task Head()
@@ -30,11 +30,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = ShardedContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedHeadCommand(this, Headers.IfNoneMatch);
 
-                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Result;
             }
@@ -47,10 +47,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = ShardedContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.None);
-                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
 
                 if (cmd.Result != null)
@@ -69,13 +69,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (id[^1] == '|')
                 {
                     // note that we use the _overall_ database for this, not the specific shards
-                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, ShardedContext.IdentitySeparator, ShardedContext.DatabaseName, GetRaftRequestIdFromQuery());
+                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, DatabaseContext.IdentitySeparator, DatabaseContext.DatabaseName, GetRaftRequestIdFromQuery());
                     id = clusterId;
                 }
                 
-                var index = ShardedContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardIndex(context, id);
                 var cmd = new ShardedCommand(this, Headers.IfMatch, content: doc);
-                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
@@ -96,11 +96,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var patch = await context.ReadForMemoryAsync(RequestBodyStream(), "ScriptedPatchRequest");
 
-                var index = ShardedContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.IfMatch, content: patch);
 
-                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
             }
@@ -172,10 +172,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = ShardedContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.IfMatch);
-                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
             }
 
             NoContentStatus();
@@ -190,10 +190,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var index = ShardedContext.GetShardIndex(context, id);
+                var index = DatabaseContext.GetShardIndex(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.None);
-                await ShardedContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
                 var document = cmd.Result;
                 if (document == null)
                 {
@@ -256,8 +256,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             var sw = Stopwatch.StartNew();
             var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
-            using var streams = await results.InitializeAsync(ShardedContext, HttpContext.RequestAborted);
-            var documents = ShardedContext.Streaming.GetDocumentsAsync(streams, token);
+            using var streams = await results.InitializeAsync(DatabaseContext, HttpContext.RequestAborted);
+            var documents = DatabaseContext.Streaming.GetDocumentsAsync(streams, token);
 
             long numberOfResults;
             long totalDocumentsSizeInBytes;
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         var result = (BlittableJsonReaderObject)cmdResults[index];
                         foreach (string includePath in includePaths)
                         {
-                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes, ShardedContext.IdentitySeparator);
+                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes, DatabaseContext.IdentitySeparator);
                         }
 
                         results[match] = result;
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private async Task FetchDocumentsFromShards(IList<string> ids, bool metadataOnly, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
             List<FetchDocumentsFromShardsCommand> cmds, List<Task> tasks, bool ignoreIncludes = false)
         {
-            var shards = ShardLocator.GetDocumentIdsShards(ids, ShardedContext, context);
+            var shards = ShardLocator.GetDocumentIdsShards(ids, DatabaseContext, context);
             foreach (var shard in shards)
             {
                 sb.Clear();
@@ -476,7 +476,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 };
 
                 cmds.Add(cmd);
-                var task = ShardedContext.RequestExecutors[shard.Key].ExecuteAsync(cmd, cmd.Context);
+                var task = DatabaseContext.RequestExecutors[shard.Key].ExecuteAsync(cmd, cmd.Context);
                 tasks.Add(task);
             }
 

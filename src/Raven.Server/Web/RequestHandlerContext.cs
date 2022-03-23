@@ -11,6 +11,6 @@ namespace Raven.Server.Web
         public RavenServer RavenServer;
         public RouteMatch RouteMatch;
         public DocumentDatabase Database;
-        public ShardedContext ShardedContext;
+        public ShardedDatabaseContext DatabaseContext;
     }
 }

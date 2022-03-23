@@ -15,7 +15,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedCollectionHandler : ShardedRequestHandler
+    public class ShardedCollectionHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/collections/stats", "GET")]
         public async Task GetCollectionStats()
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 var op = new ShardedStreamDocumentsOperation(token);
                 var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
-                using var streams = await results.InitializeAsync(ShardedContext, HttpContext.RequestAborted);
+                using var streams = await results.InitializeAsync(DatabaseContext, HttpContext.RequestAborted);
 
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public async IAsyncEnumerable<Document> GetDocuments(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation)
         {
-            await foreach (var result in ShardedContext.Streaming.PagedShardedDocumentsByLastModified(documents, nameof(CollectionResult.Results), pagingContinuation))
+            await foreach (var result in DatabaseContext.Streaming.PagedShardedDocumentsByLastModified(documents, nameof(CollectionResult.Results), pagingContinuation))
             {
                 yield return result.Item;
             }

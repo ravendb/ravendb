@@ -9,9 +9,9 @@ public class CombinedStreamResult
 {
     public Memory<StreamResult> Results;
 
-    public async ValueTask<CombinedReadContinuationState> InitializeAsync(ShardedContext shardedContext, CancellationToken token)
+    public async ValueTask<CombinedReadContinuationState> InitializeAsync(ShardedDatabaseContext databaseContext, CancellationToken token)
     {
-        var state = new CombinedReadContinuationState(shardedContext, this);
+        var state = new CombinedReadContinuationState(databaseContext, this);
         await state.InitializeAsync(token);
         return state;
     }

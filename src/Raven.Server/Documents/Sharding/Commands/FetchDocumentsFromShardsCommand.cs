@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Commands
         private readonly IDisposable _disposable;
         public TransactionOperationContext Context;
 
-        public FetchDocumentsFromShardsCommand(ShardedRequestHandler handler, List<string> ids, StringBuilder query) : base(handler, Commands.Headers.None)
+        public FetchDocumentsFromShardsCommand(ShardedDatabaseRequestHandler handler, List<string> ids, StringBuilder query) : base(handler, Commands.Headers.None)
         {
             _disposable = handler.ContextPool.AllocateOperationContext(out Context);
 

@@ -140,7 +140,7 @@ namespace Raven.Server.Routing
             switch (result.DatabaseStatus)
             {
                 case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
-                    context.ShardedContext = result.ShardedContext;
+                    context.DatabaseContext = result.DatabaseContext;
                     return null;
                 default:
                     var database = result.DatabaseTask;

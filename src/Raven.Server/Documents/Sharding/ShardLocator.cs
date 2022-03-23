@@ -7,13 +7,13 @@ namespace Raven.Server.Documents.Sharding
 {
     public static class ShardLocator
     {
-        public static DocumentIdsByShardIndex GroupIdsByShardIndex(IEnumerable<Slice> ids, ShardedContext shardedContext)
+        public static DocumentIdsByShardIndex GroupIdsByShardIndex(IEnumerable<Slice> ids, ShardedDatabaseContext databaseContext)
         {
             var result = new DocumentIdsByShardIndex();
 
             foreach (var id in ids)
             {
-                var shardIndex = shardedContext.GetShardIndex(id);
+                var shardIndex = databaseContext.GetShardIndex(id);
                 result.Add(shardIndex, id);
             }
 
@@ -21,15 +21,15 @@ namespace Raven.Server.Documents.Sharding
         }
 
         public static Dictionary<int, List<int>> GetDocumentIdsShards(IList<string> ids,
-            ShardedContext shardedContext, TransactionOperationContext context)
+            ShardedDatabaseContext databaseContext, TransactionOperationContext context)
         {
             var result  = new Dictionary<int, List<int>>();
 
             for (var i = 0; i < ids.Count; i++)
             {
                 var id = ids[i];
-                var shardId = ShardedContext.GetShardId(context, id);
-                var index = shardedContext.GetShardIndex(shardId);
+                var shardId = ShardedDatabaseContext.GetShardId(context, id);
+                var index = databaseContext.GetShardIndex(shardId);
 
                 if (result.TryGetValue(index, out var shardIds) == false)
                 {

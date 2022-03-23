@@ -13,13 +13,13 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
 
-public partial class ShardedContext
+public partial class ShardedDatabaseContext
 {
     public readonly ShardedIndexesCache Indexes;
 
     public class ShardedIndexesCache
     {
-        private readonly ShardedContext _context;
+        private readonly ShardedDatabaseContext _context;
         private Dictionary<string, IndexDefinition> _cachedStaticIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         private Dictionary<string, AutoIndexDefinition> _cachedAutoIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         private readonly ScriptRunnerCache _scriptRunnerCache;
@@ -34,7 +34,7 @@ public partial class ShardedContext
 
         public readonly ShardedIndexDeleteProcessor Delete;
 
-        public ShardedIndexesCache([NotNull] ShardedContext context, ServerStore serverStore)
+        public ShardedIndexesCache([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
 

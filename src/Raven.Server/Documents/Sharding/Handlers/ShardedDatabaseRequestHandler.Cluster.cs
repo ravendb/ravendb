@@ -9,13 +9,13 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public partial class ShardedRequestHandler
+    public partial class ShardedDatabaseRequestHandler
     {
         public class ShardedClusterHandler
         {
-            private readonly ShardedRequestHandler _handler;
+            private readonly ShardedDatabaseRequestHandler _handler;
 
-            public ShardedClusterHandler(ShardedRequestHandler handler)
+            public ShardedClusterHandler(ShardedDatabaseRequestHandler handler)
             {
                 _handler = handler;
             }
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     var timeToWait = _handler.ServerStore.Configuration.Cluster.OperationTimeout.GetValue(TimeUnit.Milliseconds) * raftIndexIds.Count;
                     cts.CancelAfter(TimeSpan.FromMilliseconds(timeToWait));
 
-                    var requestExecutors = _handler.ShardedContext.RequestExecutors;
+                    var requestExecutors = _handler.DatabaseContext.RequestExecutors;
                     var waitingTasks = new Task[requestExecutors.Length];
 
                     var waitForDatabaseCommands = new WaitForRaftCommands(raftIndexIds);

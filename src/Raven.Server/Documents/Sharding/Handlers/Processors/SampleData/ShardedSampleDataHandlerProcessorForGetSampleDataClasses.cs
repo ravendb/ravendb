@@ -4,9 +4,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
 {
-    internal class ShardedSampleDataHandlerProcessorForGetSampleDataClasses : AbstractSampleDataHandlerProcessorForGetSampleDataClasses<ShardedRequestHandler, TransactionOperationContext>
+    internal class ShardedSampleDataHandlerProcessorForGetSampleDataClasses : AbstractSampleDataHandlerProcessorForGetSampleDataClasses<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedSampleDataHandlerProcessorForGetSampleDataClasses([NotNull] ShardedRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedSampleDataHandlerProcessorForGetSampleDataClasses([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
     }

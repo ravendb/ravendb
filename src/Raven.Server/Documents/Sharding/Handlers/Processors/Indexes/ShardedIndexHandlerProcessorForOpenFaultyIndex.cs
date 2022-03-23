@@ -7,9 +7,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
-internal class ShardedIndexHandlerProcessorForOpenFaultyIndex : AbstractIndexHandlerProcessorForOpenFaultyIndex<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedIndexHandlerProcessorForOpenFaultyIndex : AbstractIndexHandlerProcessorForOpenFaultyIndex<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexHandlerProcessorForOpenFaultyIndex([NotNull] ShardedRequestHandler requestHandler)
+    public ShardedIndexHandlerProcessorForOpenFaultyIndex([NotNull] ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }

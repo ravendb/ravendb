@@ -10,9 +10,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 {
-    internal class ShardedStudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<ShardedRequestHandler, TransactionOperationContext>
+    internal class ShardedStudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedStudioStatsHandlerProcessorForGetFooterStats([NotNull] ShardedRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedStudioStatsHandlerProcessorForGetFooterStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
         
@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
         {
             var op = new ShardedGetStudioFooterStatsOperation();
             var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-            stats.CountOfIndexes = RequestHandler.ShardedContext.DatabaseRecord.Indexes.Count;
+            stats.CountOfIndexes = RequestHandler.DatabaseContext.DatabaseRecord.Indexes.Count;
             return stats;
         }
 

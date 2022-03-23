@@ -10,9 +10,9 @@ namespace Raven.Server.Documents.Indexes.Sharding;
 
 public class ShardedIndexStateProcessor : AbstractIndexStateProcessor
 {
-    private readonly ShardedContext _context;
+    private readonly ShardedDatabaseContext _context;
 
-    public ShardedIndexStateProcessor([NotNull] ShardedContext context, ServerStore serverStore)
+    public ShardedIndexStateProcessor([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         : base(serverStore)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));

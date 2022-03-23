@@ -18,12 +18,12 @@ namespace Raven.Server.Documents.Sharding.Queries;
 public class ShardedMapReduceQueryResultsMerger
 {
     private readonly List<BlittableJsonReaderObject> _currentResults;
-    private readonly ShardedContext.ShardedIndexesCache _indexesCache;
+    private readonly ShardedDatabaseContext.ShardedIndexesCache _indexesCache;
     private readonly string _indexName;
     private readonly bool _isAutoMapReduceQuery;
     private readonly TransactionOperationContext _context;
 
-    public ShardedMapReduceQueryResultsMerger(List<BlittableJsonReaderObject> currentResults, ShardedContext.ShardedIndexesCache indexesCache, string indexName, bool isAutoMapReduceQuery, TransactionOperationContext context)
+    public ShardedMapReduceQueryResultsMerger(List<BlittableJsonReaderObject> currentResults, ShardedDatabaseContext.ShardedIndexesCache indexesCache, string indexName, bool isAutoMapReduceQuery, TransactionOperationContext context)
     {
         _currentResults = currentResults;
         _indexesCache = indexesCache;

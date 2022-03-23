@@ -16,7 +16,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedSmugglerHandler : ShardedRequestHandler
+    public class ShardedSmugglerHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/smuggler/validate-options", "POST")]
         public async Task ValidateOptions()
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 try
                 {
-                    await Export(context, ShardedContext.DatabaseName, ExportShardedDatabaseInternalAsync, ServerStore.Operations, operationId);
+                    await Export(context, DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, ServerStore.Operations, operationId);
                 }
                 catch (Exception e)
                 {
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var operationId = GetLongQueryString("operationId", false) ?? Server.ServerStore.Operations.GetNextOperationId();
 
-                await Import(context, ShardedContext.DatabaseName, DoImportInternalAsync, Server.ServerStore.Operations, operationId);
+                await Import(context, DatabaseContext.DatabaseName, DoImportInternalAsync, Server.ServerStore.Operations, operationId);
             }
         }
 
@@ -102,17 +102,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
             Action<IOperationProgress> onProgress,
             OperationCancelToken token)
         {
-            using (var source = new StreamSource(stream, jsonOperationContext, ShardedContext.DatabaseName, options))
+            using (var source = new StreamSource(stream, jsonOperationContext, DatabaseContext.DatabaseName, options))
             {
                 DatabaseRecord record;
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    record = Server.ServerStore.Cluster.ReadDatabase(ctx, ShardedContext.DatabaseName);
+                    record = Server.ServerStore.Cluster.ReadDatabase(ctx, DatabaseContext.DatabaseName);
                 }
 
                 var smuggler = new ShardedDatabaseSmuggler(source, jsonOperationContext, record,
-                    Server.ServerStore, ShardedContext, this, options, result,
+                    Server.ServerStore, DatabaseContext, this, options, result,
                     onProgress, token: token.Token);
 
                 await smuggler.ExecuteAsync();

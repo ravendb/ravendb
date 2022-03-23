@@ -432,7 +432,7 @@ namespace SlowTests.Sharding.ETL
                 Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "Joe Doe", 30_000));
 
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
-                var shardedCtx = new ShardedContext(srcNodes.Servers[0].ServerStore, dbRecord);
+                var shardedCtx = new ShardedDatabaseContext(srcNodes.Servers[0].ServerStore, dbRecord);
                 var shardIndex = 0;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {

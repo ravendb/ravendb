@@ -10,7 +10,7 @@ public class ShardedQueryCommand : ShardedBaseCommand<QueryResult>
 {
     private readonly string _indexName;
 
-    public ShardedQueryCommand(ShardedRequestHandler handler, BlittableJsonReaderObject content, string indexName) : base(handler, Commands.Headers.Sharded, content)
+    public ShardedQueryCommand(ShardedDatabaseRequestHandler handler, BlittableJsonReaderObject content, string indexName) : base(handler, Commands.Headers.Sharded, content)
     {
         _indexName = indexName;
     }

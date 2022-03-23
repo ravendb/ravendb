@@ -33,13 +33,13 @@ namespace Raven.Server.Smuggler.Documents
             JsonOperationContext jsonOperationContext,
             DatabaseRecord databaseRecord,
             ServerStore server,
-            ShardedContext shardedContext,
-            ShardedRequestHandler handler,
+            ShardedDatabaseContext databaseContext,
+            ShardedDatabaseRequestHandler handler,
             DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result, 
             Action<IOperationProgress> onProgress = null, 
             CancellationToken token = default) : 
-            base(source, new MultiShardedDestination(source, shardedContext, handler), server.Server.Time, jsonOperationContext, options, result, onProgress, token)
+            base(source, new MultiShardedDestination(source, databaseContext, handler), server.Server.Time, jsonOperationContext, options, result, onProgress, token)
         {
             _databaseRecord = databaseRecord;
             _server = server;

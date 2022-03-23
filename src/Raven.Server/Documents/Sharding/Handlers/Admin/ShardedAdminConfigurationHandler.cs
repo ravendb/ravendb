@@ -5,7 +5,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    internal class ShardedAdminConfigurationHandler : ShardedRequestHandler
+    internal class ShardedAdminConfigurationHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/configuration/studio", "PUT")]
         public async Task GetStudioConfiguration()

@@ -470,7 +470,7 @@ namespace Raven.Server.ServerWide.Commands
                     if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
                         throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
 
-                    var shardIndex = ShardedContext.GetShardIndex(context, rawRecord.ShardAllocations, id);
+                    var shardIndex = ShardedDatabaseContext.GetShardIndex(context, rawRecord.ShardAllocations, id);
                     perShard.Add(id, command, shardIndex);
                 }
 

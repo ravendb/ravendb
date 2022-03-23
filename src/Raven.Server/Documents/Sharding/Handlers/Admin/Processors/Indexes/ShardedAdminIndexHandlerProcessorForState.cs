@@ -9,9 +9,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
-internal class ShardedAdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerProcessorForState<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedAdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerProcessorForState<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminIndexHandlerProcessorForState(IndexState state, [NotNull] ShardedRequestHandler requestHandler) 
+    public ShardedAdminIndexHandlerProcessorForState(IndexState state, [NotNull] ShardedDatabaseRequestHandler requestHandler) 
         : base(state, requestHandler, requestHandler.ContextPool)
     {
     }
@@ -29,6 +29,6 @@ internal class ShardedAdminIndexHandlerProcessorForState : AbstractAdminIndexHan
 
     protected override AbstractIndexStateProcessor GetIndexStateProcessor()
     {
-        return RequestHandler.ShardedContext.Indexes.State;
+        return RequestHandler.DatabaseContext.Indexes.State;
     }
 }

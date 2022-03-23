@@ -18,12 +18,12 @@ namespace Raven.Server.Documents.Sharding.Commands
 {
     internal struct ShardedImportOperation : IShardedOperation<BlittableJsonReaderObject>
     {
-        private readonly ShardedRequestHandler _handler;
+        private readonly ShardedDatabaseRequestHandler _handler;
         private readonly MultiShardedDestination.StreamDestinationHolder[] _holders;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         public readonly Task<Stream>[] ExposedStreamTasks;
 
-        public ShardedImportOperation(ShardedRequestHandler handler, MultiShardedDestination.StreamDestinationHolder[] holders, DatabaseSmugglerOptionsServerSide options)
+        public ShardedImportOperation(ShardedDatabaseRequestHandler handler, MultiShardedDestination.StreamDestinationHolder[] holders, DatabaseSmugglerOptionsServerSide options)
         {
             _handler = handler;
             _holders = holders;
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Sharding.Commands
         private readonly StreamExposerContent _stream;
         private readonly DatabaseSmugglerOptionsServerSide _options;
 
-        public ShardedImportCommand(ShardedRequestHandler handler, StreamExposerContent stream, DatabaseSmugglerOptionsServerSide options) : base(handler, Commands.Headers.None)
+        public ShardedImportCommand(ShardedDatabaseRequestHandler handler, StreamExposerContent stream, DatabaseSmugglerOptionsServerSide options) : base(handler, Commands.Headers.None)
         {
             _stream = stream;
             _options = options;

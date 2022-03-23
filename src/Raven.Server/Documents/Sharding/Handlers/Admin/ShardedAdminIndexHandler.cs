@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
-    public class ShardedAdminIndexHandler : ShardedRequestHandler
+    public class ShardedAdminIndexHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/indexes", "PUT")]
         public async Task Put()
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             }
 
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true,
-                ContextPool, ShardedContext.DatabaseName, PutIndexTask, async args =>
+                ContextPool, DatabaseContext.DatabaseName, PutIndexTask, async args =>
                 {
                     await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         public async Task PutJavaScript()
         {
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: false,
-                ContextPool, ShardedContext.DatabaseName, PutIndexTask, async args =>
+                ContextPool, DatabaseContext.DatabaseName, PutIndexTask, async args =>
                 {
                     await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
 
             var command = new PutIndexCommand(
                 args.IndexDefinition,
-                ShardedContext.DatabaseName,
+                DatabaseContext.DatabaseName,
                 args.Source,
                 ServerStore.Server.Time.GetUtcNow(),
                 args.RaftRequestId,

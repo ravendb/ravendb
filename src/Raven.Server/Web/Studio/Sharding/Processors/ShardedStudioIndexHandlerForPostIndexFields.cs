@@ -6,12 +6,12 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-internal class ShardedStudioIndexHandlerForPostIndexFields : AbstractStudioIndexHandlerForPostIndexFields<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedStudioIndexHandlerForPostIndexFields : AbstractStudioIndexHandlerForPostIndexFields<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedStudioIndexHandlerForPostIndexFields([NotNull] ShardedRequestHandler requestHandler) 
+    public ShardedStudioIndexHandlerForPostIndexFields([NotNull] ShardedDatabaseRequestHandler requestHandler) 
         : base(requestHandler, requestHandler.ContextPool)
     {
     }
 
-    protected override RavenConfiguration GetDatabaseConfiguration() => RequestHandler.ShardedContext.Configuration;
+    protected override RavenConfiguration GetDatabaseConfiguration() => RequestHandler.DatabaseContext.Configuration;
 }

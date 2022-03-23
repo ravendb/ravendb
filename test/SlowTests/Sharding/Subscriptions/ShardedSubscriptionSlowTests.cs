@@ -427,7 +427,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     DatabasesLandlord.DatabaseSearchResult result = Server.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(store.Database);
                     Assert.Equal(DatabasesLandlord.DatabaseSearchResult.Status.Sharded, result.DatabaseStatus);
-                    Assert.NotNull(result.ShardedContext);
+                    Assert.NotNull(result.DatabaseContext);
 
                     SubscriptionState subscriptionState;
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

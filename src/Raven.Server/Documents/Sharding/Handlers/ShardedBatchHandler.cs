@@ -29,7 +29,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedBatchHandler : ShardedRequestHandler
+    public class ShardedBatchHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
@@ -41,12 +41,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandBuilder.BuildCommandsAsync(context, RequestBodyStream(), ShardedContext.IdentitySeparator);
+                    await commandBuilder.BuildCommandsAsync(context, RequestBodyStream(), DatabaseContext.IdentitySeparator);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                          contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType, ShardedContext.IdentitySeparator);
+                    await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType, DatabaseContext.IdentitySeparator);
                 }
                 else
                     BatchHandler.ThrowNotSupportedType(contentType);
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     if (batch.IsClusterTransaction)
                     {
-                        var clusterTransactionHandler = new ShardClusterTransactionRequestProcessor(this, ShardedContext.DatabaseName, ShardedContext.IdentitySeparator);
+                        var clusterTransactionHandler = new ShardClusterTransactionRequestProcessor(this, DatabaseContext.DatabaseName, DatabaseContext.IdentitySeparator);
                         await clusterTransactionHandler.Process(context, batch.ParsedCommands);
                         return;
                     }
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     foreach (var command in batch)
                     {
                         var shardIndex = command.Shard;
-                        var requestExecutor = ShardedContext.RequestExecutors[shardIndex];
+                        var requestExecutor = DatabaseContext.RequestExecutors[shardIndex];
 
                         if (shardedBatchCommands.TryGetValue(shardIndex, out var shardedBatchCommand) == false)
                         {
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     var tasks = new List<Task>();
                     foreach (var command in shardedBatchCommands)
                     {
-                        tasks.Add(ShardedContext.RequestExecutors[command.Key].ExecuteAsync(command.Value, command.Value.Context));
+                        tasks.Add(DatabaseContext.RequestExecutors[command.Key].ExecuteAsync(command.Value, command.Value.Context));
                     }
 
                     await Task.WhenAll(tasks);
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly IDisposable _returnCtx;
         public JsonOperationContext Context => _context;
 
-        public SingleNodeShardedBatchCommand(ShardedRequestHandler handler, JsonContextPool pool) :
+        public SingleNodeShardedBatchCommand(ShardedDatabaseRequestHandler handler, JsonContextPool pool) :
             base(handler, Commands.Headers.None)
         {
             _returnCtx = pool.AllocateOperationContext(out _context);
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
     public class ShardedBatchCommand : IEnumerable<SingleShardedCommand>, IDisposable
     {
         private readonly TransactionOperationContext _context;
-        private readonly ShardedContext _shardedContext;
+        private readonly ShardedDatabaseContext _databaseContext;
 
         public List<ShardedBatchCommandBuilder.BufferedCommand> BufferedCommands;
         public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
@@ -229,10 +229,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public bool IsClusterTransaction;
 
 
-        internal ShardedBatchCommand(TransactionOperationContext context, ShardedContext shardedContext)
+        internal ShardedBatchCommand(TransactionOperationContext context, ShardedDatabaseContext databaseContext)
         {
             _context = context;
-            _shardedContext = shardedContext;
+            _databaseContext = databaseContext;
         }
 
         public IEnumerator<SingleShardedCommand> GetEnumerator()
@@ -257,7 +257,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                         bjro.TryGet(nameof(ICommandData.ChangeVector), out string expectedChangeVector);
 
-                        var shardId = _shardedContext.GetShardIndex(_context, id);
+                        var shardId = _databaseContext.GetShardIndex(_context, id);
                         if (idsByShard.TryGetValue(shardId, out var list) == false)
                         {
                             list = new List<(string Id, string ChangeVector)>();
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     continue;
                 }
 
-                var shard = _shardedContext.GetShardIndex(_context, cmd.Id);
+                var shard = _databaseContext.GetShardIndex(_context, cmd.Id);
                 var commandStream = bufferedCommand.CommandStream;
                 var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
 
@@ -315,13 +315,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public List<BufferedCommand> BufferedCommands = new List<BufferedCommand>();
 
         private readonly bool _encrypted;
-        private readonly ShardedContext _shardedContext;
+        private readonly ShardedDatabaseContext _databaseContext;
 
-        public ShardedBatchCommandBuilder(ShardedRequestHandler handler) :
-            base(handler, handler.ShardedContext.DatabaseName, handler.ShardedContext.IdentitySeparator)
+        public ShardedBatchCommandBuilder(ShardedDatabaseRequestHandler handler) :
+            base(handler, handler.DatabaseContext.DatabaseName, handler.DatabaseContext.IdentitySeparator)
         {
-            _shardedContext = handler.ShardedContext;
-            _encrypted = handler.ShardedContext.Encrypted;
+            _databaseContext = handler.DatabaseContext;
+            _encrypted = handler.DatabaseContext.Encrypted;
         }
 
         public override async Task SaveStream(JsonOperationContext context, Stream input)
@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public StreamsTempFile GetServerTempFile(string prefix)
         {
-            var name = $"{_shardedContext.DatabaseName}.attachment.{Guid.NewGuid():N}.{prefix}";
+            var name = $"{_databaseContext.DatabaseName}.attachment.{Guid.NewGuid():N}.{prefix}";
             var tempPath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(name);
 
             return new StreamsTempFile(tempPath.FullPath, _encrypted);
@@ -368,7 +368,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task<ShardedBatchCommand> GetCommand(TransactionOperationContext ctx)
         {
             await ExecuteGetIdentities();
-            return new ShardedBatchCommand(ctx, _shardedContext)
+            return new ShardedBatchCommand(ctx, _databaseContext)
             {
                 ParsedCommands = Commands,
                 BufferedCommands = BufferedCommands,

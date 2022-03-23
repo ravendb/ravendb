@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedOperationHandler : ShardedRequestHandler
+    public class ShardedOperationHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/operations/next-operation-id", "GET")]
         public async Task GetNextOperationId()

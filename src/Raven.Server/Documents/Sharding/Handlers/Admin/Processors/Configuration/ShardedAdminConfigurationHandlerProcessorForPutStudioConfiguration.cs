@@ -5,9 +5,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Configuration
 {
-    internal class ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration : AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<ShardedRequestHandler, TransactionOperationContext>
+    internal class ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration : AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration(ShardedRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration(ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
 
@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Configuratio
 
         protected override string GetDatabaseName()
         {
-            return RequestHandler.ShardedContext.DatabaseName;
+            return RequestHandler.DatabaseContext.DatabaseName;
         }
     }
 }
