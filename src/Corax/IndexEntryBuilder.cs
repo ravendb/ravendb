@@ -82,19 +82,8 @@ namespace Corax
         private readonly Span<int> _knownFieldsLocations;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IsEmpty()
-        {
-            foreach (var field in _knownFieldsLocations)
-            {
-                if (field != Invalid)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
+        public bool IsEmpty() => Unsafe.SizeOf<IndexEntryHeader>() == _dataIndex;
+    
         // Current pointer.        
         private int _dataIndex;
         

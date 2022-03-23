@@ -22,6 +22,7 @@ using Sparrow.Logging;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
+
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
@@ -44,7 +45,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<int> totalResults, Reference<int> skippedResults,
-            Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+            Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
+            CancellationToken token)
         {
             var pageSize = query.PageSize;
             var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
@@ -81,13 +83,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     if (fetchedDocument.Document != null)
                     {
-                        yield return new QueryResult { Result = fetchedDocument.Document };
+                        yield return new QueryResult {Result = fetchedDocument.Document};
                     }
                     else if (fetchedDocument.List != null)
                     {
                         foreach (Document item in fetchedDocument.List)
                         {
-                            yield return new QueryResult { Result = item };
+                            yield return new QueryResult {Result = item};
                         }
                     }
                 }
@@ -108,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     read = result.Fill(ids);
                     readCounter += read;
                 }
-                
+
                 totalResults.Value = Convert.ToInt32(readCounter);
             }
 
@@ -170,12 +172,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         Span<Token> tokens = tokensBuffer;
                         token.ThrowIfCancellationRequested();
                         var reader = _indexSearcher.GetReaderFor(ids[i]);
-                        reader.Read(fieldId, out Span<byte> value);
-                        analyzer.Execute(value, ref encoded, ref tokens);
-                        for (int tIndex = 0; tIndex < tokens.Length; ++tIndex)
+                        switch (reader.GetFieldType(fieldId, out _))
                         {
-                            var result = encoded.Slice(tokens[tIndex].Offset, (int)tokens[tIndex].Length);
-                            results.Add(System.Text.Encoding.UTF8.GetString(result));
+                            case IndexEntryFieldType.List:
+                                if (reader.TryReadMany(fieldId, out var iterator) == false)
+                                    continue;
+
+                                while (iterator.ReadNext())
+                                    TermToString(iterator.Sequence, analyzer, encoded, tokens, token);
+                                break;
+                            case IndexEntryFieldType.None:
+                            case IndexEntryFieldType.Tuple:
+                                reader.Read(fieldId, out var value);
+                                TermToString(value, analyzer, encoded, tokens, token);
+                                break;
+                            default:
+                                break;
                         }
                     }
 
@@ -186,6 +198,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 if (ids is not null)
                     ArrayPool<long>.Shared.Return(ids);
+            }
+
+            void TermToString(in ReadOnlySpan<byte> value, Analyzer analyzer, Span<byte> encoded, Span<Token> tokens, CancellationToken token)
+            {
+                analyzer.Execute(value, ref encoded, ref tokens);
+                for (int tIndex = 0; tIndex < tokens.Length; ++tIndex)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var result = encoded.Slice(tokens[tIndex].Offset, (int)tokens[tIndex].Length);
+                    results.Add(System.Text.Encoding.UTF8.GetString(result));
+                }
             }
 
             return results;
@@ -209,8 +232,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 var analyzer = binding.Analyzer;
                 if (analyzer == null)
-                    continue;        
-                
+                    continue;
+
                 analyzer.GetOutputBuffersSize(512, out int tempOutputSize, out int tempTokenSize);
 
                 if (tempTokenSize > tokenSize)
@@ -282,6 +305,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                         listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
                                     }
                                 }
+
                                 map.Add(listItemInIndex.ToArray());
                                 doc[name] = map;
                             }
@@ -291,8 +315,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             }
                             else
                             {
-                                reader.Read(fieldId, out var value);    
-                                
+                                reader.Read(fieldId, out var value);
+
                                 analyzer.Execute(value, ref encoded, ref tokens);
                                 if (tokens.Length > 1)
                                 {

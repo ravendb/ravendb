@@ -41,6 +41,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         else
             accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 
+        // todo maciej
         // We need to discuss how we will handle this.  
         // https://github.com/ravendb/ravendb/pull/13730#discussion_r820661488
         using var _ = _allocator.Allocate(DocumentBufferSize, out ByteString buffer);
@@ -88,8 +89,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
-            using (var blittableScope = new BlittableWriterScope(bjo))
-                blittableScope.Write(_knownFields.Count - 1, ref entryWriter);
+            scope.Write(_knownFields.Count - 1, bjo, ref entryWriter);
         }
         
         id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));

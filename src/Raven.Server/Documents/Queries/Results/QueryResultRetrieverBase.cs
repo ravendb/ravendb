@@ -16,6 +16,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
@@ -613,12 +614,12 @@ namespace Raven.Server.Documents.Queries.Results
                     retrieverInput.CoraxEntry.Read(fieldId, out data);
                     if (data.Length is 10 or 12)
                     {
-                        if (data.SequenceCompareTo(Encodings.Utf8.GetBytes(Constants.Documents.Indexing.Fields.NullValue)) == 0)
+                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.NullValue.Span) == 0)
                         {
                             value = null;
                             break;
                         }
-                        if (data.SequenceCompareTo(Encodings.Utf8.GetBytes(Constants.Documents.Indexing.Fields.EmptyString)) == 0)
+                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.EmptyString.Span) == 0)
                         {
                             value = string.Empty;
                             break;

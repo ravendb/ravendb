@@ -89,7 +89,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults,
             Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            //studio part, returns us lucene details
             ExplanationOptions explanationOptions = null;
 
             var pageSize = query.PageSize;
@@ -97,13 +96,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (isDistinctCount)
                 pageSize = int.MaxValue;
 
-            
             pageSize = LuceneGetPageSize(_searcher, pageSize);
 
             var docsToGet = pageSize;
             var position = query.Start;
 
-            // statistics
             QueryTimingsScope luceneScope = null;
             QueryTimingsScope highlightingScope = null;
             QueryTimingsScope explanationsScope = null;
@@ -121,19 +118,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var returnedResults = 0;
 
-            //the part where we translate our RQL into Lucene query, I think this is very similiar to CoraxQueryEvaluator
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             
-            //This is new RDB keyword -> is doing full-table scan tbh and apply where on it.
             using (var queryFilter = GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings))
-            
-            //sorting    
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
-                
-                //helper for distinct and includes
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
-                
                 if (query.Metadata.HasHighlightings)
                 {
                     using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
@@ -145,13 +135,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     token.ThrowIfCancellationRequested();
 
                     TopDocs search;
-                    using (luceneScope?.Start()) //.Fill(ids)
+                    using (luceneScope?.Start())
                         search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
 
-                    
                     totalResults.Value = search.TotalHits;
 
-                    //Disiinct (I assume
                     scope.RecordAlreadyPagedItemsInPreviousPage(search, token);
 
                     for (; position < search.ScoreDocs.Length && pageSize > 0; position++)
