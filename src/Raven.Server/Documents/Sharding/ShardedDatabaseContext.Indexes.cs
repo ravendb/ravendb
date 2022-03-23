@@ -21,9 +21,8 @@ public partial class ShardedDatabaseContext
     {
         private readonly ShardedDatabaseContext _context;
         private Dictionary<string, IndexContext> _indexes;
-        private readonly ScriptRunnerCache _scriptRunnerCache;
 
-        public ScriptRunnerCache ScriptRunnerCache => _scriptRunnerCache;
+        public readonly ScriptRunnerCache ScriptRunnerCache;
 
         public readonly ShardedIndexLockModeProcessor LockMode;
 
@@ -45,7 +44,7 @@ public partial class ShardedDatabaseContext
             Delete = new ShardedIndexDeleteProcessor(context, serverStore);
             Create = new ShardedIndexCreateProcessor(context, serverStore);
 
-            _scriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
+            ScriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
 
             var indexes = new Dictionary<string, IndexContext>(StringComparer.OrdinalIgnoreCase);
 
@@ -61,7 +60,7 @@ public partial class ShardedDatabaseContext
         public void Update(RawDatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for updated configuration (for projections)");
-            _scriptRunnerCache.UpdateConfiguration(_context.Configuration);
+            ScriptRunnerCache.UpdateConfiguration(_context.Configuration);
 
             var indexes = new Dictionary<string, IndexContext>(StringComparer.OrdinalIgnoreCase);
 
