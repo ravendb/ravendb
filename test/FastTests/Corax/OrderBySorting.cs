@@ -30,7 +30,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             {
                 var match1 = searcher.StartWithQuery("Id", "l");
-                var match = searcher.OrderByDescending(match1, ContentId, MatchCompareFieldType.Integer);
+                var match = searcher.OrderByDescending(match1, ContentId, SortingType.Normal, MatchCompareFieldType.Integer);
 
                 List<string> sortedByCorax = new();
                 Span<long> ids = stackalloc long[2048];
