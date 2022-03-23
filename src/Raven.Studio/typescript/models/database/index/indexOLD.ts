@@ -1,40 +1,18 @@
 import appUrl = require("common/appUrl");
-import indexProgress = require("models/database/index/indexProgress");
-import collectionsTracker = require("common/helpers/database/collectionsTracker");
-import generalUtils = require("common/generalUtils");
 
 /**
  * @deprecated
  */
 class index {
-    static readonly SideBySideIndexPrefix = "ReplacementOf/";
-    static readonly AutoIndexPrefix = "Auto/";
-    static readonly TestIndexPrefix = "Test/";
-
-    static readonly DefaultIndexGroupName = "Other";
-
+    
     parent: index; // used in side-by-side indexes to point to old index
-    collections = ko.observable<{ [index: string]: Raven.Client.Documents.Indexes.IndexStats.CollectionStats; }>();
-    collectionNames = ko.observableArray<string>();
-    createdTimestamp = ko.observable<string>();
-    entriesCount = ko.observable<number>();
-    errorsCount = ko.observable<number>();
-    isStale = ko.observable<boolean>(false);
-    isInvalidIndex = ko.observable<boolean>(false);
-    lastIndexingTime = ko.observable<string>();
-    lastQueryingTime = ko.observable<string>();
-    lockMode = ko.observable<Raven.Client.Documents.Indexes.IndexLockMode>();
     
     mapReduceIndexInfoTooltip: KnockoutComputed<string>;
-    
 
     filteredOut = ko.observable<boolean>(false); //UI only property
 
     isPending: KnockoutComputed<boolean>;
     rollingDeploymentInProgress: KnockoutComputed<boolean>;
-    isFaulty: KnockoutComputed<boolean>;
-    isAutoIndex: KnockoutComputed<boolean>;
-    isSideBySide: KnockoutComputed<boolean>;
     globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>;
     canBePaused: KnockoutComputed<boolean>;
     canBeResumed: KnockoutComputed<boolean>;
@@ -42,7 +20,6 @@ class index {
     canBeDisabled: KnockoutComputed<boolean>;
 
     replacement = ko.observable<index>();
-    progress = ko.observable<indexProgress>();
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>, parentIndex?: index) {
    
@@ -78,7 +55,7 @@ class index {
         /*
         this.isPending = ko.pureComputed(() => this.status() === "Pending");
         this.isFaulty = ko.pureComputed(() => this.type() === "Faulty");
-*/        
+
         this.rollingDeploymentInProgress = ko.pureComputed(() => {
             const progress = this.progress();
             if (progress && progress.rollingProgress()) {
@@ -89,11 +66,6 @@ class index {
             return false;
         })
         
-        /*
-        this.isSideBySide = ko.pureComputed(() => {            
-            return this.name.startsWith(index.SideBySideIndexPrefix);
-        });
-
         this.mapReduceIndexInfoTooltip = ko.pureComputed(() => {
             let infoTextHtml = "";
 

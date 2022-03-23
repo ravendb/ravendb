@@ -1,7 +1,5 @@
 <div class="indexes content-margin no-transition" data-bind="css: { 'no-transition': indexesCount() > 50 }">
-    
     <div class="flex-vertical absolute-fill" data-bind="visible: sortedGroups().length">
-        
         <div class="flex-grow scroll js-scroll-container">
             <div data-bind="foreach: sortedGroups">
                 <h2 class="on-base-background" data-bind="text: entityName, visible: !groupHidden(), attr: { title: 'Collection: ' + entityName }"></h2>
@@ -33,53 +31,3 @@
         </div>
     </div>
 </div>
-
-<script type="text/html" id="indexes-progress-template">
-    <div class="progress-container">
-        <div class="progress-overall">
-            <div class="flex-horizontal" data-bind="with: globalProgress">
-                <div class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></div>
-                <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
-            </div>
-            <div class="progress" data-bind="with: globalProgress">
-                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                    <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                </div>
-            </div>
-        </div>
-        <div class="collections-container">
-            <!-- ko foreach: collections -->
-            <div class="panel collection-progress">
-                <div class="collection-name" data-bind="text: name, attr: { title: name }"></div>
-                <div class="documents">
-                    <div class="clearfix" data-bind="with: documentsProgress">
-                        <small class="name">Documents</small>
-                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
-                    </div>
-                    <div class="progress" data-bind="with: documentsProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="tombstones">
-                    <div class="clearfix" data-bind="with: tombstonesProgress">
-                        <small class="name">Tombstones</small>
-                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
-                    </div>
-                    <div class="progress" data-bind="with: tombstonesProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- /ko -->
-        </div>
-    </div>
-</script>
-
-

@@ -127,4 +127,8 @@ export default class IndexUtils {
             return IndexUtils.DefaultIndexGroupName;
         }
     }
+    
+    static isSideBySide(index: IndexSharedInfo) {
+        return index.name.startsWith(IndexUtils.SideBySideIndexPrefix);
+    }
 }

@@ -1,15 +1,23 @@
-import { IndexNodeInfo, IndexSharedInfo } from "../../../models/indexes";
+import { IndexCollectionProgress, IndexNodeInfo, IndexProgressInfo, IndexSharedInfo } from "../../../models/indexes";
 import { Reducer } from "react";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { produce } from "immer";
 import { databaseLocationComparator } from "../../../utils/common";
+import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
+import { WritableDraft } from "immer/dist/types/types-external";
 
 interface ActionStatsLoaded {
     location: databaseLocationSpecifier;
     stats: IndexStats[];
     type: "StatsLoaded";
+}
+
+interface ActionProgressLoaded {
+    location: databaseLocationSpecifier;
+    progress: IndexProgress[];
+    type: "ProgressLoaded";
 }
 
 interface ActionSetIndexPriority {
@@ -56,6 +64,7 @@ interface ActionResumeIndexing {
 type IndexesStatsReducerAction =
     ActionDeleteIndexes
     | ActionStatsLoaded
+    | ActionProgressLoaded
     | ActionSetIndexPriority
     | ActionSetIndexLockMode
     | ActionPauseIndexing
@@ -93,7 +102,8 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
             state: stats.State,
             status: stats.Status,
             stale: stats.IsStale
-        }
+        },
+        progress: null
     }
 }
 
@@ -101,12 +111,86 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): IndexNodeInfo[] 
     return locations.map(location => ({
         location,
         status: "notLoaded",
-        details: null
+        details: null,
+        progress: null
     }));
+}
+
+function markProgressAsCompleted(progress: WritableDraft<IndexProgressInfo>) {
+    progress.global.processed = progress.global.total;
+    
+    progress.collections.forEach(c => {
+        c.documents.processed = c.documents.total;
+        c.tombstones.processed = c.tombstones.total;
+    });
+}
+
+function mapProgress(progress: IndexProgress): IndexProgressInfo {
+    const collectionNames = Object.keys(progress.Collections);
+    
+    let grandTotal = 0;
+    let grandProcessed = 0;
+    
+    const mappedCollections: IndexCollectionProgress[] = collectionNames.map(name => {
+        const stats = progress.Collections[name];
+        return {
+            name,
+            documents: {
+                processedPerSecond: 0,
+                total: stats.TotalNumberOfItems,
+                processed: stats.TotalNumberOfItems - stats.NumberOfItemsToProcess
+            },
+            tombstones: {
+                processedPerSecond: 0, 
+                total: stats.TotalNumberOfTombstones,
+                processed: stats.TotalNumberOfTombstones - stats.NumberOfTombstonesToProcess
+            }
+        }
+    });
+    
+    mappedCollections.forEach(c => {
+        grandTotal += c.documents.total + c.tombstones.total;
+        grandProcessed += c.documents.processed + c.tombstones.processed
+    });
+    
+    return {
+        collections: mappedCollections,
+        global: {
+            processed: grandProcessed,
+            total: grandTotal,
+            processedPerSecond: progress.ProcessedPerSecond
+        }
+    }
 }
 
 export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducerAction> = (state: IndexesStatsState, action: IndexesStatsReducerAction): IndexesStatsState => {
     switch (action.type) {
+        case "ProgressLoaded": {
+            
+            const incomingLocation = action.location;
+            const progress = action.progress;
+
+            return produce(state, draft => {
+                draft.indexes.forEach(index => {
+                    const itemToUpdate = index.nodesInfo.find(x => databaseLocationComparator(x.location, incomingLocation));
+                    
+                    const incomingProgress = progress.find(x => x.Name === index.name);
+                    if (incomingProgress) {
+                        itemToUpdate.progress = mapProgress(incomingProgress);
+                        if (itemToUpdate.details) {
+                            itemToUpdate.details.stale = incomingProgress.IsStale;    
+                        }
+                    } else { 
+                        if (itemToUpdate.progress) {
+                            markProgressAsCompleted(itemToUpdate.progress);
+                        }
+                        if (itemToUpdate.details) {
+                            itemToUpdate.details.stale = false;
+                        }
+                    }
+                });
+            });
+        }
         case "StatsLoaded":
             const incomingLocation = action.location;
             const indexes = action.stats.map((incomingStats): IndexSharedInfo => {
@@ -119,8 +203,10 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                         ...existingSharedInfo,
                         
                         nodesInfo: existingSharedInfo.nodesInfo.map(existingNodeInfo => {
-                            if (existingNodeInfo.location.nodeTag === incomingLocation.nodeTag && existingNodeInfo.location.shardNumber === incomingLocation.shardNumber) {
-                                return mapToIndexNodeInfo(incomingStats, incomingLocation);
+                            if (databaseLocationComparator(existingNodeInfo.location, incomingLocation)) {
+                                const nodeInfo = mapToIndexNodeInfo(incomingStats, incomingLocation);
+                                nodeInfo.progress = existingNodeInfo.progress;
+                                return nodeInfo;
                             } else {
                                 return existingNodeInfo;
                             }
@@ -130,7 +216,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                     // create new container with stats
                     const sharedInfo = mapToIndexSharedInfo(incomingStats);
                     sharedInfo.nodesInfo = initNodesInfo(state.locations).map(existingNodeInfo => {
-                        if (existingNodeInfo.location.nodeTag === incomingLocation.nodeTag && existingNodeInfo.location.shardNumber === incomingLocation.shardNumber) {
+                        if (databaseLocationComparator(existingNodeInfo.location, incomingLocation)) {
                             return mapToIndexNodeInfo(incomingStats, incomingLocation);
                         } else {
                             return existingNodeInfo;
