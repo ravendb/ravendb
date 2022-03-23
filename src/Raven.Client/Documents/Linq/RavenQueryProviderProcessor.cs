@@ -3137,7 +3137,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                 JavascriptConversionExtensions.DateOnlySupport.Instance,
 #endif
-                JavascriptConversionExtensions.MemberExpressionSupport.Instance
+                JavascriptConversionExtensions.MemberExpressionSupport.Instance // it is to be the last one in order to add IdentityPropertySupport before it
             };
 
             if (loadArg == false)
