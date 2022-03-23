@@ -3,14 +3,14 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
-import viewModelBase = require("viewmodels/viewModelBase");
 import messagePublisher = require("common/messagePublisher");
 import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 import genUtils = require("common/generalUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class databaseRecord extends viewModelBase {
+class databaseRecord extends shardViewModelBase {
 
     view = require("views/database/advanced/databaseRecord.html");
     
@@ -29,8 +29,8 @@ class databaseRecord extends viewModelBase {
 
     static containerId = "#databaseRecordContainer";
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         aceEditorBindingHandler.install();
 
         this.document.subscribe(document => {
@@ -56,12 +56,11 @@ class databaseRecord extends viewModelBase {
                 if (this.isForbidden()) {
                     deferred.resolve({ can: true });
                 } else {
-                    const db: database = this.activeDatabase();
-                    this.fetchDatabaseRecord(db)
+                    this.fetchDatabaseRecord(this.db)
                         .done(() => deferred.resolve({ can: true }))
                         .fail((response: JQueryXHR) => {
                             messagePublisher.reportError("Error fetching database record!", response.responseText, response.statusText);
-                            deferred.resolve({ redirect: appUrl.forStatus(db) });
+                            deferred.resolve({ redirect: appUrl.forStatus(this.db) });
                         });
                 }
 
@@ -120,7 +119,7 @@ class databaseRecord extends viewModelBase {
     
     refreshFromServer(reportFetchProgress: boolean = true) {
         eventsCollector.default.reportEvent("database-record", "refresh");
-        this.fetchDatabaseRecord(this.activeDatabase(), reportFetchProgress);
+        this.fetchDatabaseRecord(this.db, reportFetchProgress);
         this.forceFold = true;
     }
 
@@ -156,7 +155,7 @@ class databaseRecord extends viewModelBase {
                     let dto = JSON.parse(this.documentText());
                     dto.Settings = genUtils.flattenObj(dto.Settings, "");
                     
-                    new saveDatabaseRecordCommand(this.activeDatabase(), dto, dto.Etag)
+                    new saveDatabaseRecordCommand(this.db, dto, dto.Etag)
                         .execute()
                         .done(() => {
                             this.refreshFromServer(false);
