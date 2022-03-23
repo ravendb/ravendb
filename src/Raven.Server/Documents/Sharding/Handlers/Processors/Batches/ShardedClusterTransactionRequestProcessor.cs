@@ -1,6 +1,8 @@
 using System;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
+using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;

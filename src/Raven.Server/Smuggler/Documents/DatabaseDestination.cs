@@ -24,6 +24,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;

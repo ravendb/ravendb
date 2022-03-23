@@ -73,13 +73,13 @@ class document implements documentBase {
         return dto;
     }
 
-    toBulkDoc(method: Raven.Client.Documents.Commands.Batches.CommandType): Raven.Server.Documents.Handlers.BatchRequestParser.CommandData {
+    toBulkDoc(method: Raven.Client.Documents.Commands.Batches.CommandType): Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData {
         const dto = this.toDto(true);
         const bulkDoc = {
             Document: dto,
             Id: this.getId(),
             Type: method
-        } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData;
+        } as Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData;
 
         const meta = dto["@metadata"];
         if (meta) {

@@ -58,12 +58,20 @@ namespace Raven.Server.Utils
             }
         }
 
+        public AggregateException GetAggregateException()
+        {
+            if (_list.Count == 0)
+                return null;
+
+            return new AggregateException(_errorMsg, _list);
+        }
+
         public void ThrowIfNeeded()
         {
             if (_list.Count == 0)
                 return;
 
-            var aggregateException = new AggregateException(_errorMsg, _list);
+            var aggregateException = GetAggregateException();
 
             if (_logger != null && _logger.IsInfoEnabled)
                 _logger.Info(_errorMsg, aggregateException);

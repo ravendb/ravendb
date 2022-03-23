@@ -8,6 +8,8 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -18,14 +20,14 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
-internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorForBulkDocs<BatchHandler.MergedBatchCommand, DatabaseRequestHandler, DocumentsOperationContext>
+internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorForBulkDocs<MergedBatchCommand, DatabaseRequestHandler, DocumentsOperationContext>
 {
     public BatchHandlerProcessorForBulkDocs([NotNull] DatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }
 
-    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, BatchHandler.MergedBatchCommand command)
+    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, MergedBatchCommand command)
     {
         try
         {
@@ -150,9 +152,9 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
 
     protected override char GetIdentityPartsSeparator() => RequestHandler.Database.IdentityPartsSeparator;
 
-    protected override BatchRequestParser.AbstractBatchCommandBuilder<BatchHandler.MergedBatchCommand, DocumentsOperationContext> GetCommandBuilder() => new BatchRequestParser.DatabaseBatchCommandBuilder(RequestHandler, RequestHandler.Database);
+    protected override AbstractBatchCommandsReader<MergedBatchCommand, DocumentsOperationContext> GetCommandsReader() => new DatabaseBatchCommandsReader(RequestHandler, RequestHandler.Database);
 
-    protected override AbstractClusterTransactionRequestProcessor<DatabaseRequestHandler, BatchHandler.MergedBatchCommand> GetClusterTransactionRequestProcessor()
+    protected override AbstractClusterTransactionRequestProcessor<DatabaseRequestHandler, MergedBatchCommand> GetClusterTransactionRequestProcessor()
     {
         var topology = RequestHandler.ServerStore.LoadDatabaseTopology(RequestHandler.Database.Name);
         if (topology.Promotables.Contains(RequestHandler.ServerStore.NodeTag))

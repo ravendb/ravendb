@@ -10,6 +10,9 @@ using Raven.Client.Properties;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.Documents.Handlers.BulkInsert;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -186,7 +189,7 @@ namespace Raven.Server.Documents
         {
             switch (type)
             {
-                case nameof(BatchHandler.MergedBatchCommand):
+                case nameof(MergedBatchCommand):
                     return jsonSerializer.Deserialize<MergedBatchCommandDto>(reader);
 
                 case nameof(DeleteDocumentCommand):
@@ -250,7 +253,7 @@ namespace Raven.Server.Documents
                 case nameof(OutputReduceToCollectionCommand):
                     return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
 
-                case nameof(BatchHandler.ClusterTransactionMergedCommand):
+                case nameof(ClusterTransactionMergedCommand):
                     return jsonSerializer.Deserialize<ClusterTransactionMergedCommandDto>(reader);
 
                 case nameof(CountersHandler.ExecuteCounterBatchCommand):

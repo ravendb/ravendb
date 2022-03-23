@@ -12,7 +12,7 @@ class saveDocumentCommand extends commandBase {
     execute(): JQueryPromise<saveDocumentResponseDto> {
         this.document.__metadata.id = this.id;
         
-        const commands: Array<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = [
+        const commands: Array<Raven.Server.Documents.Handlers.Batches.BatchRequestParser.CommandData> = [
             this.document.toBulkDoc("PUT")
         ];
 

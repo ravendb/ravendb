@@ -34,6 +34,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -63,7 +65,7 @@ namespace SlowTests.Server
                 typeof(ExecuteRateLimitedOperations<>),
                 typeof(StartTransactionsRecordingCommand),
                 typeof(StopTransactionsRecordingCommand),
-                typeof(BatchHandler.TransactionMergedCommand),
+                typeof(TransactionMergedCommand),
                 typeof(AbstractQueryRunner.BulkOperationCommand<>)
             };
 

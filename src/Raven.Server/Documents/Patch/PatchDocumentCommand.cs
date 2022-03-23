@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
