@@ -10,11 +10,11 @@ namespace Raven.Server.Documents;
 
 public class ShardedDocumentDatabase : DocumentDatabase
 {
-    public int ShardNumber;
+    public readonly int ShardNumber;
 
-    public string ShardedDatabaseName;
+    public readonly string ShardedDatabaseName;
 
-    public string ShardedDatabaseId;
+    public string ShardedDatabaseId { get; private set; }
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog) : 
         base(name, configuration, serverStore, addToInitLog)
