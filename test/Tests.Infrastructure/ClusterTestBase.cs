@@ -123,7 +123,7 @@ namespace Tests.Infrastructure
             Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
         }
 
-        protected async Task EnsureReplicatingAsync(DocumentStore src, DocumentStore dst)
+        protected async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst)
         {
             var id = "marker/" + Guid.NewGuid();
             using (var s = src.OpenSession())

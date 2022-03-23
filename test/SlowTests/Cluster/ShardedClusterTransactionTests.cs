@@ -13,19 +13,15 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
-    public class ShardedClusterTransactionTests : ClusterTransactionTests
+    public class ShardedClusterTransactionTests : ClusterTransactionTestsBase
     {
         public ShardedClusterTransactionTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        protected override DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
+        protected override IDocumentStore InternalGetDocumentStore(Options options = null, string caller = null)
         {
-            options = Options.ForMode(RavenDatabaseMode.Sharded, options);
-            if (options.DatabaseMode != RavenDatabaseMode.Sharded)
-                throw new InvalidOperationException($"Can't run sharding test with '{options.DatabaseMode}' mode");
-
-            return base.GetDocumentStore(options, caller);
+            return (DocumentStore)Sharding.GetDocumentStore(options, caller);
         }
 
         [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
@@ -98,7 +94,6 @@ namespace SlowTests.Cluster
             throw new NotImplementedException();
         }
     
-
         [RavenFact(RavenTestCategory.Sharding, Skip = "nable to run request http://127.0.0.1:43631/databases/ModifyDocumentWithRevision_1/admin/revisions/config?raft-request-id=3bed2e80-bbfe-4bf5-917c-356bb9f53ccb, the database is sharded, but no shared route is defined for this operation!")]
         public override Task ModifyDocumentWithRevision()
         {
@@ -126,6 +121,160 @@ namespace SlowTests.Cluster
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,"Handle this after RavenDB-18336");
             throw new NotImplementedException();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task CanCreateClusterTransactionRequest()
+        {
+            await base.CanCreateClusterTransactionRequest();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task CanCreateClusterTransactionRequest2()
+        {
+            await base.CanCreateClusterTransactionRequest2();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task ServeSeveralClusterTransactionRequests()
+        {
+            await base.ServeSeveralClusterTransactionRequests();
+        }
+
+        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        [InlineData(1)]
+        [InlineData(3)]
+        [InlineData(5)]
+        public override async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
+        {
+            await base.CanPreformSeveralClusterTransactions(numberOfNodes);
+        }
+
+        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        [InlineData(1)]
+        [InlineData(5)]
+        [InlineData(10)]
+        public override async Task ClusterTransactionWaitForIndexes(int docs)
+        {
+            await base.ClusterTransactionWaitForIndexes(docs);
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task TestSessionSequence()
+        {
+            await base.TestSessionSequence();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task TestCleanUpClusterState()
+        {
+            await base.TestCleanUpClusterState();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task TestConcurrentClusterSessions()
+        {
+            await base.TestConcurrentClusterSessions();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task TestSessionMixture()
+        {
+            await base.TestSessionMixture();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task CreateUniqueUser()
+        {
+            await base.CreateUniqueUser();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task SessionCompareExchangeCommands()
+        {
+            await base.SessionCompareExchangeCommands();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task ClusterTxWithCounters()
+        {
+            await base.ClusterTxWithCounters();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override void ThrowOnClusterTransactionWithCounters()
+        {
+            base.ThrowOnClusterTransactionWithCounters();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override void ThrowOnClusterTransactionWithAttachments()
+        {
+            base.ThrowOnClusterTransactionWithAttachments();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override void ThrowOnClusterTransactionWithTimeSeries()
+        {
+            base.ThrowOnClusterTransactionWithTimeSeries();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task PutDocumentInDifferentCollectionWithRevision()
+        {
+            await base.PutDocumentInDifferentCollectionWithRevision();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task ThrowOnUnsupportedOperations()
+        {
+            await base.ThrowOnUnsupportedOperations();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task ThrowOnOptimisticConcurrency()
+        {
+            await base.ThrowOnOptimisticConcurrency();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task ThrowOnOptimisticConcurrencyForSingleDocument()
+        {
+            await base.ThrowOnOptimisticConcurrencyForSingleDocument();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task ThrowOnInvalidTransactionMode()
+        {
+            await base.ThrowOnInvalidTransactionMode();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task CanAddNullValueToCompareExchange()
+        {
+            await base.CanAddNullValueToCompareExchange();
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task CanGetListCompareExchange()
+        {
+            await base.CanGetListCompareExchange();
+        }
+
+        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(@"
+")]
+        public override async Task ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(string id)
+        {
+            await base.ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(id);
+        }
+
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.ClusterTransactions)]
+        public override async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
+        {
+            await base.ClusterTransactionShouldBeRedirectedFromPromotableNode();
         }
     }
 }
