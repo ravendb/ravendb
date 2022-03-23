@@ -23,24 +23,21 @@ public class BlittableWriterScope : IDisposable
     {
         fixed (byte* ptr = _buffer)
         {
-            using var writeStream = new UnmanagedMemoryStream(ptr, 0, _buffer.Length, FileAccess.Write);
-
             if (_reader.HasParent == false)
             {
-                _reader.WriteJsonToAsync(writeStream).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
-                _currentIndex = (int)writeStream.Position;
                 writer.WriteRaw(field, new Span<byte>(_reader.BasePointer, _reader.Size));
+                
             }
             else
             {
                 using var clonedBlittable = _reader.CloneOnTheSameContext();
-                clonedBlittable.WriteJsonToAsync(writeStream).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
-                _currentIndex = (int)writeStream.Position;
-                writer.Write(field, new Span<byte>(clonedBlittable.BasePointer, clonedBlittable.Size));
+                writer.WriteRaw(field, new Span<byte>(clonedBlittable.BasePointer, clonedBlittable.Size));
             }
         }
     }
 
+    
+    
     public void Dispose()
     {
         ArrayPool<byte>.Shared.Return(_buffer);

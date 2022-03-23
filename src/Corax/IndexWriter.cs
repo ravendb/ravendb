@@ -154,6 +154,9 @@ namespace Corax
             {
                 // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
                 //       that will ensure faster turnaround and more efficient execution. 
+                if (fieldType.HasFlag(IndexEntryFieldType.Raw))
+                    return;
+                
                 var iterator = entryReader.ReadMany(tokenField);
                 while (iterator.ReadNext())
                 {
