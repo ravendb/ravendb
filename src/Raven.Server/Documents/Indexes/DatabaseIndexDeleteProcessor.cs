@@ -20,10 +20,10 @@ public class DatabaseIndexDeleteProcessor : AbstractIndexDeleteProcessor
         return _database.Name;
     }
 
-    protected override IndexDefinition GetIndexDefinition(string name)
+    protected override IndexDefinitionBaseServerSide GetIndexDefinition(string name)
     {
         var index = _database.IndexStore.GetIndex(name);
-        return index?.GetIndexDefinition();
+        return index?.Definition;
     }
 
     protected override async ValueTask CreateIndexAsync(IndexDefinition definition, string raftRequestId)

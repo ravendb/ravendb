@@ -901,7 +901,7 @@ namespace Raven.Server.Documents.Indexes
 
         public async Task<Index> CreateIndex(IndexDefinition definition, string raftRequestId, string source = null)
         {
-            await Create.CreateIndexInternalAsync(definition, raftRequestId, source);
+            await Create.CreateIndexAsync(definition, raftRequestId, source);
 
             return GetIndex(definition.Name);
         }

@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             }
 
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true,
-                ContextPool, DatabaseContext.DatabaseName, PutIndexTask, async args =>
+                ContextPool, DatabaseContext.DatabaseName, DatabaseContext.Indexes.Create.CreateIndexAsync, async args =>
                 {
                     await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         public async Task PutJavaScript()
         {
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: false,
-                ContextPool, DatabaseContext.DatabaseName, PutIndexTask, async args =>
+                ContextPool, DatabaseContext.DatabaseName, DatabaseContext.Indexes.Create.CreateIndexAsync, async args =>
                 {
                     await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
@@ -68,41 +68,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         {
             using (var processor = new ShardedAdminIndexHandlerProcessorForState(IndexState.Disabled, this))
                 await processor.ExecuteAsync();
-        }
-
-        private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
-        {
-            if (args.IndexDefinition == null)
-                throw new ArgumentNullException(nameof(args.IndexDefinition));
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-                "implement ValidateStaticIndex(definition)");
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-                "take the _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber configuration from the database record");
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-                "take the _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode configuration from the database record");
-
-            var command = new PutIndexCommand(
-                args.IndexDefinition,
-                DatabaseContext.DatabaseName,
-                args.Source,
-                ServerStore.Server.Time.GetUtcNow(),
-                args.RaftRequestId,
-                10,
-                IndexDeploymentMode.Parallel
-            );
-
-            long index = 0;
-            try
-            {
-                index = (await ServerStore.SendToLeaderAsync(command)).Index;
-            }
-            catch (Exception e)
-            {
-                IndexStore.ThrowIndexCreationException("static", args.IndexDefinition.Name, e, "the cluster is probably down", ServerStore);
-            }
-
-            return index;
         }
     }
 }

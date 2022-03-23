@@ -20,10 +20,11 @@ public class ShardedIndexLockModeProcessor : AbstractIndexLockModeProcessor
 
     protected override void ValidateIndex(string name, IndexLockMode mode)
     {
-        if (_context.Indexes.TryGetIndexDefinition(name, out var indexDefinition) == false)
+        var index = _context.Indexes.GetIndex(name);
+        if (index == null)
             IndexDoesNotExistException.ThrowFor(name);
 
-        if (indexDefinition is AutoIndexDefinition)
+        if (index.Type.IsAuto())
             throw new NotSupportedException($"'Lock Mode' can't be set for the Auto-Index '{name}'.");
     }
 

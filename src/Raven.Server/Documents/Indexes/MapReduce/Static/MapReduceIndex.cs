@@ -323,6 +323,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
         }
 
+        public static IndexContext CreateContext(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex)
+        {
+            var mapReduceIndexDefinition = CreateIndexDefinition(definition, configuration, indexVersion, out staticIndex);
+            var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
+
+            return new IndexContext(mapReduceIndexDefinition, indexConfiguration);
+        }
+
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
             var workers = new List<IIndexingWork>();

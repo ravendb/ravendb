@@ -20,7 +20,7 @@ public class ShardedIndexStateProcessor : AbstractIndexStateProcessor
 
     protected override void ValidateIndex(string name, IndexState state)
     {
-        if (_context.Indexes.TryGetIndexDefinition(name, out var indexDefinition) == false)
+        if (_context.Indexes.GetIndex(name) == null)
             IndexDoesNotExistException.ThrowFor(name);
     }
 

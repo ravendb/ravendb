@@ -73,7 +73,7 @@ public abstract class AbstractIndexCreateProcessor
         }
     }
 
-    public async ValueTask<long> CreateIndexInternalAsync(IndexDefinition definition, string raftRequestId, string source = null)
+    public async ValueTask<long> CreateIndexAsync(IndexDefinition definition, string raftRequestId, string source = null)
     {
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));

@@ -20,12 +20,10 @@ public class ShardedIndexDeleteProcessor : AbstractIndexDeleteProcessor
 
     protected override string GetDatabaseName() => _context.DatabaseName;
 
-    protected override IndexDefinitionBase GetIndexDefinition(string name)
+    protected override IndexDefinitionBaseServerSide GetIndexDefinition(string name)
     {
-        if (_context.Indexes.TryGetIndexDefinition(name, out var definition))
-            return definition;
-
-        return null;
+        var index = _context.Indexes.GetIndex(name);
+        return index?.Definition;
     }
 
     protected override ValueTask CreateIndexAsync(IndexDefinition definition, string raftRequestId)

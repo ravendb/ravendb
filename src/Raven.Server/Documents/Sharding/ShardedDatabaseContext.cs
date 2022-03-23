@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Sharding
 
             UpdateConfiguration(record.Settings);
 
-            Indexes = new ShardedIndexesCache(this, serverStore);
+            Indexes = new ShardedIndexesContext(this, serverStore);
             _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
