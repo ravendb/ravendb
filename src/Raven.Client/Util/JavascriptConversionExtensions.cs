@@ -2000,7 +2000,7 @@ namespace Raven.Client.Util
                         break;
 
                     case "Today":
-                        writer.Write("new Date(new Date().setHours(0,0,0,0))");
+                        writer.Write("new Date(new Date().setUTCHours(0,0,0,0))");
                         break;
                 }
             }
