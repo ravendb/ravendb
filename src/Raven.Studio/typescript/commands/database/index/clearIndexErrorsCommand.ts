@@ -22,9 +22,7 @@ class clearIndexErrorsCommand extends commandBase {
             }
         }
         
-        return {
-            ...this.location
-        }
+        return this.location;
     }
 }
 

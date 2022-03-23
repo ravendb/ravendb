@@ -14,7 +14,8 @@
     "lib": [
       "DOM",
       "es6",
-      "es2017"  
+      "es2017", 
+      "ES2020"
     ],
     "typeRoots": [
         "./node_modules/@types",

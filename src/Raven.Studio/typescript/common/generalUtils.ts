@@ -711,6 +711,14 @@ class genUtils {
             $(containerSelector).scrollTop(elementTop);
         }
     }
+
+    static formatLocation(location: databaseLocationSpecifier) {
+        if (location.shardNumber != null) {
+            return "Shard #" + location.shardNumber + " on Node " + location.nodeTag;
+        }
+        
+        return "Node " + location.nodeTag;
+    }
 } 
 
 export = genUtils;
