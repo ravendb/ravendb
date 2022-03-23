@@ -42,15 +42,15 @@ namespace FastTests.Sparrow
         [Fact]
         public void ConstructionInsideWholeSegment()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None,ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringWholeSegment);
                 context.Allocate(1, out var byteStringNextSegment);
 
                 long startLocation = (long)byteStringInFirstSegment._pointer;
-                Assert.InRange((long)byteStringWholeSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
-                Assert.NotInRange((long)byteStringNextSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
+                Assert.InRange((long)byteStringWholeSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes - 1);
+                Assert.NotInRange((long)byteStringNextSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes - 1);
             }
         }
 
@@ -72,8 +72,8 @@ namespace FastTests.Sparrow
                 context.Allocate(1, out var byteStringNextSegment);
 
                 long startLocation = (long)byteStringInFirstSegment._pointer;
-                Assert.InRange((long)byteStringWholeSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
-                Assert.NotInRange((long)byteStringNextSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
+                Assert.InRange((long)byteStringWholeSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes - 1);
+                Assert.NotInRange((long)byteStringNextSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes - 1);
             }
         }
 
@@ -87,8 +87,8 @@ namespace FastTests.Sparrow
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringInReusedSegment);
 
                 long startLocation = (long)byteStringInFirstSegment._pointer;
-                Assert.NotInRange((long)byteStringInNewSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
-                Assert.InRange((long)byteStringInReusedSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes);
+                Assert.NotInRange((long)byteStringInNewSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes - 1);
+                Assert.InRange((long)byteStringInReusedSegment._pointer, startLocation, startLocation + ByteStringContext.MinBlockSizeInBytes - 1);
             }
         }
 
@@ -101,17 +101,17 @@ namespace FastTests.Sparrow
                 context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var byteStringInSecond);
 
                 long ptrLocation = (long)byteStringInFirst._pointer;
-                Assert.InRange((long)byteStringInSecond._pointer, ptrLocation, ptrLocation + ByteStringContext.MinBlockSizeInBytes);
+                Assert.InRange((long)byteStringInSecond._pointer, ptrLocation, ptrLocation + ByteStringContext.MinBlockSizeInBytes - 1);
 
                 context.Release(ref byteStringInFirst);
 
                 context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var byteStringReused);
 
-                Assert.InRange((long)byteStringReused._pointer, ptrLocation, ptrLocation + ByteStringContext.MinBlockSizeInBytes);
+                Assert.InRange((long)byteStringReused._pointer, ptrLocation, ptrLocation + ByteStringContext.MinBlockSizeInBytes - 1);
                 Assert.Equal(ptrLocation, (long)byteStringReused._pointer);
 
                 context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var byteStringNextSegment);
-                Assert.NotInRange((long)byteStringNextSegment._pointer, ptrLocation, ptrLocation + ByteStringContext.MinBlockSizeInBytes);
+                Assert.NotInRange((long)byteStringNextSegment._pointer, ptrLocation, ptrLocation + ByteStringContext.MinBlockSizeInBytes - 1);
             }
         }
 
