@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Queries;
@@ -40,6 +41,7 @@ namespace Raven.Server.Documents.Sharding
 
         public RavenConfiguration Configuration { get; internal set; }
 
+        public readonly SystemTime Time = new SystemTime();
 
         public int[] FullRange;
 

@@ -34,6 +34,8 @@ public partial class ShardedDatabaseContext
 
         public readonly ShardedIndexDeleteProcessor Delete;
 
+        public readonly ShardedIndexCreateProcessor Create;
+
         public ShardedIndexesCache([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -42,6 +44,7 @@ public partial class ShardedDatabaseContext
             Priority = new ShardedIndexPriorityProcessor(context, serverStore);
             State = new ShardedIndexStateProcessor(context, serverStore);
             Delete = new ShardedIndexDeleteProcessor(context, serverStore);
+            Create = new ShardedIndexCreateProcessor(context, serverStore);
 
             _scriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
 
