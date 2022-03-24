@@ -437,12 +437,14 @@ namespace SlowTests.Server.Documents.TimeSeries
 
                 await EnsureReplicatingAsync(store1, store2);
 
+                await cleaner.ExecuteCleanup();
+
                 var tss = storage.DocumentsStorage.TimeSeriesStorage;
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    Assert.True(tss.Stats.GetNumberOfEntries(ctx) >= 6);
+                    Assert.Equal(0, tss.Stats.GetNumberOfEntries(ctx));
                 }
             }
         }
