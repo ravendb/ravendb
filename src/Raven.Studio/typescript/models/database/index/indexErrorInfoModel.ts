@@ -119,7 +119,7 @@ class indexErrorInfoModel {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.dbName), "Document ID", "20%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document || "n/a", x => x.Document ? appUrl.forEditDoc(x.Document, this.dbName) : null, "Document ID", "20%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
