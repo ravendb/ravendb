@@ -1879,5 +1879,61 @@ namespace SlowTests.Client.TimeSeries.Policies
                 Assert.Equal($"{rawName}@{p3.Name}", tsNames[3]);
             }
         }
+
+        [Fact]
+        public async Task IgnoreFromRollupNotRelevantDeadSegment()
+        {
+            var baseline = RavenTestHelper.UtcToday.AddDays(-35);
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections =
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = RawTimeSeriesPolicy.Default,
+                            Policies = new List<TimeSeriesPolicy> { new TimeSeriesPolicy("Daily", TimeValue.FromDays(1))}
+                        }
+                    }
+                };
+                await store2.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "EGR" }, "foo/bar");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("foo/bar", "raven");
+                    for (int i = 0; i <= 30; i++)
+                    {
+                        tsf.Append(baseline.AddDays(i), i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("foo/bar", "raven");
+                    tsf.Delete(baseline, baseline.AddDays(29));
+                    session.SaveChanges();
+                }
+                
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                var storage2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                await storage2.TimeSeriesPolicyRunner.RunRollups(propagateException: true);
+                await storage2.TimeSeriesPolicyRunner.DoRetention(propagateException: true);
+
+                WaitForUserToContinueTheTest(store2);
+            }
+        }
     }
 }
