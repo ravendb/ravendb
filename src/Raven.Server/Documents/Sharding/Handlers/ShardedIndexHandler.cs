@@ -58,31 +58,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenShardedAction("/databases/*/indexes/performance", "GET")]
-        public async Task Performance()
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Implement it for the Client API");
-
-            var shard = GetLongQueryString("shard", false);
-            if (shard == null)
-                throw new InvalidOperationException("In a sharded environment you must provide a shard id");
-
-            if (DatabaseContext.RequestExecutors.Length <= shard)
-                throw new InvalidOperationException($"Non existing shard id, {shard}");
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var executor = DatabaseContext.RequestExecutors[shard.Value];
-                var command = new GetIndexPerformanceStatisticsOperation.GetIndexPerformanceStatisticsCommand(null, (int)shard.Value);
-                await executor.ExecuteAsync(command, context);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WritePerformanceStats(context, command.Result);
-                }
-            }
-        }
-
         [RavenShardedAction("/databases/*/indexes/set-lock", "POST")]
         public async Task SetLockMode()
         {
@@ -150,6 +125,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task Source()
         {
             using (var processor = new ShardedIndexHandlerProcessorForSource(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/indexes/performance", "GET")]
+        public async Task Performance()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForPerformance(this))
                 await processor.ExecuteAsync();
         }
     }

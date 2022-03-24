@@ -427,19 +427,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Performance()
         {
-            var stats = GetIndexesToReportOn()
-                .Select(x => new IndexPerformanceStats
-                {
-                    Name = x.Name,
-                    Performance = x.GetIndexingPerformance()
-                })
-                .ToArray();
-
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WritePerformanceStats(context, stats);
-            }
+            using (var processor = new IndexHandlerProcessorForPerformance(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
