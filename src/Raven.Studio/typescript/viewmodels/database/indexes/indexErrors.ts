@@ -7,6 +7,7 @@ import database from "models/resources/database";
 import getIndexesErrorCountCommand from "commands/database/index/getIndexesErrorCountCommand";
 import indexErrorInfoModel from "models/database/index/indexErrorInfoModel";
 import getIndexesErrorCommand from "commands/database/index/getIndexesErrorCommand";
+import IndexErrors = Raven.Client.Documents.Indexes.IndexErrors;
 
 type nameAndCount = {
     name: string;
@@ -18,11 +19,8 @@ class indexErrors extends shardViewModelBase {
     view = require("views/database/indexes/indexErrors.html");
 
     private errorInfoItems = ko.observableArray<indexErrorInfoModel>([]);
-
-    private erroredIndexNames = ko.observableArray<nameAndCount>([]);
+    
     private selectedIndexNames = ko.observableArray<string>([]);
-
-    private erroredActionNames = ko.observableArray<nameAndCount>([]);
     private selectedActionNames = ko.observableArray<string>([]);
 
     searchText = ko.observable<string>();
@@ -30,24 +28,63 @@ class indexErrors extends shardViewModelBase {
 
     clearErrorsBtnText: KnockoutComputed<string>;
     hasErrors: KnockoutComputed<boolean>;
+    
+    private debouncedCriteriaChanged = _.debounce(() => this.onSearchCriteriaChanged(), 600);
+
+    private erroredIndexNames: KnockoutComputed<nameAndCount[]>;
+    private erroredActionNames: KnockoutComputed<nameAndCount[]>;
 
     constructor(db: database) {
         super(db);
-        this.bindToCurrentInstance("toggleDetails", "clearIndexErrorsForItem", "clearIndexErrorsForAllItems");
+        this.bindToCurrentInstance("toggleDetails", "clearIndexErrorsForItem", "clearIndexErrorsForAllItems", "fetchErrorCount", "filterItems");
 
         this.initObservables();
     }
 
     private initObservables() {
-        this.searchText.throttle(500).subscribe(() => this.onSearchCriteriaChanged());
-        this.selectedIndexNames.throttle(500).subscribe(() => this.onSearchCriteriaChanged());
-        this.selectedActionNames.throttle(500).subscribe(() => this.onSearchCriteriaChanged());
+        this.searchText.subscribe(() => this.debouncedCriteriaChanged());
+        this.selectedIndexNames.subscribe(() => this.debouncedCriteriaChanged());
+        this.selectedActionNames.subscribe(() => this.debouncedCriteriaChanged());
 
         this.clearErrorsBtnText = ko.pureComputed(() => this.getButtonText());
 
         this.hasErrors = ko.pureComputed(() => this.errorInfoItems().some(x => x.totalErrorCount() > 0));
 
         this.allIndexesSelected = ko.pureComputed(() => this.erroredIndexNames().length === this.selectedIndexNames().length);
+        
+        this.erroredIndexNames = ko.pureComputed<nameAndCount[]>(() => {
+            const result = new Map<string, number>();
+            
+            const items = this.errorInfoItems();
+            items.forEach(item => {
+                item.indexErrorsCountDto().forEach(countDto => {
+                    const prevCount = result.get(countDto.Name) || 0;
+                    const currentCount = countDto.Errors.reduce((count, val) => val.NumberOfErrors + count, 0);
+                    result.set(countDto.Name, prevCount + currentCount);
+                });
+            });
+            
+            const mappedResult = Array.from(result.entries()).map(([name, count]) => ({ name, count }));
+            return _.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
+        });
+        
+        this.erroredActionNames = ko.pureComputed(() => {
+            const result = new Map<string, number>();
+            
+            const items = this.errorInfoItems();
+            items.forEach(item => {
+                item.indexErrorsCountDto().forEach(countDto => {
+                    countDto.Errors.forEach(error => {
+                        const prevCount = result.get(error.Action) || 0;
+                        const currentCount = error.NumberOfErrors;
+                        result.set(error.Action, prevCount + currentCount);
+                    })
+                })
+            })
+            
+            const mappedResult = Array.from(result.entries()).map(([name, count]) => ({ name, count }));
+            return _.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
+        });
     }
     
     private getButtonText() {
@@ -68,67 +105,28 @@ class indexErrors extends shardViewModelBase {
     }
 
     fetchAllErrorCount() {
-        this.erroredIndexNames([]);
-        this.erroredActionNames([]);
-        this.errorInfoItems([]);
-
-        this.db.getLocations().map(location => this.fetchErrorCountForLocation(location));
+        const locations = this.db.getLocations();
+        const models = locations.map(location => new indexErrorInfoModel(this.db.name, location));
+        this.errorInfoItems(models);
+        
+        models.forEach(this.fetchErrorCount);
     }
 
-    private fetchErrorCountForLocation(location: databaseLocationSpecifier): JQueryPromise<any> {
-        return new getIndexesErrorCountCommand(this.db, location)
+    fetchErrorCount(model: indexErrorInfoModel): JQueryPromise<any> {
+        return new getIndexesErrorCountCommand(this.db, model.location)
             .execute()
             .done(results => {
                 const errorsCountDto = results.Results;
-
-                // calc model item
-                const item = new indexErrorInfoModel(this.db.name, location, errorsCountDto);
-                this.errorInfoItems.push(item);
-
-                // calc index names for top dropdown
-                errorsCountDto.forEach(resultItem => {
-                    const index = this.erroredIndexNames().find(x => x.name === resultItem.Name);
-                    const countToAdd = resultItem.Errors.reduce((count, val) => val.NumberOfErrors + count, 0);
-                    
-                    if (index) {
-                        index.count += countToAdd;
-                    } else {
-                        const item: nameAndCount = {
-                            name: resultItem.Name,
-                            count: countToAdd
-                        };
-                        this.erroredIndexNames.push(item);
-                    }
-                });
-
-                // calc actions for top dropdown
-                errorsCountDto.forEach(resultItem => {
-                    resultItem.Errors.forEach(errItem => {
-                        const action = this.erroredActionNames().find(x => x.name === errItem.Action);
-                        if (action) {
-                            action.count += errItem.NumberOfErrors;
-                        } else {
-                            const item: nameAndCount = {
-                                name: errItem.Action,
-                                count: errItem.NumberOfErrors
-                            }
-                            this.erroredActionNames.push(item);
-                        }
-                    });
-                });
-
-                this.erroredIndexNames(_.sortBy(this.erroredIndexNames(), x => x.name.toLocaleLowerCase()));
-                this.erroredActionNames(_.sortBy(this.erroredActionNames(), x => x.name.toLocaleLowerCase()));
-                this.errorInfoItems(_.sortBy(this.errorInfoItems(), x => x.location().nodeTag))
-
+                
+                model.onCountsLoaded(errorsCountDto);
+                
                 this.selectedIndexNames(this.erroredIndexNames().map(x => x.name));
                 this.selectedActionNames(this.erroredActionNames().map(x => x.name));
 
                 indexErrors.syncMultiSelect();
             })
             .fail((result) => {
-                const item = new indexErrorInfoModel(this.db.name, location, null, result.responseJSON.Message);
-                this.errorInfoItems.push(item);
+                model.onCountsLoadError(result.responseJSON.Message);
             });
     }
 
@@ -183,39 +181,37 @@ class indexErrors extends shardViewModelBase {
     private onSearchCriteriaChanged() {
         this.errorInfoItems().forEach(item => {
             if (item.showDetails()) {
-                this.fetchErrorsDetails(item);
+                item.filterAndShow(this.filterItems);
             }
         });
     }
 
     toggleDetails(item: indexErrorInfoModel) {
-        item.showDetails.toggle();
-        
-        if (item.showDetails()) {
+        if (!item.showDetails()) {
+            // details are not visible - start fetching data
             this.fetchErrorsDetails(item);
+            item.onDetailsLoading();
         }
+        
+        item.showDetails.toggle();
     }
 
     private fetchErrorsDetails(item: indexErrorInfoModel) {
-        new getIndexesErrorCommand(this.db, item.location())
+        new getIndexesErrorCommand(this.db, item.location)
             .execute()
             .then((resultDto: Raven.Client.Documents.Indexes.IndexErrors[]) => {
-                const results: IndexErrorPerDocument[] = this.mapItems(resultDto);
-                const filteredResults: IndexErrorPerDocument[] = this.filterItems(results);
-                item.filteredIndexErrors(filteredResults);
-                item.errMsg("");
+                const results = this.mapItems(resultDto);
+                item.onDetailsLoaded(results);
+                item.filterAndShow(this.filterItems);
             })
-            .fail(result => item.errMsg(result));
+            .fail(result => item.onDetailsLoadError(result.responseJSON.Message));
     }
 
     private mapItems(indexErrorsDto: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
         const mappedItems = _.flatMap(indexErrorsDto, value => {
             return value.Errors.map((errorDto: Raven.Client.Documents.Indexes.IndexingError): IndexErrorPerDocument =>
                 ({
-                    Timestamp: errorDto.Timestamp,
-                    Document: errorDto.Document,
-                    Action: errorDto.Action,
-                    Error: errorDto.Error,
+                    ...errorDto,
                     IndexName: value.Name
                 }));
         });
@@ -223,29 +219,32 @@ class indexErrors extends shardViewModelBase {
         return _.orderBy(mappedItems, [x => x.Timestamp], ["desc"]);
     }
 
-    private filterItems(list: IndexErrorPerDocument[]): IndexErrorPerDocument[] {
-
-        let filteredItems = list.filter(error => this.selectedIndexNames().includes(error.IndexName) &&
-            this.selectedActionNames().includes(error.Action));
+    filterItems(error: IndexErrorPerDocument): boolean {
+        if (!this.selectedIndexNames().includes(error.IndexName)) {
+            return false;
+        }
+        if (!this.selectedActionNames().includes(error.Action)) {
+            return false;
+        }
 
         if (this.searchText()) {
             const searchText = this.searchText().toLowerCase();
             
-            filteredItems = filteredItems.filter((error) =>
-                (error.Document && error.Document.toLowerCase().includes(searchText)) ||
-                error.Error.toLowerCase().includes(searchText))
+            const matchesDocument = error.Document && error.Document.toLowerCase().includes(searchText);
+            const matchesError = error.Error.toLowerCase().includes(searchText);
+            return matchesDocument || matchesError;
         }
-
-        return filteredItems;
+        
+        return true;
     }
 
     clearIndexErrorsForAllItems() {
-        const listOfLocations = this.errorInfoItems().map(x => x.location());
+        const listOfLocations = this.errorInfoItems().map(x => x.location);
         this.handleClearRequest(listOfLocations);
     }
 
     clearIndexErrorsForItem(item: indexErrorInfoModel) {
-        this.handleClearRequest([item.location()]);
+        this.handleClearRequest([item.location]);
     }
 
     private handleClearRequest(locations: databaseLocationSpecifier[]) {

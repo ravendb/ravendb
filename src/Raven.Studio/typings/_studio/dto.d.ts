@@ -885,7 +885,7 @@ interface indexErrorsCount {
 
 interface IndexingErrorCount {
     Action: string;
-    NumberOfErrors: nubmer;
+    NumberOfErrors: number;
 }
 
 type databaseLocationSpecifier = {

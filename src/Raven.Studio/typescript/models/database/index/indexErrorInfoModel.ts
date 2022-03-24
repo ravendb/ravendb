@@ -10,35 +10,41 @@ import appUrl = require("common/appUrl");
 import moment = require("moment");
 import indexErrorDetails = require("viewmodels/database/indexes/indexErrorDetails");
 
+type indexErrorInfoModelState = "loading" | "loaded" | "error";
+
 class indexErrorInfoModel {
 
-    dbName = ko.observable<string>();
-    location = ko.observable<databaseLocationSpecifier>();
-    
-    badgeText: KnockoutComputed<string>;
-    badgeClass: KnockoutComputed<string>;
-    
-    totalErrorCount: KnockoutComputed<number>;
-    clearErrorsBtnTooltip: KnockoutComputed<string>;
-    
-    indexErrorsCountDto = ko.observableArray<indexErrorsCount>();
-    filteredIndexErrors = ko.observableArray<IndexErrorPerDocument>();
-    
-    gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
-    private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>();
-    
+    dbName: string;
+    location: databaseLocationSpecifier;
+
     gridWasInitialized: boolean = false;
-    gridId: KnockoutComputed<string>;
+    gridId: string;
     
+    state = ko.observable<indexErrorInfoModelState>("loading");
+
     showDetails = ko.observable(false);
     errMsg = ko.observable<string>();
     
-    constructor(dbName: string, location: databaseLocationSpecifier, errorsCountDto: indexErrorsCount[], errMessage: string = null) {
-        this.dbName(dbName);
-        this.location(location);
-        
-        this.indexErrorsCountDto(errorsCountDto);
-        this.errMsg(errMessage);
+    indexErrorsCountDto = ko.observableArray<indexErrorsCount>([]);
+    indexErrors: IndexErrorPerDocument[] = [];
+    filteredIndexErrors: IndexErrorPerDocument[] = [];
+    
+    gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
+    private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>();
+
+    badgeText: KnockoutComputed<string>;
+    badgeClass: KnockoutComputed<string>;
+
+    totalErrorCount: KnockoutComputed<number>;
+    clearErrorsBtnTooltip: KnockoutComputed<string>;
+    
+    emptyTemplate: KnockoutComputed<string>;
+    
+    loadingDetailsTask: JQueryDeferred<void>;
+    
+    constructor(dbName: string, location: databaseLocationSpecifier) {
+        this.dbName = dbName;
+        this.location = location;
         
         this.initObservables();
     }
@@ -58,31 +64,46 @@ class indexErrorInfoModel {
         });
         
         this.badgeText = ko.pureComputed(() => {
-            if (this.errMsg()) {
-                return "Not Available";
+            if (this.state() === "loading") {
+                return "Loading";
             }
+
+            if (this.state() === "error") {
+                return "N/A";
+            }
+            
             return this.totalErrorCount() ? "Errors" : "Ok";
         });
         
         this.badgeClass = ko.pureComputed(() => {
-            if (this.errMsg()) {
+            if (this.state() === "loading") {
+                return "state-info";
+            }
+            
+            if (this.state() === "error") {
                 return "state-warning";
             }
             return this.totalErrorCount() ? "state-danger" : "state-success";
         });
-
-        this.gridId = ko.pureComputed(() => `${this.location().nodeTag}-${this.location().shardNumber || ""}`);
         
-        this.clearErrorsBtnTooltip = ko.pureComputed(() => "Click to clear errors from " + generalUtils.formatLocation(this.location()));
-        
-        this.filteredIndexErrors.subscribe(() => {
-            if (!this.gridWasInitialized) {
-                this.gridInit();
-                this.gridWasInitialized = true;
+        this.emptyTemplate = ko.pureComputed(() => {
+            if (this.state() === "error") {
+                return "errored-index-errors-template";
             }
+            return "empty-index-errors-template";
+        })
 
-            this.gridController().reset();
-        });
+        this.gridId = `${this.location.nodeTag}-${this.location.shardNumber || "na"}`;
+        
+        this.clearErrorsBtnTooltip = ko.pureComputed(() => "Click to clear errors from " + generalUtils.formatLocation(this.location));
+    }
+    
+    get gridClass() {
+        return `virtual-grid-class-${this.gridId}`;
+    }
+    
+    get tooltipClass() {
+        return `js-index-errors-tooltip-${this.gridId}`;
     }
     
     private gridInit() {
@@ -94,11 +115,11 @@ class indexErrorInfoModel {
                     {
                         title: () => 'Show indexing error details'
                     }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.dbName()), "Index name", "25%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.dbName), "Index name", "25%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.dbName()), "Document ID", "20%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.dbName), "Document ID", "20%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
@@ -114,8 +135,8 @@ class indexErrorInfoModel {
             ]
         );
 
-        const gridTooltipClass = `.js-index-errors-tooltip-${this.gridId()}`;
-        const gridContainerSelector = `.virtual-grid-class-${this.gridId()}`;
+        const gridTooltipClass = "." + this.tooltipClass;
+        const gridContainerSelector = "." + this.gridClass;
         
         this.columnPreview.install(gridContainerSelector, gridTooltipClass,
             (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject,
@@ -136,15 +157,62 @@ class indexErrorInfoModel {
     private getIndexErrors(): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
         const deferred = $.Deferred<pagedResult<IndexErrorPerDocument>>();
 
-        return deferred.resolve({
-            items: this.filteredIndexErrors(),
-            totalResultCount: this.filteredIndexErrors().length
-        });
+        this.loadingDetailsTask
+            .always(() => {
+                deferred.resolve({
+                    items: this.filteredIndexErrors,
+                    totalResultCount: this.filteredIndexErrors.length
+                });
+            });
+        
+        return deferred;
+    }
+    
+    filterAndShow(filter: (item: IndexErrorPerDocument) => boolean) {
+        this.filteredIndexErrors = this.indexErrors.filter(filter);
+
+        this.gridController().reset();
     }
 
     private showErrorDetails(errorIdx: number) {
-        const view = new indexErrorDetails(this.filteredIndexErrors(), errorIdx);
+        const view = new indexErrorDetails(this.filteredIndexErrors, errorIdx);
         app.showBootstrapDialog(view);
+    }
+
+    onCountsLoaded(errorsCountDto: indexErrorsCount[]) {
+        this.indexErrorsCountDto(errorsCountDto);
+        this.state("loaded");
+    }
+
+    onCountsLoadError(err: string) {
+        this.indexErrors = [];
+        this.errMsg(err);
+        this.state("error");
+    }
+
+    onDetailsLoaded(results: IndexErrorPerDocument[]) {
+        this.errMsg("");
+        this.indexErrors = results;
+
+        this.loadingDetailsTask.resolve();
+    }
+
+    onDetailsLoadError(err: string) {
+        this.state("error");
+        this.errMsg(err);
+        this.filterAndShow(() => false);
+        this.loadingDetailsTask.resolve();
+    }
+
+    onDetailsLoading() {
+        this.loadingDetailsTask = $.Deferred();
+
+        if (!this.gridWasInitialized) {
+            this.gridInit();
+            this.gridWasInitialized = true;
+        } else {
+            this.gridController().reset();
+        }
     }
 }
 
