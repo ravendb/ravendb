@@ -36,17 +36,21 @@
                         <div class="flex-horizontal">
                             <div class="data margin-right-lg">
                                 <span>Node Tag:</span>
-                                <span class="data-content margin-left-xs" data-bind="text: location().nodeTag"></span>
+                                <span class="data-content margin-left-xs" data-bind="text: location.nodeTag"></span>
                             </div>
-                            <div class="data margin-right-lg" data-bind="if: location().shardNumber !== undefined">
+                            <div class="data margin-right-lg" data-bind="if: location.shardNumber !== undefined">
                                 <span>Shard:</span>
-                                <span class="data-content margin-left-xs" data-bind="text: '$' + location().shardNumber.toLocaleString()"></span>
+                                <span class="data-content margin-left-xs" data-bind="text: '$' + location.shardNumber.toLocaleString()"></span>
                             </div>
-                            <div class="data flex-grow" data-bind="visible: !errMsg()">
+                            <div class="data flex-grow" data-bind="visible: state() === 'loading', if: state() === 'loading'">
+                                <span class="global-spinner spinner-sm"></span>
+                                <span>Loading...</span>
+                            </div>
+                            <div class="data flex-grow" data-bind="visible: state() === 'loaded', if: state() === 'loaded'">
                                 <span>Error count:</span>
                                 <span class="data-content margin-left-xs" data-bind="text: totalErrorCount().toLocaleString()"></span>
                             </div>
-                            <div class="data flex-grow" data-bind="visible: errMsg">
+                            <div class="data flex-grow" data-bind="visible: state() === 'error', if: state() === 'error'">
                                 <span>Error:</span>
                                 <span class="data-content margin-left-xs" data-bind="text: errMsg"></span>
                             </div>
@@ -67,15 +71,15 @@
                         <div class="padding flex-horizontal">
                             <div class="flex-grow">
                                 <div class="panel-body grid">
-                                    <virtual-grid data-bind="attr: { class: 'resizable virtual-grid-class' + gridId() }"
-                                                  params="controller: gridController, emptyTemplate: 'empty-index-errors-template'">
+                                    <virtual-grid data-bind="attr: { class: 'resizable ' + gridClass }"
+                                                  params="controller: gridController, emptyTemplate: emptyTemplate">
                                     </virtual-grid>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div data-bind="attr: { class: 'tooltip json-preview lg ' + 'js-index-errors-tooltip' + gridId() }" style="opacity: 0">
+                <div data-bind="attr: { class: 'tooltip json-preview lg ' + tooltipClass }" style="opacity: 0">
                 </div>
             </div>
         </div>
@@ -84,4 +88,8 @@
 
 <script type="text/html" id="empty-index-errors-template">
     No errors found.
+</script>
+
+<script type="text/html" id="errored-index-errors-template">
+    <span class="text-danger">Unable to load data</span>
 </script>
