@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 foreach (var tsKey in uniqueTimeSeries)
                 {
-                    if (table.SeekOnePrimaryKeyWithPrefix(tsKey, Slices.BeforeAllKeys, out _) == false)
+                    if (table.SeekOnePrimaryKeyPrefix(tsKey, out _) == false)
                     {
                         using (Slice.External(context.Allocator, tsKey, tsKey.Size - 1, out var statsKey))
                         {
