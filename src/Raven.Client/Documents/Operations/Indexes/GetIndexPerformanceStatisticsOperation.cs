@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             {
                 var url = $"{node.Url}/databases/{node.Database}/indexes/performance";
 
-                if (_indexNames != null)
+                if (_indexNames is { Length: > 0 })
                 {
                     url += "?";
                     foreach (var indexName in _indexNames)
