@@ -9,6 +9,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
@@ -18,14 +19,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
         public const int MaximumPersistedCapacityOfCoraxWriter = 512;
+        protected const int DocumentBufferSize = 1024 * 1024 * 5;
+
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
-        private readonly IndexFieldsMapping _knownFields;                
-
+        private readonly IndexFieldsMapping _knownFields;
+        private readonly IDisposable _bufferScope;
+        private readonly ByteString _buffer;
         private int _entriesCount = 0;
 
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger) : base(index, logger)
         {
+            _bufferScope = writeTransaction.Allocator.Allocate(DocumentBufferSize, out _buffer);
             _converter = converter;
             _knownFields = _converter.GetKnownFields();
             try
@@ -64,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             LazyStringValue lowerId;
 
             using (Stats.ConvertStats.Start())
-                data = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId);
+                data = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, _buffer.ToSpan());
 
             if (data.IsEmpty)
                 return;
@@ -128,6 +133,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         public override void Dispose()
         {
+            _bufferScope?.Dispose();
             _indexWriter?.Dispose();
             if (_converter.StringsListForEnumerableScope?.Capacity > MaximumPersistedCapacityOfCoraxWriter)
             {

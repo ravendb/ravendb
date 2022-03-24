@@ -25,15 +25,15 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
     {
         _isMultiMap = index.IsMultiMap;
     }
-    
+
     public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id)
+        out LazyStringValue id, Span<byte> writerBuffer)
     {
         //todo maciej boosting inside index
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
         id = default;
-        
+
         IPropertyAccessor accessor;
 
         if (_isMultiMap == false)
@@ -44,9 +44,8 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         // todo maciej
         // We need to discuss how we will handle this.  
         // https://github.com/ravendb/ravendb/pull/13730#discussion_r820661488
-        using var _ = _allocator.Allocate(DocumentBufferSize, out ByteString buffer);
-        var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
-        
+        var entryWriter = new IndexEntryWriter(writerBuffer, _knownFields);
+
         var scope = new SingleEntryWriterScope(_allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
@@ -80,18 +79,18 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
                 storedValue[property.Key] = blittableValue;
             }
 
-            InsertRegularField(field, value, indexContext, out var shouldSkip, ref entryWriter, scope);
+            InsertRegularField(field, value, indexContext, ref entryWriter, scope);
         }
-        
+
         if (entryWriter.IsEmpty())
             return Span<byte>.Empty;
-        
+
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
             scope.Write(_knownFields.Count - 1, bjo, ref entryWriter);
         }
-        
+
         id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
         scope.Write(0, id.AsSpan(), ref entryWriter);
         entryWriter.Finish(out var output);

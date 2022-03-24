@@ -33,17 +33,17 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         index.Definition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
     }
 
+    //todo maciej: refactor | stop duplicating code from LuceneJint[...] https://github.com/ravendb/ravendb/pull/13730#discussion_r825928762
     public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id)
+        out LazyStringValue id, Span<byte> writerBuffer)
     {
         if (doc is not ObjectInstance documentToProcess)
         {
             id = null;
             return Span<byte>.Empty;
         }
-
-        using var _ = _allocator.Allocate(DocumentBufferSize, out ByteString buffer);
-        var entryWriter = new CoraxLib.IndexEntryWriter(buffer.ToSpan(), _knownFields);
+        
+        var entryWriter = new CoraxLib.IndexEntryWriter(writerBuffer, _knownFields);
 
         id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
         var scope = new SingleEntryWriterScope(_allocator);
@@ -92,7 +92,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                         {
                             value = Utils.TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                                 context: indexContext);
-                            InsertRegularField(field, value, indexContext, out var _, ref entryWriter, scope);
+                            InsertRegularField(field, value, indexContext, ref entryWriter, scope);
                             if (value is IDisposable toDispose1)
                             {
                                 // the value was converted to a lucene field and isn't needed anymore
@@ -146,7 +146,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             }
 
             value = Utils.TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
-            InsertRegularField(field, value, indexContext, out var _, ref entryWriter, scope);
+            InsertRegularField(field, value, indexContext, ref entryWriter, scope);
 
             if (value is IDisposable toDispose)
             {

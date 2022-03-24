@@ -515,7 +515,7 @@ namespace Raven.Server.Documents.Queries.Results
             return anyExtracted;
         }
 
-        private unsafe bool TryExtractValueFromIndexCorax(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
+        private bool TryExtractValueFromIndexCorax(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
         {
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;
