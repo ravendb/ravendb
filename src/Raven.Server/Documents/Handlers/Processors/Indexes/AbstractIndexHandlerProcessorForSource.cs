@@ -3,13 +3,12 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
+namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal abstract class AbstractIndexHandlerProcessorForSource<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
