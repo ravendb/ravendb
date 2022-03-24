@@ -209,20 +209,20 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MapIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
-            var context = CreateContext(definition, configuration, indexVersion, out var staticIndex);
+            var context = CreateIndexInformationHolder(definition, configuration, indexVersion, out var staticIndex);
 
             var instance = new MapIndex((MapIndexDefinition)context.Definition, staticIndex);
             return instance;
         }
 
-        public static IndexContext CreateContext(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex)
+        public static IndexInformationHolder CreateIndexInformationHolder(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex)
         {
             staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration, indexVersion);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
-            return IndexContext.CreateFor(staticMapIndexDefinition, indexConfiguration, staticIndex);
+            return IndexInformationHolder.CreateFor(staticMapIndexDefinition, indexConfiguration, staticIndex);
         }
     }
 }

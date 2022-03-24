@@ -11,7 +11,7 @@ internal class IndexHandlerProcessorForDelete : AbstractIndexHandlerProcessorFor
     {
     }
 
-    protected override AbstractIndexDeleteProcessor GetIndexDeleteProcessor() => RequestHandler.Database.IndexStore.Delete;
+    protected override AbstractIndexDeleteController GetIndexDeleteProcessor() => RequestHandler.Database.IndexStore.Delete;
 
     protected override string GetDatabaseName() => RequestHandler.Database.Name;
 }

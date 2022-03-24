@@ -13,15 +13,15 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes;
 
-public class StaticIndexContext : IndexContext
+public class StaticIndexInformationHolder : IndexInformationHolder
 {
-    public StaticIndexContext([NotNull] IndexDefinitionBaseServerSide definition, [NotNull] IndexingConfiguration configuration, AbstractStaticIndexBase staticIndex)
+    public StaticIndexInformationHolder([NotNull] IndexDefinitionBaseServerSide definition, [NotNull] IndexingConfiguration configuration, AbstractStaticIndexBase staticIndex)
         : base(definition, configuration)
     {
         Compiled = staticIndex;
     }
 
-    public StaticIndexContext([NotNull] Index index)
+    public StaticIndexInformationHolder([NotNull] Index index)
         : base(index)
     {
         Compiled = index switch
@@ -37,9 +37,9 @@ public class StaticIndexContext : IndexContext
     public readonly AbstractStaticIndexBase Compiled;
 }
 
-public class IndexContext
+public class IndexInformationHolder
 {
-    protected IndexContext([NotNull] IndexDefinitionBaseServerSide definition, [NotNull] IndexingConfiguration configuration)
+    protected IndexInformationHolder([NotNull] IndexDefinitionBaseServerSide definition, [NotNull] IndexingConfiguration configuration)
     {
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
         Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -47,7 +47,7 @@ public class IndexContext
         Type = DetectIndexType(definition);
     }
 
-    protected IndexContext([NotNull] Index index)
+    protected IndexInformationHolder([NotNull] Index index)
     {
         if (index == null)
             throw new ArgumentNullException(nameof(index));
@@ -66,25 +66,25 @@ public class IndexContext
 
     public readonly IndexType Type;
 
-    public static IndexContext CreateFor(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration, AbstractStaticIndexBase staticIndex = null)
+    public static IndexInformationHolder CreateFor(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration, AbstractStaticIndexBase staticIndex = null)
     {
         if (definition is MapIndexDefinition or MapReduceIndexDefinition)
-            return new StaticIndexContext(definition, configuration, staticIndex);
+            return new StaticIndexInformationHolder(definition, configuration, staticIndex);
 
         Debug.Assert(staticIndex == null, "staticIndex == null");
-        return new IndexContext(definition, configuration);
+        return new IndexInformationHolder(definition, configuration);
     }
 
-    public static IndexContext CreateFor(Index index)
+    public static IndexInformationHolder CreateFor(Index index)
     {
         switch (index.Type)
         {
             case IndexType.Map:
             case IndexType.MapReduce:
-                return new StaticIndexContext(index);
+                return new StaticIndexInformationHolder(index);
 
             default:
-                return new IndexContext(index);
+                return new IndexInformationHolder(index);
         }
     }
 
@@ -99,11 +99,11 @@ public class IndexContext
         if (definition is FaultyIndexDefinition or FaultyAutoIndexDefinition)
             return IndexType.Faulty;
 
-        if (definition is MapReduceIndexDefinition)
-            return IndexType.MapReduce;
+        if (definition is MapReduceIndexDefinition mapReduce)
+            return mapReduce.IndexDefinition.Type;
 
-        if (definition is MapIndexDefinition)
-            return IndexType.Map;
+        if (definition is MapIndexDefinition map)
+            return map.IndexDefinition.Type;
 
         throw new ArgumentOutOfRangeException(nameof(definition));
     }
@@ -111,8 +111,8 @@ public class IndexContext
 
 public static class IndexContextExtensions
 {
-    public static IndexContext ToIndexContext(this Index index)
+    public static IndexInformationHolder ToIndexContext(this Index index)
     {
-        return IndexContext.CreateFor(index);
+        return IndexInformationHolder.CreateFor(index);
     }
 }

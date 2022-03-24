@@ -7,11 +7,11 @@ using Raven.Server.ServerWide.Commands.Indexes;
 
 namespace Raven.Server.Documents.Indexes;
 
-public abstract class AbstractIndexLockModeProcessor
+public abstract class AbstractIndexLockModeController
 {
     protected readonly ServerStore ServerStore;
 
-    protected AbstractIndexLockModeProcessor([NotNull] ServerStore serverStore)
+    protected AbstractIndexLockModeController([NotNull] ServerStore serverStore)
     {
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
     }

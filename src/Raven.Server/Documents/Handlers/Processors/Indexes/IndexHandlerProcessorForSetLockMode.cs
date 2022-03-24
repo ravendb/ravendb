@@ -11,7 +11,7 @@ internal class IndexHandlerProcessorForSetLockMode : AbstractIndexHandlerProcess
     {
     }
 
-    protected override AbstractIndexLockModeProcessor GetIndexLockModeProcessor()
+    protected override AbstractIndexLockModeController GetIndexLockModeProcessor()
     {
         return RequestHandler.Database.IndexStore.LockMode;
     }

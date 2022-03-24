@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static async ValueTask ValidateReduceResultsCollectionNameAsync(
             IndexDefinition definition,
             AbstractStaticIndexBase index,
-            Func<IEnumerable<IndexContext>> getIndexes,
+            Func<IEnumerable<IndexInformationHolder>> getIndexes,
             Func<string, ValueTask<long>> getCollectionCountAsync,
             bool checkIfCollectionEmpty)
         {
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             var indexes = getIndexes()
                 .Where(x => x.Type.IsStatic() && x.Type.IsMapReduce())
-                .Cast<StaticIndexContext>()
+                .Cast<StaticIndexInformationHolder>()
                 .Where(mapReduceIndex =>
                 {
                     // we have handling for side by side indexing with OutputReduceToCollection so we're checking only other indexes
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             var existingIndexOrSideBySide = getIndexes()
                 .Where(x => x.Type.IsStatic() && x.Type.IsMapReduce())
-                .Cast<StaticIndexContext>()
+                .Cast<StaticIndexInformationHolder>()
                 .FirstOrDefault(mapReduceIndex =>
                 {
                     var name = definition.Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
@@ -219,8 +219,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         }
 
         private static bool CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(
-            StaticIndexContext indexToCheck, HashSet<string> indexCollections,
-            List<StaticIndexContext> indexes, out string description)
+            StaticIndexInformationHolder indexToCheck, HashSet<string> indexCollections,
+            List<StaticIndexInformationHolder> indexes, out string description)
         {
             description = $"{indexToCheck.Name}: {string.Join(",", indexToCheck.Definition.Collections)}";
 
@@ -346,12 +346,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
         }
 
-        public static IndexContext CreateContext(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex)
+        public static IndexInformationHolder CreateIndexInformationHolder(IndexDefinition definition, RavenConfiguration configuration, long indexVersion, out AbstractStaticIndexBase staticIndex)
         {
             var mapReduceIndexDefinition = CreateIndexDefinition(definition, configuration, indexVersion, out staticIndex);
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
-            return IndexContext.CreateFor(mapReduceIndexDefinition, indexConfiguration, staticIndex);
+            return IndexInformationHolder.CreateFor(mapReduceIndexDefinition, indexConfiguration, staticIndex);
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()

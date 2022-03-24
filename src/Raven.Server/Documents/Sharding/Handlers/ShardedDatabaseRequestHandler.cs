@@ -24,12 +24,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public ShardedContinuationTokensHandler ContinuationTokens;
 
-        public ShardedClusterHandler Cluster;
-
         public ShardedDatabaseRequestHandler()
         {
             ContinuationTokens = new ShardedContinuationTokensHandler(this);
-            Cluster = new ShardedClusterHandler(this);
         }
 
         public override void Init(RequestHandlerContext context)

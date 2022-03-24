@@ -10,11 +10,11 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
-public class ShardedIndexCreateProcessor : AbstractIndexCreateProcessor
+public class ShardedIndexCreateController : AbstractIndexCreateController
 {
     private readonly ShardedDatabaseContext _context;
 
-    public ShardedIndexCreateProcessor([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
+    public ShardedIndexCreateController([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         : base(serverStore)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -26,7 +26,7 @@ public class ShardedIndexCreateProcessor : AbstractIndexCreateProcessor
 
     protected override RavenConfiguration GetDatabaseConfiguration() => _context.Configuration;
 
-    protected override IndexContext GetIndex(string name)
+    protected override IndexInformationHolder GetIndex(string name)
     {
         return _context.Indexes.GetIndex(name);
     }
@@ -43,15 +43,15 @@ public class ShardedIndexCreateProcessor : AbstractIndexCreateProcessor
 
         var stats = await _context.ShardExecutor.ExecuteParallelForAllAsync(op);
 
-        return stats.Collections.TryGetValue(collection, out var collectionCount) 
-            ? collectionCount 
+        return stats.Collections.TryGetValue(collection, out var collectionCount)
+            ? collectionCount
             : 0;
     }
 
-    protected override IEnumerable<IndexContext> GetIndexes() => _context.Indexes.GetIndexes();
+    protected override IEnumerable<IndexInformationHolder> GetIndexes() => _context.Indexes.GetIndexes();
 
-    protected override async ValueTask WaitForIndexNotificationAsync(long index)
+    protected override ValueTask WaitForIndexNotificationAsync(long index)
     {
-        await ServerStore.Cluster.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+        return _context.Cluster.WaitForExecutionOfRaftCommandsAsync(index);
     }
 }

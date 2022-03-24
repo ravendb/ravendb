@@ -2,36 +2,33 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes;
 
-public class DatabaseIndexLockModeProcessor : AbstractIndexLockModeProcessor
+public class DatabaseIndexDeleteController : AbstractIndexDeleteController
 {
     private readonly DocumentDatabase _database;
 
-    public DatabaseIndexLockModeProcessor([NotNull] DocumentDatabase database)
+    public DatabaseIndexDeleteController([NotNull] DocumentDatabase database)
         : base(database.ServerStore)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    protected override void ValidateIndex(string name, IndexLockMode mode)
-    {
-        var index = _database.IndexStore.GetIndex(name);
-        if (index == null)
-            IndexDoesNotExistException.ThrowFor(name);
-
-        if (index.Type == IndexType.Faulty || index.Type.IsAuto())
-        {
-            index.SetLock(mode);  // this will throw proper exception
-            return;
-        }
-    }
-
     protected override string GetDatabaseName()
     {
         return _database.Name;
+    }
+
+    protected override IndexDefinitionBaseServerSide GetIndexDefinition(string name)
+    {
+        var index = _database.IndexStore.GetIndex(name);
+        return index?.Definition;
+    }
+
+    protected override async ValueTask CreateIndexAsync(IndexDefinition definition, string raftRequestId)
+    {
+        await _database.IndexStore.CreateIndex(definition, raftRequestId);
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)

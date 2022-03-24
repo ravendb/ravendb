@@ -11,7 +11,7 @@ internal class IndexHandlerProcessorForSetPriority : AbstractIndexHandlerProcess
     {
     }
 
-    protected override AbstractIndexPriorityProcessor GetIndexPriorityProcessor()
+    protected override AbstractIndexPriorityController GetIndexPriorityProcessor()
     {
         return RequestHandler.Database.IndexStore.Priority;
     }

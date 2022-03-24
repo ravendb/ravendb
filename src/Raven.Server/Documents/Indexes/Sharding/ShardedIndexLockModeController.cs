@@ -8,11 +8,11 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
-public class ShardedIndexLockModeProcessor : AbstractIndexLockModeProcessor
+public class ShardedIndexLockModeController : AbstractIndexLockModeController
 {
     private readonly ShardedDatabaseContext _context;
 
-    public ShardedIndexLockModeProcessor([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
+    public ShardedIndexLockModeController([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         : base(serverStore)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));

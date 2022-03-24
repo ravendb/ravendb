@@ -12,7 +12,7 @@ internal class ShardedIndexHandlerProcessorForSetLockMode : AbstractIndexHandler
     {
     }
 
-    protected override AbstractIndexLockModeProcessor GetIndexLockModeProcessor()
+    protected override AbstractIndexLockModeController GetIndexLockModeProcessor()
     {
         return RequestHandler.DatabaseContext.Indexes.LockMode;
     }

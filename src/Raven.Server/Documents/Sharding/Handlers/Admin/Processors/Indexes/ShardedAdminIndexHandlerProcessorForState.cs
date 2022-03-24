@@ -27,7 +27,7 @@ internal class ShardedAdminIndexHandlerProcessorForState : AbstractAdminIndexHan
         return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
     }
 
-    protected override AbstractIndexStateProcessor GetIndexStateProcessor()
+    protected override AbstractIndexStateController GetIndexStateProcessor()
     {
         return RequestHandler.DatabaseContext.Indexes.State;
     }

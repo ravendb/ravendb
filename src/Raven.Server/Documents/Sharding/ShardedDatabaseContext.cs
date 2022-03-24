@@ -75,6 +75,7 @@ namespace Raven.Server.Documents.Sharding
             FullRange = Enumerable.Range(0, _record.Shards.Length).ToArray();
             ShardExecutor = new ShardExecutor(this);
             Streaming = new ShardedStreaming();
+            Cluster = new ShardedCluster(this);
         }
 
         public IDisposable AllocateContext(out JsonOperationContext context) => _serverStore.ContextPool.AllocateOperationContext(out context);

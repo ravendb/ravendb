@@ -3,28 +3,30 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Errors;
 
 namespace Raven.Server.Documents.Indexes;
 
-public class DatabaseIndexPriorityProcessor : AbstractIndexPriorityProcessor
+public class DatabaseIndexLockModeController : AbstractIndexLockModeController
 {
     private readonly DocumentDatabase _database;
 
-    public DatabaseIndexPriorityProcessor([NotNull] DocumentDatabase database)
+    public DatabaseIndexLockModeController([NotNull] DocumentDatabase database)
         : base(database.ServerStore)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    protected override void ValidateIndex(string name, IndexPriority priority)
+    protected override void ValidateIndex(string name, IndexLockMode mode)
     {
         var index = _database.IndexStore.GetIndex(name);
         if (index == null)
             IndexDoesNotExistException.ThrowFor(name);
 
-        if (index is FaultyInMemoryIndex faultyInMemoryIndex)
-            faultyInMemoryIndex.SetPriority(priority); // this will throw proper exception
+        if (index.Type == IndexType.Faulty || index.Type.IsAuto())
+        {
+            index.SetLock(mode);  // this will throw proper exception
+            return;
+        }
     }
 
     protected override string GetDatabaseName()

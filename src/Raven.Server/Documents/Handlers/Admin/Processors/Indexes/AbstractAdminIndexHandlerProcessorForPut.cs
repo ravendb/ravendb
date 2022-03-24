@@ -31,7 +31,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
 
     protected abstract string GetDatabaseName();
 
-    protected abstract AbstractIndexCreateProcessor GetIndexCreateProcessor();
+    protected abstract AbstractIndexCreateController GetIndexCreateProcessor();
 
     public override async ValueTask ExecuteAsync()
     {

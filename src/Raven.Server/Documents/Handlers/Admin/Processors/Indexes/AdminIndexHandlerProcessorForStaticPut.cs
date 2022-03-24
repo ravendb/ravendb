@@ -19,7 +19,7 @@ internal class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandle
 
     protected override string GetDatabaseName() => RequestHandler.Database.Name;
 
-    protected override AbstractIndexCreateProcessor GetIndexCreateProcessor() => RequestHandler.Database.IndexStore.Create;
+    protected override AbstractIndexCreateController GetIndexCreateProcessor() => RequestHandler.Database.IndexStore.Create;
 
     protected override async ValueTask HandleLegacyIndexesAsync()
     {

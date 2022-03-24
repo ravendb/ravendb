@@ -18,11 +18,11 @@ using Raven.Server.ServerWide.Commands.Indexes;
 
 namespace Raven.Server.Documents.Indexes;
 
-public abstract class AbstractIndexCreateProcessor
+public abstract class AbstractIndexCreateController
 {
     protected readonly ServerStore ServerStore;
 
-    protected AbstractIndexCreateProcessor([NotNull] ServerStore serverStore)
+    protected AbstractIndexCreateController([NotNull] ServerStore serverStore)
     {
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
     }
@@ -33,13 +33,13 @@ public abstract class AbstractIndexCreateProcessor
 
     protected abstract RavenConfiguration GetDatabaseConfiguration();
 
-    protected abstract IndexContext GetIndex(string name);
+    protected abstract IndexInformationHolder GetIndex(string name);
 
     protected abstract IEnumerable<string> GetIndexNames();
 
     protected abstract ValueTask<long> GetCollectionCountAsync(string collection);
 
-    protected abstract IEnumerable<IndexContext> GetIndexes();
+    protected abstract IEnumerable<IndexInformationHolder> GetIndexes();
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 

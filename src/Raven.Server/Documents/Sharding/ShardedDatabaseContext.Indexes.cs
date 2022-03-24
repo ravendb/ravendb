@@ -20,33 +20,33 @@ public partial class ShardedDatabaseContext
     public class ShardedIndexesContext
     {
         private readonly ShardedDatabaseContext _context;
-        private Dictionary<string, IndexContext> _indexes;
+        private Dictionary<string, IndexInformationHolder> _indexes;
 
         public readonly ScriptRunnerCache ScriptRunnerCache;
 
-        public readonly ShardedIndexLockModeProcessor LockMode;
+        public readonly ShardedIndexLockModeController LockMode;
 
-        public readonly ShardedIndexPriorityProcessor Priority;
+        public readonly ShardedIndexPriorityController Priority;
 
-        public readonly ShardedIndexStateProcessor State;
+        public readonly ShardedIndexStateController State;
 
-        public readonly ShardedIndexDeleteProcessor Delete;
+        public readonly ShardedIndexDeleteController Delete;
 
-        public readonly ShardedIndexCreateProcessor Create;
+        public readonly ShardedIndexCreateController Create;
 
         public ShardedIndexesContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
 
-            LockMode = new ShardedIndexLockModeProcessor(context, serverStore);
-            Priority = new ShardedIndexPriorityProcessor(context, serverStore);
-            State = new ShardedIndexStateProcessor(context, serverStore);
-            Delete = new ShardedIndexDeleteProcessor(context, serverStore);
-            Create = new ShardedIndexCreateProcessor(context, serverStore);
+            LockMode = new ShardedIndexLockModeController(context, serverStore);
+            Priority = new ShardedIndexPriorityController(context, serverStore);
+            State = new ShardedIndexStateController(context, serverStore);
+            Delete = new ShardedIndexDeleteController(context, serverStore);
+            Create = new ShardedIndexCreateController(context, serverStore);
 
             ScriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
 
-            var indexes = new Dictionary<string, IndexContext>(StringComparer.OrdinalIgnoreCase);
+            var indexes = new Dictionary<string, IndexInformationHolder>(StringComparer.OrdinalIgnoreCase);
 
             UpdateStaticIndexes(context.DatabaseRecord.Indexes
                 .ToDictionary(x => x.Key, x => x.Value), indexes);
@@ -62,7 +62,7 @@ public partial class ShardedDatabaseContext
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for updated configuration (for projections)");
             ScriptRunnerCache.UpdateConfiguration(_context.Configuration);
 
-            var indexes = new Dictionary<string, IndexContext>(StringComparer.OrdinalIgnoreCase);
+            var indexes = new Dictionary<string, IndexInformationHolder>(StringComparer.OrdinalIgnoreCase);
 
             UpdateStaticIndexes(record.Indexes, indexes);
             UpdateAutoIndexes(record.AutoIndexes, indexes);
@@ -70,74 +70,74 @@ public partial class ShardedDatabaseContext
             _indexes = indexes;
         }
 
-        private void UpdateStaticIndexes(Dictionary<string, IndexDefinition> indexDefinitions, Dictionary<string, IndexContext> indexes)
+        private void UpdateStaticIndexes(Dictionary<string, IndexDefinition> indexDefinitions, Dictionary<string, IndexInformationHolder> indexes)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Major, "handle side-by-side");
 
             foreach ((string indexName, IndexDefinition definition) in indexDefinitions)
             {
-                IndexContext indexContext = null;
+                IndexInformationHolder indexInformationHolder = null;
 
                 if (_indexes.TryGetValue(indexName, out var existingIndex))
                 {
                     var creationOptions = IndexStore.GetIndexCreationOptions(definition, existingIndex, _context.Configuration, out _);
                     if (creationOptions == IndexCreationOptions.Noop)
-                        indexContext = existingIndex;
+                        indexInformationHolder = existingIndex;
                 }
 
-                indexContext ??= CreateContext(definition);
+                indexInformationHolder ??= CreateContext(definition);
 
-                indexes[indexName] = indexContext;
+                indexes[indexName] = indexInformationHolder;
             }
 
-            IndexContext CreateContext(IndexDefinition definition)
+            IndexInformationHolder CreateContext(IndexDefinition definition)
             {
-                IndexContext indexContext;
+                IndexInformationHolder indexInformationHolder;
                 switch (definition.Type)
                 {
                     case IndexType.Map:
-                        indexContext = MapIndex.CreateContext(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
+                        indexInformationHolder = MapIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
                         break;
                     case IndexType.MapReduce:
-                        indexContext = MapReduceIndex.CreateContext(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
+                        indexInformationHolder = MapReduceIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(definition.Type));
                 }
 
-                return indexContext;
+                return indexInformationHolder;
             }
         }
 
-        private void UpdateAutoIndexes(Dictionary<string, AutoIndexDefinition> indexDefinitions, Dictionary<string, IndexContext> indexes)
+        private void UpdateAutoIndexes(Dictionary<string, AutoIndexDefinition> indexDefinitions, Dictionary<string, IndexInformationHolder> indexes)
         {
             foreach ((string indexName, AutoIndexDefinition definition) in indexDefinitions)
             {
                 var indexDefinition = IndexStore.CreateAutoDefinition(definition, _context.Configuration.Indexing.AutoIndexDeploymentMode);
 
-                IndexContext indexContext = null;
+                IndexInformationHolder indexInformationHolder = null;
 
                 if (_indexes.TryGetValue(indexName, out var existingIndex))
                 {
                     var creationOptions = IndexStore.GetIndexCreationOptions(indexDefinition, existingIndex, _context.Configuration, out _);
                     if (creationOptions == IndexCreationOptions.Noop)
-                        indexContext = existingIndex;
+                        indexInformationHolder = existingIndex;
                 }
 
-                indexContext ??= IndexContext.CreateFor(indexDefinition, _context.Configuration.Indexing);
+                indexInformationHolder ??= IndexInformationHolder.CreateFor(indexDefinition, _context.Configuration.Indexing);
 
-                indexes[indexName] = indexContext;
+                indexes[indexName] = indexInformationHolder;
             }
         }
 
-        public IndexContext GetIndex(string name)
+        public IndexInformationHolder GetIndex(string name)
         {
             return _indexes.TryGetValue(name, out var index)
                 ? index
                 : null;
         }
 
-        public IEnumerable<IndexContext> GetIndexes() => _indexes.Values;
+        public IEnumerable<IndexInformationHolder> GetIndexes() => _indexes.Values;
     }
 
 }
