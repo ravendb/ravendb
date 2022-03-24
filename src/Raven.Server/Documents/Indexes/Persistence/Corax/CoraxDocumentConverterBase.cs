@@ -27,7 +27,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public static readonly Memory<byte> EmptyString = Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.EmptyString);
     
     //todo maciej
-    protected const int DocumentBufferSize = 1024 * 1024 * 5;
     private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
     private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
     private static readonly StandardFormat _standardFormat = new StandardFormat('g');
@@ -49,7 +48,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
 
     public abstract Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
-        out LazyStringValue id);
+        out LazyStringValue id, Span<byte> writerBuffer);
 
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
@@ -89,12 +88,11 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         return _knownFields ?? GetKnownFields(_allocator, _index);
     }
 
-    protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter,
+    protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
         var path = field.Name;
         var valueType = GetValueType(value);
-        shouldSkip = false;
         long @long;
         double @double;
 
@@ -222,7 +220,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var enumerableScope = new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
                 foreach (var item in iterator)
                 {
-                    InsertRegularField(field, item, indexContext, out _, ref entryWriter, enumerableScope);
+                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableScope);
                 }
 
                 enumerableScope.Finish(field.Id, ref entryWriter);
@@ -238,7 +236,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (val is not DynamicJsonValue json)
                 {
-                    InsertRegularField(field, val, indexContext, out _, ref entryWriter, scope, nestedArray);
+                    InsertRegularField(field, val, indexContext, ref entryWriter, scope, nestedArray);
                     return;
                 }
 
@@ -247,7 +245,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.BlittableJsonObject:
-                HandleObject((BlittableJsonReaderObject)value, field, indexContext, out _, ref entryWriter, scope);
+                HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope);
                 return;
 
             case ValueType.DynamicNull:
@@ -273,14 +271,12 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 throw new NotImplementedException();
         }
 
-        shouldSkip = true;
     }
     
-    void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter,
+    void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
         //todo maciej https://github.com/ravendb/ravendb/pull/12689/files/d7ab5b0c9db82dff655b647a7cc97a8cdaf8a6fe#r701808845
-        shouldSkip = false;
         if (nestedArray)
         {
             return;
@@ -288,21 +284,21 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
         foreach (var itemToIndex in itemsToIndex)
         {
-            InsertRegularField(field, itemToIndex, indexContext, out _, ref entryWriter, scope);
+            InsertRegularField(field, itemToIndex, indexContext, ref entryWriter, scope);
         }
     }
     
-    void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter,
+    void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
         if (val.TryGetMember(Constants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
         {
-            HandleArray((IEnumerable)values, field, indexContext, out _, ref entryWriter, scope, true);
+            HandleArray((IEnumerable)values, field, indexContext, ref entryWriter, scope, true);
         }
 
         _knownFields.GetByFieldId(field.Id).Analyzer = Analyzer.DefaultAnalyzer;
-        InsertRegularField(field, val, indexContext, out shouldSkip, ref entryWriter, scope, nestedArray);
+        scope.Write(field.Id, val, ref entryWriter);
     }
 
     public override void Dispose()
