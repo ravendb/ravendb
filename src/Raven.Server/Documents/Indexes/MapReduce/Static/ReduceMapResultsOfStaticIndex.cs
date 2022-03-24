@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         protected override BlittableJsonReaderObject CurrentlyProcessedResult => _blittableToDynamicWrapper.Current;
 
-        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
+        protected override AggregationResult AggregateOnImpl(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
         {
             _blittableToDynamicWrapper.InitializeForEnumeration(aggregationBatch);
             
