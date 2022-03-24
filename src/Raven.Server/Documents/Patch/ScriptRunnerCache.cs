@@ -3,23 +3,31 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using JetBrains.Annotations;
 using Raven.Server.Config;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunnerCache : ILowMemoryHandler
     {
-        private readonly DocumentDatabase _database;
-        private readonly RavenConfiguration _configuration;
+        internal static string PolyfillJs;
 
-        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner>> _cache =
-            new ConcurrentDictionary<Key, Lazy<ScriptRunner>>();
+        private long _generation;
+
+        private RavenConfiguration _configuration;
+
+        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner>> _cache = new();
 
         public bool EnableClr;
-        internal static string PolyfillJs;
+
+        public readonly DocumentDatabase Database;
+
+        public RavenConfiguration Configuration => _configuration;
+
+        public long Generation => _generation;
 
         static ScriptRunnerCache()
         {
@@ -32,9 +40,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public ScriptRunnerCache(DocumentDatabase database, RavenConfiguration configuration)
+        public ScriptRunnerCache(DocumentDatabase database, [NotNull] RavenConfiguration configuration)
         {
-            _database = database;
+            Database = database;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
@@ -83,7 +91,7 @@ namespace Raven.Server.Documents.Patch
 
         private ScriptRunner GetScriptRunner(Key script)
         {
-            if (_cache.TryGetValue(script, out var lazy))                
+            if (_cache.TryGetValue(script, out var lazy))
                 return lazy.Value;
 
             return GetScriptRunnerUnlikely(script);
@@ -93,7 +101,7 @@ namespace Raven.Server.Documents.Patch
         {
             var value = new Lazy<ScriptRunner>(() =>
             {
-                var runner = new ScriptRunner(_database, _configuration, EnableClr);
+                var runner = new ScriptRunner(this, EnableClr);
                 script.GenerateScript(runner);
                 runner.ScriptType = script.GetType().Name;
                 return runner;
@@ -103,12 +111,8 @@ namespace Raven.Server.Documents.Patch
 
         public void UpdateConfiguration(RavenConfiguration configuration)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Bump the generation like we do in the ArenaAllocator and maybe remove if needed");
-
-            foreach (var keyValue in _cache)
-            {
-                keyValue.Value.Value.UpdateConfiguration(configuration);
-            }
+            _configuration = configuration;
+            Interlocked.Increment(ref _generation);
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
