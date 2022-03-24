@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using JetBrains.Annotations;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
@@ -48,14 +49,19 @@ namespace Raven.Server.Documents.Patch
     {
         public class Holder
         {
+            public Holder(long generation)
+            {
+                Generation = generation;
+            }
+
+            public readonly long Generation;
             public ScriptRunner Parent;
             public SingleRun Value;
             public WeakReference<SingleRun> WeakValue;
         }
 
         private readonly ConcurrentQueue<Holder> _cache = new ConcurrentQueue<Holder>();
-        private readonly DocumentDatabase _db;
-        private RavenConfiguration _configuration;
+        private readonly ScriptRunnerCache _parent;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
@@ -71,10 +77,9 @@ namespace Raven.Server.Documents.Patch
 
         public string ScriptType { get; internal set; }
 
-        public ScriptRunner(DocumentDatabase db, RavenConfiguration configuration, bool enableClr)
+        public ScriptRunner([NotNull] ScriptRunnerCache parent, bool enableClr)
         {
-            _db = db;
-            _configuration = configuration;
+            _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             _enableClr = enableClr;
             _creationTime = DateTime.UtcNow;
         }
@@ -111,7 +116,7 @@ namespace Raven.Server.Documents.Patch
             Interlocked.Increment(ref Runs);
             if (_cache.TryDequeue(out var holder) == false)
             {
-                holder = new Holder
+                holder = new Holder(_parent.Generation)
                 {
                     Parent = this
                 };
@@ -127,13 +132,24 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    holder.Value = new SingleRun(_db, _configuration, this, ScriptsSource);
+                    holder.Value = new SingleRun(_parent.Database, _parent.Configuration, this, ScriptsSource);
                 }
             }
 
             run = holder.Value;
 
             return new ReturnRun(run, holder);
+        }
+
+        public void ReturnRunner(Holder holder)
+        {
+            if (holder == null)
+                return;
+
+            if (holder.Generation != _parent.Generation)
+                return;
+
+            _cache.Enqueue(holder);
         }
 
         public static void TryCompileScript(string script)
@@ -2099,16 +2115,9 @@ namespace Raven.Server.Documents.Patch
                 _run.DocumentCountersToUpdate?.Clear();
                 _run.DocumentTimeSeriesToUpdate?.Clear();
 
-                _holder.Parent._cache.Enqueue(_holder);
+                _holder.Parent.ReturnRunner(_holder);
                 _run = null;
             }
-        }
-
-        public void UpdateConfiguration(RavenConfiguration configuration)
-        {
-            _configuration = configuration;
-            
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Bump the generation like we do in the ArenaAllocator");
         }
 
         public bool RunIdleOperations()
@@ -2121,7 +2130,7 @@ namespace Raven.Server.Documents.Patch
                     // move the cache to weak reference value
                     holder.WeakValue = new WeakReference<SingleRun>(val);
                     holder.Value = null;
-                    _cache.Enqueue(holder);
+                    ReturnRunner(holder);
                     continue;
                 }
 
@@ -2133,7 +2142,7 @@ namespace Raven.Server.Documents.Patch
                 // The CLR can free it later, and then we'll act
                 if (weak.TryGetTarget(out _))
                 {
-                    _cache.Enqueue(holder);
+                    ReturnRunner(holder);
                     return true;
                 }
 
