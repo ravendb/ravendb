@@ -16,7 +16,7 @@ internal abstract class AbstractIndexHandlerProcessorForSetPriority<TRequestHand
     {
     }
 
-    protected abstract AbstractIndexPriorityProcessor GetIndexPriorityProcessor();
+    protected abstract AbstractIndexPriorityController GetIndexPriorityProcessor();
 
     public override async ValueTask ExecuteAsync()
     {

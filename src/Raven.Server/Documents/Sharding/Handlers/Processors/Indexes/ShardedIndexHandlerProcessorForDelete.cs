@@ -12,7 +12,7 @@ internal class ShardedIndexHandlerProcessorForDelete : AbstractIndexHandlerProce
     {
     }
 
-    protected override AbstractIndexDeleteProcessor GetIndexDeleteProcessor() => RequestHandler.DatabaseContext.Indexes.Delete;
+    protected override AbstractIndexDeleteController GetIndexDeleteProcessor() => RequestHandler.DatabaseContext.Indexes.Delete;
 
     protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 }

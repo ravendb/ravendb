@@ -17,7 +17,7 @@ internal abstract class AbstractIndexHandlerProcessorForDelete<TRequestHandler, 
     {
     }
 
-    protected abstract AbstractIndexDeleteProcessor GetIndexDeleteProcessor();
+    protected abstract AbstractIndexDeleteController GetIndexDeleteProcessor();
 
     protected abstract string GetDatabaseName();
 

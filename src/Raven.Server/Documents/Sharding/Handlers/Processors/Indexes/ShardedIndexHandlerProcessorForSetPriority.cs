@@ -12,7 +12,7 @@ internal class ShardedIndexHandlerProcessorForSetPriority : AbstractIndexHandler
     {
     }
 
-    protected override AbstractIndexPriorityProcessor GetIndexPriorityProcessor()
+    protected override AbstractIndexPriorityController GetIndexPriorityProcessor()
     {
         return RequestHandler.DatabaseContext.Indexes.Priority;
     }

@@ -77,26 +77,26 @@ namespace Raven.Server.Documents.Indexes
                                                  IndexCompiler.IndexExtension.Length -
                                                  4; // ".dll"
 
-        public readonly DatabaseIndexLockModeProcessor LockMode;
+        public readonly DatabaseIndexLockModeController LockMode;
 
-        public readonly DatabaseIndexPriorityProcessor Priority;
+        public readonly DatabaseIndexPriorityController Priority;
 
-        public readonly DatabaseIndexStateProcessor State;
+        public readonly DatabaseIndexStateController State;
 
-        public readonly DatabaseIndexDeleteProcessor Delete;
+        public readonly DatabaseIndexDeleteController Delete;
 
-        public readonly DatabaseIndexCreateProcessor Create;
+        public readonly DatabaseIndexCreateController Create;
 
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
             _serverStore = serverStore;
 
-            LockMode = new DatabaseIndexLockModeProcessor(documentDatabase);
-            Priority = new DatabaseIndexPriorityProcessor(documentDatabase);
-            State = new DatabaseIndexStateProcessor(documentDatabase);
-            Delete = new DatabaseIndexDeleteProcessor(documentDatabase);
-            Create = new DatabaseIndexCreateProcessor(documentDatabase);
+            LockMode = new DatabaseIndexLockModeController(documentDatabase);
+            Priority = new DatabaseIndexPriorityController(documentDatabase);
+            State = new DatabaseIndexStateController(documentDatabase);
+            Delete = new DatabaseIndexDeleteController(documentDatabase);
+            Create = new DatabaseIndexCreateController(documentDatabase);
 
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
@@ -1085,7 +1085,7 @@ namespace Raven.Server.Documents.Indexes
                 existingIndex.SetPriority(definition.Priority.Value);
         }
 
-        internal static IndexCreationOptions GetIndexCreationOptions(object indexDefinition, IndexContext existingIndex, RavenConfiguration databaseConfiguration, out IndexDefinitionCompareDifferences differences)
+        internal static IndexCreationOptions GetIndexCreationOptions(object indexDefinition, IndexInformationHolder existingIndex, RavenConfiguration databaseConfiguration, out IndexDefinitionCompareDifferences differences)
         {
             differences = IndexDefinitionCompareDifferences.All;
             if (existingIndex == null)

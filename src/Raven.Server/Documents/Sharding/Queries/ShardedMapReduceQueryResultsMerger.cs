@@ -56,7 +56,7 @@ public class ShardedMapReduceQueryResultsMerger
             throw new InvalidOperationException($"Index '{_indexName}' is not a map-reduce index");
 
 
-        var compiled = ((StaticIndexContext)index).Compiled;
+        var compiled = ((StaticIndexInformationHolder)index).Compiled;
 
         var reducingFunc = compiled.Reduce;
         var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();

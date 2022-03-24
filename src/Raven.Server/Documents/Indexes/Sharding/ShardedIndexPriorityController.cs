@@ -8,17 +8,17 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
-public class ShardedIndexStateProcessor : AbstractIndexStateProcessor
+public class ShardedIndexPriorityController : AbstractIndexPriorityController
 {
     private readonly ShardedDatabaseContext _context;
 
-    public ShardedIndexStateProcessor([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
+    public ShardedIndexPriorityController([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         : base(serverStore)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    protected override void ValidateIndex(string name, IndexState state)
+    protected override void ValidateIndex(string name, IndexPriority priority)
     {
         if (_context.Indexes.GetIndex(name) == null)
             IndexDoesNotExistException.ThrowFor(name);

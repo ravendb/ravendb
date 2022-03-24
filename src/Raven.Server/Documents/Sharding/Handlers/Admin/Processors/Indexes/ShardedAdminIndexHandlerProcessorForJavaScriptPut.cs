@@ -15,7 +15,7 @@ internal class ShardedAdminIndexHandlerProcessorForJavaScriptPut : AbstractAdmin
 
     protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 
-    protected override AbstractIndexCreateProcessor GetIndexCreateProcessor() => RequestHandler.DatabaseContext.Indexes.Create;
+    protected override AbstractIndexCreateController GetIndexCreateProcessor() => RequestHandler.DatabaseContext.Indexes.Create;
 
     protected override RavenConfiguration GetDatabaseConfiguration() => RequestHandler.DatabaseContext.Configuration;
 }

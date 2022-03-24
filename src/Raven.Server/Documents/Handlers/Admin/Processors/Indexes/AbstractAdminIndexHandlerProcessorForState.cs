@@ -23,7 +23,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForState<TRequestHandl
         State = state;
     }
 
-    protected abstract AbstractIndexStateProcessor GetIndexStateProcessor();
+    protected abstract AbstractIndexStateController GetIndexStateProcessor();
 
     protected override RavenCommand CreateCommandForNode(string nodeTag)
     {

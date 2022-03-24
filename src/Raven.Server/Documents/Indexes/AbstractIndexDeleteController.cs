@@ -9,11 +9,11 @@ using Raven.Server.ServerWide.Commands.Indexes;
 
 namespace Raven.Server.Documents.Indexes;
 
-public abstract class AbstractIndexDeleteProcessor
+public abstract class AbstractIndexDeleteController
 {
     protected readonly ServerStore ServerStore;
 
-    protected AbstractIndexDeleteProcessor([NotNull] ServerStore serverStore)
+    protected AbstractIndexDeleteController([NotNull] ServerStore serverStore)
     {
         ServerStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
     }

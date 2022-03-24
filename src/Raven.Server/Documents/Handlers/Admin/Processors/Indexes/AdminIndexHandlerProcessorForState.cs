@@ -42,5 +42,5 @@ internal class AdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerPro
 
     protected override Task ExecuteForRemoteNodeAsync(RavenCommand command) => RequestHandler.ExecuteRemoteAsync(command);
 
-    protected override AbstractIndexStateProcessor GetIndexStateProcessor() => RequestHandler.Database.IndexStore.State;
+    protected override AbstractIndexStateController GetIndexStateProcessor() => RequestHandler.Database.IndexStore.State;
 }

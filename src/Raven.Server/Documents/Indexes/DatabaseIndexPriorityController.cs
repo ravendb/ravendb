@@ -7,24 +7,24 @@ using Raven.Server.Documents.Indexes.Errors;
 
 namespace Raven.Server.Documents.Indexes;
 
-public class DatabaseIndexStateProcessor : AbstractIndexStateProcessor
+public class DatabaseIndexPriorityController : AbstractIndexPriorityController
 {
     private readonly DocumentDatabase _database;
 
-    public DatabaseIndexStateProcessor([NotNull] DocumentDatabase database)
+    public DatabaseIndexPriorityController([NotNull] DocumentDatabase database)
         : base(database.ServerStore)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    protected override void ValidateIndex(string name, IndexState state)
+    protected override void ValidateIndex(string name, IndexPriority priority)
     {
         var index = _database.IndexStore.GetIndex(name);
         if (index == null)
             IndexDoesNotExistException.ThrowFor(name);
 
         if (index is FaultyInMemoryIndex faultyInMemoryIndex)
-            faultyInMemoryIndex.SetState(state); // this will throw proper exception
+            faultyInMemoryIndex.SetPriority(priority); // this will throw proper exception
     }
 
     protected override string GetDatabaseName()

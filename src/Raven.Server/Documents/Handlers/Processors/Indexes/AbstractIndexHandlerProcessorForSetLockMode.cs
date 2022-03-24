@@ -18,7 +18,7 @@ internal abstract class AbstractIndexHandlerProcessorForSetLockMode<TRequestHand
     {
     }
 
-    protected abstract AbstractIndexLockModeProcessor GetIndexLockModeProcessor();
+    protected abstract AbstractIndexLockModeController GetIndexLockModeProcessor();
 
     public override async ValueTask ExecuteAsync()
     {

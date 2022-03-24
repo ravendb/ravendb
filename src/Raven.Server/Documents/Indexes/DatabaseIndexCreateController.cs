@@ -8,11 +8,11 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes;
 
-public class DatabaseIndexCreateProcessor : AbstractIndexCreateProcessor
+public class DatabaseIndexCreateController : AbstractIndexCreateController
 {
     private readonly DocumentDatabase _database;
 
-    public DatabaseIndexCreateProcessor([NotNull] DocumentDatabase database)
+    public DatabaseIndexCreateController([NotNull] DocumentDatabase database)
         : base(database.ServerStore)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
@@ -24,7 +24,7 @@ public class DatabaseIndexCreateProcessor : AbstractIndexCreateProcessor
 
     protected override RavenConfiguration GetDatabaseConfiguration() => _database.Configuration;
 
-    protected override IndexContext GetIndex(string name)
+    protected override IndexInformationHolder GetIndex(string name)
     {
         var index = _database.IndexStore.GetIndex(name);
         if (index == null)
@@ -46,7 +46,7 @@ public class DatabaseIndexCreateProcessor : AbstractIndexCreateProcessor
             return ValueTask.FromResult(_database.DocumentsStorage.GetCollection(collection, context).Count);
     }
 
-    protected override IEnumerable<IndexContext> GetIndexes()
+    protected override IEnumerable<IndexInformationHolder> GetIndexes()
     {
         foreach (var index in _database.IndexStore.GetIndexes())
             yield return index.ToIndexContext();

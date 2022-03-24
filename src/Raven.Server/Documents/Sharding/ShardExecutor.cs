@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Operations;
@@ -13,17 +14,17 @@ namespace Raven.Server.Documents.Sharding
         private readonly ShardedDatabaseContext _databaseContext;
         private Dictionary<int, Exception> _exceptions;
 
-        public ShardExecutor(ShardedDatabaseContext databaseContext) 
+        public ShardExecutor(ShardedDatabaseContext databaseContext)
         {
             _databaseContext = databaseContext;
         }
 
-        public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber)
+        public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {
             var executor = _databaseContext.RequestExecutors[shardNumber];
             using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                await executor.ExecuteAsync(command, ctx);
+                await executor.ExecuteAsync(command, ctx, token: token);
                 return command.Result;
             }
         }
@@ -89,8 +90,8 @@ namespace Raven.Server.Documents.Sharding
         }
 
         private static TCombinedResult BuildResults<TResult, TCombinedResult>(
-            IShardedOperation<TResult, TCombinedResult> operation, 
-            int position, 
+            IShardedOperation<TResult, TCombinedResult> operation,
+            int position,
             CommandHolder<TResult>[] commands)
         {
             TCombinedResult result;
@@ -132,11 +133,11 @@ namespace Raven.Server.Documents.Sharding
         }
 
         private async Task<int> ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(
-            Memory<int> shards, 
-            IShardedOperation<TResult, TCombinedResult> operation, 
+            Memory<int> shards,
+            IShardedOperation<TResult, TCombinedResult> operation,
             CommandHolder<TResult>[] commands)
 
-            where TExecutionMode : struct, IExecutionMode 
+            where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
         {
             int position;

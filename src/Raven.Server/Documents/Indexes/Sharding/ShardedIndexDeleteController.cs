@@ -8,11 +8,11 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
-public class ShardedIndexDeleteProcessor : AbstractIndexDeleteProcessor
+public class ShardedIndexDeleteController : AbstractIndexDeleteController
 {
     private readonly ShardedDatabaseContext _context;
 
-    public ShardedIndexDeleteProcessor([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
+    public ShardedIndexDeleteController([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         : base(serverStore)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
