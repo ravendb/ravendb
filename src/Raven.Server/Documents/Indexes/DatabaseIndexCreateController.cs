@@ -30,7 +30,7 @@ public class DatabaseIndexCreateController : AbstractIndexCreateController
         if (index == null)
             return null;
 
-        return index.ToIndexContext();
+        return index.ToIndexInformationHolder();
     }
 
     protected override IEnumerable<string> GetIndexNames()
@@ -49,7 +49,7 @@ public class DatabaseIndexCreateController : AbstractIndexCreateController
     protected override IEnumerable<IndexInformationHolder> GetIndexes()
     {
         foreach (var index in _database.IndexStore.GetIndexes())
-            yield return index.ToIndexContext();
+            yield return index.ToIndexInformationHolder();
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)

@@ -109,10 +109,7 @@ public class IndexInformationHolder
     }
 }
 
-public static class IndexContextExtensions
+public static class IndexInformationHolderExtensions
 {
-    public static IndexInformationHolder ToIndexContext(this Index index)
-    {
-        return IndexInformationHolder.CreateFor(index);
-    }
+    public static IndexInformationHolder ToIndexInformationHolder(this Index index) => IndexInformationHolder.CreateFor(index);
 }

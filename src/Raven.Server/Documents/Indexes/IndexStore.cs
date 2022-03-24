@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Indexes
                 var existingIndex = GetIndex(name);
                 IndexDefinitionCompareDifferences differences = IndexDefinitionCompareDifferences.None;
                 if (existingIndex != null)
-                    creationOptions = GetIndexCreationOptions(definition, existingIndex.ToIndexContext(), _documentDatabase.Configuration, out differences);
+                    creationOptions = GetIndexCreationOptions(definition, existingIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out differences);
 
                 if (creationOptions == IndexCreationOptions.Noop)
                 {
@@ -587,7 +587,7 @@ namespace Raven.Server.Documents.Indexes
                 IndexDefinitionCompareDifferences currentDifferences = IndexDefinitionCompareDifferences.None;
 
                 if (currentIndex != null)
-                    creationOptions = GetIndexCreationOptions(definition, currentIndex.ToIndexContext(), _documentDatabase.Configuration, out currentDifferences);
+                    creationOptions = GetIndexCreationOptions(definition, currentIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out currentDifferences);
 
                 var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
 
@@ -657,7 +657,7 @@ namespace Raven.Server.Documents.Indexes
 
                     if (replacementIndex != null)
                     {
-                        creationOptions = GetIndexCreationOptions(definition, replacementIndex.ToIndexContext(), _documentDatabase.Configuration, out IndexDefinitionCompareDifferences sideBySideDifferences);
+                        creationOptions = GetIndexCreationOptions(definition, replacementIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out IndexDefinitionCompareDifferences sideBySideDifferences);
                         if (creationOptions == IndexCreationOptions.Noop)
                             return null;
 
@@ -977,7 +977,7 @@ namespace Raven.Server.Documents.Indexes
             if (existingIndex == null)
                 return true;
 
-            var creationOptions = GetIndexCreationOptions(definition, existingIndex.ToIndexContext(), _documentDatabase.Configuration, out IndexDefinitionCompareDifferences _);
+            var creationOptions = GetIndexCreationOptions(definition, existingIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out IndexDefinitionCompareDifferences _);
             return creationOptions != IndexCreationOptions.Noop;
         }
 
