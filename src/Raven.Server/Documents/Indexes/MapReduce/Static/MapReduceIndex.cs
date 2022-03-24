@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             ValidateReduceResultsCollectionNameAsync(
                 definition,
                 instance._compiled,
-                () => database.IndexStore.GetIndexes().Select(x => x.ToIndexContext()),
+                () => database.IndexStore.GetIndexes().Select(x => x.ToIndexInformationHolder()),
                 collection =>
                 {
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

@@ -145,6 +145,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new IndexHandlerProcessorForGetIndexHistory<TransactionOperationContext>(this, ContextPool, DatabaseContext.DatabaseName))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/indexes/source", "GET")]
+        public async Task Source()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForSource(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
 

@@ -13,6 +13,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -89,44 +90,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/source", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Source()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            if (index.Type.IsStatic() == false)
-                throw new InvalidOperationException("Source can be only retrieved for static indexes.");
-
-            string source = null;
-            switch (index.Type)
-            {
-                case IndexType.Map:
-                    var staticMapIndex = (MapIndex)index;
-                    source = staticMapIndex._compiled.Source;
-                    break;
-
-                case IndexType.MapReduce:
-                    var staticMapReduceIndex = (MapReduceIndex)index;
-                    source = staticMapReduceIndex._compiled.Source;
-                    break;
-            }
-
-            if (string.IsNullOrWhiteSpace(source))
-                throw new InvalidOperationException("Could not retrieve source for given index.");
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Index"] = index.Name,
-                    ["Source"] = source
-                });
-            }
+            using (var processor = new IndexHandlerProcessorForSource(this))
+                await processor.ExecuteAsync();
         }
 
         public class IndexHistoryResult
