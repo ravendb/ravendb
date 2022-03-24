@@ -1,9 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
-using Raven.Server.Json;
+﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -12,15 +9,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/rachis/wait-for-raft-commands", "POST")]
         public async Task WaitFor()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var processor = new ShardedRachisHandlerProcessorForWaitForRaftCommands(this))
             {
-                var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "raft-index-ids");
-                var commands = JsonDeserializationServer.WaitForRaftCommands(blittable);
-
-                foreach (var index in commands.RaftCommandIndexes)
-                {
-                    await WaitForIndexToBeAppliedAsync(context, index);
-                }
+                await processor.ExecuteAsync();
             }
         }
     }
