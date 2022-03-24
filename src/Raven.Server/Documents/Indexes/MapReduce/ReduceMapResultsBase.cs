@@ -80,6 +80,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public string Name { get; } = "Reduce";
 
         protected abstract BlittableJsonReaderObject CurrentlyProcessedResult { get; }
+
+        protected BlittableJsonReaderObject OnErrorResult { get; private set; }
+
         public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
@@ -190,18 +193,26 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 stats.RecordReduceAttempts(numberOfEntriesToReduce);
 
-                AggregationResult result;
-                using (_nestedValuesReductionStats.NestedValuesAggregation.Start())
+                AggregationResult result = null;
+
+                try
                 {
-                    result = AggregateOn(_aggregationBatch.Items, indexContext, _nestedValuesReductionStats.NestedValuesAggregation, token);
+                    using (_nestedValuesReductionStats.NestedValuesAggregation.Start())
+                    {
+                        result = AggregateOn(_aggregationBatch.Items, indexContext, _nestedValuesReductionStats.NestedValuesAggregation, token);
+                    }
+
+                    if (section.IsNew == false)
+                        writer.Value.DeleteReduceResult(reduceKeyHash, stats);
+
+                    foreach (var output in result.GetOutputs())
+                    {
+                        writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                    }
                 }
-
-                if (section.IsNew == false)
-                    writer.Value.DeleteReduceResult(reduceKeyHash, stats);
-
-                foreach (var output in result.GetOutputs())
+                finally
                 {
-                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                    result?.Dispose();
                 }
 
                 _index.ReducesPerSec?.MarkSingleThreaded(numberOfEntriesToReduce);
@@ -612,7 +623,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             throw new AggregationResultNotFoundException(message + debugDetails);
         }
 
-        protected abstract AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token);
+        private AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats,
+            CancellationToken token)
+        {
+            OnErrorResult = null;
+            try
+            {
+                return AggregateOnImpl(aggregationBatch, indexContext, stats, token);
+            }
+            catch
+            {
+                OnErrorResult = CurrentlyProcessedResult.Clone(indexContext);
+                throw;
+            }
+        }
+
+        protected abstract AggregationResult AggregateOnImpl(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidTreeReductionStats(IndexingStatsScope stats)
@@ -652,7 +678,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             builder.Append($"of '{_indexDefinition.Name}' index. The relevant reduce result is going to be removed from the index ");
             builder.Append($"as it would be incorrect due to encountered errors (reduce key hash: {reduceKeyHash}");
 
-            var erroringResult = CurrentlyProcessedResult;
+            var erroringResult = OnErrorResult;
 
             if (erroringResult != null)
             {
