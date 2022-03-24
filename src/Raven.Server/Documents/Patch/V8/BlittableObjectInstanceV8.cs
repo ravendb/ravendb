@@ -517,16 +517,17 @@ namespace Raven.Server.Documents.Patch.V8
                     yield return value.Key;
             }
 
-            if (_blittable == null) yield break;
-            
-            foreach (var key in _blittable.GetPropertyNames())
+            if (_blittable != null)
             {
-                if (_deletes?.Contains(key) == true)
-                    continue;
-                if (_ownValues?.ContainsKey(key) == true)
-                    continue;
+                foreach (var key in _blittable.GetPropertyNames())
+                {
+                    if (_deletes?.Contains(key) == true)
+                        continue;
+                    if (_ownValues?.ContainsKey(key) == true)
+                        continue;
 
-                yield return key;
+                    yield return key;
+                }
             }
         }
 
