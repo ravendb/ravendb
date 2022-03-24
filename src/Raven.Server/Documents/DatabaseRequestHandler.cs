@@ -177,7 +177,7 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected override OperationCancelToken CreateOperationToken()
+        public override OperationCancelToken CreateOperationToken()
         {
             return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted);
         }

@@ -32,29 +32,38 @@ namespace Raven.Server.Documents.Sharding
         public Task<TResult> ExecuteOneByOneForAllAsync<TResult>(IShardedOperation<TResult> operation)
             => ExecuteForShardsAsync<OneByOneExecution, ThrowOnFailure, TResult>(new Memory<int>(_databaseContext.FullRange), operation);
 
-        public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation)
-            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(new Memory<int>(_databaseContext.FullRange), operation);
+        public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
+            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(new Memory<int>(_databaseContext.FullRange), operation, token);
 
-        public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation)
-            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(new Memory<int>(_databaseContext.FullRange), operation);
+        public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation, CancellationToken token = default)
+            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(new Memory<int>(_databaseContext.FullRange), operation, token);
 
-        public Task<TResult> ExecuteForAllAsync<TExecutionMode, TFailureMode, TResult>(IShardedOperation<TResult> operation)
+        public Task<TResult> ExecuteForAllAsync<TExecutionMode, TFailureMode, TResult>(IShardedOperation<TResult> operation, CancellationToken token = default)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
-            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(new Memory<int>(_databaseContext.FullRange), operation);
+            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(new Memory<int>(_databaseContext.FullRange), operation, token);
 
-        public Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation)
+        public Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation, CancellationToken token = default)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
-            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation);
+            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation, token);
 
         public Task ExecuteForShardsAsync<TExecutionMode, TFailureMode>(Memory<int> shards,
-            IShardedOperation operation)
+            IShardedOperation operation, CancellationToken token = default)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
-            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, object, object>(shards, operation);
+            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, object, object>(shards, operation, token);
 
-        public async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards, IShardedOperation<TResult, TCombinedResult> operation)
+        public Task ExecuteForAllAsync<TExecutionMode, TFailureMode>(
+            IShardedOperation operation, CancellationToken token = default)
+            where TExecutionMode : struct, IExecutionMode
+            where TFailureMode : struct, IFailureMode
+            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, object, object>(new Memory<int>(_databaseContext.FullRange), operation, token);
+
+        public Task ExecuteParallelForAllAsync(IShardedOperation operation)
+            => ExecuteForAllAsync<ParallelExecution, ThrowOnFailure>(operation);
+
+        public async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards, IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
         {
@@ -62,7 +71,7 @@ namespace Raven.Server.Documents.Sharding
             var commands = ArrayPool<CommandHolder<TResult>>.Shared.Rent(shards.Length);
             try
             {
-                position = await ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(shards, operation, commands);
+                position = await ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(shards, operation, commands, token);
 
                 if (operation is IShardedOperation)
                     return default;
@@ -133,9 +142,10 @@ namespace Raven.Server.Documents.Sharding
         }
 
         private async Task<int> ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(
-            Memory<int> shards,
-            IShardedOperation<TResult, TCombinedResult> operation,
-            CommandHolder<TResult>[] commands)
+            Memory<int> shards, 
+            IShardedOperation<TResult, TCombinedResult> operation, 
+            CommandHolder<TResult>[] commands,
+            CancellationToken token)
 
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
@@ -153,7 +163,7 @@ namespace Raven.Server.Documents.Sharding
                 var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 commands[position].ContextReleaser = release;
 
-                var t = executor.ExecuteAsync(cmd, ctx);
+                var t = executor.ExecuteAsync(cmd, ctx, token: token);
                 commands[position].Task = t;
 
                 if (typeof(TExecutionMode) == typeof(OneByOneExecution))

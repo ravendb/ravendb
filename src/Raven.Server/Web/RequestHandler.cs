@@ -512,7 +512,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse query string '{name}' as bool, val {val}");
         }
 
-        protected DateTime? GetDateTimeQueryString(string name, bool required = true)
+        internal DateTime? GetDateTimeQueryString(string name, bool required = true)
         {
             var dataAsString = GetStringQueryString(name, required);
             if (dataAsString == null)
@@ -789,7 +789,7 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
-        protected virtual OperationCancelToken CreateOperationToken()
+        public virtual OperationCancelToken CreateOperationToken()
         {
             return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted);
         }

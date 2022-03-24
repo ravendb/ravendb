@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
         {
             var shardNumber = GetShardNumber();
 
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, GetShardNumber());
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
 
             return command.Result;
         }
