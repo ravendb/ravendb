@@ -4,7 +4,6 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
@@ -26,10 +25,9 @@ public class ShardedIndexDeleteController : AbstractIndexDeleteController
         return index?.Definition;
     }
 
-    protected override ValueTask CreateIndexAsync(IndexDefinition definition, string raftRequestId)
+    protected override async ValueTask CreateIndexAsync(IndexDefinition definition, string raftRequestId)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Here we want to use IndexCreateProcessor");
-        throw new System.NotImplementedException();
+        await _context.Indexes.Create.CreateIndexAsync(definition, raftRequestId);
     }
 
     protected override async ValueTask WaitForIndexNotificationAsync(long index)
