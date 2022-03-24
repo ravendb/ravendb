@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
+using NuGet.Packaging;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
@@ -23,23 +24,25 @@ using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Revisions
 {
-    
+
     public class RevisionsTests : RavenTestBase
     {
         public RevisionsTests(ITestOutputHelper output) : base(output)
         {
         }
-        
-    
 
-        
+
+
+
         [Fact]
         public async Task CanGetNonExistingRevisionsByChangeVectorAsyncLazily()
         {
@@ -64,15 +67,15 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
-                     session.Store(new User {Name = "Omer"}, id);
-                     session.SaveChanges();
+                    session.Store(new User { Name = "Omer" }, id);
+                    session.SaveChanges();
                 }
 
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenSession())
                     {
-                        var user =  session.Load<Company>(id);
+                        var user = session.Load<Company>(id);
                         user.Name = "Omer" + i;
                         session.SaveChanges();
                     }
@@ -80,25 +83,25 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenSession())
                 {
-                    var revisionsMetadata =  session.Advanced.Revisions.GetMetadataFor(id);
+                    var revisionsMetadata = session.Advanced.Revisions.GetMetadataFor(id);
                     Assert.Equal(11, revisionsMetadata.Count);
 
                     var changeVectors = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
                     var changeVectors2 = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
-                    
-                    var revisionsLazy  = session.Advanced.Revisions.Lazily.Get<User>(changeVectors);
-                    var revisionsLazy2  = session.Advanced.Revisions.Lazily.Get<User>(changeVectors2);
-                    var lazyResult =  revisionsLazy.Value;
-                    var revisions  =   session.Advanced.Revisions.Get<User>(changeVectors);
+
+                    var revisionsLazy = session.Advanced.Revisions.Lazily.Get<User>(changeVectors);
+                    var revisionsLazy2 = session.Advanced.Revisions.Lazily.Get<User>(changeVectors2);
+                    var lazyResult = revisionsLazy.Value;
+                    var revisions = session.Advanced.Revisions.Get<User>(changeVectors);
 
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
                     Assert.Equal(revisions.Keys, lazyResult.Keys);
-                    
-                    Assert.Equal(revisions.Values.Select(x=>x!=null), lazyResult.Values.Select(x=>x!=null));
+
+                    Assert.Equal(revisions.Values.Select(x => x != null), lazyResult.Values.Select(x => x != null));
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanGetForLazily()
         {
@@ -109,16 +112,16 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
-                     session.Store(new User {Name = "Omer"}, id);
-                     session.Store(new User {Name = "Rhinos"}, id2);
-                     session.SaveChanges();
+                    session.Store(new User { Name = "Omer" }, id);
+                    session.Store(new User { Name = "Rhinos" }, id2);
+                    session.SaveChanges();
                 }
-        
+
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenSession())
                     {
-                        var user =  session.Load<Company>(id);
+                        var user = session.Load<Company>(id);
                         user.Name = "Omer " + i;
                         session.SaveChanges();
                     }
@@ -126,17 +129,17 @@ namespace FastTests.Server.Documents.Revisions
                 using (var session = store.OpenSession())
                 {
                     var revision = session.Advanced.Revisions.GetFor<User>("users/1");
-                    var revisionLazily =  session.Advanced.Revisions.Lazily.GetFor<User>("users/1");
-                    var revisionLazily2 =  session.Advanced.Revisions.Lazily.GetFor<User>("users/2");
+                    var revisionLazily = session.Advanced.Revisions.Lazily.GetFor<User>("users/1");
+                    var revisionLazily2 = session.Advanced.Revisions.Lazily.GetFor<User>("users/2");
                     var revisionLazilyResult = revisionLazily.Value;
-                    
+
                     Assert.Equal(revision.Select(x => x.Name), revisionLazilyResult.Select(x => x.Name));
                     Assert.Equal(revision.Select(x => x.Id), revisionLazilyResult.Select(x => x.Id));
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanGetRevisionsByIdAndTimeLazily()
         {
@@ -147,34 +150,34 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Omer"}, id);
-                    session.Store(new User {Name = "Rhinos"}, id2);
+                    session.Store(new User { Name = "Omer" }, id);
+                    session.Store(new User { Name = "Rhinos" }, id2);
                     session.SaveChanges();
                 }
-        
+
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenSession())
                     {
-                        var user =  session.Load<Company>(id);
+                        var user = session.Load<Company>(id);
                         user.Name = "Omer " + i;
                         session.SaveChanges();
                     }
                 }
                 using (var session = store.OpenSession())
                 {
-                    var revision                 =  session.Advanced.Revisions.Get<User>("users/1", DateTime.Now);
-                    var revisionLazily  =  session.Advanced.Revisions.Lazily.Get<User>("users/1",DateTime.UtcNow);
-                    var revisionLazily2  =  session.Advanced.Revisions.Lazily.Get<User>("users/2",DateTime.UtcNow);
-                    var revisionLazilyResult =  revisionLazily.Value;
-                    
+                    var revision = session.Advanced.Revisions.Get<User>("users/1", DateTime.Now);
+                    var revisionLazily = session.Advanced.Revisions.Lazily.Get<User>("users/1", DateTime.UtcNow);
+                    var revisionLazily2 = session.Advanced.Revisions.Lazily.Get<User>("users/2", DateTime.UtcNow);
+                    var revisionLazilyResult = revisionLazily.Value;
+
                     Assert.Equal(revision.Id, revisionLazilyResult.Id);
                     Assert.Equal(revision.Name, revisionLazilyResult.Name);
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanGetMetadataForLazily()
         {
@@ -185,36 +188,36 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
-                     session.Store(new User {Name = "Omer"}, id);
-                     session.Store(new User {Name = "Rhinos"}, id2);
-                     session.SaveChanges();
+                    session.Store(new User { Name = "Omer" }, id);
+                    session.Store(new User { Name = "Rhinos" }, id2);
+                    session.SaveChanges();
                 }
-        
+
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenSession())
                     {
-                        var user =  session.Load<Company>(id);
+                        var user = session.Load<Company>(id);
                         user.Name = "Omer " + i;
                         session.SaveChanges();
                     }
                 }
                 using (var session = store.OpenSession())
                 {
-                    var revisionsMetadata =  session.Advanced.Revisions.GetMetadataFor(id);
-                    var revisionsMetaDataLazily   = session.Advanced.Revisions.Lazily.GetMetadataFor(id);
-                    var revisionsMetaDataLazily2   = session.Advanced.Revisions.Lazily.GetMetadataFor(id2);
-                    var revisionsMetaDataLazilyResult =  revisionsMetaDataLazily.Value;
-                    
+                    var revisionsMetadata = session.Advanced.Revisions.GetMetadataFor(id);
+                    var revisionsMetaDataLazily = session.Advanced.Revisions.Lazily.GetMetadataFor(id);
+                    var revisionsMetaDataLazily2 = session.Advanced.Revisions.Lazily.GetMetadataFor(id2);
+                    var revisionsMetaDataLazilyResult = revisionsMetaDataLazily.Value;
+
                     Assert.Equal(
                         revisionsMetadata.Select(x => x["@id"]),
-                        revisionsMetaDataLazilyResult.Select(x =>  x["@id"])
+                        revisionsMetaDataLazilyResult.Select(x => x["@id"])
                     );
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanGetRevisionsByChangeVectorLazily()
         {
@@ -225,31 +228,31 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenSession())
                 {
-                     session.Store(new User {Name = "Omer"}, id);
-                     session.Store(new User {Name = "Rhinos"}, id2);
-                     session.SaveChanges();
+                    session.Store(new User { Name = "Omer" }, id);
+                    session.Store(new User { Name = "Rhinos" }, id2);
+                    session.SaveChanges();
                 }
 
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenSession())
                     {
-                        var user =  session.Load<Company>(id);
+                        var user = session.Load<Company>(id);
                         user.Name = "Omer " + i;
                         session.SaveChanges();
                     }
                 }
-                var database =  await Databases.GetDocumentDatabaseInstanceFor(store);
-                var dbId =  database.DbBase64Id;
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var dbId = database.DbBase64Id;
                 var cv = $"A:23-{dbId}";
                 var cv2 = $"A:3-{dbId}";
 
                 using (var session = store.OpenSession())
                 {
-                    var revisions =  session.Advanced.Revisions.Get<User>(cv);
+                    var revisions = session.Advanced.Revisions.Get<User>(cv);
                     var revisionsLazily = session.Advanced.Revisions.Lazily.Get<User>(cv);
                     var revisionsLazily1 = session.Advanced.Revisions.Lazily.Get<User>(cv2);
-                    var revisionsLazilyValue =  revisionsLazily.Value;
+                    var revisionsLazilyValue = revisionsLazily.Value;
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
                     Assert.Equal(revisions.Id, revisionsLazilyValue.Id);
@@ -257,9 +260,9 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 using (var session = store.OpenSession())
                 {
-                    var revisions =  session.Advanced.Revisions.Get<User>(cv);
+                    var revisions = session.Advanced.Revisions.Get<User>(cv);
                     var revisionsLazily = session.Advanced.Revisions.Lazily.Get<User>(cv);
-                    var revisionsLazilyValue =  revisionsLazily.Value;
+                    var revisionsLazilyValue = revisionsLazily.Value;
 
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
                     Assert.Equal(revisions.Id, revisionsLazilyValue.Id);
@@ -267,7 +270,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanGetForAsyncLazily()
         {
@@ -277,10 +280,10 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Omer"}, id);
+                    await session.StoreAsync(new User { Name = "Omer" }, id);
                     await session.SaveChangesAsync();
                 }
-        
+
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenAsyncSession())
@@ -290,22 +293,22 @@ namespace FastTests.Server.Documents.Revisions
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var revision = await session.Advanced.Revisions.GetForAsync<User>("users/1");
                     var revisionLazily = session.Advanced.Revisions.Lazily.GetForAsync<User>("users/1");
                     var revisionLazily2 = session.Advanced.Revisions.Lazily.GetForAsync<User>("users/2");
                     var revisionLazilyResult = await revisionLazily.Value;
-                    
+
                     Assert.Equal(revision.Select(x => x.Name), revisionLazilyResult.Select(x => x.Name));
                     Assert.Equal(revision.Select(x => x.Id), revisionLazilyResult.Select(x => x.Id));
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
-                    
+
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanGetMetadataForAsyncLazily()
         {
@@ -314,14 +317,14 @@ namespace FastTests.Server.Documents.Revisions
                 const string id = "users/1";
                 const string id2 = "users/2";
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Omer"}, id);
-                    await session.StoreAsync(new User {Name = "Rhinos"}, id2);
+                    await session.StoreAsync(new User { Name = "Omer" }, id);
+                    await session.StoreAsync(new User { Name = "Rhinos" }, id2);
                     await session.SaveChangesAsync();
                 }
-        
+
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenAsyncSession())
@@ -331,7 +334,7 @@ namespace FastTests.Server.Documents.Revisions
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenAsyncSession())
@@ -341,24 +344,221 @@ namespace FastTests.Server.Documents.Revisions
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
-                    var revisionsMetaDataLazily   = session.Advanced.Revisions.Lazily.GetMetadataForAsync(id);
-                    var revisionsMetaDataLazily2  = session.Advanced.Revisions.Lazily.GetMetadataForAsync(id2);
+                    var revisionsMetaDataLazily = session.Advanced.Revisions.Lazily.GetMetadataForAsync(id);
+                    var revisionsMetaDataLazily2 = session.Advanced.Revisions.Lazily.GetMetadataForAsync(id2);
                     var revisionsMetaDataLazilyResult = await revisionsMetaDataLazily.Value;
-                    
+
                     Assert.Equal(
                         revisionsMetadata.Select(x => x["@id"]),
-                        revisionsMetaDataLazilyResult.Select(x =>  x["@id"])
+                        revisionsMetaDataLazilyResult.Select(x => x["@id"])
                         );
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
-                    
+
                 }
             }
         }
-        
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsByChangeVectors2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
+                var user1 = new User { Name = "Jane" };
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user1);
+                    await session.SaveChangesAsync();
+                
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = await session.LoadAsync<User>(user1.Id);
+                        user.Name = "Jane" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                string[] allCVs;
+                using (var session = store.OpenAsyncSession())
+                {
+                    var metadata = await session.Advanced.Revisions.GetMetadataForAsync(user1.Id);
+                    allCVs = metadata.Select(x => x[Constants.Documents.Metadata.ChangeVector].ToString()).ToArray();
+                
+                    var revisionsByCV = await session.Advanced.Revisions.GetAsync<User>(allCVs);
+
+                    for (int i = 0; i < allCVs.Length; i++)
+                    {
+                        Assert.Contains(allCVs[i], revisionsByCV.Keys);
+
+                        User user = await session.Advanced.Revisions.GetAsync<User>(allCVs[i]);
+
+                        Assert.Equal(user?.Name, revisionsByCV[allCVs[i]]?.Name);
+                    }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsByChangeVectors2Shards(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, null, conf => conf.Collections["Products"].Disabled = false);
+                var user = new User { Name = "Jane0" };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i < 3; i++)
+                    {
+                        var user1 = await session.LoadAsync<User>(user.Id);
+                        user1.Name = "Jane" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var product = new Product { Quantity = 0 };
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(product);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1; i < 3; i++)
+                    {
+                        var product1 = await session.LoadAsync<Product>(product.Id);
+                        product1.Quantity = i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                //make sure revisions are saved on different shards
+                Assert.NotEqual(Sharding.GetShardNumber(store, user.Id), Sharding.GetShardNumber(store, product.Id));
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    var metadata = await session.Advanced.Revisions.GetMetadataForAsync(user.Id);
+                    var userCVs = metadata.Select(x => x[Constants.Documents.Metadata.ChangeVector].ToString()).ToArray();
+
+                    var metadata2 = await session.Advanced.Revisions.GetMetadataForAsync(product.Id);
+                    var productCVs = metadata2.Select(x => x[Constants.Documents.Metadata.ChangeVector].ToString()).ToArray();
+
+                    var allCVs = new List<string>();
+                    allCVs.AddRange(userCVs);
+                    allCVs.AddRange(productCVs);
+
+                    var revisionsByCV = await session.Advanced.Revisions.GetAsync<object>(allCVs);
+
+                    Assert.Equal("Jane2", ((User)revisionsByCV[allCVs[0]]).Name);
+                    Assert.Equal("Jane1", ((User)revisionsByCV[allCVs[1]]).Name);
+                    Assert.Equal("Jane0", ((User)revisionsByCV[allCVs[2]]).Name);
+                    Assert.Equal(2, ((Product)revisionsByCV[allCVs[3]]).Quantity);
+                    Assert.Equal(1, ((Product)revisionsByCV[allCVs[4]]).Quantity);
+                    Assert.Equal(0, ((Product)revisionsByCV[allCVs[5]]).Quantity);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsByChangeVectorsNonExist(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
+                var user1 = new User { Name = "Jane" };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user1);
+                    await session.SaveChangesAsync();
+                
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = await session.LoadAsync<User>(user1.Id);
+                        user.Name = "Jane" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    string[] allCVs = new[] {"AB:1", "AB:2", "AB:3"};
+                    var revisionsByCV = await session.Advanced.Revisions.GetAsync<User>(allCVs);
+
+                    Assert.Equal(3, revisionsByCV.Count);
+                    foreach (var val in revisionsByCV.Values)
+                    {
+                        Assert.Null(val);
+                    }
+
+                    string cv = "AB:1";
+                    var revision = await session.Advanced.Revisions.GetAsync<User>(cv);
+
+                    Assert.Null(revision);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsByIdStartTake(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
+                var user1 = new User { Name = "Jane" };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user1);
+                    await session.SaveChangesAsync();
+                
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = await session.LoadAsync<User>(user1.Id);
+                        user.Name = "Jane" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<User>(user1.Id, 0, 5));
+                Assert.Equal(11, revisionsResult.TotalResults);
+                Assert.Equal(5, revisionsResult.Results.Count);
+                var revisionNames = revisionsResult.Results.Select(x => x.Name).ToHashSet();
+
+                for (int i = revisionsResult.TotalResults - 2; i >= 5; i--)
+                {
+                    Assert.Contains("Jane" + i, revisionNames);
+                }
+
+                revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<User>(user1.Id, 6, 5));
+                Assert.Equal(11, revisionsResult.TotalResults);
+                Assert.Equal(5, revisionsResult.Results.Count);
+
+                revisionNames = revisionsResult.Results.Select(x => x.Name).ToHashSet();
+
+                for (int i = revisionsResult.TotalResults - 2 - 6; i >= 0; i--)
+                {
+                    Assert.Contains("Jane" + i, revisionNames);
+                }
+            }
+        }
+
         [Fact]
         public async Task CanGetRevisionsByIdAndTimeAsyncLazily()
         {
@@ -366,19 +566,19 @@ namespace FastTests.Server.Documents.Revisions
             {
                 const string id = "users/1";
                 const string id2 = "users/2";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Omer"}, id);
-                    await session.StoreAsync(new User {Name = "Rhinos"}, id2);
+                    await session.StoreAsync(new User { Name = "Omer" }, id);
+                    await session.StoreAsync(new User { Name = "Rhinos" }, id2);
                     await session.SaveChangesAsync();
                 }
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var revision = session.Advanced.Lazily.LoadAsync<User>("users/1");
                     var doc = await revision.Value;
-                 
+
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
@@ -386,10 +586,10 @@ namespace FastTests.Server.Documents.Revisions
                 using (var session = store.OpenAsyncSession())
                 {
                     var revision = await session.Advanced.Revisions.GetAsync<User>("users/1", dateTime);
-                    var revisionLazily = session.Advanced.Revisions.Lazily.GetAsync<User>("users/1",dateTime);
-                    var revisionLazily2 = session.Advanced.Revisions.Lazily.GetAsync<User>("users/2",dateTime);
+                    var revisionLazily = session.Advanced.Revisions.Lazily.GetAsync<User>("users/1", dateTime);
+                    var revisionLazily2 = session.Advanced.Revisions.Lazily.GetAsync<User>("users/2", dateTime);
                     var revisionLazilyResult = await revisionLazily.Value;
-                    
+
                     Assert.Equal(revision.Id, revisionLazilyResult.Id);
                     Assert.Equal(revision.Name, revisionLazilyResult.Name);
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
@@ -404,11 +604,11 @@ namespace FastTests.Server.Documents.Revisions
             {
                 const string id = "users/1";
                 const string id2 = "users/2";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Omer"}, id);
-                    await session.StoreAsync(new User {Name = "Rhinos"}, id2);
+                    await session.StoreAsync(new User { Name = "Omer" }, id);
+                    await session.StoreAsync(new User { Name = "Rhinos" }, id2);
                     await session.SaveChangesAsync();
                 }
 
@@ -421,7 +621,7 @@ namespace FastTests.Server.Documents.Revisions
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var dbId = database.DbBase64Id;
                 var cv = $"A:23-{dbId}";
@@ -450,11 +650,11 @@ namespace FastTests.Server.Documents.Revisions
                 const string id = "users/1";
                 const string id2 = "users/2";
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Omer"}, id);
-                    await session.StoreAsync(new User {Name = "Rhinos"}, id2);
+                    await session.StoreAsync(new User { Name = "Omer" }, id);
+                    await session.StoreAsync(new User { Name = "Rhinos" }, id2);
                     await session.SaveChangesAsync();
                 }
 
@@ -467,7 +667,7 @@ namespace FastTests.Server.Documents.Revisions
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenAsyncSession())
@@ -477,7 +677,7 @@ namespace FastTests.Server.Documents.Revisions
                         await session.SaveChangesAsync();
                     }
                 }
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
@@ -487,30 +687,31 @@ namespace FastTests.Server.Documents.Revisions
 
                     var changeVectors = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
                     var changeVectors2 = revisionsMetadata2.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
-                    
-                    var revisionsLazy  = session.Advanced.Revisions.Lazily.GetAsync<User>(changeVectors);
-                    var revisionsLazy2  = session.Advanced.Revisions.Lazily.GetAsync<User>(changeVectors2);
+
+                    var revisionsLazy = session.Advanced.Revisions.Lazily.GetAsync<User>(changeVectors);
+                    var revisionsLazy2 = session.Advanced.Revisions.Lazily.GetAsync<User>(changeVectors2);
                     var lazyResult = await revisionsLazy.Value;
-                    
-                    var revisions  =  await session.Advanced.Revisions.GetAsync<User>(changeVectors);
+
+                    var revisions = await session.Advanced.Revisions.GetAsync<User>(changeVectors);
 
                     Assert.Equal(4, session.Advanced.NumberOfRequests);
                     Assert.Equal(revisions.Keys, lazyResult.Keys);
-                    Assert.Equal(revisions.Values.Select(x=>x!=null), lazyResult.Values.Select(x=>x!=null));
+                    Assert.Equal(revisions.Values.Select(x => x != null), lazyResult.Values.Select(x => x != null));
                 }
             }
         }
 
-        [Fact]
-        public async Task CanGetRevisionsByChangeVectors()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsByChangeVectors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var id = "users/1";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, id);
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, id);
                     await session.SaveChangesAsync();
                 }
 
@@ -528,10 +729,10 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     Assert.Equal(11, revisionsMetadata.Count);
-                    
+
                     var changeVectors = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
                     changeVectors.Add("NotExistsChangeVector");
-                    
+
                     var revisions = await session.Advanced.Revisions.GetAsync<User>(changeVectors);
                     var first = revisions.First();
                     var last = revisions.Last();
@@ -551,10 +752,10 @@ namespace FastTests.Server.Documents.Revisions
             {
                 var configuration = new RevisionsConfiguration
                 {
-                    Default = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 10},
+                    Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        ["Users"] = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 0}
+                        ["Users"] = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 0 }
                     }
                 };
 
@@ -589,7 +790,7 @@ namespace FastTests.Server.Documents.Revisions
         {
             using (var store = GetDocumentStore())
             {
-                var configuration = new RevisionsConfiguration {Default = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 10}};
+                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 } };
 
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
@@ -599,7 +800,7 @@ namespace FastTests.Server.Documents.Revisions
                     {
                         using (var session = store.OpenAsyncSession())
                         {
-                            await session.StoreAsync(new Product {Description = j.ToString()}, "bar" + i);
+                            await session.StoreAsync(new Product { Description = j.ToString() }, "bar" + i);
                             await session.SaveChangesAsync();
                         }
                     }
@@ -664,7 +865,7 @@ namespace FastTests.Server.Documents.Revisions
         {
             using (var store = GetDocumentStore())
             {
-                var configuration = new RevisionsConfiguration {Default = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 10}};
+                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 } };
 
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
@@ -674,7 +875,7 @@ namespace FastTests.Server.Documents.Revisions
                     {
                         using (var session = store.OpenAsyncSession())
                         {
-                            await session.StoreAsync(new Product {Description = j.ToString()}, "bar" + i);
+                            await session.StoreAsync(new Product { Description = j.ToString() }, "bar" + i);
                             await session.SaveChangesAsync();
                         }
                     }
@@ -742,10 +943,10 @@ namespace FastTests.Server.Documents.Revisions
             {
                 var configuration = new RevisionsConfiguration
                 {
-                    Default = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 10},
+                    Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        ["Dummy"] = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 10}
+                        ["Dummy"] = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 }
                     }
                 };
 
@@ -790,7 +991,7 @@ namespace FastTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 var id = "users/1";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -808,7 +1009,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task CanGetAllRevisionsFor()
         {
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -838,7 +1039,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task CanCheckIfDocumentHasRevisions()
         {
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -861,7 +1062,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task RemoveHasRevisionsFlag()
         {
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -919,8 +1120,8 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task CanExcludeEntitiesFromRevisions()
         {
-            var user = new User {Name = "User Name"};
-            var comment = new Comment {Name = "foo"};
+            var user = new User { Name = "User Name" };
+            var comment = new Comment { Name = "foo" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -944,8 +1145,8 @@ namespace FastTests.Server.Documents.Revisions
         public async Task ServerSaveBundlesAfterRestart()
         {
             var path = NewDataPath();
-            var company = new Company {Name = "Company Name"};
-            using (var store = GetDocumentStore(new Options {Path = path}))
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore(new Options { Path = path }))
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
@@ -981,7 +1182,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task WillCreateRevision()
         {
-            var product = new User {Name = "Hibernating"};
+            var product = new User { Name = "Hibernating" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -1019,7 +1220,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task WillCreateValidRevisionWhenCompressionDocumentWasSaved()
         {
-            var user = new User {Name = new string('1', 4096 * 2)}; // create a string which will be compressed
+            var user = new User { Name = new string('1', 4096 * 2) }; // create a string which will be compressed
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -1043,7 +1244,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task WillNotCreateRevision()
         {
-            var product = new Product {Description = "A fine document db", Quantity = 5};
+            var product = new Product { Description = "A fine document db", Quantity = 5 };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -1078,7 +1279,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task WillDeleteOldRevisions()
         {
-            var company = new Company {Name = "Company #1"};
+            var company = new Company { Name = "Company #1" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -1112,8 +1313,8 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var company = new Company {Name = "Hibernating Rhinos "};
-                    var user = new User {Name = "Fitzchak "};
+                    var company = new Company { Name = "Hibernating Rhinos " };
+                    var user = new User { Name = "Fitzchak " };
                     await session.StoreAsync(company, "companies/1");
                     await session.StoreAsync(user, "users/1");
                     await session.SaveChangesAsync();
@@ -1154,8 +1355,8 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company {Name = "New Company"}, "companies/1");
-                    await session.StoreAsync(new User {Name = "New User"}, "users/1");
+                    await session.StoreAsync(new Company { Name = "New Company" }, "companies/1");
+                    await session.StoreAsync(new User { Name = "New User" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -1178,22 +1379,22 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Hibernating"}, "users/1");
-                    await session.StoreAsync(new User {Name = "Hibernating11"}, "users/11");
+                    await session.StoreAsync(new User { Name = "Hibernating" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating11" }, "users/11");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Hibernating Rhinos"}, "users/1");
-                    await session.StoreAsync(new User {Name = "Hibernating Rhinos11"}, "users/11");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos11" }, "users/11");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Hibernating Rhinos - RavenDB"}, "users/1");
-                    await session.StoreAsync(new User {Name = "Hibernating Rhinos - RavenDB11"}, "users/11");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos - RavenDB" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos - RavenDB11" }, "users/11");
                     await session.SaveChangesAsync();
                 }
 
@@ -1312,7 +1513,7 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        ["Users"] = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionAgeToKeep = revisionsAgeLimit}
+                        ["Users"] = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionAgeToKeep = revisionsAgeLimit }
                     }
                 };
                 var index = await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
@@ -1323,7 +1524,7 @@ namespace FastTests.Server.Documents.Revisions
                 using (var session = store.OpenAsyncSession())
                 {
                     // revision 1
-                    await session.StoreAsync(new User {Name = "Aviv"}, "users/1-A");
+                    await session.StoreAsync(new User { Name = "Aviv" }, "users/1-A");
                     await session.SaveChangesAsync();
                 }
 
@@ -1387,7 +1588,7 @@ namespace FastTests.Server.Documents.Revisions
                 var id = "users/1";
                 if (useSession)
                 {
-                    var user = new User {Name = "Fitzchak"};
+                    var user = new User { Name = "Fitzchak" };
                     for (var i = 0; i < 2; i++)
                     {
                         using (var session = store.OpenAsyncSession())
@@ -1407,9 +1608,9 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 else
                 {
-                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
+                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
                     await store.Commands().DeleteAsync(id, null);
-                    await store.Commands().PutAsync(id, null, new User {Name = "Fitzchak"});
+                    await store.Commands().PutAsync(id, null, new User { Name = "Fitzchak" });
                     await store.Commands().DeleteAsync(id, null);
                 }
 
@@ -1438,7 +1639,7 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisionsMetadata[3].GetString(Constants.Documents.Metadata.Flags));
                 }
 
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters {DocumentIds = new[] {id, "users/not/exists"}}));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters { DocumentIds = new[] { id, "users/not/exists" } }));
 
                 statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
@@ -1463,7 +1664,7 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Name = "Fitzchak " + i});
+                        await session.StoreAsync(new User { Name = "Fitzchak " + i });
                         await session.SaveChangesAsync();
                     }
                 }
@@ -1473,7 +1674,7 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Name = "Fitzchak " + (i + 100)});
+                        await session.StoreAsync(new User { Name = "Fitzchak " + (i + 100) });
                         await session.SaveChangesAsync();
                     }
                 }
@@ -1530,14 +1731,14 @@ namespace FastTests.Server.Documents.Revisions
                 var id = "user/1";
                 var configuration = new RevisionsConfiguration
                 {
-                    Collections = new Dictionary<string, RevisionsCollectionConfiguration> {["uSErs"] = new RevisionsCollectionConfiguration {Disabled = false}}
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration> { ["uSErs"] = new RevisionsCollectionConfiguration { Disabled = false } }
                 };
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
 
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "raven"}, id);
+                    await session.StoreAsync(new User { Name = "raven" }, id);
                     await session.SaveChangesAsync();
                 }
 
@@ -1567,14 +1768,14 @@ namespace FastTests.Server.Documents.Revisions
                 var id = "uSEr/1";
                 var configuration = new RevisionsConfiguration
                 {
-                    Collections = new Dictionary<string, RevisionsCollectionConfiguration> {["users"] = new RevisionsCollectionConfiguration {Disabled = false}}
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration> { ["users"] = new RevisionsCollectionConfiguration { Disabled = false } }
                 };
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
 
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "raven"}, id);
+                    await session.StoreAsync(new User { Name = "raven" }, id);
                     await session.SaveChangesAsync();
                 }
 
@@ -1605,7 +1806,8 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        ["users"] = new RevisionsCollectionConfiguration {Disabled = false}, ["USERS"] = new RevisionsCollectionConfiguration {Disabled = false}
+                        ["users"] = new RevisionsCollectionConfiguration { Disabled = false },
+                        ["USERS"] = new RevisionsCollectionConfiguration { Disabled = false }
                     }
                 };
 
@@ -1614,13 +1816,14 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task CanGetAllRevisionsForDocument_UsingStoreOperation()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetAllRevisionsForDocument_UsingStoreOperation(Options options)
         {
-            var company = new Company {Name = "Company Name"};
-            using (var store = GetDocumentStore())
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore(options))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -1645,12 +1848,14 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task CanGetRevisionsWithPaging_UsingStoreOperation()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsWithPaging_UsingStoreOperation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, minRevisionToKeep: 100);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, modifyConfiguration: c => c.Default.MinimumRevisionsToKeep = 100);
+
                 var id = "companies/1";
 
                 using (var session = store.OpenAsyncSession())
@@ -1683,7 +1888,7 @@ namespace FastTests.Server.Documents.Revisions
                     }
                 }
 
-                var parameters = new GetRevisionsOperation<Company>.Parameters {Id = id, Start = 10};
+                var parameters = new GetRevisionsOperation<Company>.Parameters { Id = id, Start = 10 };
                 var revisionsResult = await store.Operations.SendAsync(new GetRevisionsOperation<Company>(parameters));
                 Assert.Equal(13, revisionsResult.TotalResults);
 
@@ -1737,7 +1942,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task CanGetRevisionsCountFor()
         {
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -1773,7 +1978,7 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task CanGetRevisionsCountForAsync()
         {
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);

@@ -15,6 +15,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -163,17 +164,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsFor()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var token = CreateOperationToken())
+            using (var processor = new RevisionsHandlerProcessorForGetRevisions(this))
             {
-                var changeVectors = GetStringValuesQueryString("changeVector", required: false);
-                var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
-
-                if (changeVectors.Count > 0)
-                    await GetRevisionByChangeVector(context, changeVectors, metadataOnly, token.Token);
-                else
-                    await GetRevisions(context, metadataOnly, token.Token);
+                await processor.ExecuteAsync();
             }
         }
 
@@ -207,96 +200,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task GetRevisionByChangeVector(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly, CancellationToken token)
-        {
-            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-            var sw = Stopwatch.StartNew();
-
-            var revisions = new List<Document>(changeVectors.Count);
-
-            foreach (var changeVector in changeVectors)
-            {
-                var revision = revisionsStorage.GetRevision(context, changeVector);
-                if (revision == null && changeVectors.Count == 1)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                revisions.Add(revision);
-            }
-
-            var actualEtag = ComputeHttpEtags.ComputeEtagForRevisions(revisions);
-
-            var etag = GetStringFromHeaders("If-None-Match");
-            if (etag == actualEtag)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-
-            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-
-            long numberOfResults;
-            long totalDocumentsSizeInBytes;
-            var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
-            if (blittable)
-            {
-                WriteRevisionsBlittable(context, revisions, out numberOfResults, out totalDocumentsSizeInBytes);
-            }
-            else
-            {
-                (numberOfResults, totalDocumentsSizeInBytes) = await WriteRevisionsJsonAsync(context, metadataOnly, revisions, token);
-            }
-
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetRevisionByChangeVector), HttpContext.Request.QueryString.Value, numberOfResults, revisions.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
-        }
-
-        private async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, CancellationToken token)
-        {
-            long numberOfResults;
-            long totalDocumentsSizeInBytes;
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetDocumentsResult.Results));
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
-                writer.WriteEndObject();
-            }
-
-            return (numberOfResults, totalDocumentsSizeInBytes);
-        }
-
-        private void WriteRevisionsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, out long numberOfResults, out long totalDocumentsSizeInBytes)
-        {
-            numberOfResults = 0;
-            totalDocumentsSizeInBytes = 0;
-            HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
-
-            using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
-            using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedStreamBuffer>(context,
-                null, new BlittableWriter<UnmanagedStreamBuffer>(context, streamBuffer)))
-            {
-                writer.StartWriteObjectDocument();
-
-                writer.StartWriteObject();
-                writer.WritePropertyName(nameof(GetDocumentsResult.Results));
-
-                writer.StartWriteArray();
-                foreach (var document in documentsToWrite)
-                {
-                    numberOfResults++;
-                    writer.WriteEmbeddedBlittableDocument(document.Data);
-                    totalDocumentsSizeInBytes += document.Data.Size;
-                }
-                writer.WriteArrayEnd();
-
-                writer.WriteObjectEnd();
-
-                writer.FinalizeDocument();
-            }
-        }
-
         private async Task GetRevisionsCount(DocumentsOperationContext documentContext)
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -312,59 +215,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 documentContext.Write(writer, documentRevisionsDetails.ToJson());
             }
-        }
-
-        private async Task GetRevisions(DocumentsOperationContext context, bool metadataOnly, CancellationToken token)
-        {
-            var sw = Stopwatch.StartNew();
-
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var before = GetDateTimeQueryString("before", required: false);
-            var start = GetStart();
-            var pageSize = GetPageSize();
-
-            Document[] revisions = Array.Empty<Document>();
-            long count = 0;
-            if (before != null)
-            {
-                var revision = Database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context, id, before.Value);
-                if (revision != null)
-                {
-                    count = 1;
-                    revisions = new[] { revision };
-                }
-            }
-            else
-            {
-                (revisions, count) = Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, start, pageSize);
-            }
-
-            var actualChangeVector = revisions.Length == 0 ? "" : revisions[0].ChangeVector;
-
-            if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-
-            HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
-
-            long loadedRevisionsCount;
-            long totalDocumentsSizeInBytes;
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Results");
-                (loadedRevisionsCount, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisions, metadataOnly, token);
-
-                writer.WriteComma();
-
-                writer.WritePropertyName("TotalResults");
-                writer.WriteInteger(count);
-                writer.WriteEndObject();
-            }
-
-            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

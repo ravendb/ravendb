@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -14,6 +15,8 @@ namespace Raven.Server.Documents.Commands
         {
             _indexes = indexes;
         }
+
+        public override bool IsReadRequest => true;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
@@ -35,10 +38,5 @@ namespace Raven.Server.Documents.Commands
 
             return request;
         }
-    }
-
-    public class WaitForCommandsRequest
-    {
-        public List<long> RaftCommandIndexes { get; set; }
     }
 }

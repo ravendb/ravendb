@@ -12,6 +12,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
     public interface IShardedOperation : IShardedOperation<object>
     {
+        object IShardedOperation<object, object>.Combine(Memory<object> results) => null;
     }
 
     public interface IShardedOperation<TResult, out TCombinedResult>

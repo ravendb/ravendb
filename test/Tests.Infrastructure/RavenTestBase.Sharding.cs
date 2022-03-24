@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Utils;
 
 namespace FastTests;
@@ -49,6 +51,12 @@ public partial class RavenTestBase
             return _parent.GetDocumentStore(shardedOptions, caller);
         }
 
+        public async Task<int> GetShardNumber(IDocumentStore store, string id)
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var bucket = ShardHelper.GetBucket(id);
+            return ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
+        }
         public async Task<IEnumerable<DocumentDatabase>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, string database = null)
         {
             var dbs = new List<DocumentDatabase>();
