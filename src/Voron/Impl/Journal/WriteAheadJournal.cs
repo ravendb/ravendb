@@ -1524,11 +1524,16 @@ namespace Voron.Impl.Journal
             private void ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken()
             {
                 var currentWriteTransactionHolder = _waj._env._currentWriteTransactionHolder;
+                var currentTxLockCount = _waj._env._transactionWriter.CurrentCount;
+
                 if (currentWriteTransactionHolder != null &&
                     currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
                 {
                     throw new InvalidOperationException("The flushing lock must be taken before acquiring the write transaction lock. " +
-                                                        "This check is supposed to prevent potential deadlock and guarantee the same order of taking those two locks.");
+                                                        "This check is supposed to prevent potential deadlock and guarantee the same order of taking those two locks." +
+                                                        $"(Thread holding the write tx lock - Name: '{currentWriteTransactionHolder.Name}', Id: {currentWriteTransactionHolder.ManagedThreadId}. " +
+                                                        $"Current thread - Id: {Thread.CurrentThread.ManagedThreadId}. " +
+                                                        $"Current tx lock count: {currentTxLockCount})");
                 }
             }
 
