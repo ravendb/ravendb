@@ -26,7 +26,7 @@ class indexErrorInfoModel {
     errMsg = ko.observable<string>();
     
     indexErrorsCountDto = ko.observableArray<indexErrorsCount>([]);
-    indexErrors: IndexErrorPerDocument[] = [];
+    indexErrors = ko.observableArray<IndexErrorPerDocument>([])
     filteredIndexErrors: IndexErrorPerDocument[] = [];
     
     gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
@@ -90,7 +90,12 @@ class indexErrorInfoModel {
             if (this.state() === "error") {
                 return "errored-index-errors-template";
             }
-            return "empty-index-errors-template";
+            
+            if (this.indexErrors().length > 0 && !this.filteredIndexErrors.length) {
+                return "no-matching-index-errors-template";
+            }
+            
+            return "no-index-errors-template";
         })
 
         this.gridId = `${this.location.nodeTag}-${this.location.shardNumber || "na"}`;
@@ -169,7 +174,7 @@ class indexErrorInfoModel {
     }
     
     filterAndShow(filter: (item: IndexErrorPerDocument) => boolean) {
-        this.filteredIndexErrors = this.indexErrors.filter(filter);
+        this.filteredIndexErrors = this.indexErrors().filter(filter);
 
         this.gridController().reset();
     }
@@ -185,14 +190,14 @@ class indexErrorInfoModel {
     }
 
     onCountsLoadError(err: string) {
-        this.indexErrors = [];
+        this.indexErrors([]);
         this.errMsg(err);
         this.state("error");
     }
 
     onDetailsLoaded(results: IndexErrorPerDocument[]) {
         this.errMsg("");
-        this.indexErrors = results;
+        this.indexErrors(results);
 
         this.loadingDetailsTask.resolve();
     }
