@@ -12,6 +12,8 @@ public class ShardedClusterTransactionRequestProcessor : AbstractClusterTransact
     {
     }
 
+    protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(ShardedBatchCommand command) => command.ParsedCommands;
+
     protected override ClusterTransactionCommand CreateClusterTransactionCommand(
         ArraySegment<BatchRequestParser.CommandData> parsedCommands,
         ClusterTransactionCommand.ClusterTransactionOptions options,
