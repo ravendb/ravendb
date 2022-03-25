@@ -51,12 +51,12 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     protected override ValueTask WaitForIndexesAsync(TimeSpan timeout, List<string> specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections)
     {
-        return ValueTask.CompletedTask;
+        throw new NotImplementedException();
     }
 
     protected override ValueTask WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
     {
-        return ValueTask.CompletedTask;
+        throw new NotImplementedException();
     }
 
     protected override char GetIdentityPartsSeparator() => RequestHandler.DatabaseContext.IdentityPartsSeparator;
