@@ -1,18 +1,18 @@
 ﻿using System;
+using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.Web;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches
 {
-    public class ClusterTransactionRequestProcessor : AbstractClusterTransactionRequestProcessor<BatchHandler.MergedBatchCommand>
+    public class ClusterTransactionRequestProcessor : AbstractClusterTransactionRequestProcessor<DatabaseRequestHandler, BatchHandler.MergedBatchCommand>
     {
         private readonly DatabaseTopology _topology;
 
-        public ClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator, DatabaseTopology topology) 
-            : base(handler, database, identitySeparator)
+        public ClusterTransactionRequestProcessor(DatabaseRequestHandler requestHandler, [NotNull] DatabaseTopology topology)
+            : base(requestHandler)
         {
-            _topology = topology;
+            _topology = topology ?? throw new ArgumentNullException(nameof(topology));
         }
 
         protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(BatchHandler.MergedBatchCommand command) => command.ParsedCommands;
@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
             string raftRequestId)
         {
             return new ClusterTransactionCommand(
-                Database,
-                IdentitySeparator,
+                RequestHandler.Database.Name,
+                RequestHandler.Database.IdentityPartsSeparator,
                 _topology,
                 parsedCommands,
                 options,

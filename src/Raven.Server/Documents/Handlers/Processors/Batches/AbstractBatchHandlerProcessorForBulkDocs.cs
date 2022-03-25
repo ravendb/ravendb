@@ -35,7 +35,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     protected abstract BatchRequestParser.AbstractBatchCommandBuilder<TBatchCommand, TOperationContext> GetCommandBuilder();
 
-    protected abstract AbstractClusterTransactionRequestProcessor<TBatchCommand> GetClusterTransactionRequestProcessor();
+    protected abstract AbstractClusterTransactionRequestProcessor<TRequestHandler, TBatchCommand> GetClusterTransactionRequestProcessor();
 
     public override async ValueTask ExecuteAsync()
     {

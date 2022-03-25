@@ -2,13 +2,13 @@ using System;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.Web;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
-public class ShardedClusterTransactionRequestProcessor : AbstractClusterTransactionRequestProcessor<ShardedBatchCommand>
+public class ShardedClusterTransactionRequestProcessor : AbstractClusterTransactionRequestProcessor<ShardedDatabaseRequestHandler, ShardedBatchCommand>
 {
-    public ShardedClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator) : base(handler, database, identitySeparator)
+    public ShardedClusterTransactionRequestProcessor(ShardedDatabaseRequestHandler requestHandler)
+        : base(requestHandler)
     {
     }
 
@@ -20,8 +20,8 @@ public class ShardedClusterTransactionRequestProcessor : AbstractClusterTransact
         string raftRequestId)
     {
         return new ClusterTransactionCommand(
-            Database,
-            IdentitySeparator,
+            RequestHandler.DatabaseContext.DatabaseName,
+            RequestHandler.DatabaseContext.IdentityPartsSeparator,
             parsedCommands,
             options,
             raftRequestId);

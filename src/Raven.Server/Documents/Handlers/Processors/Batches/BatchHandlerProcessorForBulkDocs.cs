@@ -151,13 +151,13 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
 
     protected override BatchRequestParser.AbstractBatchCommandBuilder<BatchHandler.MergedBatchCommand, DocumentsOperationContext> GetCommandBuilder() => new BatchRequestParser.DatabaseBatchCommandBuilder(RequestHandler, RequestHandler.Database);
 
-    protected override AbstractClusterTransactionRequestProcessor<BatchHandler.MergedBatchCommand> GetClusterTransactionRequestProcessor()
+    protected override AbstractClusterTransactionRequestProcessor<DatabaseRequestHandler, BatchHandler.MergedBatchCommand> GetClusterTransactionRequestProcessor()
     {
         var topology = RequestHandler.ServerStore.LoadDatabaseTopology(RequestHandler.Database.Name);
         if (topology.Promotables.Contains(RequestHandler.ServerStore.NodeTag))
             throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
-        return new ClusterTransactionRequestProcessor(RequestHandler, RequestHandler.Database.Name, RequestHandler.Database.IdentityPartsSeparator, topology);
+        return new ClusterTransactionRequestProcessor(RequestHandler, topology);
     }
 
     private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)

@@ -63,5 +63,5 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
 
     protected override BatchRequestParser.AbstractBatchCommandBuilder<ShardedBatchCommand, TransactionOperationContext> GetCommandBuilder() => new ShardedBatchCommandBuilder(RequestHandler);
 
-    protected override AbstractClusterTransactionRequestProcessor<ShardedBatchCommand> GetClusterTransactionRequestProcessor() => new ShardedClusterTransactionRequestProcessor(RequestHandler, RequestHandler.DatabaseContext.DatabaseName, RequestHandler.DatabaseContext.IdentityPartsSeparator);
+    protected override AbstractClusterTransactionRequestProcessor<ShardedDatabaseRequestHandler, ShardedBatchCommand> GetClusterTransactionRequestProcessor() => new ShardedClusterTransactionRequestProcessor(RequestHandler);
 }
