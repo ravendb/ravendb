@@ -2,40 +2,25 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Json;
-using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -44,260 +29,34 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
-            var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-            var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
-            var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
-
-            var commandBuilder = new BatchRequestParser.DatabaseBatchCommandBuilder(this, Database);
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var contentType = HttpContext.Request.ContentType;
-                try
-                {
-                    if (contentType == null ||
-                        contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await commandBuilder.BuildCommandsAsync(context, RequestBodyStream(), Database.IdentityPartsSeparator);
-                    }
-                    else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
-                             contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType, Database.IdentityPartsSeparator);
-                    }
-                    else
-                        ThrowNotSupportedType(contentType);
-                }
-                finally
-                {
-                    if (TrafficWatchManager.HasRegisteredClients)
-                    {
-                        var log = BatchTrafficWatch(commandBuilder.Commands);
-                        // add sb to httpContext
-                        AddStringToHttpContext(log, TrafficWatchChangeType.BulkDocs);
-                    }
-                }
-
-                using (var command = await commandBuilder.GetCommand(context))
-                {
-                    if (command.IsClusterTransaction)
-                    {
-                        var topology = ServerStore.LoadDatabaseTopology(Database.Name);
-                        if (topology.Promotables.Contains(ServerStore.NodeTag))
-                            throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
-                        
-                        var clusterTransactionHandler = new ClusterTransactionRequestProcessor(this, Database.Name, Database.IdentityPartsSeparator, topology);
-                        await clusterTransactionHandler.Process(context, command.ParsedCommands);
-                        return;
-                    }
-
-                    if (waitForIndexesTimeout != null)
-                        command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                    try
-                    {
-                        await Database.TxMerger.Enqueue(command);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                        throw;
-                    }
-
-                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                    if (waitForReplicasTimeout != null)
-                    {
-                        var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
-                        var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
-
-                        await WaitForReplicationAsync(Database, waitForReplicasTimeout.Value, numberOfReplicasStr, throwOnTimeoutInWaitForReplicas,
-                            command.LastChangeVector);
-                    }
-
-                    if (waitForIndexesTimeout != null)
-                    {
-                        await WaitForIndexesAsync(ContextPool, Database, waitForIndexesTimeout.Value, specifiedIndexesQueryString.ToList(), waitForIndexThrow,
-                            command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
-                    }
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = command.Reply});
-                    }
-                }
-            }
+            using (var processor = new BatchHandlerProcessorForBulkDocs(this))
+                await processor.ExecuteAsync();
         }
 
-        public static string BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+        public interface IBatchCommand : IDisposable
         {
-            var sb = new StringBuilder();
-            for (var i = parsedCommands.Offset; i < (parsedCommands.Offset + parsedCommands.Count); i++)
-            {
-                // log script and args if type is patch
-                if (parsedCommands.Array[i].Type == CommandType.PATCH)
-                {
-                    sb.Append(parsedCommands.Array[i].Type).Append("    ")
-                        .Append(parsedCommands.Array[i].Id).Append("    ")
-                        .Append(parsedCommands.Array[i].Patch.Script).Append("    ")
-                        .Append(parsedCommands.Array[i].PatchArgs).AppendLine();
-                }
-                else
-                {
-                    sb.Append(parsedCommands.Array[i].Type).Append("    ")
-                        .Append(parsedCommands.Array[i].Id).AppendLine();
-                }
-            }
+            public HashSet<string> ModifiedCollections { get; set; }
 
-            return sb.ToString();
+            public string LastChangeVector { get; set; }
+
+            public long LastTombstoneEtag { get; set; }
+
+            public bool IsClusterTransaction { get; set; }
         }
 
-        public static void ThrowNotSupportedType(string contentType)
-        {
-            throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
-        }
-
-        public static async Task WaitForReplicationAsync(DocumentDatabase database, TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
-        {
-            int numberOfReplicasToWaitFor;
-
-            if (numberOfReplicasStr == "majority")
-            {
-                numberOfReplicasToWaitFor = database.ReplicationLoader.GetSizeOfMajority();
-            }
-            else
-            {
-                if (int.TryParse(numberOfReplicasStr, out numberOfReplicasToWaitFor) == false)
-                    ThrowInvalidInteger("numberOfReplicasToWaitFor", numberOfReplicasStr);
-            }
-
-            var replicatedPast = await database.ReplicationLoader.WaitForReplicationAsync(
-                numberOfReplicasToWaitFor,
-                waitForReplicasTimeout,
-                lastChangeVector);
-
-            if (replicatedPast < numberOfReplicasToWaitFor && throwOnTimeoutInWaitForReplicas)
-            {
-                var message = $"Could not verify that etag {lastChangeVector} was replicated " +
-                              $"to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. " +
-                              $"So far, it only replicated to {replicatedPast}";
-
-                throw new TimeoutException(message);
-            }
-        }
-
-        public static async Task WaitForIndexesAsync(DocumentsContextPool contextPool, DocumentDatabase database, TimeSpan timeout,
-            List<string> specifiedIndexesQueryString, bool throwOnTimeout,
-            string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections)
-        {
-            // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
-            // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
-
-            if (modifiedCollections.Count == 0)
-                return;
-
-            var indexesToWait = new List<WaitForIndexItem>();
-
-            var indexesToCheck = GetImpactedIndexesToWaitForToBecomeNonStale(database, specifiedIndexesQueryString, modifiedCollections);
-
-            if (indexesToCheck.Count == 0)
-                return;
-
-            var sp = Stopwatch.StartNew();
-
-            bool needsServerContext = false;
-
-            // we take the awaiter _before_ the indexing transaction happens,
-            // so if there are any changes, it will already happen to it, and we'll
-            // query the index again. This is important because of:
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
-            foreach (var index in indexesToCheck)
-            {
-                var indexToWait = new WaitForIndexItem
-                {
-                    Index = index,
-                    IndexBatchAwaiter = index.GetIndexingBatchAwaiter(),
-                    WaitForIndexing = new AsyncWaitForIndexing(sp, timeout, index)
-                };
-
-                indexesToWait.Add(indexToWait);
-
-                needsServerContext |= index.Definition.HasCompareExchange;
-            }
-
-            var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
-            var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
-
-            while (true)
-            {
-                var hadStaleIndexes = false;
-
-                using (var context = QueryOperationContext.Allocate(database, needsServerContext))
-                using (context.OpenReadTransaction())
-                {
-                    foreach (var waitForIndexItem in indexesToWait)
-                    {
-                        if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
-                            continue;
-
-                        hadStaleIndexes = true;
-
-                        await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
-
-                        if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
-                        {
-                            if (throwOnTimeout == false)
-                                return;
-
-                            throw new TimeoutException(
-                                $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                                $"indexes has caught up with the changes as of etag: {cutoffEtag}");
-                        }
-                    }
-                }
-
-                if (hadStaleIndexes == false)
-                    return;
-            }
-        }
-
-        private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
-        {
-            var indexesToCheck = new List<Index>();
-
-            if (specifiedIndexesQueryString.Count > 0)
-            {
-                var specificIndexes = specifiedIndexesQueryString.ToHashSet();
-                foreach (var index in database.IndexStore.GetIndexes())
-                {
-                    if (specificIndexes.Contains(index.Name))
-                    {
-                        if (index.WorksOnAnyCollection(modifiedCollections))
-                            indexesToCheck.Add(index);
-                    }
-                }
-            }
-            else
-            {
-                foreach (var index in database.IndexStore.GetIndexes())
-                {
-                    if (index.Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection) ||
-                        index.WorksOnAnyCollection(modifiedCollections))
-                    {
-                        indexesToCheck.Add(index);
-                    }
-                }
-            }
-            return indexesToCheck;
-        }
-
-        public abstract class TransactionMergedCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public abstract class TransactionMergedCommand : TransactionOperationsMerger.MergedTransactionCommand, IBatchCommand
         {
             protected readonly DocumentDatabase Database;
-            public HashSet<string> ModifiedCollections;
-            public string LastChangeVector;
-            public long LastTombstoneEtag;
 
-            public DynamicJsonArray Reply = new DynamicJsonArray();
+            public DynamicJsonArray Reply = new();
+
+            public HashSet<string> ModifiedCollections { get; set; }
+
+            public string LastChangeVector { get; set; }
+
+            public long LastTombstoneEtag { get; set; }
+
+            public bool IsClusterTransaction { get; set; }
 
             protected TransactionMergedCommand(DocumentDatabase database)
             {
@@ -367,6 +126,8 @@ namespace Raven.Server.Documents.Handlers
                     ["Deleted"] = deleted
                 });
             }
+
+            public abstract void Dispose();
         }
 
         public class ClusterTransactionMergedCommand : TransactionMergedCommand
@@ -554,18 +315,21 @@ namespace Raven.Server.Documents.Handlers
                     Batch = _batch
                 };
             }
+
+            public override void Dispose()
+            {
+            }
         }
 
-        public class MergedBatchCommand : TransactionMergedCommand, IDisposable
+        public class MergedBatchCommand : TransactionMergedCommand
         {
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
+
             public List<AttachmentStream> AttachmentStreams;
             public StreamsTempFile AttachmentStreamsTempFile;
 
             private Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>> _documentsToUpdateAfterAttachmentChange;
-            private readonly List<IDisposable> _disposables = new List<IDisposable>();
-
-            public bool IsClusterTransaction;
+            private readonly List<IDisposable> _toDispose = new();
 
             public MergedBatchCommand(DocumentDatabase database) : base(database)
             {
@@ -608,7 +372,7 @@ namespace Raven.Server.Documents.Handlers
                     return 0;// should never happened
                 }
                 Reply.Clear();
-                _disposables.Clear();
+                _toDispose.Clear();
 
                 DocumentsStorage.PutOperationResults? lastPutResult = null;
 
@@ -647,7 +411,7 @@ namespace Raven.Server.Documents.Handlers
                                     flags |= DocumentFlags.HasRevisions;
                                 }
 
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, 
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document,
                                     oldChangeVectorForClusterTransactionIndexCheck: cmd.OriginalChangeVector, flags: flags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
@@ -677,7 +441,7 @@ namespace Raven.Server.Documents.Handlers
 
                         case CommandType.PATCH:
                         case CommandType.BatchPATCH:
-                                cmd.PatchCommand.ExecuteDirectly(context);
+                            cmd.PatchCommand.ExecuteDirectly(context);
 
                             var lastChangeVector = cmd.PatchCommand.HandleReply(Reply, ModifiedCollections);
 
@@ -687,7 +451,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
 
                         case CommandType.JsonPatch:
-                            
+
                             cmd.JsonPatchCommand.ExecuteDirectly(context);
 
                             var lastChangeVectorJsonPatch = cmd.JsonPatchCommand.HandleReply(Reply, ModifiedCollections, Database);
@@ -712,7 +476,7 @@ namespace Raven.Server.Documents.Handlers
                             attachmentIterator.MoveNext();
                             var attachmentStream = attachmentIterator.Current;
                             var stream = attachmentStream.Stream;
-                            _disposables.Add(stream);
+                            _toDispose.Add(stream);
 
                             var docId = cmd.Id;
 
@@ -887,7 +651,7 @@ namespace Raven.Server.Documents.Handlers
                                 Documents = new List<DocumentCountersOperation> { cmd.Counters },
                                 FromEtl = cmd.FromEtl
                             });
-                                counterBatchCmd.ExecuteDirectly(context);
+                            counterBatchCmd.ExecuteDirectly(context);
 
                             LastChangeVector = counterBatchCmd.LastChangeVector;
 
@@ -969,7 +733,7 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(forceRevisionReply);
                             break;
-                        
+
                     }
                 }
 
@@ -1008,12 +772,12 @@ namespace Raven.Server.Documents.Handlers
                 docId = lastPutResult.Value.Id;
             }
 
-            public void Dispose()
+            public override void Dispose()
             {
                 if (ParsedCommands.Count == 0)
                     return;
 
-                foreach (var disposable in _disposables)
+                foreach (var disposable in _toDispose)
                 {
                     disposable?.Dispose();
                 }
@@ -1037,13 +801,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 throw new InvalidOperationException($"Unexpected order of commands sent by Raven ETL. {CommandType.AttachmentPUT} needs to be preceded by {CommandType.PUT}");
             }
-        }
-
-        private class WaitForIndexItem
-        {
-            public Index Index;
-            public AsyncManualResetEvent.FrozenAwaiter IndexBatchAwaiter;
-            public AsyncWaitForIndexing WaitForIndexing;
         }
     }
 
@@ -1079,8 +836,8 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch: false,
                     patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
                     patchIfMissing: (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
-                    identityPartsSeparator:database.IdentityPartsSeparator,
-                    createIfMissing:ParsedCommands[i].CreateIfMissing,
+                    identityPartsSeparator: database.IdentityPartsSeparator,
+                    createIfMissing: ParsedCommands[i].CreateIfMissing,
                     isTest: false,
                     debugMode: false,
                     collectResultsNeeded: true,

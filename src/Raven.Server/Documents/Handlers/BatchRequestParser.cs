@@ -12,7 +12,6 @@ using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -24,6 +23,7 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
 using Raven.Server.Web;
 using Sparrow;
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Handlers
     public static class BatchRequestParser
     {
         // TODO sharding: CommandData seems to grew beyond the good practice of struct
-        public struct CommandData 
+        public struct CommandData
         {
             public CommandType Type;
             public string Id;
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        public class DatabaseBatchCommandBuilder : BatchCommandBuilder
+        public class DatabaseBatchCommandBuilder : AbstractBatchCommandBuilder<BatchHandler.MergedBatchCommand, DocumentsOperationContext>
         {
             private readonly DocumentDatabase _database;
             public List<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;
@@ -162,9 +162,10 @@ namespace Raven.Server.Documents.Handlers
                 AttachmentStreams.Add(attachmentStream);
             }
 
-            public async Task<BatchHandler.MergedBatchCommand> GetCommand(JsonOperationContext ctx)
+            public override async ValueTask<BatchHandler.MergedBatchCommand> GetCommandAsync(DocumentsOperationContext context)
             {
-                await ExecuteGetIdentities();
+                await ExecuteGetIdentitiesAsync();
+
                 return new BatchHandler.MergedBatchCommand(_database)
                 {
                     ParsedCommands = Commands,
@@ -175,7 +176,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public abstract class BatchCommandBuilder
+        public abstract class AbstractBatchCommandBuilder<TBatchCommand, TOperationContext>
+            where TBatchCommand : BatchHandler.IBatchCommand
+            where TOperationContext : JsonOperationContext
         {
             private readonly char _identityPartsSeparator;
             protected readonly RequestHandler Handler;
@@ -192,7 +195,7 @@ namespace Raven.Server.Documents.Handlers
             public bool HasIdentities => _identities != null;
             public bool IsClusterTransactionRequest;
 
-            protected BatchCommandBuilder(RequestHandler handler, string database, char identityPartsSeparator)
+            protected AbstractBatchCommandBuilder(RequestHandler handler, string database, char identityPartsSeparator)
             {
                 Handler = handler;
                 _database = database;
@@ -210,7 +213,7 @@ namespace Raven.Server.Documents.Handlers
                 command.ChangeVector ??= ctx.GetLazyString("");
             }
 
-            protected async Task ExecuteGetIdentities()
+            protected async ValueTask ExecuteGetIdentitiesAsync()
             {
                 if (HasIdentities == false)
                     return;
@@ -224,7 +227,7 @@ namespace Raven.Server.Documents.Handlers
                     var cmd = _commands[value];
 
                     cmd.Id = cmd.Id.Substring(0, cmd.Id.Length - 1) + _identityPartsSeparator + newIds[index];
-                    
+
                     if (string.IsNullOrEmpty(cmd.ChangeVector) == false)
                         ThrowInvalidUsageOfChangeVectorWithIdentities(cmd);
 
@@ -236,11 +239,11 @@ namespace Raven.Server.Documents.Handlers
             public abstract Task SaveStream(JsonOperationContext context, Stream input);
 
             public virtual Task<CommandData> ReadCommand(
-                JsonOperationContext ctx, 
-                Stream stream, 
-                JsonParserState state, 
-                UnmanagedJsonParser parser, 
-                JsonOperationContext.MemoryBuffer buffer, 
+                JsonOperationContext ctx,
+                Stream stream,
+                JsonParserState state,
+                UnmanagedJsonParser parser,
+                JsonOperationContext.MemoryBuffer buffer,
                 BlittableMetadataModifier modifier,
                 CancellationToken token)
             {
@@ -252,8 +255,8 @@ namespace Raven.Server.Documents.Handlers
                 var state = new JsonParserState();
                 using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "bulk_docs"))
-                    /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
-                    /* we can't know from advanced if we will need this information so we save this for all batch commands */
+                /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
+                /* we can't know from advanced if we will need this information so we save this for all batch commands */
                 using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false, DatabaseItemType.Attachments))
                 {
                     while (parser.Read() == false)
@@ -313,14 +316,14 @@ namespace Raven.Server.Documents.Handlers
                                 );
                         }
 
-                    if (commandData.Type == CommandType.JsonPatch)
-                    {
-                        commandData.JsonPatchCommand = new JsonPatchCommand(
-                            commandData.Id, 
-                            commandData.JsonPatchCommands, 
-                            commandData.ReturnDocument,
-                            context);
-                    }
+                        if (commandData.Type == CommandType.JsonPatch)
+                        {
+                            commandData.JsonPatchCommand = new JsonPatchCommand(
+                                commandData.Id,
+                                commandData.JsonPatchCommands,
+                                commandData.ReturnDocument,
+                                context);
+                        }
 
                         if (commandData.Type == CommandType.BatchPATCH)
                         {
@@ -380,6 +383,8 @@ namespace Raven.Server.Documents.Handlers
                     await SaveStream(context, bodyStream);
                 }
             }
+
+            public abstract ValueTask<TBatchCommand> GetCommandAsync(TOperationContext context);
         }
 
         private static async Task<bool> IsClusterTransaction(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, JsonParserState state)
@@ -407,7 +412,7 @@ namespace Raven.Server.Documents.Handlers
                    *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 25711 && // od
                    *(state.StringBuffer + sizeof(long) + sizeof(int) + sizeof(short)) == (byte)'e';
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe long GetLongFromStringBuffer(JsonParserState state)
         {
@@ -553,7 +558,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-                        
+
                         commandData.Type = GetCommandType(state, ctx);
                         break;
                     case CommandPropertyName.Id:
@@ -608,7 +613,7 @@ namespace Raven.Server.Documents.Handlers
                             position = 0;
                             await RefillParserBuffer(stream, buffer, parser, token);
                         }
-                        
+
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.OriginalChangeVector = null;
@@ -630,7 +635,7 @@ namespace Raven.Server.Documents.Handlers
                             position = 0;
                             await RefillParserBuffer(stream, buffer, parser, token);
                         }
-                    
+
                         commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.SeenAttachments = modifier.SeenAttachments;
                         commandData.SeenCounters = modifier.SeenCounters;
@@ -1334,9 +1339,9 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28265 &&
                         state.StringBuffer[14] == (byte)'g')
                         return CommandPropertyName.CreateIfMissing;
-        
+
                     return CommandPropertyName.NoSuchProperty;
-                
+
                 case 20:
                     if (*(long*)state.StringBuffer == 7809644627822735951 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7302135340735752259 &&
@@ -1511,7 +1516,7 @@ namespace Raven.Server.Documents.Handlers
 
                 case 24:
                     if (*(long*)state.StringBuffer == 7598246930185808212 &&
-                        *(long*)(state.StringBuffer + sizeof(long)) == 7946997866664784741 && 
+                        *(long*)(state.StringBuffer + sizeof(long)) == 7946997866664784741 &&
                         *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 8319395793566265955)
                         return CommandType.TimeSeriesWithIncrements;
                     break;

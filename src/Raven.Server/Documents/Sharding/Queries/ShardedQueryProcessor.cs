@@ -451,7 +451,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
 
         var fieldsToFetch = new FieldsToFetch(_query, null);
         var retriever = new ShardedMapReduceResultRetriever(_parent.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, fieldsToFetch, null, _context, false, null, null, null,
-            _parent.DatabaseContext.IdentitySeparator);
+            _parent.DatabaseContext.IdentityPartsSeparator);
 
         var currentResults = _result.Results;
         _result.Results = new List<BlittableJsonReaderObject>();

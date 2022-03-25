@@ -369,7 +369,7 @@ namespace Raven.Server.Web
             return null;
         }
 
-        protected static void ThrowInvalidInteger(string name, string etag, string type = "int")
+        public void ThrowInvalidInteger(string name, string etag, string type = "int")
         {
             throw new ArgumentException($"Could not parse header '{name}' header as {type}, value was: {etag}");
         }

@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Sharding
 
         public int NumberOfShardNodes => _record.Shards.Length;
 
-        public char IdentitySeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
+        public char IdentityPartsSeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
         public bool Encrypted => _record.Encrypted;
 
