@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (id[^1] == '|')
                 {
                     // note that we use the _overall_ database for this, not the specific shards
-                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, DatabaseContext.IdentitySeparator, DatabaseContext.DatabaseName, GetRaftRequestIdFromQuery());
+                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, DatabaseContext.IdentityPartsSeparator, DatabaseContext.DatabaseName, GetRaftRequestIdFromQuery());
                     id = clusterId;
                 }
                 
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         var result = (BlittableJsonReaderObject)cmdResults[index];
                         foreach (string includePath in includePaths)
                         {
-                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes, DatabaseContext.IdentitySeparator);
+                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes, DatabaseContext.IdentityPartsSeparator);
                         }
 
                         results[match] = result;

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Exceptions;
-using Raven.Client.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -16,23 +15,26 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers;
+namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
-public abstract class BaseClusterTransactionRequestProcessor
+public abstract class AbstractClusterTransactionRequestProcessor<TBatchCommand>
+    where TBatchCommand : BatchHandler.IBatchCommand
 {
     private readonly RequestHandler _handler;
     protected readonly string Database;
     protected readonly char IdentitySeparator;
 
-    protected BaseClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator)
+    protected AbstractClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator)
     {
         _handler = handler;
         Database = database;
         IdentitySeparator = identitySeparator;
     }
 
-    public async Task Process(JsonOperationContext context, ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+    public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command)
     {
+        ArraySegment<BatchRequestParser.CommandData> parsedCommands = null;
+
         var waitForIndexesTimeout = _handler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
         var waitForIndexThrow = _handler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
         var specifiedIndexesQueryString = _handler.HttpContext.Request.Query["waitForSpecificIndex"];
@@ -92,16 +94,7 @@ public abstract class BaseClusterTransactionRequestProcessor
                 }
             }
 
-            _handler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, _handler.ResponseBodyStream()))
-            {
-                context.Write(writer,
-                    new DynamicJsonValue
-                    {
-                        [nameof(BatchCommandResult.Results)] = result,
-                        [nameof(BatchCommandResult.TransactionIndex)] = clusterTransactionCommandResult.Index
-                    });
-            }
+            return (clusterTransactionCommandResult.Index, result);
         }
     }
 

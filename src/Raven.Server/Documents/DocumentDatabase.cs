@@ -23,6 +23,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -337,7 +338,7 @@ namespace Raven.Server.Documents
 
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
-                
+
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
@@ -512,7 +513,7 @@ namespace Raven.Server.Documents
                     Add(command);
                 }
             }
-            
+
             public void Add(ClusterTransactionCommand.SingleClusterDatabaseCommand command)
             {
                 if (Count >= _maxSize)
@@ -561,7 +562,7 @@ namespace Raven.Server.Documents
                 OnClusterTransactionCompletion(command, mergedCommands);
             }
         }
-      
+
         private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
             for (int i = 0; i < batch.Count; i++)
@@ -609,7 +610,7 @@ namespace Raven.Server.Documents
                 Task indexTask = null;
                 if (options.WaitForIndexesTimeout != null)
                 {
-                    indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                    indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
                         options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
                         mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
                 }
