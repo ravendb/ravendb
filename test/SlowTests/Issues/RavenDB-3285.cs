@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,34 +31,19 @@ namespace SlowTests.Issues
                 };
                 index.Execute(store);
 
+                var tester = store.Maintenance.ForTesting(() => new GetIndexOperation("IndexEmployee"));
+
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.Unlock));
-                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.Unlock, indexDefinition.LockMode));
+                tester.AssertAll((_, indexDefinition) => Assert.Equal(IndexLockMode.Unlock, indexDefinition.LockMode));
 
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedError));
-                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedError, indexDefinition.LockMode));
+                tester.AssertAll((_, indexDefinition) => Assert.Equal(IndexLockMode.LockedError, indexDefinition.LockMode));
 
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
-                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
+                tester.AssertAll((_, indexDefinition) => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
 
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
-                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
-            }
-
-            static void AssertIndex(IDocumentStore store, Options options, string indexName, Action<IndexDefinition> assert)
-            {
-                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
-                {
-                    var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-
-                    for (var i = 0; i < databaseRecord.Shards.Length; i++)
-                    {
-                        assert(store.Maintenance.ForShard(i).Send(new GetIndexOperation(indexName)));
-                    }
-
-                    return;
-                }
-
-                assert(store.Maintenance.Send(new GetIndexOperation("IndexEmployee")));
+                tester.AssertAll((_, indexDefinition) => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
             }
         }
 
