@@ -31,9 +31,11 @@ public abstract class AbstractClusterTransactionRequestProcessor<TBatchCommand>
         IdentitySeparator = identitySeparator;
     }
 
+    protected abstract ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(TBatchCommand command);
+
     public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command)
     {
-        ArraySegment<BatchRequestParser.CommandData> parsedCommands = null;
+        ArraySegment<BatchRequestParser.CommandData> parsedCommands = GetParsedCommands(command);
 
         var waitForIndexesTimeout = _handler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
         var waitForIndexThrow = _handler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;

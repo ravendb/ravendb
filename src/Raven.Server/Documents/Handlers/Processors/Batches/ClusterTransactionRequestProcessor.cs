@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
             _topology = topology;
         }
 
+        protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(BatchHandler.MergedBatchCommand command) => command.ParsedCommands;
+
         protected override ClusterTransactionCommand CreateClusterTransactionCommand(
             ArraySegment<BatchRequestParser.CommandData> parsedCommands,
             ClusterTransactionCommand.ClusterTransactionOptions options,
