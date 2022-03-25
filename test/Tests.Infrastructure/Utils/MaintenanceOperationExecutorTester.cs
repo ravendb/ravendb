@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Xunit.Sdk;
 
 namespace Tests.Infrastructure.Utils;
 
@@ -25,7 +26,16 @@ public class MaintenanceOperationExecutorTester<TResult>
     public async Task AssertAllAsync(Action<Key, TResult> assert)
     {
         await foreach (var (key, result) in GetResultsAsync())
-            assert(key, result);
+        {
+            try
+            {
+                assert(key, result);
+            }
+            catch (XunitException e)
+            {
+                throw new InvalidOperationException($"Assertion failed for '{key}'.", e);
+            }
+        }
     }
 
     public void AssertAll(Action<Key, TResult> assert)
