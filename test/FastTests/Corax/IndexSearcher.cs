@@ -1529,13 +1529,37 @@ namespace FastTests.Corax
                 {
                     read = andNotMatch.Fill(ids);
 
-                    for ( int i = 0; i < read; i++)
+                    for (int i = 0; i < read; i++)
                     {
                         var id = searcher.GetIdentityFor(ids[i]);
                         Assert.False(id.StartsWith("entry/00"));
                         entriesLookup.Add(id);
                     }
-                    
+
+                }
+                while (read != 0);
+
+                Assert.Equal(total - startWith, entriesLookup.Count);
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
+                var andMatch = searcher.And(searcher.AllEntries(), andNotMatch);
+
+                Span<long> ids = stackalloc long[4096];
+
+                var entriesLookup = new HashSet<string>();
+                int read;
+                do
+                {
+                    read = andMatch.Fill(ids);
+
+                    for (int i = 0; i < read; i++)
+                    {
+                        var id = searcher.GetIdentityFor(ids[i]);
+                        Assert.False(id.StartsWith("entry/00"));
+                        entriesLookup.Add(id);
+                    }
                 }
                 while (read != 0);
 
