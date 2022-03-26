@@ -290,6 +290,33 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void AllAndMemoized()
+        {
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
+            var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+
+            {
+                using var searcher = new IndexSearcher(Env);
+
+                var match1 = searcher.Memoize(searcher.TermQuery("Id", "entry/1"));
+                var match2 = searcher.Memoize(searcher.TermQuery("Content", "mountain"));
+                var andMatch = searcher.Memoize(searcher.And(match1.Replay(), match2.Replay()));
+
+                var replay1 = andMatch.Replay();
+                var replay2 = andMatch.Replay();
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, replay1.Fill(ids));
+                Assert.Equal(0, replay1.Fill(ids));
+                Assert.Equal(2, replay2.Fill(ids));
+                Assert.Equal(0, replay2.Fill(ids));
+            }
+        }
+
+        [Fact]
         public void EmptyOr()
         {
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
@@ -1457,6 +1484,143 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[256];
                 Assert.Equal(3, andNotMatch.Fill(ids));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void BigMemoizationQueries()
+        {
+            int total = 100000;
+
+            int startWith = 0;
+            var entries = new List<IndexSingleEntry>();
+            for (int i = 0; i < total; i++)
+            {
+                var content = i.ToString("000000");
+                entries.Add(new IndexSingleEntry { Id = $"entry/{content}", Content = content });
+                if (content.StartsWith("00"))
+                    startWith++;
+            }
+
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            using var searcher = new IndexSearcher(Env);
+
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void BigAndNotMemoized()
+        {
+            int total = 100000;
+
+            int startWith = 0;
+            var entries = new List<IndexSingleEntry>();
+            for (int i = 0; i < total; i++)
+            {
+                var content = i.ToString("000000");
+                entries.Add(new IndexSingleEntry { Id = $"entry/{content}", Content = content });
+                if (content.StartsWith("00"))
+                    startWith++;
+            }
+
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            using var searcher = new IndexSearcher(Env);
+
+            var allEntries = searcher.AllEntries();
+            var allEntriesMemoized = searcher.Memoize(allEntries);
+
+            {
+                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), allEntriesMemoized.Replay());
+
+                Span<long> ids = stackalloc long[4096];
+
+                int counter = 0;
+                int read;
+                do
+                {
+                    read = andNotMatch.Fill(ids);
+                    counter += read;
+                }
+                while (read != 0);
+
+                Assert.Equal(0, counter);
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "J"));
+
+                Span<long> ids = stackalloc long[4096];
+                int counter = 0;
+                int read;
+                do
+                {
+                    read = andNotMatch.Fill(ids);
+                    counter += read;
+                }
+                while (read != 0);
+
+                Assert.Equal(entries.Count, counter);
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "00"));
+
+                Span<long> ids = stackalloc long[4096];
+
+                var entriesLookup = new HashSet<string>();
+                int read;
+                do
+                {
+                    read = andNotMatch.Fill(ids);
+
+                    for (int i = 0; i < read; i++)
+                    {
+                        var id = searcher.GetIdentityFor(ids[i]);
+                        Assert.False(id.StartsWith("entry/00"));
+                        entriesLookup.Add(id);
+                    }
+
+                }
+                while (read != 0);
+
+                Assert.Equal(total - startWith, entriesLookup.Count);
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "00"));
+                var andMatch = searcher.And(allEntriesMemoized.Replay(), andNotMatch);
+
+                Span<long> ids = stackalloc long[4096];
+
+                var entriesLookup = new HashSet<string>();
+                int read;
+                do
+                {
+                    read = andMatch.Fill(ids);
+
+                    for (int i = 0; i < read; i++)
+                    {
+                        var id = searcher.GetIdentityFor(ids[i]);
+                        Assert.False(id.StartsWith("entry/00"));
+                        entriesLookup.Add(id);
+                    }
+                }
+                while (read != 0);
+
+                Assert.Equal(total - startWith, entriesLookup.Count);
             }
         }
 
