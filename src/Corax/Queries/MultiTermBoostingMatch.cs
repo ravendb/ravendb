@@ -76,7 +76,7 @@ namespace Corax.Queries
 
             int count = 0;
             var bufferState = buffer;
-            bool requiresSort = false;           
+            bool requiresSort = false;
 
             long docsCount = _currentTerm.Count;
             while (bufferState.Length > 0)

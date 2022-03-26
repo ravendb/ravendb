@@ -12,9 +12,11 @@ using Raven.Client.Documents.Linq;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using VoronConstants = Voron.Global.Constants;
 
 namespace FastTests.Corax
 {
@@ -537,7 +539,7 @@ namespace FastTests.Corax
                 Assert.Equal(3, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
             }
-        }
+        }        
 
         [Theory]
         [InlineData(new object[] { 300, 128 })]
@@ -1441,7 +1443,128 @@ namespace FastTests.Corax
             }        
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
+        public void SimpleAndNot()
+        {
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "Testing" };
+            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "Running" };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "Runner" };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            using var searcher = new IndexSearcher(Env);
+
+            {
+                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "Run"));
+
+                Span<long> ids = stackalloc long[256];
+                Assert.Equal(1, andNotMatch.Fill(ids));
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.AllEntries());
+
+                Span<long> ids = stackalloc long[256];
+                Assert.Equal(0, andNotMatch.Fill(ids));
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "J"));
+
+                Span<long> ids = stackalloc long[256];
+                Assert.Equal(3, andNotMatch.Fill(ids));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void BigAndNot()
+        {
+            int total = 100000;
+
+            int startWith = 0;
+            var entries = new List<IndexSingleEntry>();
+            for (int i = 0; i < total; i++)
+            {
+                var content = i.ToString("000000");
+                entries.Add(new IndexSingleEntry { Id = $"entry/{content}", Content = content });
+                if (content.StartsWith("00"))
+                    startWith++;
+            }
+                
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            using var searcher = new IndexSearcher(Env);
+
+            {
+                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.AllEntries());
+
+                Span<long> ids = stackalloc long[4096];
+
+                int counter = 0;
+                int read;
+                do
+                {
+                    read = andNotMatch.Fill(ids);
+                    counter += read;
+                }
+                while (read != 0);
+
+                Assert.Equal(0, counter);
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "J"));
+
+                Span<long> ids = stackalloc long[4096];
+                int counter = 0;
+                int read;
+                do
+                {
+                    read = andNotMatch.Fill(ids);
+                    counter += read;
+                }
+                while (read != 0);
+
+                Assert.Equal(entries.Count, counter);
+            }
+
+            {
+                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
+
+                Span<long> ids = stackalloc long[4096];
+
+                var entriesLookup = new HashSet<string>();
+                int read;
+                do
+                {
+                    read = andNotMatch.Fill(ids);
+
+                    for ( int i = 0; i < read; i++)
+                    {
+                        var id = searcher.GetIdentityFor(ids[i]);
+                        Assert.False(id.StartsWith("entry/00"));
+                        entriesLookup.Add(id);
+                    }
+                    
+                }
+                while (read != 0);
+
+                Assert.Equal(total - startWith, entriesLookup.Count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
         public void NotEqualWithList()
         {
             var entries = new List<IndexEntry>();

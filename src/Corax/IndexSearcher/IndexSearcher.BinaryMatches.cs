@@ -69,4 +69,32 @@ public partial class IndexSearcher
 
         return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldOr(in set1, in set2));
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public AndNotMatch AndNot<TInner, TOuter>(in TInner set1, in TOuter set2)
+        where TInner : IQueryMatch
+        where TOuter : IQueryMatch
+    {
+
+        // If any of the generic types is not known to be a struct (calling from interface) the code executed will
+        // do all the work to figure out what to emit. The cost is in instantiation not on execution.                         
+        if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
+        {
+            return AndNotMatch.Create(AndNotMatch<TermMatch, TermMatch>.Create(this, (TermMatch)(object)set1, (TermMatch)(object)set2));
+        }
+        else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(TermMatch))
+        {
+            return AndNotMatch.Create(AndNotMatch<BinaryMatch, TermMatch>.Create(this, (BinaryMatch)(object)set1, (TermMatch)(object)set2));
+        }
+        else if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(BinaryMatch))
+        {
+            return AndNotMatch.Create(AndNotMatch<TermMatch, BinaryMatch>.Create(this, (TermMatch)(object)set1, (BinaryMatch)(object)set2));
+        }
+        else if (set1.GetType() == typeof(BinaryMatch) && set2.GetType() == typeof(BinaryMatch))
+        {
+            return AndNotMatch.Create(AndNotMatch<BinaryMatch, BinaryMatch>.Create(this, (BinaryMatch)(object)set1, (BinaryMatch)(object)set2));
+        }
+
+        return AndNotMatch.Create(AndNotMatch<TInner, TOuter>.Create(this, in set1, in set2));
+    }
 }
