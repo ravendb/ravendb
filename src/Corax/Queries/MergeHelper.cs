@@ -159,13 +159,13 @@ namespace Corax.Queries
                 else if (leftValue < rightValue)
                 {
                     leftPtr++;
-                }                
+                }
                 else
                 {
                     *dstPtr = leftValue;
                     dstPtr++;
                     leftPtr++;
-                    rightPtr++;                    
+                    rightPtr++;
                 }
             }
 
@@ -310,6 +310,74 @@ namespace Corax.Queries
             }
 
             return (int)(dstPtr + values - dst);
+        }
+
+        /// <summary>
+        /// dst and left may *not* be the same buffer
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int AndNot(Span<long> dst, Span<long> left, Span<long> right)
+        {
+            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
+            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
+            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
+
+            // TODO: Check there is no overlapping between dst and left and right.             
+            return AndNot(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static int AndNot(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        {
+            // PERF: This can be improved implementing support Sse2 implementation. This type of algorithms
+            //       are very suitable for instruction level parallelism.
+            return AndNotScalar(dst, dstLength, left, leftLength, right, rightLength);
+        }
+
+        /// <summary>
+        /// Scalar CPU fallback implementation in case some CPUs do not support the most advanced versions like AVX2 or SSE2. It
+        /// is also used for testing purposes. 
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe static int AndNotScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        {
+            long* dstPtr = dst;
+            long* leftPtr = left;
+            long* rightPtr = right;
+
+            long* leftEndPtr = leftPtr + leftLength;
+            long* rightEndPtr = rightPtr + rightLength;
+
+            while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
+            {                
+                long leftValue = *leftPtr;
+                long rightValue = *rightPtr;
+
+                if (leftValue > rightValue)
+                {
+                    rightPtr++;
+                }
+                else if (leftValue < rightValue)
+                {
+                    *dstPtr = leftValue;
+                    leftPtr++;
+                    dstPtr++;
+                }
+                else
+                {
+                    leftPtr++;
+                    rightPtr++;
+                }
+            }
+
+            while (leftPtr < leftEndPtr)
+            {
+                *dstPtr = *leftPtr;
+                leftPtr++;
+                dstPtr++;
+            }
+
+            return (int)(dstPtr - dst);
         }
     }
 }
