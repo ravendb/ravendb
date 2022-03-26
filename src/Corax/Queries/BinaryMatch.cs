@@ -75,7 +75,7 @@ namespace Corax.Queries
             {
                 _inner.Score(matches, scores);
 
-                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(float) * scores.Length);
+                var bufferHolder = QueryContext.MatchesRawPool.Rent(sizeof(float) * scores.Length);
                 var outerScores = MemoryMarshal.Cast<byte, float>(bufferHolder).Slice(0, scores.Length);
 
                 outerScores.Fill(1); // We will fill the scores with 1.0
@@ -87,7 +87,7 @@ namespace Corax.Queries
                 for(int i = 0; i < scores.Length; i++)
                     scores[i] *= outerScores[i];
 
-                QueryContext.MatchesPool.Return(bufferHolder);
+                QueryContext.MatchesRawPool.Return(bufferHolder);
 
                 return;
             }

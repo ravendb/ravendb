@@ -124,7 +124,7 @@ namespace Corax.Queries
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
 
-                var bufferHolder = QueryContext.MatchesPool.Rent(2 * sizeof(long) * matches);
+                var bufferHolder = QueryContext.MatchesRawPool.Rent(2 * sizeof(long) * matches);
                 var innerBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
 
                 var innerMatches = innerBuffer.Slice(0, matches);
@@ -132,6 +132,7 @@ namespace Corax.Queries
                 Debug.Assert(innerMatches.Length == matches);
                 Debug.Assert(outerMatches.Length == matches);
 
+                // Important that we only keep the actual matches. 
                 var actualMatches = buffer.Slice(0, matches);
 
                 // Execute the AndWith operation for each subpart of the query.               
@@ -143,7 +144,7 @@ namespace Corax.Queries
                 
                 // Merge the hits from every side into the output buffer. 
                 var result = MergeHelper.Or(buffer, innerMatches.Slice(0, innerSize), outerMatches.Slice(0, outerSize));                
-                QueryContext.MatchesPool.Return(bufferHolder);
+                QueryContext.MatchesRawPool.Return(bufferHolder);
 
                 return result;
             }
@@ -168,7 +169,7 @@ namespace Corax.Queries
                     return count;
                 }
 
-                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
+                var bufferHolder = QueryContext.MatchesRawPool.Rent(sizeof(long) * matches.Length);
                 var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matches.Length);                
 
                 // RavenDB-17750: The basic concept for this fill function is that we do not really care from which side the matches come
@@ -270,7 +271,7 @@ namespace Corax.Queries
                 }
 
                 END:
-                QueryContext.MatchesPool.Return(bufferHolder);
+                QueryContext.MatchesRawPool.Return(bufferHolder);
                 return idx;
             }      
 
