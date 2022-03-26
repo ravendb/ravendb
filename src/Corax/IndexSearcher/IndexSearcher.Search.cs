@@ -44,7 +44,7 @@ public partial class IndexSearcher
         wildcardAnalyzer.GetOutputBuffersSize(term.Length, out var wildcardSize, out var wildcardTokenSize);
 
         var tokenStructSize = Unsafe.SizeOf<Token>();
-        var buffer = QueryContext.MatchesPool.Rent(outputSize + wildcardSize + tokenStructSize * (tokenSize + wildcardTokenSize));
+        var buffer = QueryContext.MatchesRawPool.Rent(outputSize + wildcardSize + tokenStructSize * (tokenSize + wildcardTokenSize));
         Span<byte> encodeBufferOriginal = buffer.AsSpan().Slice(0, outputSize);
         Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize, tokenSize * tokenStructSize));
 
@@ -80,7 +80,7 @@ public partial class IndexSearcher
                 BuildExpression(mode, encodedString);
         }
 
-        QueryContext.MatchesPool.Return(buffer);
+        QueryContext.MatchesRawPool.Return(buffer);
 
         return typeof(TScoreFunction) == typeof(NullScoreFunction)
             ? match

@@ -9,6 +9,8 @@ namespace Corax.Queries
 {
     public static class QueryContext
     {
-        public static readonly ArrayPool<byte> MatchesPool = ArrayPool<byte>.Create();
+        public static readonly ArrayPool<byte> MatchesRawPool = ArrayPool<byte>.Create();
+
+        public static readonly ArrayPool<long> MatchesPool = ArrayPool<long>.Create();
     }
 }

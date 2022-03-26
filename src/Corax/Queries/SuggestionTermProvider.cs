@@ -108,12 +108,12 @@ namespace Corax.Queries
                 int minSize = word.Length + (2 * _maxSize * sizeof(int)) + _maxSize * sizeof(float);
                 if ( _storage == null )
                 {
-                    _storage = QueryContext.MatchesPool.Rent(minSize);
+                    _storage = QueryContext.MatchesRawPool.Rent(minSize);
                 }                    
                 else if ( _storage.Length < minSize )
                 {
-                    QueryContext.MatchesPool.Return(_storage);
-                    _storage = QueryContext.MatchesPool.Rent(minSize);
+                    QueryContext.MatchesRawPool.Return(_storage);
+                    _storage = QueryContext.MatchesRawPool.Rent(minSize);
                 }
 
                 word.CopyTo(Word);
@@ -161,7 +161,7 @@ namespace Corax.Queries
             public void Dispose()
             {
                 if (_storage != null)
-                    QueryContext.MatchesPool.Return(_storage);
+                    QueryContext.MatchesRawPool.Return(_storage);
             }
         }
 
