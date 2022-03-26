@@ -157,8 +157,7 @@ public partial class IndexSearcher
                 this, new InTermProvider(this, field, inTerms, fieldId), scoreFunction));
     }
 
-    private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction, bool isNegated,
-        int fieldId)
+    private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction, bool isNegated, int fieldId)
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider
     {
