@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Utils;
 using Sparrow.Server;
 using static Voron.Global.Constants;
 
@@ -94,7 +95,7 @@ namespace Corax.Queries
                 {
                     // We need to sort and remove duplicates.
                     var bufferBasePtr = _buffer;
-                    count = SortAndRemoveDuplicates(bufferBasePtr, count);
+                    count = Sorting.SortAndRemoveDuplicates(bufferBasePtr, count);
                 }
 
                 _bufferIdx = count;
@@ -130,7 +131,7 @@ namespace Corax.Queries
                 {
                     // We need to sort and remove duplicates.
                     var bufferBasePtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-                    totalResults = SortAndRemoveDuplicates(bufferBasePtr, totalResults);
+                    totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
                 }
 
                 if (totalResults == 0)
@@ -145,29 +146,7 @@ namespace Corax.Queries
             }
         }
 
-        private static int SortAndRemoveDuplicates(long* bufferBasePtr, int count)
-        {
-            MemoryExtensions.Sort(new Span<long>(bufferBasePtr, count));
-
-            // We need to fill in the gaps left by removing deduplication process.
-            // If there are no duplicated the writes at the architecture level will execute
-            // way faster than if there are.
-
-            var outputBufferPtr = bufferBasePtr;
-
-            var bufferPtr = bufferBasePtr;
-            var bufferEndPtr = bufferBasePtr + count - 1;
-            while (bufferPtr < bufferEndPtr)
-            {
-                outputBufferPtr += bufferPtr[1] != bufferPtr[0] ? 1 : 0;
-                *outputBufferPtr = bufferPtr[1];
-
-                bufferPtr++;
-            }
-
-            count = (int)(outputBufferPtr - bufferBasePtr + 1);
-            return count;
-        }
+        
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void UnlikelyGrowBuffer(int currentlyUsed)
@@ -277,7 +256,7 @@ namespace Corax.Queries
                     {
                         // We need to sort and remove duplicates.
                         var bufferBasePtr = (long*)currentMatchesBuffer.Ptr;
-                        totalResults = SortAndRemoveDuplicates(bufferBasePtr, totalResults);
+                        totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
                     }
                 }
 

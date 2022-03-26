@@ -296,7 +296,7 @@ namespace Corax.Queries
                 long* inputEndPtr = inputStartPtr + matches;
                 
                 // The size of this array is fixed to improve cache locality.
-                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * BlockSize);
+                var bufferHolder = QueryContext.MatchesRawPool.Rent(sizeof(long) * BlockSize);
                 var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, BlockSize);
                 Debug.Assert(blockMatches.Length == BlockSize);
                 

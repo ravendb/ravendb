@@ -290,7 +290,7 @@ namespace Corax.Queries
             int floatArraySize = 2 * sizeof(float) * matches.Length;
             int matchesArraySize = sizeof(long) * matches.Length;
             int itemArraySize = 2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, W>.Item>() * matches.Length;
-            var bufferHolder = QueryContext.MatchesPool.Rent(itemArraySize + matchesArraySize + floatArraySize);
+            var bufferHolder = QueryContext.MatchesRawPool.Rent(itemArraySize + matchesArraySize + floatArraySize);
 
             var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, W>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
             Debug.Assert(matchesKeysSpan.Length == 2 * matches.Length);
@@ -342,7 +342,7 @@ namespace Corax.Queries
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
                 {
-                    QueryContext.MatchesPool.Return(bufferHolder);
+                    QueryContext.MatchesRawPool.Return(bufferHolder);
                     return totalMatches;
                 }
 
@@ -459,7 +459,7 @@ namespace Corax.Queries
 
             End:
                 totalMatches = kIdx;
-                QueryContext.MatchesPool.Return(bufferHolder);
+                QueryContext.MatchesRawPool.Return(bufferHolder);
             }
         }
 
