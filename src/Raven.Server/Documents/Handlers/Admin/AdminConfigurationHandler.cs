@@ -4,20 +4,15 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
-using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
-using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using ConfigurationEntryScope = Raven.Server.Config.Attributes.ConfigurationEntryScope;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -26,55 +21,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/configuration/settings", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public async Task GetSettings()
         {
-            ConfigurationEntryScope? scope = null;
-            var scopeAsString = GetStringQueryString("scope", required: false);
-            if (scopeAsString != null)
-            {
-                if (Enum.TryParse<ConfigurationEntryScope>(scopeAsString, ignoreCase: true, out var value) == false)
-                    throw new BadRequestException($"Could not parse '{scopeAsString}' to a valid configuration entry scope.");
-
-                scope = value;
-            }
-
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
-
-            DatabaseRecord databaseRecord;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var dbId = Constants.Documents.Prefix + Database.Name;
-                using (context.OpenReadTransaction())
-                using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
-                {
-                    if (dbDoc == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(dbDoc);
-                }
-            }
-
-            var settingsResult = new SettingsResult();
-
-            foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
-            {
-                if (scope.HasValue && scope != configurationEntryMetadata.Scope)
-                    continue;
-
-                var entry = new ConfigurationEntryDatabaseValue(Database.Configuration, databaseRecord, configurationEntryMetadata, status);
-                settingsResult.Settings.Add(entry);
-            }
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, settingsResult.ToJson());
-                }
-            }
+            using (var processor = new AdminConfigurationHandlerForGetSettings(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/record", "GET", AuthorizationStatus.DatabaseAdmin)]
