@@ -2729,7 +2729,7 @@ namespace Raven.Server.Documents
         {
             var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
-            var bucket = ShardedContext.GetShardId(idPtr, idSize);
+            var bucket = ShardedDatabaseContext.GetShardId(idPtr, idSize);
 
             *(int*)buffer.Ptr = bucket;
             *(long*)(buffer.Ptr + sizeof(int)) = *(long*)etagPtr;
