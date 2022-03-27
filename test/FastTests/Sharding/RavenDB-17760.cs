@@ -37,7 +37,7 @@ namespace FastTests.Sharding
                 var suffix = $"suffix{i}";
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
                 {
-                    var bucket = ShardedContext.GetShardId(txContext, suffix);
+                    var bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
                     Assert.DoesNotContain(bucket, buckets);
                     buckets[i] = bucket;
                 }
@@ -91,7 +91,7 @@ namespace FastTests.Sharding
             int bucket;
             using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
             {
-                bucket = ShardedContext.GetShardId(txContext, suffix);
+                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -164,7 +164,7 @@ namespace FastTests.Sharding
             int bucket;
             using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
             {
-                bucket = ShardedContext.GetShardId(txContext, suffix);
+                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -246,7 +246,7 @@ namespace FastTests.Sharding
             int bucket;
             using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
             {
-                bucket = ShardedContext.GetShardId(txContext, suffix);
+                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -318,7 +318,7 @@ namespace FastTests.Sharding
             int bucket;
             using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
             {
-                bucket = ShardedContext.GetShardId(txContext, suffix);
+                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -417,7 +417,7 @@ namespace FastTests.Sharding
             int bucket;
             using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
             {
-                bucket = ShardedContext.GetShardId(txContext, suffix);
+                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -509,7 +509,7 @@ namespace FastTests.Sharding
             int bucket;
             using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
             {
-                bucket = ShardedContext.GetShardId(txContext, suffix);
+                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -592,7 +592,7 @@ namespace FastTests.Sharding
             int bucket;
             using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
             {
-                bucket = ShardedContext.GetShardId(txContext, suffix);
+                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
             }
 
             using (var session = store.OpenAsyncSession())
