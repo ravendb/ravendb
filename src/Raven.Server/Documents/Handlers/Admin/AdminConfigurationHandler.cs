@@ -34,34 +34,15 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/configuration/settings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutSettings()
         {
-            await ServerStore.EnsureNotPassiveAsync();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var databaseSettingsJson = await context.ReadForDiskAsync(RequestBodyStream(), Constants.DatabaseSettings.StudioId);
-
-                Dictionary<string, string> settings = new Dictionary<string, string>();
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                for (int i = 0; i < databaseSettingsJson.Count; i++)
-                {
-                    databaseSettingsJson.GetPropertyByIndex(i, ref prop);
-                    settings.Add(prop.Name, prop.Value?.ToString());
-                }
-
-                await UpdateDatabaseRecord(context, (record, _) => record.Settings = settings, GetRaftRequestIdFromQuery());
-            }
-
-            NoContentStatus(HttpStatusCode.Created);
+            using (var processor = new AdminConfigurationHandlerProcessorForPutSettings(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutStudioConfiguration()
         {
             using (var processor = new AdminConfigurationHandlerProcessorForPutStudioConfiguration(this))
-            {
                 await processor.ExecuteAsync();
-            }
         }
 
         [RavenAction("/databases/*/admin/configuration/client", "PUT", AuthorizationStatus.DatabaseAdmin)]

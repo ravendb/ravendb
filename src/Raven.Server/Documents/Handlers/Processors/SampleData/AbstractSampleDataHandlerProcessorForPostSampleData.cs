@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
-        public AbstractSampleDataHandlerProcessorForPostSampleData([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractSampleDataHandlerProcessorForPostSampleData([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
         {
         }
 

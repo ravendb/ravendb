@@ -12,12 +12,14 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
-        protected AbstractAdminConfigurationHandlerProcessor(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
-        { }
+        protected AbstractAdminConfigurationHandlerProcessor(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool)
+            : base(requestHandler, contextPool)
+        {
+        }
 
         protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
-        protected async Task UpdateDatabaseRecordAsync(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId, string databaseName)
+        protected async ValueTask UpdateDatabaseRecordAsync(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId, string databaseName)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
