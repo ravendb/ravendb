@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -54,6 +55,7 @@ namespace Raven.Server.Documents
         private static readonly Slice DeletedEtagsSlice;
 
         private static readonly Slice DocsBucketAndEtagSlice;
+
         internal static readonly Slice BucketStatsTreeSlice;
 
         public static readonly TableSchema DocsSchema = new TableSchema
@@ -89,14 +91,13 @@ namespace Raven.Server.Documents
         public enum DocumentsTable
         {
             LowerId = 0,
-            Bucket = 1,
-            Etag = 2,
-            Id = 3, // format of lazy string id is detailed in GetLowerIdSliceAndStorageKey
-            Data = 4,
-            ChangeVector = 5,
-            LastModified = 6,
-            Flags = 7,
-            TransactionMarker = 8
+            Etag = 1,
+            Id = 2, // format of lazy string id is detailed in GetLowerIdSliceAndStorageKey
+            Data = 3,
+            ChangeVector = 4,
+            LastModified = 5,
+            Flags = 6,
+            TransactionMarker = 7
         }
 
         public enum CollectionsTable
@@ -177,7 +178,6 @@ namespace Raven.Server.Documents
                 docsSchema.DefineKey(new TableSchema.IndexDef { StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice });
                 docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice });
                 docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice });
-                docsSchema.DefineIndex(new TableSchema.SchemaIndexDef { StartIndex = (int)DocumentsTable.Bucket, Count = 2, IsGlobal = true, Name = DocsBucketAndEtagSlice });
             }
         }
 
@@ -196,8 +196,8 @@ namespace Raven.Server.Documents
             _name = DocumentDatabase.Name;
             _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
             _addToInitLog = addToInitLog;
+            _isSharded = ShardHelper.IsShardedName(_name);
         }
-
         public StorageEnvironment Environment { get; private set; }
 
         public RevisionsStorage RevisionsStorage;
@@ -208,6 +208,7 @@ namespace Raven.Server.Documents
         public TimeSeriesStorage TimeSeriesStorage;
         public DocumentPutAction DocumentPut;
         private readonly Action<string> _addToInitLog;
+        private readonly bool _isSharded;
 
         // this is used to remember the metadata about collections / documents for
         // common operations. It always points to the latest valid transaction and is updated by
@@ -320,7 +321,6 @@ namespace Raven.Server.Documents
 
                     tx.CreateTree(TableSchema.CompressionDictionariesSlice);
                     tx.CreateTree(DocsSlice);
-                    tx.CreateTree(DocsBucketAndEtagSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
                     tx.CreateTree(BucketStatsTreeSlice);
@@ -1788,7 +1788,7 @@ namespace Raven.Server.Documents
                 CountersStorage.DeleteCountersForDocument(context, id, collectionName);
                 TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
 
-                UpdateBucketStats(context, GetBucket(id), sizeToAdd: -tvr.Size, updateType: UpdateType.Remove);
+                UpdateBucketStats(context, GetBucket(lowerId), sizeToAdd: -tvr.Size, updateType: UpdateType.Remove);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
@@ -2564,7 +2564,6 @@ namespace Raven.Server.Documents
             return result;
         }
 
-
         public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -2593,7 +2592,6 @@ namespace Raven.Server.Documents
                 return *(BucketStats*)val.Reader.Base;
             }
         }
-
 
         public void UpdateBucketStats(DocumentsOperationContext context, int bucket, int sizeToAdd, UpdateType updateType)
         {
@@ -2663,17 +2661,14 @@ namespace Raven.Server.Documents
         }
 
 
-        public int GetBucket(string id)
+        public int GetBucket(Slice lowerId)
         {
-            if (ShardHelper.IsShardedName(DocumentDatabase.Name) == false) // ?
+            if (_isSharded == false) // ?
                 return -1;
 
-            using (DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                return ShardedContext.GetShardId(txContext, id);
-            }
+            return ShardedContext.GetShardId(lowerId.Content.Ptr, lowerId.Size);
         }
-
+         
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBucketAndEtagByteString(
             ByteStringContext allocator, int bucket, long etag,
             out ByteString buffer)
