@@ -1,11 +1,13 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import { shardingTodo } from "common/developmentHelper";
 
 class getIndexNamesCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier) {
+    constructor(private db: database, private location: databaseLocationSpecifier = null) {
         super();
+        shardingTodo("Danielle"); // TODO - location param should not be optional
     }
 
     execute(): JQueryPromise<string[]> {
