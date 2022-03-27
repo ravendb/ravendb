@@ -96,7 +96,6 @@ namespace Raven.Server.Documents.Sharding
         public DatabaseTopology[] ShardsTopology => _record.Shards;
 
         public int GetShardNumber(int shardBucket) => ShardHelper.GetShardNumber(_record.ShardBucketRanges, shardBucket);
-
         public int GetShardNumber(TransactionOperationContext context, string id)
         {
             var bucket = ShardHelper.GetBucket(context, id);

@@ -242,13 +242,10 @@ namespace Raven.Server.Documents
                 }
 
                 FlagsProperlySet(flags, changeVector);
-                UpdateType updateType;
-                int sizeToAdd, bucket = _documentsStorage.GetBucket(id);
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerId);
-                    tvb.Add(bucket);
                     tvb.Add(Bits.SwapBytes(newEtag));
                     tvb.Add(idPtr);
                     tvb.Add(document.BasePointer, document.Size);
@@ -257,6 +254,7 @@ namespace Raven.Server.Documents
                     tvb.Add((int)flags);
                     tvb.Add(context.GetTransactionMarker());
 
+                    UpdateType updateType;
                     if (oldValue.Pointer == null)
                     {
                         table.Insert(tvb);
@@ -268,7 +266,7 @@ namespace Raven.Server.Documents
                         updateType = UpdateType.Update;
                     }
 
-                    sizeToAdd = tvb.Size - oldValue.Size;
+                    _documentsStorage.UpdateBucketStats(context, _documentsStorage.GetBucket(lowerId), sizeToAdd: tvb.Size - oldValue.Size, updateType);
                 }
 
                 if (collectionName.IsHiLo == false)
@@ -278,8 +276,6 @@ namespace Raven.Server.Documents
 
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
-
-                _documentsStorage.UpdateBucketStats(context, bucket, sizeToAdd, updateType);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

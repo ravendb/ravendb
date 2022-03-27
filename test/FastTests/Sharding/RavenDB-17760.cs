@@ -142,7 +142,7 @@ namespace FastTests.Sharding
                         {
                             stats = shardedDb.DocumentsStorage.GetBucketStats(context, buckets[i]);
 
-                            Assert.Equal(70, stats.Count);
+                            Assert.Equal(70, stats.Count); // todo aviv : change when we have tombstones handling
                             Assert.True(oldStats.Size > stats.Size);
                             Assert.True(stats.LastAccessed > oldStats.LastAccessed);
                         }

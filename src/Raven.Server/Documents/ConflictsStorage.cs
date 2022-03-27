@@ -574,10 +574,11 @@ namespace Raven.Server.Documents
             var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
 
             var fromSmuggler = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler);
-            int bucket = _documentsStorage.GetBucket(id);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
+                int bucket = _documentsStorage.GetBucket(lowerId);
+
                 CollectionName collectionName;
 
                 // ReSharper disable once ArgumentsStyleLiteral
