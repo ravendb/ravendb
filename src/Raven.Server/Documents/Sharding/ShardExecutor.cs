@@ -48,11 +48,9 @@ namespace Raven.Server.Documents.Sharding
             where TFailureMode : struct, IFailureMode
             => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation);
 
-        public Task ExecuteForShardsAsync<TExecutionMode, TFailureMode>(Memory<int> shards,
+        public Task ExecuteParallelForShardsAsync(Memory<int> shards,
             IShardedOperation operation)
-            where TExecutionMode : struct, IExecutionMode
-            where TFailureMode : struct, IFailureMode
-            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, object, object>(shards, operation);
+            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, object, object>(shards, operation);
 
         public async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards, IShardedOperation<TResult, TCombinedResult> operation)
             where TExecutionMode : struct, IExecutionMode
