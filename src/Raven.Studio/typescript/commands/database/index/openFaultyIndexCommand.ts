@@ -1,16 +1,17 @@
-import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
-import endpoints = require("endpoints");
+import commandBase from "commands/commandBase";
+import database from "models/resources/database";
+import endpoints from "endpoints";
 
-class openFaultyIndexCommand extends commandBase {
+export default class openFaultyIndexCommand extends commandBase {
 
-    constructor(private indexNameToOpen: string, private db: database) {
+    constructor(private indexNameToOpen: string, private db: database, private location: databaseLocationSpecifier) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
-            name: this.indexNameToOpen
+            name: this.indexNameToOpen,
+            ...this.location
         };
 
         const url = endpoints.databases.index.indexOpenFaultyIndex + this.urlEncodeArgs(args);
@@ -19,5 +20,3 @@ class openFaultyIndexCommand extends commandBase {
             .fail((response: JQueryXHR) => this.reportError(`Failed to open faulty index: ${this.indexNameToOpen}`, response.responseText, response.statusText));
     }
 }
-
-export = openFaultyIndexCommand;

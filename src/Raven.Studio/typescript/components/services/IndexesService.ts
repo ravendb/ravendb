@@ -1,3 +1,5 @@
+/// <reference path="../../../typings/tsd.d.ts" />
+
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import saveIndexPriorityCommand from "commands/database/index/saveIndexPriorityCommand";
@@ -12,6 +14,8 @@ import disableIndexCommand from "commands/database/index/disableIndexCommand";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import togglePauseIndexingCommand from "commands/database/index/togglePauseIndexingCommand";
 import getIndexesProgressCommand from "commands/database/index/getIndexesProgressCommand";
+import openFaultyIndexCommand from "commands/database/index/openFaultyIndexCommand";
+import forceIndexReplace from "commands/database/index/forceIndexReplace";
 
 export default class IndexesService {
     
@@ -59,6 +63,16 @@ export default class IndexesService {
 
     async resume(indexes: IndexSharedInfo[], db: database, location: databaseLocationSpecifier) {
         await new togglePauseIndexingCommand(true, db, { name: indexes.map(x => x.name) }, location)
+            .execute();
+    }
+    
+    async openFaulty(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
+        await new openFaultyIndexCommand(index.name, db, location)
+            .execute();
+    }
+
+    async forceReplace(name: string, database: database) {
+        await new forceIndexReplace(name, database)
             .execute();
     }
 }

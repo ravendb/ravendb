@@ -23,12 +23,16 @@ interface IndexPanelProps {
     resumeIndexing: () => Promise<void>;
     deleteIndex: () => Promise<void>;
     resetIndex: () => Promise<void>;
+    openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
     selected: boolean;
+    hasReplacement?: boolean;
     toggleSelection: () => void;
 }
 
 export function IndexPanel(props: IndexPanelProps) {
-    const { index, selected, toggleSelection, database } = props;
+    const { index, selected, toggleSelection, database, hasReplacement } = props;
+    
+    const isReplacement = IndexUtils.isSideBySide(index);
     
     const eventsCollector = useEventsCollector();
 
@@ -115,6 +119,10 @@ export function IndexPanel(props: IndexPanelProps) {
         app.showBootstrapDialog(view);
     }
     
+    const openFaulty = async (location: databaseLocationSpecifier) => {
+        await props.openFaulty(location);
+    }
+    
     const resetIndex = () => props.resetIndex();
     
     const urls = useAppUrls();
@@ -123,8 +131,8 @@ export function IndexPanel(props: IndexPanelProps) {
     const editUrl = urls.editIndex(index.name)();
     
     return (
-        <div className="sidebyside-indexes">
-            <div className="panel panel-state panel-hover index" data-bind="css: { 'has-replacement': replacement }">
+        <div className={classNames({ "sidebyside-indexes": hasReplacement })}>
+            <div className={classNames("panel panel-state panel-hover index", { "has-replacement": hasReplacement })}>
                 <div className="padding padding-sm js-index-template" id={indexUniqueId(index)}>
                     <div className="row">
                         <div className="col-xs-12 col-sm-6 col-xl-4 info-container">
@@ -161,12 +169,16 @@ export function IndexPanel(props: IndexPanelProps) {
                                 </div>
                                 <div className="index-type">
                                     <span>{IndexUtils.formatType(index.type)}</span>
-                                    { /* TODO
-                                    
-                                    <span data-bind="visible: replacement" className="margin-left margin-left-sm"><span
-                                        className="label label-warning">OLD</span></span>
-                                    <span data-bind="visible: parent" className="margin-left margin-left-sm"><span
-                                        className="label label-warning">NEW</span></span> */ }
+                                    {hasReplacement && (
+                                        <span className="margin-left margin-left-sm">
+                                            <span className="label label-warning">OLD</span>
+                                        </span>
+                                    )}
+                                    {isReplacement && (
+                                        <span className="margin-left margin-left-sm">
+                                            <span className="label label-warning">NEW</span>
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -339,13 +351,6 @@ export function IndexPanel(props: IndexPanelProps) {
                                                title="View index"><i className="icon-preview"/></a>
                                         )}
                                     </div>
-                                    { IndexUtils.isFaulty(index) && (
-                                        <div className="btn-group" role="group">
-                                            <button className="btn btn-default" data-bind="click: $root.openFaultyIndex"
-                                                    title="Open index"><i className="icon-arrow-filled-up"/></button>
-                                        </div>    
-                                    )}
-                                    
                                     <div className="btn-group" role="group">
                                         <button className="btn btn-warning" type="button" onClick={resetIndex}
                                                 data-bind="requiredAccess: 'DatabaseReadWrite'"
@@ -360,8 +365,8 @@ export function IndexPanel(props: IndexPanelProps) {
                     </div>
                 </div>
             </div>
-            <div className="sidebyside-actions" data-bind="with: replacement, visible: replacement">
-                <div className="panel panel-state panel-warning">
+            <div>
+                <div className="panel panel-state panel-info">
                     {index.nodesInfo.map(nodeInfo => (
                         <div key={indexNodeInfoKey(nodeInfo)}>
                             <span className="margin-right">Shard #{nodeInfo.location.shardNumber}</span>
@@ -384,9 +389,17 @@ export function IndexPanel(props: IndexPanelProps) {
                                             <i className="icon-check" /><span>Up to date</span>
                                         </span>
                                     )}
+                                    {
+                                        nodeInfo.details.faulty ? (
+                                            <button type="button" className="btn btn-default" onClick={() => openFaulty(nodeInfo.location)}
+                                                    title="Open index"><i className="icon-arrow-filled-up"/></button>
+                                        ) : (
+                                            <IndexProgress progress={nodeInfo.progress} nodeDetails={nodeInfo.details}/>
+                                        )
+                                    }
                                 </>
                             )}
-                            <IndexProgress progress={nodeInfo.progress} nodeDetails={nodeInfo.details}/>
+                            
                         </div>
                     ))}
                 </div>

@@ -322,20 +322,6 @@ class indexes {
         });
     }
 
-    openFaultyIndex(i: index) {
-        this.confirmationMessage("Open index?", `You're opening a faulty index <strong>'${generalUtils.escapeHtml(i.name)}'</strong>`, {
-            html: true
-        })
-            .done(result => {
-                if (result.can) {
-
-                    eventsCollector.default.reportEvent("indexes", "open");
-
-                    new openFaultyIndexCommand(i.name, this.activeDatabase())
-                        .execute();
-                }
-            });
-    }
 
 
     private processIndexEvent(e: Raven.Client.Documents.Changes.IndexChange) {
@@ -409,29 +395,6 @@ class indexes {
         this.addNotification(changesApi.watchAllIndexes(e => this.processIndexEvent(e)));
     }
 
-    swapSideBySide(idx: index) {
-        const margin = `class="margin-bottom"`;
-        let text = `<li ${margin}>Index: <strong>${generalUtils.escapeHtml(idx.name)}</strong></li>`;
-        text += `<li ${margin}>Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the replacement index.</li>`;
-
-        const replacementIndex = idx.replacement();
-        if (replacementIndex.progress() && replacementIndex.progress().rollingProgress().length) {
-            text += `<li ${margin}>Actual indexing will occur once the node reaches its turn in the rolling deployment process.</li>`;
-        }
-
-        this.confirmationMessage("Are you sure?", `<ul>${text}</ul>`, { buttons: ["Cancel", "Swap Now"], html: true })
-            .done((result: canActivateResultDto) => {
-                if (result.can) {
-                    this.spinners.swapNow.push(idx.name);
-                    eventsCollector.default.reportEvent("index", "swap-side-by-side");
-                    new forceIndexReplace(idx.name, this.activeDatabase())
-                        .execute()
-                        .always(() => this.spinners.swapNow.remove(idx.name));
-                }
-            });
-    }
-
-   
 
     private setLockModeSelectedIndexes(lockModeString: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
 
