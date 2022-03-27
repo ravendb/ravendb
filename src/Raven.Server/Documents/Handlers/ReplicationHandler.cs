@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
@@ -415,60 +416,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task SuggestConflictResolution()
-        {
-            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-                var advisor = new ConflictResolverAdvisor(conflicts.Select(c => c.Doc), context);
-                var resolved = advisor.Resolve();
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(ConflictResolverAdvisor.MergeResult.Document)] = resolved.Document,
-                    [nameof(ConflictResolverAdvisor.MergeResult.Metadata)] = resolved.Metadata
-                });
-            }
-        }
-
         [RavenAction("/databases/*/replication/conflicts/solver", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task GetRevisionsConfig()
+        public async Task GetConflictSolver()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                ConflictSolver solverConfig;
-                using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
-                {
-                    solverConfig = rawRecord?.ConflictSolverConfiguration;
-                }
-
-                if (solverConfig != null)
-                {
-                    var resolveByCollection = new DynamicJsonValue();
-                    foreach (var collection in solverConfig.ResolveByCollection)
-                    {
-                        resolveByCollection[collection.Key] = collection.Value.ToJson();
-                    }
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(solverConfig.ResolveToLatest)] = solverConfig.ResolveToLatest,
-                            [nameof(solverConfig.ResolveByCollection)] = resolveByCollection
-                        });
-                    }
-                }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetConflictSolver(this))
+                await processor.ExecuteAsync();
         }
     }
 }

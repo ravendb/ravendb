@@ -216,11 +216,11 @@ namespace Raven.Server.Documents
 
         public SubscriptionStorage SubscriptionStorage { get; }
 
-        public string Name { get; }
+        public readonly string Name;
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
-        public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? "";
+        public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? string.Empty;
 
         public RavenConfiguration Configuration { get; }
 
