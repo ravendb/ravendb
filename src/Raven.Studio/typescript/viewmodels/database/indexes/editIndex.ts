@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-import viewModelBase = require("viewmodels/viewModelBase");
 import indexDefinition = require("models/database/index/indexDefinition");
 import autoIndexDefinition = require("models/database/index/autoIndexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
@@ -41,8 +40,11 @@ import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaul
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
 import IndexUtils from "../../../components/utils/IndexUtils";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
-class editIndex extends viewModelBase {
+class editIndex extends shardViewModelBase {
     
     view = require('views/database/indexes/editIndex.html');
 
@@ -95,8 +97,10 @@ class editIndex extends viewModelBase {
         return this.formatDeploymentMode(deploymentMode);
     });
 
-    constructor() {
-        super();
+    localNodeTag = clusterTopologyManager.default.localNodeTag();
+
+    constructor(db: database) {
+        super(db);
 
         this.bindToCurrentInstance("removeMap",
             "removeField",
@@ -193,7 +197,7 @@ class editIndex extends viewModelBase {
         
         return $.when<any>(super.canActivate(indexToEditName))
             .then(() => {
-                const db = this.activeDatabase();
+                const db = this.db;
 
                 if (indexToEditName) {
                     this.isEditingExistingIndex(true);
@@ -223,7 +227,7 @@ class editIndex extends viewModelBase {
         this.updateHelpLink('CQ5AYO');
 
         this.initializeDirtyFlag();
-        this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
+        this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.db, this.editedIndex);
 
         this.initValidation();
         
@@ -236,7 +240,7 @@ class editIndex extends viewModelBase {
         return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
             .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
-                   [indexDefaults]: [Raven.Server.Web.Studio.StudioDatabaseTasksHandler.IndexDefaults]) => {
+                   [indexDefaults]: [Raven.Server.Web.Studio.Processors.IndexDefaults]) => {
                 const analyzersList = [...analyzers.map(x => x.Name), ...serverWideAnalyzers.map(x => x.Name)];
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
@@ -305,8 +309,8 @@ class editIndex extends viewModelBase {
     }
 
     private fetchIndexes() {
-        const db = this.activeDatabase();
-        new getIndexNamesCommand(db)
+        const db = this.db;
+        new getIndexNamesCommand(db, db.getFirstLocation(this.localNodeTag))
             .execute()
             .done((indexesNames) => {
                 this.indexesNames(indexesNames);
@@ -314,7 +318,7 @@ class editIndex extends viewModelBase {
     }
     
     private fetchCustomAnalyzers(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {
-        return new getCustomAnalyzersCommand(this.activeDatabase(), true)
+        return new getCustomAnalyzersCommand(this.db, true)
             .execute();
     }
 
@@ -324,12 +328,12 @@ class editIndex extends viewModelBase {
     }
     
     private fetchIndexDefaults(): JQueryPromise<Raven.Server.Web.Studio.Processors.IndexDefaults> {
-        return new getIndexDefaultsCommand(this.activeDatabase())
+        return new getIndexDefaultsCommand(this.db)
             .execute();
     }
 
     private fetchIndexHistory() {
-        const db = this.activeDatabase();
+        const db = this.db;
         
         return new getIndexHistoryCommand(db, this.editedIndex().name() || this.originalIndexName)
             .execute()
@@ -445,7 +449,7 @@ class editIndex extends viewModelBase {
         
         const additionalAssembliesDto = this.editedIndex().additionalAssemblies().map(x => x.toDto());
 
-        new getIndexFieldsFromMapCommand(this.activeDatabase(), map, additionalSourcesDto, additionalAssembliesDto)
+        new getIndexFieldsFromMapCommand(this.db, map, additionalSourcesDto, additionalAssembliesDto)
             .execute()
             .done((fields: resultsDto<string>) => {
                 this.fieldNames(fields.Results);
@@ -522,8 +526,8 @@ class editIndex extends viewModelBase {
 
     private editExistingIndex(indexName: string) {
         this.originalIndexName = indexName;
-        this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
-        this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
+        this.termsUrl(appUrl.forTerms(indexName, this.db));
+        this.queryUrl(appUrl.forQuery(this.db, indexName));
     }
 
     mapIndexSyntaxHelp() {
@@ -637,7 +641,7 @@ class editIndex extends viewModelBase {
     }
 
     private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Documents.Indexes.IndexDefinition> {
-        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
+        return new getIndexDefinitionCommand(indexName, this.db, this.db.getFirstLocation(this.localNodeTag))
             .execute()
             .done(result => {
 
@@ -760,7 +764,7 @@ class editIndex extends viewModelBase {
             indexDto.Name = indexDto.Name.substr(IndexUtils.SideBySideIndexPrefix.length);
         }
 
-        const db = this.activeDatabase();
+        const db = this.db;
         
         return new detectIndexTypeCommand(indexDto, db)
             .execute()
@@ -802,7 +806,7 @@ class editIndex extends viewModelBase {
         eventsCollector.default.reportEvent("index", "delete");
         const indexName = this.originalIndexName;
         if (indexName) {
-            const db = this.activeDatabase();
+            const db = this.db;
             const deleteViewModel = new deleteIndexesConfirm([this.editedIndex()], db);
             deleteViewModel.deleteTask.done((can: boolean) => {
                 if (can) {
@@ -826,7 +830,7 @@ class editIndex extends viewModelBase {
 
     getCSharpCode() {
         eventsCollector.default.reportEvent("index", "generate-csharp-code");
-        new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
+        new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.db, this.db.getFirstLocation(this.localNodeTag))
             .execute()
             .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, "csharp")));
     }
@@ -854,7 +858,7 @@ class editIndex extends viewModelBase {
     }
 
     private setFormattedText(textToFormat: KnockoutObservable<string>) {
-        new formatIndexCommand(this.activeDatabase(), textToFormat())
+        new formatIndexCommand(this.db, textToFormat())
             .execute()
             .done((formattedText) => {
                 textToFormat(formattedText.Expression);

@@ -54,6 +54,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             title: 'Edit Index',
+            shardingMode: "allShardsOnly",
             route: 'databases/indexes/edit(/:indexName)',
             moduleId: require('viewmodels/database/indexes/editIndex'),
             css: 'icon-edit',
