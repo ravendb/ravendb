@@ -103,6 +103,26 @@ namespace Raven.Server.Documents.Sharding
             return ShardHelper.GetShardNumber(_record.ShardBucketRanges, bucket);
         }
 
+        public static unsafe int GetShardId(byte* buffer, int size)
+        {
+            AdjustAfterSeparator((byte)'$', ref buffer, ref size);
+
+            var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
+            return (int)(hash % NumberOfShards);
+        }
+
+        private static unsafe void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
+        {
+            for (int i = len - 1; i > 0; i--)
+            {
+                if (ptr[i] != expected)
+                    continue;
+                ptr += i + 1;
+                len -= i + 1;
+                break;
+            }
+        }
+
         public bool HasTopologyChanged(long etag)
         {
             // TODO fix this
