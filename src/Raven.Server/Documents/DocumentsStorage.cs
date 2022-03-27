@@ -175,9 +175,31 @@ namespace Raven.Server.Documents
 
             void DefineIndexesForDocsSchema(TableSchema docsSchema)
             {
-                docsSchema.DefineKey(new TableSchema.IndexDef { StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice });
+                docsSchema.DefineKey(new TableSchema.IndexDef
+                {
+                    StartIndex = (int)DocumentsTable.LowerId, 
+                    Count = 1, 
+                    IsGlobal = true, 
+                    Name = DocsSlice
+                });
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)DocumentsTable.Etag, 
+                    IsGlobal = false, 
+                    Name = CollectionEtagsSlice
+                });
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)DocumentsTable.Etag, 
+                    IsGlobal = true, 
+                    Name = AllDocsEtagsSlice
+                });
+                docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = GenerateBucketAndEtagIndexKey,
+                    IsGlobal = true,
+                    Name = DocsBucketAndEtagSlice
+                });
             }
         }
 
@@ -2572,7 +2594,7 @@ namespace Raven.Server.Documents
             using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
             using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
             {
-                foreach (var result in table.SeekForwardFromPrefix(DocsSchema.Indexes[DocsBucketAndEtagSlice], keySlice, prefix, 0))
+                foreach (var result in table.SeekForwardFromPrefix(DocsSchema.DynamicKeyIndexes[DocsBucketAndEtagSlice], keySlice, prefix, 0))
                 {
                     yield return TableValueToDocument(context, ref result.Result.Reader);
                 }
@@ -2766,6 +2788,30 @@ namespace Raven.Server.Documents
         {
             var ptr = tvr.Read(index, out _);
             return *(int*)ptr;
+        }
+
+        [IndexEntryKeyGenerator]
+
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
+        }
+
+
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+        {
+            var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
+
+            var idPtr = tvr.Read(idIndex, out var size);
+            var bucket = ShardedContext.GetShardId(idPtr, size);
+
+            var etagPtr = tvr.Read(etagIndex, out _);
+
+            *(int*)buffer.Ptr = bucket;
+            *(long*)(buffer.Ptr + sizeof(int)) = *(long*)etagPtr;
+
+            slice = new Slice(buffer);
+            return scope;
         }
     }
 

@@ -215,17 +215,15 @@ namespace FastTests.Sharding
 
                 using (context.OpenReadTransaction())
                 {
-                    var conflicts = ConflictsStorage.GetConflictsByBucketFrom(context, bucket, 0).ToList();
+                    var conflicts = ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 20; // 2 conflicts per doc
                     Assert.Equal(expected, conflicts.Count);
-                }
 
-                // check stats
-                using (context.OpenReadTransaction())
-                {
-                    var stats = storage.GetBucketStats(context, bucket);
-                    var expected = 110; // 100 docs + 20 conflicts - 10 deletions
-                    Assert.Equal(expected, stats.Count);
+
+                    var fromEtag = conflicts[12].Etag;
+                    conflicts = ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    expected = 8; 
+                    Assert.Equal(expected, conflicts.Count);
                 }
             }
         }

@@ -118,10 +118,9 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
                 Name = ConflictedCollectionSlice
             });
-            ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            ConflictsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
             {
-                StartIndex = (int)ConflictsTable.Bucket,
-                Count = 2,
+                GenerateKey = GenerateBucketAndEtagIndexKey,
                 IsGlobal = true,
                 Name = ConflictsBucketAndEtagSlice
             });
@@ -214,7 +213,7 @@ namespace Raven.Server.Documents
             using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
             using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
             {
-                foreach (var result in table.SeekForwardFromPrefix(ConflictsSchema.Indexes[ConflictsBucketAndEtagSlice], keySlice, prefix, 0))
+                foreach (var result in table.SeekForwardFromPrefix(ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], keySlice, prefix, 0))
                 {
                     yield return TableValueToConflictDocument(context, ref result.Result.Reader);
                 }
@@ -927,6 +926,13 @@ namespace Raven.Server.Documents
             }
 
             return collection;
+        }
+
+
+        [IndexEntryKeyGenerator]
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            return DocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
         }
     }
 }
