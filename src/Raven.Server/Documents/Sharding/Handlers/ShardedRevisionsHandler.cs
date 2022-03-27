@@ -14,5 +14,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
             }
         }
+
+        [RavenShardedAction("/databases/*/revisions/count", "GET")]
+        public async Task GetRevisionsCountFor()
+        {
+            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsCount(this))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
     }
 }
