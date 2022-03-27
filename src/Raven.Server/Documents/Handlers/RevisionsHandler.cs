@@ -154,10 +154,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsCountFor()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new RevisionsHandlerProcessorForGetRevisionsCount(this))
             {
-                await GetRevisionsCount(context);
+                await processor.ExecuteAsync();
             }
         }
 
