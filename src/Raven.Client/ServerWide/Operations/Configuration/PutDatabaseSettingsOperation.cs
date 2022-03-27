@@ -20,6 +20,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(configurationSettings));
             _configurationSettings = configurationSettings ?? throw new ArgumentNullException(nameof(configurationSettings));
         }
+
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutDatabaseConfigurationSettingsCommand(context, _configurationSettings, _databaseName);

@@ -48,6 +48,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
+using Raven.Server.Web.System.Processors.Databases;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -67,8 +68,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "GET", AuthorizationStatus.Operator)]
         public async Task Get()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            await Documents.Handlers.Admin.AdminConfigurationHandler.SendDatabaseRecord(name, ServerStore, HttpContext, ResponseBodyStream());
+            using (var processor = new AdminDatabasesHandlerProcessorForGetDatabaseRecord(this))
+                await processor.ExecuteAsync();
         }
 
         // add database to already existing database group

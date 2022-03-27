@@ -9,7 +9,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         [RavenShardedAction("/databases/*/admin/configuration/settings", "GET")]
         public async Task GetSettings()
         {
-            using (var processor = new ShardedAdminConfigurationHandlerForGetSettings(this))
+            using (var processor = new ShardedAdminConfigurationHandlerProcessorForGetSettings(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/record", "GET")]
+        public async Task GetDatabaseRecord()
+        {
+            using (var processor = new ShardedAdminConfigurationHandlerProcessorForGetDatabaseRecord(this))
                 await processor.ExecuteAsync();
         }
 

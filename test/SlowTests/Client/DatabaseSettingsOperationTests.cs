@@ -5,6 +5,7 @@ using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Tests.Infrastructure;
 
 namespace SlowTests.Client
 {
@@ -14,19 +15,21 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
-        public void CheckIfConfigurationSettingsIsEmpty()
+        [RavenTheory(RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CheckIfConfigurationSettingsIsEmpty(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CheckIfOurValuesGotSaved(store, new Dictionary<string, string>());
             }
         }
 
-        [Fact]
-        public void ChangeSingleSettingKeyOnServer()
+        [RavenTheory(RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ChangeSingleSettingKeyOnServer(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var name = "Storage.PrefetchResetThresholdInGb";
                 var value = "10";
@@ -37,36 +40,37 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public void ChangeMultipleSettingsKeysOnServer()
+        [RavenTheory(RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ChangeMultipleSettingsKeysOnServer(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                string[] names  = {"Storage.PrefetchResetThresholdInGb",  "Storage.TimeToSyncAfterFlushInSec", "Tombstones.CleanupIntervalInMin" };
-                string[] values = {"10","35", "10"};
+                string[] names = { "Storage.PrefetchResetThresholdInGb", "Storage.TimeToSyncAfterFlushInSec", "Tombstones.CleanupIntervalInMin" };
+                string[] values = { "10", "35", "10" };
                 var settings = new Dictionary<string, string>();
-                for (int i = 0; i < names.Length;++i) 
-                    settings.Add(names[i],values[i]);
+                for (int i = 0; i < names.Length; ++i)
+                    settings.Add(names[i], values[i]);
                 PutConfigurationSettings(store, settings);
                 CheckIfOurValuesGotSaved(store, settings);
             }
         }
-        
-        private void PutConfigurationSettings(DocumentStore store, Dictionary<string, string> settings)
+
+        private static void PutConfigurationSettings(DocumentStore store, Dictionary<string, string> settings)
         {
             store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database, settings));
             store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
             store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
         }
-        
-        private DatabaseSettings GetConfigurationSettings(DocumentStore store)
+
+        private static DatabaseSettings GetConfigurationSettings(DocumentStore store)
         {
             var settings = store.Maintenance.Send(new GetDatabaseSettingsOperation(store.Database));
             Assert.NotNull(settings);
             return settings;
         }
 
-        private void CheckIfOurValuesGotSaved(DocumentStore store, Dictionary<string, string> data)
+        private static void CheckIfOurValuesGotSaved(DocumentStore store, Dictionary<string, string> data)
         {
             var settings = GetConfigurationSettings(store);
             foreach (var item in data)

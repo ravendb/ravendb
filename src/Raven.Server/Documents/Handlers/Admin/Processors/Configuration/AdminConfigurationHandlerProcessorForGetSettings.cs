@@ -4,9 +4,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal class AdminConfigurationHandlerForGetSettings : AbstractAdminConfigurationHandlerForGetSettings<DatabaseRequestHandler, DocumentsOperationContext>
+internal class AdminConfigurationHandlerProcessorForGetSettings : AbstractAdminConfigurationHandlerProcessorForGetSettings<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AdminConfigurationHandlerForGetSettings([NotNull] DatabaseRequestHandler requestHandler)
+    public AdminConfigurationHandlerProcessorForGetSettings([NotNull] DatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }
