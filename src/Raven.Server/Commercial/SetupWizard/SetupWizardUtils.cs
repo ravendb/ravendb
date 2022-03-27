@@ -90,7 +90,7 @@ public static class SetupWizardUtils
             {
                 // requires server certificate to be loaded
                 var clientCertificateName = $"{domain}.client.certificate";
-                (certBytes, certificateDefinition, selfSignedCertificate) = LetsEncryptCertificateUtil.GenerateCertificateTask(serverCertificateHolder, clientCertificateName, parameters.SetupInfo);
+                (certBytes, certificateDefinition, selfSignedCertificate) = LetsEncryptCertificateUtil.GenerateClientCertificateTask(serverCertificateHolder, clientCertificateName, parameters.SetupInfo);
                 
                 Debug.Assert(selfSignedCertificate != null);
                 

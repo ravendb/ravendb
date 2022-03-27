@@ -335,7 +335,9 @@ namespace Raven.Server.ServerWide
                 string msg = $"The provided certificate '{loadedCertificate.FriendlyName}' from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}";
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
+                
                 progress?.AddError(msg);
+                throw new InvalidOperationException(msg);
             }
 
 
@@ -353,7 +355,6 @@ namespace Raven.Server.ServerWide
                         Logger.Operations(msg);
 
                     progress?.AddError(msg);
-
                     throw new InvalidOperationException(msg);
                 }
             }
