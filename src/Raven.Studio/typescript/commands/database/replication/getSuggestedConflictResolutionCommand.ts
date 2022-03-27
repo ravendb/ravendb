@@ -12,7 +12,7 @@ class getSuggestedConflictResolutionCommand extends commandBase {
         const args = {
             docId: this.documentId
         };
-        const url = endpoints.databases.replication.studioTasksSuggestConflictResolution + this.urlEncodeArgs(args);
+        const url = endpoints.databases.studioDatabaseTasks.studioTasksSuggestConflictResolution + this.urlEncodeArgs(args);
 
         return this.query<Raven.Server.Utils.ConflictResolverAdvisor.MergeResult>(url, null, this.ownerDb);
     }
