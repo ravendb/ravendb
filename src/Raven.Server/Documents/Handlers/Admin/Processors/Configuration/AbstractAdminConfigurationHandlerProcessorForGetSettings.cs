@@ -16,11 +16,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal abstract class AbstractAdminConfigurationHandlerForGetSettings<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractAdminConfigurationHandlerForGetSettings([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+    protected AbstractAdminConfigurationHandlerProcessorForGetSettings([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
         : base(requestHandler, contextPool)
     {
     }

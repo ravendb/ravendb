@@ -5,9 +5,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Configuration;
 
-internal class ShardedAdminConfigurationHandlerForGetSettings : AbstractAdminConfigurationHandlerForGetSettings<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedAdminConfigurationHandlerProcessorForGetSettings : AbstractAdminConfigurationHandlerProcessorForGetSettings<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminConfigurationHandlerForGetSettings([NotNull] ShardedDatabaseRequestHandler requestHandler) 
+    public ShardedAdminConfigurationHandlerProcessorForGetSettings([NotNull] ShardedDatabaseRequestHandler requestHandler) 
         : base(requestHandler, requestHandler.ContextPool)
     {
     }
