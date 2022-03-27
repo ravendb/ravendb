@@ -1939,13 +1939,14 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task CanGetRevisionsCountFor()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsCountFor(Options options)
         {
             var company = new Company { Name = "Company Name" };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
 
                 using (var session = store.OpenSession())
                 {
@@ -1975,13 +1976,14 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
-        public async Task CanGetRevisionsCountForAsync()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetRevisionsCountForAsync(Options options)
         {
             var company = new Company { Name = "Company Name" };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);

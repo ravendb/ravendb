@@ -173,7 +173,7 @@ namespace Raven.Client.Documents.Session.Operations
             return new GetRevisionsCountCommand(_docId);
         }
 
-        private class GetRevisionsCountCommand : RavenCommand<long>
+        internal class GetRevisionsCountCommand : RavenCommand<long>
         {
             private readonly string _id;
 
