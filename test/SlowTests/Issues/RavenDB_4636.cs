@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,11 +14,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanInjectConfigurationFromServer()
+        [RavenTheory(RavenTestCategory.Configuration)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanInjectConfigurationFromServer(Options options)
         {
             DoNotReuseServer();// we modify global server configuration, and it impacts other tests
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var requestExecutor = store.GetRequestExecutor();
 

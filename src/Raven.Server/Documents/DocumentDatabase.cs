@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
                 IdentityPartsSeparator = '/';
-                _requestExecutor = new Lazy<RequestExecutor>(() => RequestExecutor.Create(new[] { ServerStore.Server.WebUrl }, Name, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+                _requestExecutor = new Lazy<RequestExecutor>(() => RequestExecutor.CreateForServer(new[] { ServerStore.Server.WebUrl }, Name, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
             }
             catch (Exception)
             {
@@ -1633,19 +1633,6 @@ namespace Raven.Server.Documents
         {
             // only if have a newer topology index
             return _lastTopologyIndex > index;
-        }
-
-        public bool HasClientConfigurationChanged(long index)
-        {
-            var serverIndex = GetClientConfigurationEtag();
-            return index < serverIndex;
-        }
-
-        public long GetClientConfigurationEtag()
-        {
-            return ClientConfiguration == null || ClientConfiguration.Disabled && ServerStore.LastClientConfigurationIndex > ClientConfiguration.Etag
-                ? ServerStore.LastClientConfigurationIndex
-                : ClientConfiguration.Etag;
         }
 
         public (Size Data, Size TempBuffers) GetSizeOnDisk()

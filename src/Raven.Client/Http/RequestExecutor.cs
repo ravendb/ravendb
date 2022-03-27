@@ -334,6 +334,13 @@ namespace Raven.Client.Http
             return executor;
         }
 
+        internal static RequestExecutor CreateForServer(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        {
+            var executor = Create(initialUrls, databaseName, certificate, conventions);
+            executor._disableClientConfigurationUpdates = true;
+            return executor;
+        }
+
         public static RequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             var executor = CreateForSingleNodeWithoutConfigurationUpdates(url, databaseName, certificate, conventions);

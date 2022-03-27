@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
 using Sparrow.Logging;
 
@@ -37,16 +38,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             ContextPool = context.RavenServer.ServerStore.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(DatabaseContext.DatabaseName, GetType().FullName);
 
-            var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
-            if (topologyEtag.HasValue && DatabaseContext.HasTopologyChanged(topologyEtag.Value))
-            {
-                context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
-            }
-
-            var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
-            if (clientConfigurationEtag.HasValue && DatabaseContext.HasClientConfigurationChanged(clientConfigurationEtag.Value))
-                context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
-
             var request = HttpContext.Request;
             var url = request.Path.Value;
             var relativeIndex = url.IndexOf('/', 11); //start after "/databases/" and skip the database name
@@ -54,6 +45,21 @@ namespace Raven.Server.Documents.Sharding.Handlers
             BaseShardUrl = url.Substring(relativeIndex);
             RelativeShardUrl = BaseShardUrl + request.QueryString;
             Method = new HttpMethod(request.Method);
+
+            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+        }
+
+        public Task CheckForChanges(RequestHandlerContext context)
+        {
+            var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
+            if (topologyEtag.HasValue && DatabaseContext.HasTopologyChanged(topologyEtag.Value))
+                context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
+
+            var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
+            if (clientConfigurationEtag.HasValue && ClientConfigurationHelper.HasClientConfigurationChanged(DatabaseContext.DatabaseRecord.Client, ServerStore, clientConfigurationEtag.Value))
+                context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
+
+            return Task.CompletedTask;
         }
 
         public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)

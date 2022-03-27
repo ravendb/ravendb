@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 certificate = null;
             }
 
-            return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, certificate, DocumentConventions.DefaultForServer);
+            return RequestExecutor.CreateForServer(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, certificate, DocumentConventions.DefaultForServer);
         }
 
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
