@@ -14,7 +14,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class LetsEncryptCertificateUtil
 {
-    internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition, X509Certificate2 SelfSignedCertificate) GenerateCertificateTask(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
+    internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition, X509Certificate2 SelfSignedCertificate) GenerateClientCertificateTask(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
     {
         if (certificateHolder.Certificate == null)
             throw new InvalidOperationException($"Cannot generate the client certificate '{certificateName}' because the server certificate is not loaded.");
@@ -37,7 +37,7 @@ public class LetsEncryptCertificateUtil
         return (certBytes, newCertDef, selfSignedCertificate);
     }
 
-    public static async Task WriteCertificateAsPemAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
+    public static async Task WriteCertificateAsPemToZipArchiveAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
     {
         var a = new Pkcs12Store();
         a.Load(new MemoryStream(rawBytes), Array.Empty<char>());

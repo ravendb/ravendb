@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -122,7 +123,7 @@ namespace rvn
             try
             {
                 ExtractSetupInfoObjectFromFile(parameters, out setupInfo);
-                ValidateSetupInfo(setupInfo, parameters);
+                ValidateSetupInfoAndSetDefaultSetupParametersIfNeeded(setupInfo, parameters);
                 ValidateSetupOptions(parameters);
             }
             catch (InvalidOperationException e)
@@ -175,15 +176,23 @@ namespace rvn
                 throw new InvalidOperationException($"-s|--setup-json-path path:{parameters.SetupJsonPath} not found");
             }
 
-            using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
+            try
             {
-                JsonSerializer serializer = new();
-                setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
+                {
+                    JsonSerializer serializer = new();
+                    setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to deserialize {nameof(setupInfo)} object from this path {parameters.SetupJsonPath}", ex);
             }
         }
 
-        private static void ValidateSetupInfo(SetupInfo setupInfo, CreateSetupPackageParameters parameters)
+        private static void ValidateSetupInfoAndSetDefaultSetupParametersIfNeeded(SetupInfo setupInfo, CreateSetupPackageParameters parameters)
         {
+            var ex = new List<Exception>();
             if (setupInfo.License == null)
             {
                 throw new InvalidOperationException($"{nameof(setupInfo.License)} must be set");
@@ -223,11 +232,14 @@ namespace rvn
             {
                 throw new InvalidOperationException($"{nameof(setupInfo.NodeSetupInfos)} must be set");
             }
-
+            
             foreach (var tag in setupInfo.NodeSetupInfos.Keys.Where(tag => IsValidNodeTag(tag) == false))
             {
-                throw new InvalidOperationException($"{tag} - node tag must contain only capital letters. Maximum length should be up to 4 characters");
+                ex.Add(new InvalidOperationException($"'{tag}'"));
             }
+
+            if (ex.Count > 0)
+                throw new AggregateException($"Node tags must contain only capital letters.Maximum length should be up to 4 characters{Environment.NewLine}Node tags - ",ex);
 
             foreach (var nodeInfoNode in setupInfo.NodeSetupInfos.Values)
             {

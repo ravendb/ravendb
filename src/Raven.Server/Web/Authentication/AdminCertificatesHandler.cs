@@ -132,7 +132,7 @@ namespace Raven.Server.Web.Authentication
                 await using (var s = entry.Open())
                     await s.WriteAsync(certBytes, 0, certBytes.Length);
 
-                await LetsEncryptCertificateUtil.WriteCertificateAsPemAsync(certificate.Name, clientCertBytes, certificate.Password, archive);
+                await LetsEncryptCertificateUtil.WriteCertificateAsPemToZipArchiveAsync(certificate.Name, clientCertBytes, certificate.Password, archive);
             }
 
             return ms.ToArray();
