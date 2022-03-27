@@ -33,5 +33,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             using (var processor = new ShardedAdminConfigurationHandlerProcessorForPutStudioConfiguration(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/configuration/client", "PUT")]
+        public async Task PutClientConfiguration()
+        {
+            using (var processor = new ShardedAdminConfigurationHandlerProcessorForPutClientConfiguration(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

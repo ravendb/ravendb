@@ -8,28 +8,23 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
-using Voron;
 
 namespace Raven.Server.Documents.Sharding
 {
     public partial class ShardedDatabaseContext : IDisposable
     {
-        public const int NumberOfShards = 1024 * 1024;
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
         private readonly ServerStore _serverStore;
-        private readonly long _lastClientConfigurationIndex;
 
         private DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
@@ -57,7 +52,6 @@ namespace Raven.Server.Documents.Sharding
 
             Indexes = new ShardedIndexesContext(this, serverStore);
             _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
-            _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
             for (int i = 0; i < record.Shards.Length; i++)
@@ -65,11 +59,11 @@ namespace Raven.Server.Documents.Sharding
                 var allNodes = serverStore.GetClusterTopology().AllNodes;
                 var urls = record.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
                 // TODO: pool request executors?
-                RequestExecutors[i] = RequestExecutor.Create(
+                RequestExecutors[i] = RequestExecutor.CreateForServer(
                     urls,
                     ShardHelper.ToShardName(DatabaseName, i),
                     serverStore.Server.Certificate.Certificate,
-                    new DocumentConventions());
+                    DocumentConventions.DefaultForServer);
             }
 
             FullRange = Enumerable.Range(0, _record.Shards.Length).ToArray();
@@ -114,13 +108,6 @@ namespace Raven.Server.Documents.Sharding
         {
             // TODO fix this
             return _record.Topology?.Stamp?.Index > etag;
-        }
-
-        public bool HasClientConfigurationChanged(long clientConfigurationEtag)
-        {
-            var lastClientConfigurationIndex = _record.Client?.Etag ?? 0;
-            var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
-            return actual > clientConfigurationEtag;
         }
 
         private void UpdateConfiguration(Dictionary<string, string> settings)

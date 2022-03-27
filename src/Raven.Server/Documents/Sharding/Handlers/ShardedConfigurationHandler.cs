@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Configuration;
 using Raven.Server.Routing;
 
@@ -11,6 +10,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task GetStudioConfiguration()
         {
             using (var processor = new ShardedConfigurationHandlerProcessorForGetStudioConfiguration(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/configuration/client", "GET")]
+        public async Task GetClientConfiguration()
+        {
+            using (var processor = new ShardedConfigurationHandlerProcessorForGetClientConfiguration(this))
                 await processor.ExecuteAsync();
         }
     }
