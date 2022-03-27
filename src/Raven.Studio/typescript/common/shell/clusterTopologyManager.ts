@@ -2,9 +2,9 @@
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
+import changesContext = require("common/changesContext");
 import licenseModel = require("models/auth/licenseModel");
 import getClusterNodeInfoCommand = require("commands/database/cluster/getClusterNodeInfoCommand");
-import serverNotificationCenterClient from "common/serverNotificationCenterClient";
 
 class clusterTopologyManager {
 
@@ -47,8 +47,10 @@ class clusterTopologyManager {
         this.initObservables();
     }
 
-    setupGlobalNotifications(client: serverNotificationCenterClient) {
-        client.watchClusterTopologyChanges(e => this.onTopologyUpdated(e));
+    setupGlobalNotifications() {
+        const serverWideClient = changesContext.default.serverNotifications();
+
+        serverWideClient.watchClusterTopologyChanges(e => this.onTopologyUpdated(e));
     }
 
     private onTopologyUpdated(e: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {

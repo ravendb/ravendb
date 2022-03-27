@@ -41,7 +41,6 @@ import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaul
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
 import IndexUtils from "../../../components/utils/IndexUtils";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 class editIndex extends viewModelBase {
     
@@ -234,7 +233,6 @@ class editIndex extends viewModelBase {
             this.showIndexHistory(true);
         }
             
-        /* TODO:
         return $.when<any>(this.fetchCustomAnalyzers(), this.fetchServerWideCustomAnalyzers(), this.fetchIndexDefaults())
             .done(([analyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
                    [serverWideAnalyzers]: [Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>],
@@ -243,7 +241,7 @@ class editIndex extends viewModelBase {
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
                 this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
-        });*/
+        });
     }
 
     attached() {
@@ -308,12 +306,11 @@ class editIndex extends viewModelBase {
 
     private fetchIndexes() {
         const db = this.activeDatabase();
-        /* TODO
         new getIndexNamesCommand(db)
             .execute()
             .done((indexesNames) => {
                 this.indexesNames(indexesNames);
-            });*/
+            });
     }
     
     private fetchCustomAnalyzers(): JQueryPromise<Array<Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition>> {
@@ -448,12 +445,11 @@ class editIndex extends viewModelBase {
         
         const additionalAssembliesDto = this.editedIndex().additionalAssemblies().map(x => x.toDto());
 
-        /* TODO
         new getIndexFieldsFromMapCommand(this.activeDatabase(), map, additionalSourcesDto, additionalAssembliesDto)
             .execute()
             .done((fields: resultsDto<string>) => {
                 this.fieldNames(fields.Results);
-            });*/
+            });
     }
 
     private initializeDirtyFlag() {
@@ -641,9 +637,7 @@ class editIndex extends viewModelBase {
     }
 
     private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Documents.Indexes.IndexDefinition> {
-        const db = this.activeDatabase();
-        const localNodeTag = clusterTopologyManager.default.localNodeTag();
-        return new getIndexDefinitionCommand(indexName, db, db.getFirstLocation(localNodeTag))
+        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done(result => {
 
@@ -767,20 +761,18 @@ class editIndex extends viewModelBase {
         }
 
         const db = this.activeDatabase();
-
-        return new saveIndexDefinitionCommand(indexDto, false, db)
-            .execute()
-            .done((savedIndexName) => {
-                this.resetDirtyFlag();
-                router.navigate(appUrl.forIndexes(db, this.editedIndex().name()));
-            });
-        /* TODO
+        
         return new detectIndexTypeCommand(indexDto, db)
             .execute()
             .then((typeInfo) => {
                 indexDto.SourceType = typeInfo.IndexSourceType;
-                
-            });*/
+                return new saveIndexDefinitionCommand(indexDto, typeInfo.IndexType === "JavaScriptMap" || typeInfo.IndexType === "JavaScriptMapReduce", db)
+                    .execute()
+                    .done((savedIndexName) => {
+                        this.resetDirtyFlag();
+                        router.navigate(appUrl.forIndexes(db, this.editedIndex().name()));
+                    });
+            });
     }
     
     private resetDirtyFlag() {
