@@ -290,8 +290,8 @@ namespace Voron.Data.Tables
                 if (method.IsStatic == false)
                     throw new InvalidDataException($"{nameof(GenerateKey)} must be a static method. method name : {methodName}");
 
-                if (method.GetCustomAttribute<IndexEntryKeyGeneratorAttribute>() == null)
-                    throw new InvalidDataException($"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(IndexEntryKeyGeneratorAttribute)}'. method name : {methodName}");
+                if (method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
+                    throw new InvalidDataException($"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'. method name : {methodName}");
 
                 var @delegate = Delegate.CreateDelegate(typeof(IndexEntryKeyGenerator), method);
                 indexDef.GenerateKey = (IndexEntryKeyGenerator)@delegate;
@@ -346,8 +346,8 @@ namespace Voron.Data.Tables
                 if (GenerateKey.Method.IsStatic == false)
                     throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be a static method");
 
-                if (GenerateKey.Method.GetCustomAttribute<IndexEntryKeyGeneratorAttribute>() == null)
-                    throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(IndexEntryKeyGeneratorAttribute)}'");
+                if (GenerateKey.Method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
+                    throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'");
             }
         }
 

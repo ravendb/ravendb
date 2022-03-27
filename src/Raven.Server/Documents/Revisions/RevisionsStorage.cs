@@ -1786,14 +1786,9 @@ namespace Raven.Server.Documents.Revisions
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             
-            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            foreach (var result in GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, etag))
             {
-                foreach (var result in table.SeekForwardFromPrefix(RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], keySlice, prefix, 0))
-                {
-                    yield return TableValueToRevision(context, ref result.Result.Reader);
-                }
+                yield return TableValueToRevision(context, ref result.Result.Reader);
             }
         }
 
@@ -1984,7 +1979,7 @@ namespace Raven.Server.Documents.Revisions
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
 
-        [IndexEntryKeyGenerator]
+        [StorageIndexEntryKeyGenerator]
         private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
             GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
     }

@@ -318,7 +318,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [IndexEntryKeyGenerator]
+        [StorageIndexEntryKeyGenerator]
         internal static ByteStringContext.Scope IndexKeyGenerator(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);

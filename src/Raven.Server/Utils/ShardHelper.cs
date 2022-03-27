@@ -73,6 +73,14 @@ namespace Raven.Server.Utils
             }
         }
 
+        public static unsafe int GetBucket(byte* buffer, int size)
+        {
+            AdjustAfterSeparator((byte)'$', ref buffer, ref size);
+
+            var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
+            return (int)(hash % NumberOfBuckets);
+        }
+
         //do not use this directly, we might mutate the slice buffer here.
         private static unsafe int GetBucketFromSlice(Slice lowerId)
         {

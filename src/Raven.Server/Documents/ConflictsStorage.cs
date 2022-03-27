@@ -208,14 +208,9 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            foreach (var result in GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, etag))
             {
-                foreach (var result in table.SeekForwardFromPrefix(ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], keySlice, prefix, 0))
-                {
-                    yield return TableValueToConflictDocument(context, ref result.Result.Reader);
-                }
+                yield return TableValueToConflictDocument(context, ref result.Result.Reader);
             }
         }
 
@@ -898,7 +893,7 @@ namespace Raven.Server.Documents
             return collection;
         }
 
-        [IndexEntryKeyGenerator]
+        [StorageIndexEntryKeyGenerator]
         private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
             GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
     }
