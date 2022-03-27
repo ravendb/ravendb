@@ -30,6 +30,10 @@ abstract class database {
     abstract get root(): database;
 
     abstract getLocations(): databaseLocationSpecifier[];
+
+    getFirstLocation(nodeTag: string): databaseLocationSpecifier {
+        return this.getLocations().find(x => x.nodeTag === nodeTag);
+    }
     
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;

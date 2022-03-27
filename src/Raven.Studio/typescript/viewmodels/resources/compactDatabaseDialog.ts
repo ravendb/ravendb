@@ -40,12 +40,14 @@ class compactDatabaseDialog extends dialogViewModelBase {
     }
 
     activate() {
+        /* TODO - add the missing location to the command method
         new getIndexNamesCommand(databasesManager.default.getDatabaseByName(this.database.name))
             .execute()
             .done(indexNames => {
                 this.allIndexes(indexNames);
                 this.compactAllIndexes(!!indexNames.length);
             });
+         */
     }
 
     protected initObservables() {
