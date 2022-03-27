@@ -1316,14 +1316,9 @@ namespace Raven.Server.Documents
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
-            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag))
             {
-                foreach (var result in table.SeekForwardFromPrefix(TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], keySlice, prefix, 0))
-                {
-                    yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Result.Reader));
-                }
+                yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Result.Reader));
             }
         }
 
@@ -2601,13 +2596,22 @@ namespace Raven.Server.Documents
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
-            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[DocsBucketAndEtagSlice], bucket, etag))
             {
-                foreach (var result in table.SeekForwardFromPrefix(DocsSchema.DynamicKeyIndexes[DocsBucketAndEtagSlice], keySlice, prefix, 0))
+                yield return TableValueToDocument(context, ref result.Result.Reader);
+            }
+        }
+
+        public static IEnumerable<Table.SeekResult> GetItemsByBucket(ByteStringContext allocator, Table table, 
+            TableSchema.DynamicKeyIndexDef dynamicIndex, int bucket, long etag)
+        {
+            using (GetBucketAndEtagByteString(allocator, bucket, etag, out var buffer))
+            using (Slice.External(allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(dynamicIndex, keySlice, prefix, 0))
                 {
-                    yield return TableValueToDocument(context, ref result.Result.Reader);
+                    yield return result;
                 }
             }
         }
@@ -2693,11 +2697,11 @@ namespace Raven.Server.Documents
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
         }
 
-        [IndexEntryKeyGenerator]
+        [StorageIndexEntryKeyGenerator]
         private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
             GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
 
-        [IndexEntryKeyGenerator]
+        [StorageIndexEntryKeyGenerator]
         private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
             GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
 
@@ -2729,7 +2733,7 @@ namespace Raven.Server.Documents
         {
             var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
-            var bucket = ShardedDatabaseContext.GetShardId(idPtr, idSize);
+            var bucket = ShardHelper.GetBucket(idPtr, idSize);
 
             *(int*)buffer.Ptr = bucket;
             *(long*)(buffer.Ptr + sizeof(int)) = *(long*)etagPtr;

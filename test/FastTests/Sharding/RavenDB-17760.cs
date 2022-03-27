@@ -7,8 +7,8 @@ using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -29,18 +29,14 @@ namespace FastTests.Sharding
         public async Task CanGetDocumentsByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
             var buckets = new int[3];
 
             for (int i = 0; i < 3; i++)
             {
                 var suffix = $"suffix{i}";
-                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-                {
-                    var bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-                    Assert.DoesNotContain(bucket, buckets);
-                    buckets[i] = bucket;
-                }
+                int bucket = ShardHelper.GetBucket(suffix);
+                Assert.DoesNotContain(bucket, buckets);
+                buckets[i] = bucket;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -85,14 +81,8 @@ namespace FastTests.Sharding
         public async Task CanGetConflictsByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
-
             const string suffix = "suffix";
-            int bucket;
-            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-            }
+            int bucket = ShardHelper.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -104,7 +94,7 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            db = null;
+            DocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
@@ -158,14 +148,9 @@ namespace FastTests.Sharding
         public async Task CanGetTombstonesByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
-            int bucket;
-            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-            }
+            int bucket = ShardHelper.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -177,7 +162,7 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            db = null;
+            DocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
@@ -240,14 +225,8 @@ namespace FastTests.Sharding
         public async Task CanGetRevisionsByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
-
             const string suffix = "suffix";
-            int bucket;
-            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-            }
+            int bucket = ShardHelper.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -274,7 +253,7 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            db = null;
+            DocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
@@ -312,14 +291,8 @@ namespace FastTests.Sharding
         public async Task CanGetAttachmentsByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
-
             const string suffix = "suffix";
-            int bucket;
-            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-            }
+            int bucket = ShardHelper.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -363,7 +336,7 @@ namespace FastTests.Sharding
                 }
             }
 
-            db = null;
+            DocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
@@ -411,14 +384,8 @@ namespace FastTests.Sharding
         public async Task CanGetCountersByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
-
             const string suffix = "suffix";
-            int bucket;
-            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-            }
+            int bucket = ShardHelper.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -448,7 +415,7 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            db = null;
+            DocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
@@ -503,14 +470,8 @@ namespace FastTests.Sharding
         public async Task CanGetTimeSeriesByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
-
             const string suffix = "suffix";
-            int bucket;
-            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-            }
+            int bucket = ShardHelper.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -542,7 +503,7 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            db = null;
+            DocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
@@ -586,14 +547,8 @@ namespace FastTests.Sharding
         public async Task CanGetTimeSeriesDeletedRangesByBucket()
         {
             using var store = Sharding.GetDocumentStore();
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
-
             const string suffix = "suffix";
-            int bucket;
-            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                bucket = ShardedDatabaseContext.GetShardId(txContext, suffix);
-            }
+            int bucket = ShardHelper.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -640,7 +595,7 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            db = null;
+            DocumentDatabase db = null;
             var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
             foreach (var shard in dbs)
             {
