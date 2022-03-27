@@ -22,6 +22,8 @@ import viewHelpers from "common/helpers/view/viewHelpers";
 import { CheckboxTriple } from "../../../common/CheckboxTriple";
 import { useEventsCollector } from "../../../hooks/useEventsCollector";
 import bulkIndexOperationConfirm from "viewmodels/database/indexes/bulkIndexOperationConfirm";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import classNames from "classnames";
 
 interface IndexesPageProps {
     database: database;
@@ -99,10 +101,13 @@ function indexMatchesFilter(index: IndexSharedInfo, filter: IndexFilterCriteria)
     return nameMatch && statusMatch && indexingErrorsMatch;
 }
 
-function groupAndFilterIndexStats(indexes: IndexSharedInfo[], collections: collection[], filter: IndexFilterCriteria) {
+function groupAndFilterIndexStats(indexes: IndexSharedInfo[], collections: collection[], filter: IndexFilterCriteria): { groups: IndexGroup[], replacements: IndexSharedInfo[] } {
     const result = new Map<string, IndexGroup>();
 
-    indexes.forEach(index => {
+    const replacements = indexes.filter(IndexUtils.isSideBySide);
+    const regularIndexes = indexes.filter(x => !IndexUtils.isSideBySide(x));
+
+    regularIndexes.forEach(index => {
         if (!indexMatchesFilter(index, filter)) {
             return ;
         }
@@ -128,7 +133,10 @@ function groupAndFilterIndexStats(indexes: IndexSharedInfo[], collections: colle
         group.indexes.sort((a, b) => genUtils.sortAlphaNumeric(a.name, b.name));
     });
     
-    return groups;
+    return {
+        groups,
+        replacements
+    }
 }
 
 
@@ -137,21 +145,22 @@ export function IndexesPage(props: IndexesPageProps) {
     const locations = database.getLocations();
     
     const { indexesService } = useServices();
-    
     const eventsCollector = useEventsCollector();
     
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
     
-    const initialLocation = locations[0]; //TODO:
+    const nodeTag = clusterTopologyManager.default.localNodeTag();
+    const initialLocation = database.getFirstLocation(nodeTag);
     
     const [filter, setFilter] = useState<IndexFilterCriteria>(defaultFilterCriteria);
     
-    const groups = useMemo(() => {
+    const { groups, replacements } = useMemo(() => {
         const collections = collectionsTracker.default.collections();
         return groupAndFilterIndexStats(stats.indexes, collections, filter);
     }, [stats, filter]);
     
     const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
+    const [swapNowProgress, setSwapNowProgress] = useState<string[]>([]);
     
     const fetchProgress = async (location: databaseLocationSpecifier) => {
         const progress = await indexesService.getProgress(database, location);
@@ -374,6 +383,19 @@ export function IndexesPage(props: IndexesPageProps) {
         }
     }
     
+    const openFaulty = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
+        viewHelpers.confirmationMessage("Open index?", `You're opening a faulty index <strong>'${genUtils.escapeHtml(index.name)}'</strong>`, {
+            html: true
+        })
+            .done(result => {
+                if (result.can) {
+                    eventsCollector.reportEvent("indexes", "open");
+
+                    indexesService.openFaulty(index, database, location);
+                }
+            });
+    }
+    
     const resetIndex = async (index: IndexSharedInfo) => {
         const canReset = await confirmResetIndex(database, index);
         if (canReset) {
@@ -405,6 +427,38 @@ export function IndexesPage(props: IndexesPageProps) {
         const allIndexes: IndexSharedInfo[] = [];
         groups.forEach(group => allIndexes.push(...group.indexes));
         return allIndexes;
+    }
+
+    const swapSideBySide = async (index: IndexSharedInfo) => {
+        setSwapNowProgress(x => [ ...x, index.name ]);
+        eventsCollector.reportEvent("index", "swap-side-by-side");
+        try {
+            await indexesService.forceReplace(index.name, database);
+        } finally {
+            setSwapNowProgress(item => item.filter(x => x !== index.name));
+        }
+    }
+    
+    const confirmSwapSideBySide = (index: IndexSharedInfo) => {
+        const margin = `class="margin-bottom"`;
+        let text = `<li ${margin}>Index: <strong>${genUtils.escapeHtml(index.name)}</strong></li>`;
+        text += `<li ${margin}>Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the replacement index.</li>`;
+
+        /*
+        const replacementIndex = irdx.replacement();
+        if (replacementIndex.progress() && replacementIndex.progress().rollingProgress().length) {
+            text += `<li ${margin}>Actual indexing will occur once the node reaches its turn in the rolling deployment process.</li>`;
+        }*/
+        
+
+        //TODO: is it node wide?
+        
+        viewHelpers.confirmationMessage("Are you sure?", `<ul>${text}</ul>`, { buttons: ["Cancel", "Swap Now"], html: true })
+            .done((result: canActivateResultDto) => {
+                if (result.can) {
+                    swapSideBySide(index);
+                }
+            });
     }
     
     const toggleSelectAll = () => {
@@ -486,27 +540,69 @@ export function IndexesPage(props: IndexesPageProps) {
             <div className="flex-grow scroll js-scroll-container">
                 {groups.map(group => {
                     return (
-                        <div key={group.name}>
+                        <div key={"group-" + group.name}>
                             <h2 className="on-base-background" title={"Collection: " + group.name}>
                                 {group.name}
                             </h2>
-                            {group.indexes.map(index =>
-                                (
-                                    <IndexPanel setPriority={p => setIndexPriority(index, p)}
-                                                setLockMode={l => setIndexLockMode(index, l)}
-                                                resetIndex={() => resetIndex(index)}
-                                                enableIndexing={() => enableIndexing(index)}
-                                                disableIndexing={() => disableIndexing(index)}
-                                                pauseIndexing={() => pauseIndexing(index)}
-                                                resumeIndexing={() => resumeIndexing(index)}
-                                                index={index}
-                                                database={database}
-                                                deleteIndex={() => confirmDeleteIndexes(database, [index])}
-                                                selected={selectedIndexes.includes(index.name)}
-                                                toggleSelection={() => toggleSelection(index)}
-                                                key={index.name}
-                                    />
-                                ))}
+                            {group.indexes.map(index => {
+                                const replacement = replacements.find(x => x.name === IndexUtils.SideBySideIndexPrefix + index.name);
+                                return (
+                                    <React.Fragment key={index.name}>
+                                        <IndexPanel setPriority={p => setIndexPriority(index, p)}
+                                                    setLockMode={l => setIndexLockMode(index, l)}
+                                                    resetIndex={() => resetIndex(index)}
+                                                    openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
+                                                    enableIndexing={() => enableIndexing(index)}
+                                                    disableIndexing={() => disableIndexing(index)}
+                                                    pauseIndexing={() => pauseIndexing(index)}
+                                                    resumeIndexing={() => resumeIndexing(index)}
+                                                    index={index}
+                                                    hasReplacement={!!replacement}
+                                                    database={database}
+                                                    deleteIndex={() => confirmDeleteIndexes(database, [index])}
+                                                    selected={selectedIndexes.includes(index.name)}
+                                                    toggleSelection={() => toggleSelection(index)}
+                                                    key={index.name}
+                                        />
+                                        {replacement && (
+                                            <div className="sidebyside-actions">
+                                                <div className="panel panel-state panel-warning">
+                                                    <div className="state state-swap">
+                                                        <i className="icon-swap" />
+                                                    </div>
+                                                    <div className="padding flex-horizontal">
+                                                        <div className="title">Side by side</div>
+                                                        <div className="flex-separator" />
+                                                        <button className={classNames("btn btn-sm btn-warning", { "btn-spinner": swapNowProgress.includes(index.name) })} 
+                                                                disabled={swapNowProgress.includes(index.name)}
+                                                                onClick={() => confirmSwapSideBySide(index)}
+                                                                title="Click to replace the current index definition with the replacement index">
+                                                            <i className="icon-force" /> <span>Swap now</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {replacement && (
+                                            <IndexPanel setPriority={p => setIndexPriority(replacement, p)}
+                                                        setLockMode={l => setIndexLockMode(replacement, l)}
+                                                        resetIndex={() => resetIndex(replacement)}
+                                                        openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
+                                                        enableIndexing={() => enableIndexing(replacement)}
+                                                        disableIndexing={() => disableIndexing(replacement)}
+                                                        pauseIndexing={() => pauseIndexing(replacement)}
+                                                        resumeIndexing={() => resumeIndexing(replacement)}
+                                                        index={replacement}
+                                                        database={database}
+                                                        deleteIndex={() => confirmDeleteIndexes(database, [replacement])}
+                                                        selected={selectedIndexes.includes(replacement.name)}
+                                                        toggleSelection={() => toggleSelection(replacement)}
+                                                        key={replacement.name}
+                                            />
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </div>
                     )
                 })}

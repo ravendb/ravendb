@@ -101,9 +101,10 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
             entriesCount: stats.EntriesCount,
             state: stats.State,
             status: stats.Status,
-            stale: stats.IsStale
+            stale: stats.IsStale,
+            faulty: stats.Type === "Faulty"
         },
-        progress: null
+        progress: null,
     }
 }
 
@@ -112,7 +113,7 @@ function initNodesInfo(locations: databaseLocationSpecifier[]): IndexNodeInfo[] 
         location,
         status: "notLoaded",
         details: null,
-        progress: null
+        progress: null,
     }));
 }
 
@@ -126,7 +127,7 @@ function markProgressAsCompleted(progress: WritableDraft<IndexProgressInfo>) {
 }
 
 function mapProgress(progress: IndexProgress): IndexProgressInfo {
-    const collectionNames = Object.keys(progress.Collections);
+    const collectionNames = Object.keys(progress.Collections || {});
     
     let grandTotal = 0;
     let grandProcessed = 0;
@@ -166,7 +167,6 @@ function mapProgress(progress: IndexProgress): IndexProgressInfo {
 export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducerAction> = (state: IndexesStatsState, action: IndexesStatsReducerAction): IndexesStatsState => {
     switch (action.type) {
         case "ProgressLoaded": {
-            
             const incomingLocation = action.location;
             const progress = action.progress;
 
@@ -193,44 +193,33 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
         }
         case "StatsLoaded":
             const incomingLocation = action.location;
-            const indexes = action.stats.map((incomingStats): IndexSharedInfo => {
-                const existingSharedInfo = state.indexes.find(x => x.name === incomingStats.Name);
+            const incomingStats = action.stats;
+            
+            return produce(state, draft => {
+                incomingStats.forEach(stat => {
+                    const existingShardedInfo = draft.indexes.find(x => x.name === stat.Name);
+                    if (existingShardedInfo) {
+                        // container already exists, just update node stats
 
-                if (existingSharedInfo) {
-                    // container already exists, just update node stats
-                    
-                    return {
-                        ...existingSharedInfo,
-                        
-                        nodesInfo: existingSharedInfo.nodesInfo.map(existingNodeInfo => {
+                        const findIdx = existingShardedInfo.nodesInfo.findIndex(x => databaseLocationComparator(x.location, incomingLocation));
+                        if (findIdx !== -1) {
+                            const nodeInfo = mapToIndexNodeInfo(stat, incomingLocation);
+                            existingShardedInfo.nodesInfo.splice(findIdx, 1, nodeInfo);
+                        }
+                    } else {
+                        // create new container with stats
+                        const sharedInfo = mapToIndexSharedInfo(stat);
+                        sharedInfo.nodesInfo = initNodesInfo(state.locations).map(existingNodeInfo => {
                             if (databaseLocationComparator(existingNodeInfo.location, incomingLocation)) {
-                                const nodeInfo = mapToIndexNodeInfo(incomingStats, incomingLocation);
-                                nodeInfo.progress = existingNodeInfo.progress;
-                                return nodeInfo;
+                                return mapToIndexNodeInfo(stat, incomingLocation);
                             } else {
                                 return existingNodeInfo;
                             }
-                        })
+                        });
+                        draft.indexes.push(sharedInfo);
                     }
-                } else {
-                    // create new container with stats
-                    const sharedInfo = mapToIndexSharedInfo(incomingStats);
-                    sharedInfo.nodesInfo = initNodesInfo(state.locations).map(existingNodeInfo => {
-                        if (databaseLocationComparator(existingNodeInfo.location, incomingLocation)) {
-                            return mapToIndexNodeInfo(incomingStats, incomingLocation);
-                        } else {
-                            return existingNodeInfo;
-                        }
-                    });
-                    
-                    return sharedInfo;
-                }
+                })
             });
-            
-            return {
-                ...state,
-                indexes
-            }
         case "DeleteIndexes":
             return produce(state, draft => {
                 draft.indexes = draft.indexes.filter(x => !action.indexNames.includes(x.name));
