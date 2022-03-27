@@ -4,14 +4,13 @@ import endpoints = require("endpoints");
 
 class getIndexDefinitionCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database, private location: databaseLocationSpecifier = null) {
+    constructor(private indexName: string, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexDefinition> {
         const args = {
-            name: this.indexName,
-            ...this.location
+            name: this.indexName
         };
         
         const url = endpoints.databases.index.indexes;
