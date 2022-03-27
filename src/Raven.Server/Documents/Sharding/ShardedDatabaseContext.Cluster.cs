@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Commands;
-using Sparrow.Json;
+using Raven.Server.Documents.Sharding.Operations;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
@@ -23,9 +23,9 @@ public partial class ShardedDatabaseContext
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public ValueTask WaitForExecutionOfRaftCommandsAsync(long index)
+        public async ValueTask WaitForExecutionOfRaftCommandsAsync(long index)
         {
-            return WaitForExecutionOfRaftCommandsAsync(new List<long>(1) { index });
+            await WaitForAllNodesToUpdateDatabaseContext(index);
         }
 
         public async ValueTask WaitForExecutionOfRaftCommandsAsync(List<long> indexes)
@@ -49,6 +49,12 @@ public partial class ShardedDatabaseContext
 
                 await Task.WhenAll(waitingTasks);
             }
+        }
+
+        public async Task WaitForAllNodesToUpdateDatabaseContext(long index)
+        {
+            var op = new WaitForDatabaseContextUpdateOperation(_context.DatabaseName, index);
+            await _context.ShardExecutor.ExecuteParallelForShardsAsync(_context.UniqueShards, op);
         }
     }
 }

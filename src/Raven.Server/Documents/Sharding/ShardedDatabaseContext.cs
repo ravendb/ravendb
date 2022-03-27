@@ -8,7 +8,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.ServerWide;
@@ -18,7 +17,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
-using Voron;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -44,6 +42,8 @@ namespace Raven.Server.Documents.Sharding
         public readonly SystemTime Time = new SystemTime();
 
         public int[] FullRange;
+
+        public RachisLogIndexNotifications ShardedDatabaseContextIndexNotifications;
 
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
@@ -76,17 +76,45 @@ namespace Raven.Server.Documents.Sharding
             ShardExecutor = new ShardExecutor(this);
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
+
+            ShardedDatabaseContextIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
         }
 
         public IDisposable AllocateContext(out JsonOperationContext context) => _serverStore.ContextPool.AllocateOperationContext(out context);
 
-        public void UpdateDatabaseRecord(RawDatabaseRecord record)
+
+        public void UpdateDatabaseRecord(RawDatabaseRecord record, long index)
         {
             UpdateConfiguration(record.Settings);
 
             Indexes.Update(record);
 
             Interlocked.Exchange(ref _record, record);
+
+            ShardedDatabaseContextIndexNotifications.NotifyListenersAbout(index, e: null);
+        }
+
+        private int[] _uniqueShards;
+        public Memory<int> UniqueShards 
+        { 
+            get
+            {
+                if (_uniqueShards != null)
+                    return new Memory<int>(_uniqueShards);
+
+                var nodes = new Dictionary<string, int>();
+                for (var shardNumber = 0; shardNumber < ShardsTopology.Length; shardNumber++)
+                {
+                    var topology = ShardsTopology[shardNumber];
+                    foreach (var node in topology.AllNodes)
+                    {
+                        nodes.TryAdd(node, shardNumber);
+                    }
+                }
+
+                _uniqueShards = nodes.Values.ToArray();
+                return new Memory<int>(_uniqueShards);
+            }
         }
 
         public string DatabaseName => _record.DatabaseName;

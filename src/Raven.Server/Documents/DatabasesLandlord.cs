@@ -128,7 +128,7 @@ namespace Raven.Server.Documents
                             if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var databaseContextTask))
                             {
                                 var databaseContext = databaseContextTask.Result; // this isn't really a task
-                                databaseContext.UpdateDatabaseRecord(rawRecord);
+                                databaseContext.UpdateDatabaseRecord(rawRecord, index);
                             }
                         }
                         else
