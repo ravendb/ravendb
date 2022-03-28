@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -312,7 +313,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 return new ClusterTransactionMergedCommandDto
                 {
-                    Batch = _batch
+                    Batch = _batch.Slice(0, _batch.Count).ToList()
                 };
             }
 
@@ -806,11 +807,11 @@ namespace Raven.Server.Documents.Handlers
 
     public class ClusterTransactionMergedCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.ClusterTransactionMergedCommand>
     {
-        public ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
+        public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
 
         public BatchHandler.ClusterTransactionMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new BatchHandler.ClusterTransactionMergedCommand(database, Batch);
+            var command = new BatchHandler.ClusterTransactionMergedCommand(database, new ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand>(Batch.ToArray()));
             return command;
         }
     }
