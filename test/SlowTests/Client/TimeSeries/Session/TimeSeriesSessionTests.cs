@@ -59,9 +59,6 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var res = store.Operations.Send(new GetTimeSeriesStatisticsOperation("users/ayende"));
-                Assert.Null(res);
-
                 var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
@@ -84,6 +81,32 @@ namespace SlowTests.Client.TimeSeries.Session
                         .ToList();
                     Assert.Equal(2, val.Count);
                 }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanCreateSimpleTimeSeries3(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var res = store.Operations.Send(new GetTimeSeriesStatisticsOperation("users/ayende"));
+                Assert.Null(res);
+
+                var baseline = RavenTestHelper.UtcToday;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 60d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 61d }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
 
                 res = store.Operations.Send(new GetTimeSeriesStatisticsOperation("users/ayende"));
                 Assert.NotNull(res);
@@ -92,8 +115,6 @@ namespace SlowTests.Client.TimeSeries.Session
                 Assert.Equal(2, res.TimeSeries[0].NumberOfEntries);
                 Assert.Equal(baseline.AddMinutes(1), res.TimeSeries[0].StartDate);
                 Assert.Equal(baseline.AddMinutes(2), res.TimeSeries[0].EndDate);
-
-                //TODO: add sharded mode when TS creation EP is done
             }
         }
 

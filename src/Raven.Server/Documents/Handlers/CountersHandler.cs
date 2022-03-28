@@ -600,7 +600,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {
-            //TODO: add sharded mode to SessionGetCounters test adter this EP is done for sharded
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var countersBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "counters");
