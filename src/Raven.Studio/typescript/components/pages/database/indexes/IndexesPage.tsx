@@ -7,7 +7,6 @@ import {
 } from "../../../models/indexes";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { IndexPanel } from "./IndexPanel";
-import appUrl from "common/appUrl";
 import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";
 import app from "durandal/app";
 import IndexFilter, { IndexFilterDescription } from "./IndexFilter";
@@ -24,6 +23,7 @@ import { useEventsCollector } from "../../../hooks/useEventsCollector";
 import bulkIndexOperationConfirm from "viewmodels/database/indexes/bulkIndexOperationConfirm";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import classNames from "classnames";
+import { useAppUrls } from "../../../hooks/useAppUrls";
 
 interface IndexesPageProps {
     database: database;
@@ -53,7 +53,7 @@ async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<
 }
 
 function NoIndexes() {
-    const newIndexUrl = appUrl.forCurrentDatabase().newIndex();
+    const newIndexUrl = useAppUrls().newIndex();
     
     return (
         <div className="row">
