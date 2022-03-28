@@ -19,16 +19,16 @@ using Xunit.Abstractions;
 
 namespace FastTests.Sharding
 {
-    public class RavenDB_17760 : ShardedTestBase
+    public class RavenDB_17760 : RavenTestBase
     {
         public RavenDB_17760(ITestOutputHelper output) : base(output)
         {
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetDocumentsByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
             var buckets = new int[3];
 
@@ -81,10 +81,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetConflictsByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
@@ -154,10 +154,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetTombstonesByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
@@ -236,10 +236,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetRevisionsByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
@@ -308,10 +308,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetAttachmentsByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
@@ -407,10 +407,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetCountersByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
@@ -499,10 +499,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetTimeSeriesByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
@@ -582,10 +582,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetTimeSeriesDeletedRangesByBucket()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
 
             const string suffix = "suffix";
