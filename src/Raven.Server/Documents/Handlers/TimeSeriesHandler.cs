@@ -11,6 +11,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -815,63 +816,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/timeseries/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetTimeSeriesConfig()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                TimeSeriesConfiguration timeSeriesConfig;
-                using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
-                {
-                    timeSeriesConfig = rawRecord?.TimeSeriesConfiguration;
-                }
-
-                if (timeSeriesConfig != null)
-                {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, timeSeriesConfig.ToJson());
-                    }
-                }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
-            }
+            using (var processor = new ConfigurationHandlerProcessorForGetTimeSeriesConfiguration(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/timeseries/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigTimeSeries()
         {
-            await DatabaseConfigurations(
-                ServerStore.ModifyTimeSeriesConfiguration,
-                "read-timeseries-config",
-                GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context, ServerStore serverStore) =>
-                {
-                    if (configuration == null)
-                    {
-                        return;
-                    }
-
-                    var hasCollectionsConfig = configuration.TryGet(nameof(TimeSeriesConfiguration.Collections), out BlittableJsonReaderObject collections) &&
-                                               collections?.Count > 0;
-
-                    if (hasCollectionsConfig == false)
-                        return;
-
-                    var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                    for (var i = 0; i < collections.Count; i++)
-                    {
-                        collections.GetPropertyByIndex(i, ref prop);
-
-                        if (uniqueKeys.Add(prop.Name) == false)
-                        {
-                            throw new InvalidOperationException("Cannot have two different revision configurations on the same collection. " +
-                                                                $"Collection name : '{prop.Name}'");
-                        }
-                    }
-                });
+            using (var processor = new ConfigurationHandlerProcessorForTimeSeriesConfig(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/timeseries/policy", "PUT", AuthorizationStatus.DatabaseAdmin)]
