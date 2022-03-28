@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new GetTimeSeriesStatisticsCommand(_documentId);
         }
 
-        private class GetTimeSeriesStatisticsCommand : RavenCommand<TimeSeriesStatistics>
+        internal class GetTimeSeriesStatisticsCommand : RavenCommand<TimeSeriesStatistics>
         {
             private readonly string _documentId;
 
@@ -47,6 +47,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
+                if (response == null)
+                {
+                    Result = null;
+                    return;
+                }
+
                 Result = JsonDeserializationClient.GetTimeSeriesStatisticsResult(response);
             }
         }

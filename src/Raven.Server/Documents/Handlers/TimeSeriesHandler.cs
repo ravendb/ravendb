@@ -11,7 +11,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
-using Raven.Server.Documents.Handlers.Processors.Configuration;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -21,7 +21,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -33,69 +32,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/timeseries/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Stats()
         {
-            var documentId = GetStringQueryString("docId");
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new TimeSeriesHandlerProcessorForGetTimeSeriesStats(this))
             {
-                var document = Database.DocumentsStorage.Get(context, documentId, DocumentFields.Data);
-                if (document == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                var timeSeriesNames = GetTimesSeriesNames(document);
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(TimeSeriesStatistics.DocumentId));
-                    writer.WriteString(documentId);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(TimeSeriesStatistics.TimeSeries));
-
-                    writer.WriteStartArray();
-
-                    var first = true;
-                    foreach (var tsName in timeSeriesNames)
-                    {
-                        if (first == false)
-                        {
-                            writer.WriteComma();
-                        }
-                        first = false;
-
-                        var stats = Database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, tsName);
-
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.Name));
-                        writer.WriteString(tsName);
-
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.NumberOfEntries));
-                        writer.WriteInteger(stats.Count);
-
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.StartDate));
-                        writer.WriteDateTime(stats.Start, isUtc: true);
-
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.EndDate));
-                        writer.WriteDateTime(stats.End, isUtc: true);
-
-                        writer.WriteEndObject();
-                    }
-
-                    writer.WriteEndArray();
-
-                    writer.WriteEndObject();
-                }
+                await processor.ExecuteAsync();
             }
         }
 
