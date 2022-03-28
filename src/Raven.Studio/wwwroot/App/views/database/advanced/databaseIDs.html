@@ -5,24 +5,24 @@
                 <div class="col-xs-12 col-xl-6 margin-top margin-top-lg no-padding-right">
                     <div class="panel padding margin-bottom no-padding-right">
                         <div class="panel-body no-padding-right">
-                            <div class="form-group">
-                                <label class="control-label">Database ID</label>
-                                <div class="margin-top margin-top-xs" >
-                                    <strong class="form-control-static" data-bind="text: databaseID"></strong>
+                            <div class="form-group margin-top">
+                                <label class="control-label" data-bind="text: 'Used Database ID' + (usedIDs.length > 1 ? 's' : '')"></label>
+                                <div data-bind="foreach: usedIDs">
+                                    <div class="form-control-static"><strong data-bind="text: $data"></strong></div>
                                 </div>
                             </div>
                             <div class="form-group margin-top margin-top-lg">
-                                <label class="control-label">Change Vector</label>
-                                <div class="margin-top margin-top-sm flex-grow">
-                                    <div data-bind="foreach: databaseChangeVector">
+                                <label class="control-label">IDs that may be added to Unused List</label>
+                                <div class="margin-top flex-grow">
+                                    <div data-bind="foreach: suggestedIDs">
                                         <div class="row container-fluid">
                                             <div class="col-xs-7 badge margin-bottom margin-bottom-sm change-vector-entry" data-bind="text: $data">
                                             </div>
                                             <div class="col-xs-5">
                                                 <span class="has-disable-reason" data-placement="right"
-                                                      data-bind="attr: { 'data-original-title': $parent.itemIsInsideUnusedList($data)() ? 'ID entry already in list' : '' }">
-                                                    <button class="btn btn-default btn-sm margin-bottom margin-bottom-sm add-to-unused-btn" title="Click to add the database ID from this entry to the unused database IDs"
-                                                            data-bind="visible: $parent.canAddIdToUnusedIDs($data), disable: $parent.itemIsInsideUnusedList($data), click: _.partial($parent.addToUnusedList, $data)">
+                                                      data-bind="attr: { 'data-original-title': $parent.itemIsInsideUnusedList($data)() ? 'This ID is already in the list' : '' }">
+                                                    <button class="btn btn-default btn-sm margin-bottom margin-bottom-sm add-to-unused-btn" title="Click to add this database ID to the Unused Database IDs"
+                                                            data-bind="disable: $parent.itemIsInsideUnusedList($data), click: _.partial($parent.addToUnusedList, $data)">
                                                         <span>Add to unused</span><i class="margin-left margin-left-sm icon-arrow-filled-right"></i>
                                                     </button>
                                                 </span>
@@ -54,18 +54,18 @@
                             <div class="flex-grow">
                                 <div class="flex-horizontal">
                                     <div class="flex-grow">
-                                        <input class="form-control" placeholder="Enter database ID to add" data-bind="textInput: inputDatabaseId" />
+                                        <input class="form-control" placeholder="Enter database ID to add" data-bind="textInput: inputDatabaseID" />
                                     </div>
-                                    <button class="btn btn-info" data-bind="click: addInputToUnusedList, enable: inputDatabaseId">
+                                    <button class="btn btn-info" data-bind="click: addInputToUnusedList, enable: inputDatabaseID">
                                         <i class="icon-plus"></i><span>Add ID</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <div class="form-group" data-bind="visible: unusedDatabaseIDs().length">
+                        <div class="form-group" data-bind="visible: unusedIDs().length">
                             <label class="control-label">&nbsp;</label>
                             <div class="flex-grow">
-                                <ul class="well collection-list margin-bottom margin-bottom-lg" data-bind="foreach: unusedDatabaseIDs">
+                                <ul class="well collection-list margin-bottom margin-bottom-lg" data-bind="foreach: unusedIDs">
                                     <li>
                                         <div class="name" data-bind="text: $data"></div>
                                         <a title="Remove this ID from the unused list" href="#" data-bind="click: _.partial($parent.removeFromUnusedList, $data)"><i class="icon-trash"></i></a>
@@ -73,7 +73,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="text-center text-muted margin-top margin-top-lg margin-bottom margin-bottom-lg" data-bind="visible: !unusedDatabaseIDs().length">
+                        <div class="text-center text-muted margin-top margin-top-lg margin-bottom margin-bottom-lg" data-bind="visible: !unusedIDs().length">
                             <i class="icon-lg icon-empty-set"></i>
                             <h3 class="margin-top">No unused database IDs are set</h3>
                         </div>

@@ -50,7 +50,7 @@ class changeVectorUtils {
         return tokens.map(x => `${x.tag}:${x.etag}`).join(", ");
     }
     
-    static getDatabaseID(cvEntry: string) {
+    static getDatabaseID(cvEntry: string): string {
         const tokens = changeVectorUtils.parseChangeVectorEntry(cvEntry);
         return tokens.dbId;
     }
