@@ -1387,8 +1387,10 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice) =>
-            ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            return ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
                 (int)AttachmentsTable.Etag, ref tvr, out slice);
+        }
     }
 }

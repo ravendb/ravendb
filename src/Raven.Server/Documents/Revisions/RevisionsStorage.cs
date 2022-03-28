@@ -1980,7 +1980,9 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
-            GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
+        }
     }
 }
