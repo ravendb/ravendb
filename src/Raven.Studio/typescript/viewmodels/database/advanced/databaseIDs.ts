@@ -4,22 +4,24 @@ import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordC
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
 import getDatabaseStatsCommand from "commands/resources/getDatabaseStatsCommand";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 
 class databaseIDs extends shardViewModelBase {
 
-    view = require("views/database/advanced/databaseIDs.html");
+    view = require("views/database/advanced/databaseIDs.html"); 
+    
+    usedIDsArray: string[] = [];
+    usedIDs = ko.observableArray<string>([]);
+    
+    idsFromCVsSet = new Set<string>();
+    idsFromCVs = ko.observable<Set<string>>(new Set<string>());
+    suggestedIDs: KnockoutComputed<string[]>;
 
+    unusedIDs = ko.observableArray<string>([]);
+    inputDatabaseID = ko.observable<string>();
+    
     isForbidden = ko.observable<boolean>(false);
-    
-    databaseID = ko.observable<string>();
-    databaseChangeVector = ko.observableArray<string>([]);
-    
-    unusedDatabaseIDs = ko.observableArray<string>([]);
-    inputDatabaseId = ko.observable<string>();
-
     isSaveEnabled = ko.observable<boolean>();
 
     spinners = {
@@ -29,22 +31,23 @@ class databaseIDs extends shardViewModelBase {
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList");
+        this.initObservables();
+    }
+    
+    private initObservables(): void {
+        this.suggestedIDs = ko.pureComputed(() => {
+            const idsArray = Array.from(this.idsFromCVs());
+            return idsArray.filter(x => !this.usedIDs().includes(x));
+        });
     }
 
     compositionComplete() {
         super.compositionComplete();
         this.setupDisableReasons();
     }
-    
-    canAddIdToUnusedIDs(cvEntry: string) {
-       return ko.pureComputed(() => changeVectorUtils.getDatabaseID(cvEntry) !== this.databaseID());
-    }
 
-    itemIsInsideUnusedList(cvEntry: string) {
-        return ko.pureComputed(() => {
-            const idPart = changeVectorUtils.getDatabaseID(cvEntry);
-            return _.includes(this.unusedDatabaseIDs(), idPart);
-        });
+    itemIsInsideUnusedList(dbId: string) {
+        return ko.pureComputed(() => this.unusedIDs().includes(dbId));
     }
 
     canActivate(args: any) {
@@ -55,14 +58,18 @@ class databaseIDs extends shardViewModelBase {
                 this.isForbidden(!accessManager.default.isOperatorOrAbove());
                 
                 if (this.isForbidden()) {
-                    deferred.resolve({ can: true });
+                    deferred.resolve({can: true});
                 } else {
-                    const fetchStatsTask = this.fetchStats();
+                    const fetchStatsTaskArray = this.fetchAllStatsTasks();
                     const fetchUnusedIDsTask = this.fetchUnusedDatabaseIDs();
 
-                    return $.when<any>(fetchStatsTask, fetchUnusedIDsTask)
-                        .then(() => deferred.resolve({ can: true }))
-                        .fail(() => deferred.resolve({ redirect: appUrl.forStatus(this.db) }));
+                    $.when<any>(...fetchStatsTaskArray, fetchUnusedIDsTask)
+                        .then(() => {
+                            this.usedIDs(this.usedIDsArray);
+                            this.idsFromCVs(this.idsFromCVsSet);
+                            deferred.resolve({can: true});
+                        })
+                        .fail(() => deferred.resolve({redirect: appUrl.forStatus(this.db)}));
                 }
 
                 return deferred;
@@ -72,7 +79,7 @@ class databaseIDs extends shardViewModelBase {
     activate(args: any) {
         super.activate(args);
         
-        this.dirtyFlag = new ko.DirtyFlag([this.unusedDatabaseIDs]);
+        this.dirtyFlag = new ko.DirtyFlag([this.unusedIDs]);
         
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             const dirty = this.dirtyFlag().isDirty();
@@ -81,14 +88,21 @@ class databaseIDs extends shardViewModelBase {
         });
     }
 
-    private fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
-        const db = this.db;
-        const localNode = clusterTopologyManager.default.localNodeTag();
-        return new getDatabaseStatsCommand(db, db.getFirstLocation(localNode))
+    private fetchAllStatsTasks(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics>[] {
+        const locations = this.db.getLocations();
+        return locations.map(location => this.fetchStats(location));
+    }
+
+    private fetchStats(location: databaseLocationSpecifier): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
+        return new getDatabaseStatsCommand(this.db, location)
             .execute()
             .done((stats: Raven.Client.Documents.Operations.DatabaseStatistics) => {
-                this.databaseChangeVector(stats.DatabaseChangeVector.split(","));
-                this.databaseID(stats.DatabaseId);
+
+                const changeVector = stats.DatabaseChangeVector.split(",");
+                const dbsFromCV = changeVector.map(cvEntry => changeVectorUtils.getDatabaseID(cvEntry));
+                dbsFromCV.forEach(x => this.idsFromCVsSet.add(x));
+
+                this.usedIDsArray.push(stats.DatabaseId);
             });
     }
     
@@ -96,37 +110,36 @@ class databaseIDs extends shardViewModelBase {
         return new getDatabaseRecordCommand(this.db)
             .execute()
             .done((document) => {
-                this.unusedDatabaseIDs((document as any)["UnusedDatabaseIds"]);
+                this.unusedIDs((document as any)["UnusedDatabaseIds"]);
             });
     }
 
     saveUnusedDatabaseIDs() {
         this.spinners.save(true);
         
-        new saveUnusedDatabaseIDsCommand(this.unusedDatabaseIDs(), this.db.name)
+        new saveUnusedDatabaseIDsCommand(this.unusedIDs(), this.db.name)
             .execute()
             .done(() => this.dirtyFlag().reset())
             .always(() => this.spinners.save(false));
     }
 
     addInputToUnusedList() {
-        this.addWithBlink(this.inputDatabaseId());
+        this.addWithBlink(this.inputDatabaseID());
     }
     
-    addToUnusedList(cvEntry: string) {
-        const dbId = changeVectorUtils.getDatabaseID(cvEntry);
-        this.addWithBlink(dbId);
+    addToUnusedList(dbID: string) {
+        this.addWithBlink(dbID);
     }
     
     private addWithBlink(dbIdToAdd: string) {
-        if (!_.includes(this.unusedDatabaseIDs(), dbIdToAdd)) {
-            this.unusedDatabaseIDs.unshift(dbIdToAdd);
+        if (!this.unusedIDs().includes(dbIdToAdd)) {
+            this.unusedIDs.unshift(dbIdToAdd);
             $(".collection-list li").first().addClass("blink-style");
         }
     }
     
     removeFromUnusedList(dbId: string) {
-        this.unusedDatabaseIDs.remove(dbId);
+        this.unusedIDs.remove(dbId);
     }
 }
 
