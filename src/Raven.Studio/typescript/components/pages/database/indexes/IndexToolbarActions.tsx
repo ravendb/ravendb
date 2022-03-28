@@ -32,7 +32,7 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
     } = props;
     
     return (
-        <div className="indexesToolbar-actions" data-bind="requiredAccess: 'DatabaseReadWrite'">
+        <div className="indexesToolbar-actions">
             <div className={classNames("btn-group-label", { active: selectedIndexes.length > 0 })} data-label="Selection" role="group">
                 <button type="button" className="btn btn-danger" disabled={selectedIndexes.length === 0} onClick={deleteSelectedIndexes}>
                     <i className="icon-trash"/><span>Delete</span>

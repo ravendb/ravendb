@@ -24,6 +24,8 @@ import bulkIndexOperationConfirm from "viewmodels/database/indexes/bulkIndexOper
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import classNames from "classnames";
 import { useAppUrls } from "../../../hooks/useAppUrls";
+import { useAccessManager } from "../../../hooks/useAccessManager";
+import { data } from "jquery";
 
 interface IndexesPageProps {
     database: database;
@@ -52,16 +54,25 @@ async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<
     });
 }
 
-function NoIndexes() {
+interface NoIndexesProps {
+    database: database;
+}
+
+function NoIndexes(props: NoIndexesProps) {
+    const { database } = props;
     const newIndexUrl = useAppUrls().newIndex();
+    const { canReadWriteDatabase } = useAccessManager();
     
     return (
         <div className="row">
             <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                 <i className="icon-xl icon-empty-set text-muted"/>
                 <h2 className="text-center text-muted">No indexes have been created for this database.</h2>
-                <p data-bind="requiredAccess: 'DatabaseReadWrite'" className="lead text-center text-muted">
-                    Go ahead and <a href={newIndexUrl}>create one now</a>.</p>
+                { canReadWriteDatabase(database) && (
+                    <p className="lead text-center text-muted">
+                        Go ahead and <a href={newIndexUrl}>create one now</a>.
+                    </p>
+                )}
             </div>
         </div>
     )
@@ -146,6 +157,8 @@ export function IndexesPage(props: IndexesPageProps) {
     
     const { indexesService } = useServices();
     const eventsCollector = useEventsCollector();
+    
+    const { canReadWriteDatabase } = useAccessManager();
     
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
     
@@ -303,7 +316,7 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     if (stats.indexes.length === 0) {
-        return <NoIndexes />
+        return <NoIndexes database={database} />
     }
 
     const toggleSelection = (index: IndexSharedInfo) => {
@@ -371,6 +384,8 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     const resumeIndexing = async (index: IndexSharedInfo) => {
+        eventsCollector.reportEvent("indexes", "resume");
+        
         const locations = database.getLocations();
         while (locations.length > 0) {
             const location = locations.pop();
@@ -511,24 +526,28 @@ export function IndexesPage(props: IndexesPageProps) {
                     <div className="clearfix toolbar">
                         <div className="pull-left">
                             <div className="form-inline">
-                                <div className="checkbox checkbox-primary checkbox-inline align-checkboxes"
-                                     title="Select all or none" data-bind="requiredAccess: 'DatabaseReadWrite'">
-                                    <CheckboxTriple onChanged={toggleSelectAll} state={indexesSelectionState()} />
-                                    <label/>
-                                </div>
-
+                                { canReadWriteDatabase(database) && (
+                                    <div className="checkbox checkbox-primary checkbox-inline align-checkboxes"
+                                         title="Select all or none">
+                                        <CheckboxTriple onChanged={toggleSelectAll} state={indexesSelectionState()} />
+                                        <label/>
+                                    </div>
+                                )}
+                                
                                 <IndexFilter filter={filter} setFilter={setFilter} />
-                                <IndexToolbarActions
-                                    selectedIndexes={selectedIndexes}
-                                    deleteSelectedIndexes={deleteSelectedIndexes}
-                                    enableSelectedIndexes={enableSelectedIndexes}
-                                    disableSelectedIndexes={disableSelectedIndexes}
-                                    pauseSelectedIndexes={pauseSelectedIndexes}
-                                    resumeSelectedIndexes={resumeSelectedIndexes}
-                                    lockSelectedIndexes={lockSelectedIndexes}
-                                    unlockSelectedIndexes={unlockSelectedIndexes}
-                                    lockErrorSelectedIndexes={lockErrorSelectedIndexes}
-                                />
+                                { canReadWriteDatabase(database) && (
+                                    <IndexToolbarActions
+                                        selectedIndexes={selectedIndexes}
+                                        deleteSelectedIndexes={deleteSelectedIndexes}
+                                        enableSelectedIndexes={enableSelectedIndexes}
+                                        disableSelectedIndexes={disableSelectedIndexes}
+                                        pauseSelectedIndexes={pauseSelectedIndexes}
+                                        resumeSelectedIndexes={resumeSelectedIndexes}
+                                        lockSelectedIndexes={lockSelectedIndexes}
+                                        unlockSelectedIndexes={unlockSelectedIndexes}
+                                        lockErrorSelectedIndexes={lockErrorSelectedIndexes}
+                                    />
+                                )}
                             </div>
                         </div>
                         { /*  TODO  <IndexGlobalIndexing /> */ }

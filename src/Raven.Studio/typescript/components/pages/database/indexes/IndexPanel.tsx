@@ -11,6 +11,7 @@ import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessRea
 import database = require("models/resources/database");
 import app from "durandal/app";
 import { IndexProgress } from "./IndexProgress";
+import { useAccessManager } from "../../../hooks/useAccessManager";
 
 interface IndexPanelProps {
     database: database;
@@ -31,6 +32,8 @@ interface IndexPanelProps {
 
 export function IndexPanel(props: IndexPanelProps) {
     const { index, selected, toggleSelection, database, hasReplacement } = props;
+    
+    const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
     
     const isReplacement = IndexUtils.isSideBySide(index);
     
@@ -137,10 +140,13 @@ export function IndexPanel(props: IndexPanelProps) {
                     <div className="row">
                         <div className="col-xs-12 col-sm-6 col-xl-4 info-container">
                             <div className="flex-horizontal">
-                                <div className="checkbox" data-bind="requiredAccess: 'DatabaseReadWrite'">
-                                    <input type="checkbox" className="styled" checked={selected} onChange={toggleSelection} />
-                                    <label/>
-                                </div>
+                                { canReadWriteDatabase(database) && (
+                                    <div className="checkbox">
+                                        <input type="checkbox" className="styled" checked={selected} onChange={toggleSelection} />
+                                        <label/>
+                                    </div>
+                                )}
+                                
                                 <h3 className="index-name flex-grow">
                                     <a href={editUrl} title={index.name}>{index.name}</a>
                                 </h3>
@@ -184,57 +190,62 @@ export function IndexPanel(props: IndexPanelProps) {
                         </div>
                         { !IndexUtils.isFaulty(index) && (
                             <div className="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container">
-                                <div className="properties-item priority" data-bind="if: !isSideBySide()">
-                                    <span className="properties-label">Priority:</span>
-                                    <div className="btn-group properties-value">
-                                        <button type="button" className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLocalPriority, "enable": !updatingLocalPriority })}
-                                                data-toggle="dropdown"
-                                                data-bind="requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
-                                            { index.priority === "Normal" && (
-                                                <span>
+                                { !IndexUtils.isSideBySide(index) && (
+                                    <div className="properties-item priority">
+                                        <span className="properties-label">Priority:</span>
+                                        <div className="btn-group properties-value">
+                                            <button type="button" className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLocalPriority, "enable": !updatingLocalPriority })}
+                                                    data-toggle="dropdown"
+                                                    disabled={!canReadWriteDatabase(database)}>
+                                                { index.priority === "Normal" && (
+                                                    <span>
                                                 <i className="icon-check"/>
                                                 <span>Normal</span>
                                             </span>
-                                            )}
-                                            { index.priority === "Low" && (
-                                                <span>
+                                                )}
+                                                { index.priority === "Low" && (
+                                                    <span>
                                                 <i className="icon-coffee"/>
                                                 <span>Low</span>
                                             </span>
-                                            )}
-                                            { index.priority === "High" && (
-                                                <span>
+                                                )}
+                                                { index.priority === "High" && (
+                                                    <span>
                                                 <i className="icon-force"/>
                                                 <span>High</span>
                                             </span>
-                                            )}
-                                            <span className="caret"/>
-                                        </button>
-                                        <ul className="dropdown-menu">
-                                            <li>
-                                                <a href="#" onClick={e => setPriority(e, "Low")} title="Low">
-                                                    <i className="icon-coffee"/><span>Low</span>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="#" onClick={e => setPriority(e, "Normal")} title="Normal">
-                                                    <i className="icon-check"/><span>Normal</span>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="#" onClick={e => setPriority(e, "High")} title="High">
-                                                    <i className="icon-force"/><span>High</span>
-                                                </a>
-                                            </li>
-                                        </ul>
+                                                )}
+                                                <span className="caret"/>
+                                            </button>
+                                            <ul className="dropdown-menu">
+                                                <li>
+                                                    <a href="#" onClick={e => setPriority(e, "Low")} title="Low">
+                                                        <i className="icon-coffee"/><span>Low</span>
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="#" onClick={e => setPriority(e, "Normal")} title="Normal">
+                                                        <i className="icon-check"/><span>Normal</span>
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="#" onClick={e => setPriority(e, "High")} title="High">
+                                                        <i className="icon-force"/><span>High</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+                                
                                 <div className="properties-item mode"
                                      data-bind="css: { 'hidden': type() === 'AutoMap' || type() === 'AutoMapReduce' || isSideBySide() }">
                                     <span className="properties-label">Mode:</span>
                                     <div className="btn-group properties-value">
-                                        <button type="button" className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLockMode, enable: !updatingLockMode })} data-toggle="dropdown"
-                                                data-bind="requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                        <button type="button" 
+                                                className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLockMode, enable: !updatingLockMode })} 
+                                                data-toggle="dropdown"
+                                                disabled={!canReadWriteDatabase(database)}>
                                             {index.lockMode === "Unlock" && (
                                                 <span>
                                                 <i className="icon-unlock"/><span>Unlocked</span>
@@ -340,25 +351,23 @@ export function IndexPanel(props: IndexPanelProps) {
                                     )}
                                     
                                     <div className="btn-group" role="group">
-                                        { !IndexUtils.isAutoIndex(index) && (
+                                        { !IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
                                             <a className="btn btn-default" href={editUrl}
-                                               data-bind=" visible: !isAutoIndex() && !$root.isReadOnlyAccess()"
                                                title="Edit index"><i className="icon-edit"/></a>
                                         )}
-                                        { IndexUtils.isAutoIndex(index) && (
+                                        { (IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
                                             <a className="btn btn-default" href={editUrl}
-                                               data-bind=", visible: isAutoIndex() || $root.isReadOnlyAccess()"
                                                title="View index"><i className="icon-preview"/></a>
                                         )}
                                     </div>
-                                    <div className="btn-group" role="group">
-                                        <button className="btn btn-warning" type="button" onClick={resetIndex}
-                                                data-bind="requiredAccess: 'DatabaseReadWrite'"
-                                                title="Reset index (rebuild)"><i className="icon-reset-index"/></button>
-                                        <button className="btn btn-danger" onClick={deleteIndex}
-                                                data-bind="requiredAccess: 'DatabaseReadWrite'"
-                                                title="Delete the index"><i className="icon-trash"/></button>
-                                    </div>
+                                    { canReadWriteDatabase(database) && (
+                                        <div className="btn-group" role="group">
+                                            <button className="btn btn-warning" type="button" onClick={resetIndex}
+                                                    title="Reset index (rebuild)"><i className="icon-reset-index"/></button>
+                                            <button className="btn btn-danger" onClick={deleteIndex}
+                                                    title="Delete the index"><i className="icon-trash"/></button>
+                                        </div>
+                                    )} 
                                 </div>
                             </div>
                         </div>

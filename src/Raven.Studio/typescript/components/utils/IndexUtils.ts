@@ -131,4 +131,5 @@ export default class IndexUtils {
     static isSideBySide(index: IndexSharedInfo) {
         return index.name.startsWith(IndexUtils.SideBySideIndexPrefix);
     }
+    
 }

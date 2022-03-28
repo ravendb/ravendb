@@ -1,19 +1,6 @@
 class indexes {
     
     /* TODO
-    hasAnyStateFilter: KnockoutComputed<boolean>;
-    selectedIndexesName = ko.observableArray<string>();
-    indexesSelectionState: KnockoutComputed<checkbox>;
-    indexProgressInterval: number;
-    indexingProgresses = new Map<string, indexProgress>();
-    requestedIndexingInProgress = false;
-    indexesCount: KnockoutComputed<number>;
-    indexNameToHighlight = ko.observable<string>(null);
-
-    private clusterManager = clusterTopologyManager.default;
-    localNodeTag = ko.observable<string>();
-    isCluster: KnockoutComputed<boolean>;
-
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
     resetsInProgress = new Set<string>();
@@ -67,24 +54,12 @@ class indexes {
             }
         });
 
-
-        this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
-            const selectedCount = this.selectedIndexesName().length;
-            const indexesCount = this.getAllIndexes().length;
-            if (indexesCount && selectedCount === indexesCount)
-                return "checked";
-            if (selectedCount > 0)
-                return "some_checked";
-            return "unchecked";
-        });
-        
         this.searchText.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
         this.hasAnyStateFilter.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
     }
 
     activate(args: any) {
         super.activate(args);
-        this.updateHelpLink('AIHAR1');
         
         if (args && args.stale) {
             this.indexStatusFilter(["Stale"]);
@@ -93,15 +68,8 @@ class indexes {
         if (args && args.indexName) {
             this.indexNameToHighlight(args.indexName);
         }
-
-        return this.fetchIndexes();
     }
 
-    deactivate() {
-        super.deactivate();
-
-        clearInterval(this.indexProgressInterval);
-    }
     
     compositionComplete() {
         super.compositionComplete();
@@ -183,33 +151,6 @@ class indexes {
         this.processReplacements(replacements);
         this.syncIndexingProgress();
     }
-
-    private processReplacements(replacements: Raven.Client.Documents.Indexes.IndexStats[]) {
-        const replacementCache = new Map<string, Raven.Client.Documents.Indexes.IndexStats>();
-
-        replacements.forEach(item => {
-            const forIndex = item.Name.substr(index.SideBySideIndexPrefix.length);
-            replacementCache.set(forIndex, item);
-
-            if (this.indexingProgresses.get(item.Name)) {
-                return;
-            }
-
-            this.indexesProgressRefreshThrottle();
-        });
-
-        this.indexGroups().forEach(group => {
-            group.indexes().forEach(indexDef => {
-                const replacementDto = replacementCache.get(indexDef.name);
-                if (replacementDto) {
-                    indexDef.replacement(new index(replacementDto, this.globalIndexingStatus, indexDef));
-                } else {
-                    indexDef.replacement(null);
-                }
-            });
-        });
-    }
-
 
 
     private filterIndexes(passive: boolean) {
@@ -301,26 +242,7 @@ class indexes {
             })
             .always(() => this.requestedIndexingInProgress = false);
     }
-    
-    /* passes indexing progress to index instance *
-    private syncIndexingProgress() {
-        this.indexGroups().forEach(group => {
-            group.indexes().forEach(indexDef => {
-                const progress = this.indexingProgresses.get(indexDef.name);
-                if (progress !== indexDef.progress()) {
-                    indexDef.progress(progress);
-                }
 
-                const indexReplacement = indexDef.replacement();
-                if (indexReplacement) {
-                    const replacementProgress = this.indexingProgresses.get(indexReplacement.name);
-                    if (replacementProgress !== indexReplacement.progress()) {
-                        indexReplacement.progress(replacementProgress);
-                    }
-                }
-            });
-        });
-    }
 
 
 
@@ -372,23 +294,6 @@ class indexes {
         });
     }
 
-    private setIndexPriority(idx: index, newPriority: Raven.Client.Documents.Indexes.IndexPriority) {
-        const originalPriority = idx.priority();
-        if (originalPriority !== newPriority) {
-            this.spinners.localPriority.push(idx.name);
-
-            const optionalResumeTask = idx.globalIndexingStatus() === "Paused"
-                ? this.resumeIndexingInternal(idx)
-                : $.Deferred<void>().resolve();
-
-            optionalResumeTask.done(() => {
-                new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
-                    .execute()
-                    .done(() => idx.priority(newPriority))
-                    .always(() => this.spinners.localPriority.remove(idx.name));
-            });
-        }
-    }
 
     protected afterClientApiConnected() {
         const changesApi = this.changesContext.databaseChangesApi();
