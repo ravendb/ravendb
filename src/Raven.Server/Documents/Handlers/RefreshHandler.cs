@@ -22,7 +22,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/refresh/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostRefreshConfiguration()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseRefresh, "read-refresh-config", GetRaftRequestIdFromQuery());
+            using (var processor = new RefreshHandlerProcessorForPostRefreshConfiguration(this))
+                await processor.ExecuteAsync();
         }
     }
 }
