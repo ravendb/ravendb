@@ -32,7 +32,8 @@ namespace FastTests.Sharding.Encryption
                 ModifyDatabaseName = s => dbName
             };
 
-            using (var store = GetDocumentStore(options))
+
+            using (var store = Sharding.GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -68,7 +69,7 @@ namespace FastTests.Sharding.Encryption
                 ModifyDatabaseName = s => dbName
             };
 
-            using (var store = GetDocumentStore(options))
+            using (var store = Sharding.GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

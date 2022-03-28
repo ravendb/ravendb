@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
-using FastTests.Sharding;
 using Nest;
 using Parquet;
 using Parquet.Data;
@@ -1256,7 +1255,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task SqlEtl_ReplicateMultipleBatches()
         {
-            using (var store = GetDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -1413,7 +1412,7 @@ loadToOrders(partitionBy(key), o);
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = Sharding.GetDocumentStore())
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
