@@ -1,0 +1,26 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3><i class="icon-tasks"></i><span>Ongoing Tasks</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
+                          attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
+        </button>
+    </div>
+    <div class="tasks-container" style="position: relative;">
+        <div data-bind="foreach: taskList">
+            <div data-bind="attr: { class: 'task-item ' + typeClass() }">
+                <div class="task-name" data-bind="css: { 'text-muted': !taskCount() }">
+                    <i data-bind="attr: { class: iconClass }"></i><span data-bind="text: getTaskNameForUI()"></span>
+                </div>
+                <div class="task-count" data-bind="text: taskCount, visible: taskCount"></div>
+                <div class="task-count no-count" data-bind="visible: !taskCount()"><i class="icon-cancel text-muted"></i></div>
+                <div class="task-node" data-bind="foreach: taskNodes().nodesArray">
+                    <span data-bind="text: $data, attr: { class: $root.getNodeClass($data) }"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

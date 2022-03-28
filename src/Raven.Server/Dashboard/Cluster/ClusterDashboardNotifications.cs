@@ -44,11 +44,12 @@ namespace Raven.Server.Dashboard.Cluster
                     return new IndexingSpeedNotificationSender(topicId, ClusterDashboardPayloadType.Database, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.DatabaseOverview:
                     return new DatabaseOverviewNotificationSender(topicId, _databasesInfoRetriever, watcher, _shutdown);
+                case ClusterDashboardNotificationType.OngoingTasks:
+                    return new OngoingTasksNotificationSender(topicId, _databasesInfoRetriever, watcher, _shutdown);
                 default:
                     throw new NotSupportedException($"Unsupported cluster dashboard notification type: {type}");
             }
         }
-
 
         public async Task<ConnectedWatcher> EnsureWatcher()
         {
