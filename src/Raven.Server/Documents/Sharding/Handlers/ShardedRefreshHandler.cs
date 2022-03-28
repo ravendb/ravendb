@@ -12,4 +12,11 @@ public class ShardedRefreshHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedRefreshHandlerProcessorForGetRefreshConfiguration(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/admin/refresh/config", "POST")]
+    public async Task PostRefreshConfiguration()
+    {
+        using (var processor = new ShardedRefreshHandlerProcessorForPostRefreshConfiguration(this))
+            await processor.ExecuteAsync();
+    }
 }
