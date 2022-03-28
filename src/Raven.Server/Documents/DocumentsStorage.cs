@@ -14,7 +14,6 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -2621,7 +2620,7 @@ namespace Raven.Server.Documents
             out ByteString buffer)
         {
             var scope = allocator.Allocate(sizeof(int) + sizeof(long), out buffer);
-            *(int*)buffer.Ptr = bucket;
+            *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
             *(long*)(buffer.Ptr + sizeof(int)) = Bits.SwapBytes(etag);
 
             return scope;
@@ -2698,19 +2697,23 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
-            GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
+        }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
-            GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
+        }
 
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
         {
             var idPtr = tvr.Read(idIndex, out var size);
-            var etagPtr = tvr.Read(etagIndex, out _);
+            var etag = *(long*)tvr.Read(etagIndex, out _);
 
-            return GenerateBucketAndEtagSlice(context, idPtr, size, etagPtr, out slice);
+            return GenerateBucketAndEtagSlice(context, idPtr, size, etag, out slice);
         }
 
         internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(ByteStringContext context, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
@@ -2724,19 +2727,19 @@ namespace Raven.Server.Documents
                     break;
             }
 
-            var etagPtr = tvr.Read(etagIndex, out _);
+            var etag = *(long*)tvr.Read(etagIndex, out _);
 
-            return GenerateBucketAndEtagSlice(context, keyPtr, sizeOfDocId, etagPtr, out slice);
+            return GenerateBucketAndEtagSlice(context, keyPtr, sizeOfDocId, etag, out slice);
         }
 
-        private static ByteStringContext.Scope GenerateBucketAndEtagSlice(ByteStringContext context, byte* idPtr, int idSize, byte* etagPtr, out Slice slice)
+        private static ByteStringContext.Scope GenerateBucketAndEtagSlice(ByteStringContext context, byte* idPtr, int idSize, long etag, out Slice slice)
         {
             var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
             var bucket = ShardHelper.GetBucket(idPtr, idSize);
 
-            *(int*)buffer.Ptr = bucket;
-            *(long*)(buffer.Ptr + sizeof(int)) = *(long*)etagPtr;
+            *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
+            *(long*)(buffer.Ptr + sizeof(int)) = etag;
 
             slice = new Slice(buffer);
             return scope;
