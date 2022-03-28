@@ -78,7 +78,7 @@ public partial class ShardedDatabaseContext
             {
                 IndexInformationHolder indexInformationHolder = null;
 
-                if (_indexes.TryGetValue(indexName, out var existingIndex))
+                if (_indexes != null && _indexes.TryGetValue(indexName, out var existingIndex))
                 {
                     var creationOptions = IndexStore.GetIndexCreationOptions(definition, existingIndex, _context.Configuration, out _);
                     if (creationOptions == IndexCreationOptions.Noop)
@@ -117,7 +117,7 @@ public partial class ShardedDatabaseContext
 
                 IndexInformationHolder indexInformationHolder = null;
 
-                if (_indexes.TryGetValue(indexName, out var existingIndex))
+                if (_indexes != null && _indexes.TryGetValue(indexName, out var existingIndex))
                 {
                     var creationOptions = IndexStore.GetIndexCreationOptions(indexDefinition, existingIndex, _context.Configuration, out _);
                     if (creationOptions == IndexCreationOptions.Noop)
