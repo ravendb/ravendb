@@ -74,6 +74,8 @@ class nodeRawData {
 }
 
 class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.OngoingTasksPayload> {
+
+    view = require("views/resources/widgets/ongoingTasksWidget.html");
     
     allNodesData = ko.observableArray<nodeRawData>();
     

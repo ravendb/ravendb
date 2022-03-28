@@ -60,7 +60,7 @@ class addWidgetModal extends dialogViewModelBase {
             type: "DatabaseOverview"
         }, {
             name: "Ongoing Tasks",
-            icon: "list-icon",
+            icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
             type: "OngoingTasks"
         }
     ]
