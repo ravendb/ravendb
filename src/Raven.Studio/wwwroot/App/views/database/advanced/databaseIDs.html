@@ -6,7 +6,7 @@
                     <div class="panel padding margin-bottom no-padding-right">
                         <div class="panel-body no-padding-right">
                             <div class="form-group margin-top">
-                                <label class="control-label" data-bind="text: 'Used Database ID' + (usedIDs.length > 1 ? 's' : '')"></label>
+                                <label class="control-label" data-bind="text: 'Used Database ID' + (usedIDs().length > 1 ? 's' : '')"></label>
                                 <div data-bind="foreach: usedIDs">
                                     <div class="form-control-static"><strong data-bind="text: $data"></strong></div>
                                 </div>
