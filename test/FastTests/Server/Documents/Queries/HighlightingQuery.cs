@@ -25,7 +25,7 @@ namespace FastTests.Corax
         {
             using var store = GetDocumentStore(option);
 
-            CreateNorthwindDatabase(store);
+            Samples.CreateNorthwindDatabase(store);
             {
                 using var session = store.OpenSession();
                 var result = session.Query<Company>()
