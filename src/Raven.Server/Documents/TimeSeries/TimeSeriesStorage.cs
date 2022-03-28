@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 foreach (var tsKey in uniqueTimeSeries)
                 {
-                    if (table.SeekOnePrimaryKeyWithPrefix(tsKey, Slices.BeforeAllKeys, out _) == false)
+                    if (table.SeekOnePrimaryKeyPrefix(tsKey, out _) == false)
                     {
                         using (Slice.External(context.Allocator, tsKey, tsKey.Size - 1, out var statsKey))
                         {
@@ -2335,6 +2335,12 @@ namespace Raven.Server.Documents.TimeSeries
             using (TimeSeriesStats.ExtractStatsKeyFromStorageKey(context, item.Key, out var statsKey))
             {
                 item.Name = Stats.GetTimeSeriesNameOriginalCasing(context, statsKey);
+
+                if (item.Name == null)
+                {
+                    // RavenDB-18381 - replace Null in lower-case name to recover from an existing state of broken replication
+                    TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, context, out _, out item.Name);
+                }
             }
 
             return item;
