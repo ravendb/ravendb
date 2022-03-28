@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.Counters;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Includes
@@ -62,7 +63,7 @@ namespace Raven.Server.Documents.Includes
                 var countersToGet = kvp.Value.ToArray();
                 CountersToGetByDocId[docId] = countersToGet;
 
-                var details = CountersHandler.GetInternal(_database, _context, countersToGet, docId, false);
+                var details = CountersHandlerProcessorForGetCounters.GetInternal(_database, _context, countersToGet, docId, false);
                 Results.Add(docId, details.Counters);
             }
         }

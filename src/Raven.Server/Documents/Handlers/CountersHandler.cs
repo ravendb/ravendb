@@ -15,6 +15,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.Handlers.Processors.Counters;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -108,7 +109,7 @@ namespace Raven.Server.Documents.Handlers
                         case CounterOperationType.Increment:
                             LastChangeVector =
                                 _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
-                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail, capValueOnOverflow: operation.Delta < 0);
+                            CountersHandlerProcessorForGetCounters.GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail, capValueOnOverflow: operation.Delta < 0);
 
                             if (exists == false)
                             {
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
 
                         case CounterOperationType.Get:
-                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                            CountersHandlerProcessorForGetCounters.GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
                             break;
 
                         default:
@@ -590,43 +591,16 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            var docId = GetStringValuesQueryString("docId");
-            var full = GetBoolValueQueryString("full", required: false) ?? false;
-            var counters = GetStringValuesQueryString("counter", required: false);
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var processor = new CountersHandlerProcessorForGetCounters(this))
             {
-                CountersDetail countersDetail;
-                using (context.OpenReadTransaction())
-                {
-                    countersDetail = GetInternal(Database, context, counters, docId, full);
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, countersDetail.ToJson());
-                }
+                await processor.ExecuteAsync();
             }
         }
-
-        public static CountersDetail GetInternal(DocumentDatabase database, DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues counters, string docId, bool full)
-        {
-            var result = new CountersDetail();
-            var names = counters.Count != 0
-                ? counters
-                : database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, docId);
-
-            foreach (var counter in names)
-            {
-                GetCounterValue(context, database, docId, counter, full, result);
-            }
-
-            return result;
-        }
-
+        
         [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {
+            //TODO: add sharded mode to SessionGetCounters test adter this EP is done for sharded
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var countersBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "counters");
@@ -661,67 +635,6 @@ namespace Raven.Server.Documents.Handlers
                     context.Write(writer, cmd.CountersDetail.ToJson());
                 }
             }
-        }
-
-        private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId,
-            string counterName, bool addFullValues, CountersDetail result, bool capValueOnOverflow = false)
-        {
-            long value = 0;
-            long etag = 0;
-            result.Counters ??= new List<CounterDetail>();
-            Dictionary<string, long> fullValues = null;
-
-            if (addFullValues)
-            {
-                fullValues = new Dictionary<string, long>();
-                foreach (var partialValue in database.DocumentsStorage.CountersStorage.GetCounterPartialValues(context, docId, counterName))
-                {
-                    etag = HashCode.Combine(etag, partialValue.Etag);
-                    try
-                    {
-                        value = checked(value + partialValue.PartialValue);
-                    }
-                    catch (OverflowException e)
-                    {
-                        if (capValueOnOverflow == false)
-                            CounterOverflowException.ThrowFor(docId, counterName, e);
-
-                        value = value + partialValue.PartialValue > 0 ?
-                            long.MinValue :
-                            long.MaxValue;
-                    }
-
-                    fullValues[partialValue.ChangeVector] = partialValue.PartialValue;
-                }
-
-                if (fullValues.Count == 0)
-                {
-                    result.Counters.Add(null);
-                    return;
-                }
-            }
-            else
-            {
-                var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName, capValueOnOverflow);
-
-                if (v == null)
-                {
-                    result.Counters.Add(null);
-                    return;
-                }
-
-                value = v.Value.Value;
-                etag = v.Value.Etag;
-            }
-
-            result.Counters.Add(new CounterDetail
-            {
-                DocumentId = docId,
-                CounterName = counterName,
-                TotalValue = value,
-                CounterValues = fullValues,
-                Etag = etag
-            });
         }
 
         private static void ThrowMissingDocument(string docId)

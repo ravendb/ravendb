@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.Counters
             return new GetCounterValuesCommand(_docId, _counters, _returnFullResults);
         }
 
-        private class GetCounterValuesCommand : RavenCommand<CountersDetail>
+        internal class GetCounterValuesCommand : RavenCommand<CountersDetail>
         {
             private readonly string _docId;
             private readonly string[] _counters;
