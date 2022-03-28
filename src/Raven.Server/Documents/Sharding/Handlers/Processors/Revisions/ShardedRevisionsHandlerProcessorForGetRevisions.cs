@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         protected override void CheckNotModified(string actualEtag)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Minor, "Implement AddPagingPerformanceHint");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Implement CheckNotModified");
         }
 
         private async ValueTask WriteRevisionsResult(JsonOperationContext context, RevisionsResult revisions)
