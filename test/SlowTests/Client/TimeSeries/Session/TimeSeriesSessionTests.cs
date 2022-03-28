@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,6 +59,9 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
+                var res = store.Operations.Send(new GetTimeSeriesStatisticsOperation("users/ayende"));
+                Assert.Null(res);
+
                 var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
@@ -80,6 +84,16 @@ namespace SlowTests.Client.TimeSeries.Session
                         .ToList();
                     Assert.Equal(2, val.Count);
                 }
+
+                res = store.Operations.Send(new GetTimeSeriesStatisticsOperation("users/ayende"));
+                Assert.NotNull(res);
+                Assert.Equal(1, res.TimeSeries.Count);
+                Assert.Equal("Heartrate", res.TimeSeries[0].Name);
+                Assert.Equal(2, res.TimeSeries[0].NumberOfEntries);
+                Assert.Equal(baseline.AddMinutes(1), res.TimeSeries[0].StartDate);
+                Assert.Equal(baseline.AddMinutes(2), res.TimeSeries[0].EndDate);
+
+                //TODO: add sharded mode when TS creation EP is done
             }
         }
 
