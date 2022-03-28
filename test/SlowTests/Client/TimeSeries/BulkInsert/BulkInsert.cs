@@ -1147,7 +1147,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                     count.Signal();
                 });
 
-                count.Wait();
+                Assert.True(count.Wait(TimeSpan.FromMinutes(5)));
 
                 using (var session = store.OpenSession())
                 {
