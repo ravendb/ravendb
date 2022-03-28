@@ -13,13 +13,10 @@ namespace Raven.Server.Web.Studio
     public class StudioDatabaseTasksHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task GetFolderPathOptionsForDatabaseAdmin()
+        public async Task GetFolderPathOptionsForDatabaseAdmin()
         {
-            var type = GetStringValuesQueryString("type", required: false);
-            var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
-            var path = GetStringQueryString("path", required: false);
-
-            return StudioTasksHandler.GetFolderPathOptionsInternal(ServerStore, type, isBackupFolder, path, RequestBodyStream, ResponseBodyStream);
+            using (var processor = new StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin<DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/studio-tasks/indexes/configuration/defaults", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
