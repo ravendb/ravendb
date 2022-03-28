@@ -10,6 +10,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: ['databases/settings/databaseSettings'],
             moduleId: require('viewmodels/database/settings/databaseSettings'),
+            shardingMode: "allShardsOnly",
             title: 'Database Settings',
             nav: true,
             css: 'icon-database-settings',

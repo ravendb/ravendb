@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
-import viewModelBase = require("viewmodels/viewModelBase");
 import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
 import jsonUtil = require("common/jsonUtil");
@@ -16,6 +15,7 @@ import models = require("models/database/settings/databaseSettingsModels");
 import popoverUtils = require("common/popoverUtils");
 import genUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 type viewModeType = "summaryMode" | "editMode";
 
@@ -28,7 +28,7 @@ class categoryInfo {
     }
 }
 
-class databaseSettings extends viewModelBase {
+class databaseSettings extends shardViewModelBase {
 
     view = require("views/database/settings/databaseSettings.html");
     
@@ -59,8 +59,8 @@ class databaseSettings extends viewModelBase {
     filterKeys = ko.observable<string>("");
     hasPendingValues = ko.observable<boolean>(false);
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         this.bindToCurrentInstance("save", "refresh", "switchToEditMode", "exitEditMode");
         this.initializeObservables();
@@ -132,7 +132,7 @@ class databaseSettings extends viewModelBase {
                 if (this.isForbidden()) {
                     deferred.resolve({can: true});
                 } else {
-                    const db: database = this.activeDatabase();
+                    const db: database = this.db;
                     this.fetchDatabaseSettings(db)
                         .done(() => deferred.resolve({can: true}))
                         .fail((response: JQueryXHR) => {
@@ -159,7 +159,7 @@ class databaseSettings extends viewModelBase {
 
         categoriesGrid.init(() => this.fetchCategoriesData(), () =>
             [
-                new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), x => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "90%",
+                new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), x => appUrl.forDatabaseSettings(this.db), "Category", "90%",
                     {
                         useRawValue: () => true,
                         sortable: "string",
@@ -403,7 +403,7 @@ class databaseSettings extends viewModelBase {
             if (result.can) {
                 this.spinners.save(true);
 
-                new saveDatabaseSettingsCommand(this.activeDatabase(), settingsToSaveObject)
+                new saveDatabaseSettingsCommand(this.db, settingsToSaveObject)
                     .execute()
                     .done(() => this.exitEditMode())
                     .always(() => this.spinners.save(false));
@@ -422,7 +422,7 @@ class databaseSettings extends viewModelBase {
     }
     
     fetchData() {
-        return this.fetchDatabaseSettings(this.activeDatabase())
+        return this.fetchDatabaseSettings(this.db)
             .done(() => this.processAfterFetch());
     }
 
