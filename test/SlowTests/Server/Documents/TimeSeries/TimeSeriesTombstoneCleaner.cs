@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -381,7 +382,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                 {
                     foreach (string user in users)
                     {
-                        session.Store(new User {Name = "EGR"}, user);
+                        session.Store(new User { Name = "EGR" }, user);
                     }
 
                     session.SaveChanges();
@@ -445,6 +446,39 @@ namespace SlowTests.Server.Documents.TimeSeries
                 using (ctx.OpenReadTransaction())
                 {
                     Assert.Equal(0, tss.Stats.GetNumberOfEntries(ctx));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanReplicateWhenStatsNameIsNull()
+        {
+            var backupPath = NewDataPath(forceCreateDir: true);
+            var fullBackupPath = Path.Combine(backupPath, "2022-03-27-12-38-05-8912792.ravendb-snapshot");
+
+            await using (var file = File.Create(fullBackupPath))
+            {
+                await using (var stream = typeof(TimeSeriesTombstoneCleaner).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_18381.2022-03-27-12-38-05-8912792.ravendb-snapshot"))
+                {
+                    await stream.CopyToAsync(file);
+                }
+            }
+
+            using (var store1 = GetDocumentStore(new Options
+            {
+                CreateDatabase = false
+            }))
+            using (var store2 = GetDocumentStore())
+            {
+                using (Backup.RestoreDatabase(store1,
+                           new RestoreBackupConfiguration
+                           {
+                               BackupLocation = backupPath,
+                               DatabaseName = store1.Database
+                           }))
+                {
+                    await SetupReplicationAsync(store1, store2);
+                    await EnsureReplicatingAsync(store1, store2);
                 }
             }
         }
