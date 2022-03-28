@@ -1,44 +1,28 @@
 ﻿using System;
-using System.Net.Http;
+using System.Collections.Generic;
 using Raven.Client.Http;
-using Sparrow.Json;
+using Raven.Server.Documents.Commands;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
     public readonly struct WaitForDatabaseContextUpdateOperation : IShardedOperation
     {
-        private readonly string _database;
-        private readonly long _index;
+        private readonly List<long> _indexes;
+        private readonly bool _useShardedName;
 
-        public WaitForDatabaseContextUpdateOperation(string database, long index)
+        public WaitForDatabaseContextUpdateOperation(List<long> indexes, bool useShardedName)
         {
-            _database = database;
-            _index = index;
+            _indexes = indexes;
+            _useShardedName = useShardedName;
         }
+
+        public WaitForDatabaseContextUpdateOperation(long index, bool useShardedName) : this(new List<long> { index }, useShardedName)
+        {
+        }
+
         public object Combine(Memory<object> results) => throw new NotImplementedException();
 
         public RavenCommand<object> CreateCommandForShard(int shard)
-            => new WaitForDatabaseContextUpdateCommand(_database, _index);
-
-        private class WaitForDatabaseContextUpdateCommand : RavenCommand
-        {
-            private readonly string _database;
-            private readonly long _index;
-
-            public WaitForDatabaseContextUpdateCommand(string database, long index)
-            {
-                _database = database;
-                _index = index;
-            }
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/admin/databases/sharded/wait-for?database={Uri.EscapeDataString(_database)}&index={_index}";
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post
-                };
-                return request;
-            }
-        }
+            => new WaitForRaftCommands(_indexes, _useShardedName ? shard : null);
     }
 }
