@@ -6,7 +6,9 @@ using FastTests;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.Handlers;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,10 +21,11 @@ namespace SlowTests.Client.Counters
         {
         }
 
-        [Fact]
-        public void SessionIncrementCounter()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionIncrementCounter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -198,9 +201,9 @@ namespace SlowTests.Client.Counters
                         }
                     }
                 };
-
+                
                 store.Operations.Send(new CounterBatchOperation(counterBatch));
-
+                
                 using (var session = store.OpenSession())
                 {
                     var dic = session.CountersFor("users/1-A").GetAll();
@@ -348,10 +351,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void GetCountersFor()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void GetCountersFor(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
