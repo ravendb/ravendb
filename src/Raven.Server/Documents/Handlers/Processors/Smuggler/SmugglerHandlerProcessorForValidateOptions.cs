@@ -6,12 +6,12 @@ using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 {
-    internal class SmugglerHandlerProcessorForValidateOptions<T> : AbstractHandlerProcessor<RequestHandler, T>
-    where T : JsonOperationContext
+    internal class SmugglerHandlerProcessorForValidateOptions<TOperationContext> : AbstractHandlerProcessor<RequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
     {
-        internal SmugglerHandlerProcessorForValidateOptions(RequestHandler requestHandler, JsonContextPoolBase<T> contextPool) : base(requestHandler, contextPool)
+        internal SmugglerHandlerProcessorForValidateOptions(RequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
         {
 
         }
