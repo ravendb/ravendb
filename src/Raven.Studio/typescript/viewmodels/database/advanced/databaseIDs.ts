@@ -7,19 +7,23 @@ import getDatabaseStatsCommand from "commands/resources/getDatabaseStatsCommand"
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 
+interface NodeStats {
+    databaseId: string;
+    databaseIdsFromChangeVector: string[];
+}
+
 class databaseIDs extends shardViewModelBase {
 
-    view = require("views/database/advanced/databaseIDs.html"); 
-    
-    usedIDsArray: string[] = [];
-    usedIDs = ko.observableArray<string>([]);
-    
-    idsFromCVsSet = new Set<string>();
-    idsFromCVs = ko.observable<Set<string>>(new Set<string>());
-    suggestedIDs: KnockoutComputed<string[]>;
+    view = require("views/database/advanced/databaseIDs.html");
 
     unusedIDs = ko.observableArray<string>([]);
+    
+    usedIDs = ko.observableArray<string>([]);
+    idsFromCVs = ko.observableArray<string>();
+    
     inputDatabaseID = ko.observable<string>();
+
+    suggestedIDs: KnockoutComputed<string[]>;
     
     isForbidden = ko.observable<boolean>(false);
     isSaveEnabled = ko.observable<boolean>();
@@ -35,10 +39,7 @@ class databaseIDs extends shardViewModelBase {
     }
     
     private initObservables(): void {
-        this.suggestedIDs = ko.pureComputed(() => {
-            const idsArray = Array.from(this.idsFromCVs());
-            return idsArray.filter(x => !this.usedIDs().includes(x));
-        });
+        this.suggestedIDs = ko.pureComputed(() => this.idsFromCVs().filter(x => !this.usedIDs().includes(x)));
     }
 
     compositionComplete() {
@@ -58,24 +59,32 @@ class databaseIDs extends shardViewModelBase {
                 this.isForbidden(!accessManager.default.isOperatorOrAbove());
                 
                 if (this.isForbidden()) {
-                    deferred.resolve({can: true});
+                    deferred.resolve({ can: true });
                 } else {
-                    const fetchStatsTaskArray = this.fetchAllStatsTasks();
-                    const fetchUnusedIDsTask = this.fetchUnusedDatabaseIDs();
-
-                    $.when<any>(...fetchStatsTaskArray, fetchUnusedIDsTask)
-                        .then(() => {
-                            this.usedIDs(this.usedIDsArray);
-                            this.idsFromCVs(this.idsFromCVsSet);
-                            deferred.resolve({can: true});
-                        })
-                        .fail(() => deferred.resolve({redirect: appUrl.forStatus(this.db)}));
+                    this.loadData()
+                        .then(() => deferred.resolve({ can: true }))
+                        .catch(() => deferred.resolve({ redirect: appUrl.forStatus(this.db) }));
                 }
 
                 return deferred;
             });
     }
+    
+    private async loadData(): Promise<void> {
+        const fetchUnusedIDsTask = this.fetchUnusedDatabaseIDs();
 
+        const nodeStats = await Promise.all(this.fetchAllStatsTasks());
+        
+        const unusedIds = await fetchUnusedIDsTask;
+        
+        const usedIdsSet = new Set(nodeStats.map(x => x.databaseId));
+        const idsFromChangeVectors = new Set(nodeStats.flatMap(x => x.databaseIdsFromChangeVector));
+        
+        this.unusedIDs(unusedIds);
+        this.usedIDs(Array.from(usedIdsSet));
+        this.idsFromCVs(Array.from(idsFromChangeVectors));
+    }
+    
     activate(args: any) {
         super.activate(args);
         
@@ -88,30 +97,29 @@ class databaseIDs extends shardViewModelBase {
         });
     }
 
-    private fetchAllStatsTasks(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics>[] {
+    private fetchAllStatsTasks(): Promise<NodeStats>[] {
         const locations = this.db.getLocations();
         return locations.map(location => this.fetchStats(location));
     }
 
-    private fetchStats(location: databaseLocationSpecifier): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
-        return new getDatabaseStatsCommand(this.db, location)
-            .execute()
-            .done((stats: Raven.Client.Documents.Operations.DatabaseStatistics) => {
+    private async fetchStats(location: databaseLocationSpecifier): Promise<NodeStats> {
+        const stats = await new getDatabaseStatsCommand(this.db, location)
+            .execute();
+        
+        const changeVector = stats.DatabaseChangeVector.split(",");
+        const dbsFromCV = changeVector.map(cvEntry => changeVectorUtils.getDatabaseID(cvEntry));
 
-                const changeVector = stats.DatabaseChangeVector.split(",");
-                const dbsFromCV = changeVector.map(cvEntry => changeVectorUtils.getDatabaseID(cvEntry));
-                dbsFromCV.forEach(x => this.idsFromCVsSet.add(x));
-
-                this.usedIDsArray.push(stats.DatabaseId);
-            });
+        return {
+            databaseId: stats.DatabaseId,
+            databaseIdsFromChangeVector: dbsFromCV
+        }
     }
     
-    private fetchUnusedDatabaseIDs() {
-        return new getDatabaseRecordCommand(this.db)
-            .execute()
-            .done((document) => {
-                this.unusedIDs((document as any)["UnusedDatabaseIds"]);
-            });
+    private async fetchUnusedDatabaseIDs(): Promise<string[]> {
+        const document = await new getDatabaseRecordCommand(this.db)
+            .execute();
+
+        return (document as any)["UnusedDatabaseIds"];
     }
 
     saveUnusedDatabaseIDs() {
