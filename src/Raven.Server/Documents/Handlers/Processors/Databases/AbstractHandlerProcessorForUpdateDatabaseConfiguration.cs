@@ -42,7 +42,9 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
     protected abstract Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, T configuration, string raftRequestId);
 
-    protected virtual Action<DynamicJsonValue, T, long> GetOnBeforeResponseWrite() => null;
+    protected virtual void OnBeforeResponseWrite(DynamicJsonValue responseJson, T configuration, long index)
+    {
+    }
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
@@ -78,8 +80,7 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
                     ["RaftCommandIndex"] = index
                 };
 
-                var onBeforeResponseWrite = GetOnBeforeResponseWrite();
-                onBeforeResponseWrite?.Invoke(json, configuration, index);
+                OnBeforeResponseWrite(json, configuration, index);
 
                 context.Write(writer, json);
             }
