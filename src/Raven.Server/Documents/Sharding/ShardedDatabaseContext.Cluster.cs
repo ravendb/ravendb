@@ -25,36 +25,19 @@ public partial class ShardedDatabaseContext
 
         public async ValueTask WaitForExecutionOfRaftCommandsAsync(long index)
         {
-            await WaitForAllNodesToUpdateDatabaseContext(index);
+            await WaitForExecutionOnAllNodes(index);
         }
 
-        public async ValueTask WaitForExecutionOfRaftCommandsAsync(List<long> indexes)
+        public async ValueTask WaitForExecutionOnShards(List<long> indexes)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Should be modified after we migrate to ShardedExecutor");
-
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_context.DatabaseShutdown))
-            {
-                var timeToWait = _context.Configuration.Cluster.OperationTimeout.GetValue(TimeUnit.Milliseconds) * indexes.Count;
-                cts.CancelAfter(TimeSpan.FromMilliseconds(timeToWait));
-
-                var requestExecutors = _context.RequestExecutors;
-                var waitingTasks = new Task[requestExecutors.Length];
-
-                var waitForDatabaseCommands = new WaitForRaftCommands(indexes);
-                for (var index = 0; index < _context.FullRange.Length; index++)
-                {
-                    var shardNumber = _context.FullRange[index];
-                    waitingTasks[index] = _context.ShardExecutor.ExecuteSingleShardAsync(waitForDatabaseCommands, shardNumber, cts.Token);
-                }
-
-                await Task.WhenAll(waitingTasks);
-            }
+            var op = new WaitForDatabaseContextUpdateOperation(indexes, useShardedName: true);
+            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op);
         }
 
-        public async Task WaitForAllNodesToUpdateDatabaseContext(long index)
+        public async Task WaitForExecutionOnAllNodes(long index)
         {
-            var op = new WaitForDatabaseContextUpdateOperation(_context.DatabaseName, index);
-            await _context.ShardExecutor.ExecuteParallelForShardsAsync(_context.UniqueShards, op);
+            var op = new WaitForDatabaseContextUpdateOperation(index, useShardedName: false);
+            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op);
         }
     }
 }

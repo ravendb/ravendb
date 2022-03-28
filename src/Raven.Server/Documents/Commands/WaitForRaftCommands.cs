@@ -2,6 +2,8 @@
 using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands
@@ -9,20 +11,21 @@ namespace Raven.Server.Documents.Commands
     public class WaitForRaftCommands : RavenCommand
     {
         private readonly List<long> _indexes;
+        private readonly int? _shardNumber;
 
-        public WaitForRaftCommands(List<long> indexes)
+        public WaitForRaftCommands(List<long> indexes, int? shardNumber = null)
         {
             _indexes = indexes;
+            _shardNumber = shardNumber;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/rachis/wait-for-raft-commands";
+            var databaseName = node.Database;
+            if (_shardNumber.HasValue)
+                databaseName = ShardHelper.ToShardName(node.Database, _shardNumber.Value);
 
-            var waitForCommands = new WaitForCommandsRequest
-            {
-                RaftCommandIndexes = _indexes
-            };
+            url = $"{node.Url}/databases/{databaseName}/admin/rachis/wait-for-raft-commands";
 
             var request = new HttpRequestMessage
             {

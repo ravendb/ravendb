@@ -10,6 +10,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.ShardedTcpHandlers;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly Logger _logger;
 
         public readonly ShardExecutor ShardExecutor;
+        public readonly AllNodesExecutor AllNodesExecutor;
         public DatabaseRecord DatabaseRecord => _record;
 
         public RavenConfiguration Configuration { get; internal set; }
@@ -71,12 +73,12 @@ namespace Raven.Server.Documents.Sharding
                     serverStore.Server.Certificate.Certificate,
                     new DocumentConventions());
             }
-
             FullRange = Enumerable.Range(0, _record.Shards.Length).ToArray();
-            ShardExecutor = new ShardExecutor(this);
+            ShardExecutor = new ShardExecutor(_serverStore, this);
+            AllNodesExecutor = new AllNodesExecutor(_serverStore, DatabaseName);
+
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
-
             ShardedDatabaseContextIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
         }
 
@@ -92,29 +94,6 @@ namespace Raven.Server.Documents.Sharding
             Interlocked.Exchange(ref _record, record);
 
             ShardedDatabaseContextIndexNotifications.NotifyListenersAbout(index, e: null);
-        }
-
-        private int[] _uniqueShards;
-        public Memory<int> UniqueShards 
-        { 
-            get
-            {
-                if (_uniqueShards != null)
-                    return new Memory<int>(_uniqueShards);
-
-                var nodes = new Dictionary<string, int>();
-                for (var shardNumber = 0; shardNumber < ShardsTopology.Length; shardNumber++)
-                {
-                    var topology = ShardsTopology[shardNumber];
-                    foreach (var node in topology.AllNodes)
-                    {
-                        nodes.TryAdd(node, shardNumber);
-                    }
-                }
-
-                _uniqueShards = nodes.Values.ToArray();
-                return new Memory<int>(_uniqueShards);
-            }
         }
 
         public string DatabaseName => _record.DatabaseName;
@@ -173,6 +152,15 @@ namespace Raven.Server.Documents.Sharding
                 {
                     // ignored
                 }
+            }
+
+            try
+            {
+                AllNodesExecutor.Dispose();
+            }
+            catch
+            {
+                // ignored
             }
 
             foreach (var connection in ShardedSubscriptionConnection.Connections)

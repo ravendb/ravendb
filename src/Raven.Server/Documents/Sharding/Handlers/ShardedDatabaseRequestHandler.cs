@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Logging;
