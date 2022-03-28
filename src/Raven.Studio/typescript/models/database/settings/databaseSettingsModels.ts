@@ -3,6 +3,7 @@ import jsonUtil = require("common/jsonUtil");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import genUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import { shardingTodo } from "common/developmentHelper";
 
 type configurationOrigin = "Default" | "Server" | "Database";
 
@@ -258,9 +259,11 @@ export class pathEntry extends databaseEntry<string> {
         super(data);
         _.bindAll(this, "pathHasChanged");
 
-        this.customizedDatabaseValue.throttle(300).subscribe((newPathValue) => {
-            this.getFolderPathOptions(newPathValue);
-        });
+        shardingTodo("Danielle");
+        // TODO: waiting for ep:  "/databases/*/admin/studio-tasks/folder-path-options" RavenDB-18222
+        // this.customizedDatabaseValue.throttle(300).subscribe((newPathValue) => {
+        //     this.getFolderPathOptions(newPathValue);
+        // });
     }
 
     initCustomizedValue(value: string) {
