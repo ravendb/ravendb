@@ -2382,39 +2382,18 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], etag, 0))
             {
-                var item = CreateDeletedRangeItem(context, ref result.Reader);
-                if (item.Etag > toEtag)
-                    yield break;
-                yield return item;
+                yield return CreateDeletedRangeItem(context, ref result.Reader);
             }
         }
 
-        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesByBucketFrom(DocumentsOperationContext context, int bucket, long etag, long toEtag = long.MaxValue)
-        {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
-
-            using (DocumentsStorage.GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
-            {
-                foreach (var result in table.SeekForwardFromPrefix(DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], keySlice, prefix, 0))
-                {
-                    var item = CreateDeletedRangeItem(context, ref result.Result.Reader);
-                    if (item.Etag > toEtag)
-                        yield break;
-                    yield return item;
-                }
-            }
-        }
-
-        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag = long.MaxValue)
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -2426,10 +2405,22 @@ namespace Raven.Server.Documents.TimeSeries
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, 0))
             {
-                var item = CreateDeletedRangeItem(context, ref result.Reader);
-                if (item.Etag > toEtag)
-                    yield break;
-                yield return item;
+                yield return CreateDeletedRangeItem(context, ref result.Reader);
+            }
+        }
+
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+
+            using (DocumentsStorage.GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    yield return CreateDeletedRangeItem(context, ref result.Result.Reader);
+                }
             }
         }
 

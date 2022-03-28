@@ -260,18 +260,6 @@ namespace Voron.Data.BTrees
             throw new ArgumentNullException();
         }
 
-        public void Add(Slice key, byte* value, int size)
-        {
-            if (value == null)
-                ThrowNullReferenceException();
-            Debug.Assert(value != null);
-
-            using (DirectAdd(key, size, out byte* ptr))
-            {
-                Memory.Copy(ptr, value, size);
-            }
-        }
-
         public void Add(Slice key, byte[] value)
         {
             if (value == null)
