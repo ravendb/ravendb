@@ -8,6 +8,7 @@ import {
 } from "../../../models/indexes";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../utils/IndexUtils";
+import { DropdownPanel } from "../../../common/DropdownPanel";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -164,8 +165,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                     <span>Index Status</span>
                     <span className="caret"/>
                 </button>
-                <div className="dropdown-menu settings-menu"
-                     data-bind="dropdownPanel: true">
+                <DropdownPanel className="settings-menu">
                     <div className="settings-item">
                         <div className="margin-left margin-right margin-right-sm">
                             <IndexFilterStatusItem toggleStatus={() => toggleStatus("Normal")} checked={filter.status.includes("Normal")} label="Normal" toggleClass="toggle-success" />
@@ -202,7 +202,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                             </div>
                         </div>
                     </div>
-                </div>
+                </DropdownPanel> 
             </div>
         </div>
     )
