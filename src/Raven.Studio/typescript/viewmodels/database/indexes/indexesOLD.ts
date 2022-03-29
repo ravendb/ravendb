@@ -19,48 +19,10 @@ class indexes {
 
     resetsInProgress = new Set<string>();
 
-    throttledRefresh: Function;
-    indexesProgressRefreshThrottle: Function;
-
-    indexErrorsUrl = ko.pureComputed(() => appUrl.forIndexErrors(this.activeDatabase()));
-
-    constructor() {
-        super();
-        this.initObservables();
-        
-
-        // refresh not often then 5 seconds, but delay refresh by 2 seconds
-        this.throttledRefresh = _.throttle(() => setTimeout(() => this.fetchIndexes(), 2000), 5000);
-
-        // refresh every 3 seconds
-        this.indexesProgressRefreshThrottle = _.throttle(() => this.getIndexesProgress(), 3000);
-        this.indexProgressInterval = setInterval(() => {
-            const indexes = this.getAllIndexes();
-            if (indexes.length === 0) {
-                return;
-            }
-
-            const anyIndexStale = indexes.find(x => x.isStale() && !x.isDisabledState());
-            const anyRollingDeployment = indexes.find(x => x.rollingDeploymentInProgress() && !x.isDisabledState());
-
-            if (anyIndexStale || anyRollingDeployment) {
-                this.indexesProgressRefreshThrottle();
-            }
-        }, 3000);
-        
-        this.indexesCount = ko.pureComputed(() => {
-            return _.sum(this.indexGroups().map(x => x.indexes().length));
-        });
-    }
-  
-
     private initObservables() {
         this.localNodeTag = this.clusterManager.localNodeTag;
         this.isCluster = ko.pureComputed(() => this.clusterManager.nodesCount() > 1);
         
-        this.searchText.throttle(200).subscribe(() => this.filterIndexes(false));
-        this.indexStatusFilter.subscribe(() => this.filterIndexes(false));
-        this.showOnlyIndexesWithIndexingErrors.subscribe(() => this.filterIndexes(false));
         this.autoRefresh.subscribe(refresh => {
             if (refresh) {
                 this.filterIndexes(false);
@@ -70,56 +32,6 @@ class indexes {
 
         this.searchText.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
         this.hasAnyStateFilter.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
-    }
-
-    activate(args: any) {
-        super.activate(args);
-        
-        if (args && args.stale) {
-            this.indexStatusFilter(["Stale"]);
-        }
-        
-        if (args && args.indexName) {
-            this.indexNameToHighlight(args.indexName);
-        }
-    }
-
-    
-    compositionComplete() {
-        super.compositionComplete();
-
-        $('.index-info [data-toggle="tooltip"]').tooltip();
-        
-        this.scrollToIndex();
-    }
-
-    private scrollToIndex(): void {
-        const indexToHighlight = this.indexNameToHighlight();
-
-        if (indexToHighlight) {
-            const indexId = index.getUniqueId(indexToHighlight);
-            
-            const indexElement = document.getElementById(indexId);
-
-            if (indexElement) {
-                generalUtils.scrollToElement(indexElement);
-                this.highlightIndexElement(indexElement);
-            }
-        }
-    }
-    
-    private highlightIndex(indexName: string, highlight: boolean = true): void {
-        const indexId = index.getUniqueId(indexName);
-        const indexElement = document.getElementById(indexId);
-        this.highlightIndexElement(indexElement, highlight);
-    }
-
-    private highlightIndexElement(indexElement: HTMLElement, highlight: boolean = true): void {
-        if (highlight) {
-            indexElement.classList.add("blink-style-basic");
-        } else {
-            indexElement.classList.remove("blink-style-basic");
-        }
     }
     
     private fetchIndexes(forceRefresh: boolean = false): JQueryPromise<void> {
@@ -164,40 +76,6 @@ class indexes {
         
         this.processReplacements(replacements);
         this.syncIndexingProgress();
-    }
-
-
-    private filterIndexes(passive: boolean) {
-        if (passive && !this.autoRefresh()) {
-            // do NOT touch visibility of indexes!
-            return;
-        }
-        
-        const filterLower = this.searchText().toLowerCase();
-        const typeFilter = this.indexStatusFilter();
-        const withIndexingErrorsOnly = this.showOnlyIndexesWithIndexingErrors();
-        
-        const selectedIndexes = this.selectedIndexesName();
-        let selectionChanged = false;
-        
-        this.indexGroups().forEach(indexGroup => {
-            let hasAnyInGroup = false;
-            indexGroup.indexes().forEach(index => {
-                const match = index.filter(filterLower, typeFilter, withIndexingErrorsOnly);
-                if (match) {
-                    hasAnyInGroup = true;
-                } else if (_.includes(selectedIndexes, index.name)) {
-                    _.pull(selectedIndexes, index.name);
-                    selectionChanged = true;
-                }
-            });
-
-            indexGroup.groupHidden(!hasAnyInGroup);
-        });
-        
-        if (selectionChanged) {
-            this.selectedIndexesName(selectedIndexes);    
-        }
     }
 
     createIndexesUrlObservableForNode(nodeTag: string, indexProgress: indexProgress) {
@@ -257,46 +135,6 @@ class indexes {
             .always(() => this.requestedIndexingInProgress = false);
     }
 
-
-
-
-    private processIndexEvent(e: Raven.Client.Documents.Changes.IndexChange) {
-        if (!this.autoRefresh()) {
-            return;    
-        }
-        
-        switch (e.Type) {
-            case "IndexRemoved":
-                if (!this.resetsInProgress.has(e.Name)) {
-                    this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
-                    this.removeSideBySideIndexesFromAllGroups(e.Name);
-                }
-                break;
-            case "BatchCompleted":
-                if (this.indexingProgresses.get(e.Name)) {
-                    this.indexesProgressRefreshThrottle();
-                }
-                break;
-            case "SideBySideReplace":
-                const sideBySideIndexName = index.SideBySideIndexPrefix + e.Name;
-                this.removeSideBySideIndexesFromAllGroups(sideBySideIndexName);
-                break;
-        }
-
-        this.throttledRefresh();
-    }
-
-    private removeIndexesFromAllGroups(indexes: index[], skipGroup: string = null) {
-        this.indexGroups()
-            .filter(x => skipGroup ? x.entityName !== skipGroup : true)
-            .forEach(g => {
-                g.indexes.removeAll(indexes);
-            });
-
-        // Remove any empty groups.
-        this.indexGroups.remove((item: indexGroup) => item.indexes().length === 0);
-    }
-
     private removeSideBySideIndexesFromAllGroups(indexName: string) {
         this.indexGroups().forEach(g => {
             g.indexes().forEach(i => {
@@ -308,15 +146,7 @@ class indexes {
         });
     }
 
-
-    protected afterClientApiConnected() {
-        const changesApi = this.changesContext.databaseChangesApi();
-        this.addNotification(changesApi.watchAllIndexes(e => this.processIndexEvent(e)));
-    }
-
-
     private setLockModeSelectedIndexes(lockModeString: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
-
         this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(lockModeStrForTitle)}</strong> selected indexes?</br>Note: Static-indexes only will be set, 'Lock Mode' is not relevant for auto-indexes.`, {
             html: true
         })
