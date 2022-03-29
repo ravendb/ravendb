@@ -1,18 +1,20 @@
-﻿using JetBrains.Annotations;
-using Raven.Server.ServerWide.Context;
+﻿using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration
 {
-    internal class ConfigurationHandlerProcessorForPostTimeSeriesConfiguration : AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class ConfigurationHandlerProcessorForPostTimeSeriesConfiguration : AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<DatabaseRequestHandler>
     {
         public ConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] DatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler)
         {
         }
 
-        protected override string GetDatabaseName()
+        protected override string GetDatabaseName() => RequestHandler.Database.Name;
+
+        protected override async ValueTask WaitForIndexNotificationAsync(long index)
         {
-            return RequestHandler.Database.Name;
+            await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
         }
     }
 }
