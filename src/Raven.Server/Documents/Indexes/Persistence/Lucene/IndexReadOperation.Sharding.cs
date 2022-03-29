@@ -1,12 +1,15 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using Lucene.Net.Search;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene;
 
 public partial class IndexReadOperation
 {
-    partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, ref Document d)
+    partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, int doc, ref Document d)
     {
         // * for sharded queries, we'll send the order by fields separately
         // * for a map-reduce index, it's fields are the ones that are used for sorting
@@ -19,12 +22,26 @@ public partial class IndexReadOperation
 
         foreach (var field in query.Metadata.OrderBy)
         {
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-17888
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-                "make it work without storing the fields in the index");
+            string fieldName;
+            object fieldValue;
 
-            var fieldValue = document.GetField(field.Name.Value).StringValue(_state);
-            documentWithOrderByFields.AddOrderByField(field.Name.Value, fieldValue);
+            switch (field.OrderingType)
+            {
+                case OrderByFieldType.Long:
+                    fieldName = $"{field.Name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixLong}";
+                    fieldValue = _searcher.IndexReader.GetLongValueFor(fieldName, FieldCache_Fields.NUMERIC_UTILS_LONG_PARSER, doc, _state);
+                    break;
+                case OrderByFieldType.Double:
+                    fieldName = $"{field.Name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble}";
+                    fieldValue = _searcher.IndexReader.GetDoubleValueFor(fieldName, FieldCache_Fields.NUMERIC_UTILS_DOUBLE_PARSER, doc, _state);
+                    break;
+                default:
+                    fieldName = field.Name;
+                    fieldValue = _searcher.IndexReader.GetStringValueFor(fieldName, doc, _state);
+                    break;
+            }
+
+            documentWithOrderByFields.AddOrderByField(field.Name.Value, field.OrderingType, fieldValue);
         }
 
         d = documentWithOrderByFields;

@@ -150,7 +150,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         using (luceneScope?.Start())
                             document = _searcher.Doc(scoreDoc.Doc, _state);
 
-
                         if (retriever.TryGetKey(document, _state, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                         {
                             skippedResults.Value++;
@@ -237,9 +236,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                     }
                                 }
 
-                                AddOrderByFields(query, document, ref d);
+                                AddOrderByFields(query, document, scoreDoc.Doc, ref d);
 
-                                return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };
+                                return new QueryResult
+                                {
+                                    Result = d,
+                                    Highlightings = highlightings,
+                                    Explanation = explanation
+                                };
                             }
                             return default;
                         }
@@ -341,7 +345,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, ref Document d);
+        partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, int doc, ref Document d);
 
         private void SetupHighlighter(IndexQueryServerSide query, Query luceneQuery, JsonOperationContext context)
         {
