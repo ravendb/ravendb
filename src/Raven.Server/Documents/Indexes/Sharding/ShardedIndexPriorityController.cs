@@ -26,5 +26,5 @@ public class ShardedIndexPriorityController : AbstractIndexPriorityController
 
     protected override string GetDatabaseName() => _context.DatabaseName;
 
-    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOfRaftCommandsAsync(index);
+    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodes(index);
 }

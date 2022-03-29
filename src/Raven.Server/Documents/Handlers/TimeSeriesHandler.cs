@@ -915,7 +915,7 @@ namespace Raven.Server.Documents.Handlers
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
                 var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
-                await WaitForIndexToBeApplied(context, index);
+                await WaitForIndexToBeAppliedAsync(context, index);
                 await SendConfigurationResponseAsync(context, index);
             }
         }
@@ -957,7 +957,7 @@ namespace Raven.Server.Documents.Handlers
                     var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
                     var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
-                    await WaitForIndexToBeApplied(context, index);
+                    await WaitForIndexToBeAppliedAsync(context, index);
                     await SendConfigurationResponseAsync(context, index);
                 }
             }
@@ -999,7 +999,7 @@ namespace Raven.Server.Documents.Handlers
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
                 var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
-                await WaitForIndexToBeApplied(context, index);
+                await WaitForIndexToBeAppliedAsync(context, index);
                 await SendConfigurationResponseAsync(context, index);
             }
         }

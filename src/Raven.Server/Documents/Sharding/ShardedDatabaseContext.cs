@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Sharding
 
         public int[] FullRange;
 
-        public RachisLogIndexNotifications ShardedDatabaseContextIndexNotifications;
+        public RachisLogIndexNotifications RachisLogIndexNotifications;
 
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Sharding
 
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
-            ShardedDatabaseContextIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
+            RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
         }
 
         public IDisposable AllocateContext(out JsonOperationContext context) => _serverStore.ContextPool.AllocateOperationContext(out context);
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Sharding
 
             Interlocked.Exchange(ref _record, record);
 
-            ShardedDatabaseContextIndexNotifications.NotifyListenersAbout(index, e: null);
+            RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
         }
 
         public string DatabaseName => _record.DatabaseName;
@@ -137,6 +137,8 @@ namespace Raven.Server.Documents.Sharding
 
         public void Dispose()
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "needs an ExceptionAggregator like DocumentDatabase");
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Disposing {nameof(ShardedDatabaseContext)} of {DatabaseName}.");
 

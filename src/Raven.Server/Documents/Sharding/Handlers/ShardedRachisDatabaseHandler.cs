@@ -19,25 +19,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 foreach (var index in commands.RaftCommandIndexes)
                 {
-                    await DatabaseContext.ShardedDatabaseContextIndexNotifications.WaitForIndexNotification(index, HttpContext.RequestAborted);
-
-                    for (int i = 0; i < DatabaseContext.ShardCount; i++)
-                    {
-                        var name = ShardHelper.ToShardName(DatabaseContext.DatabaseName, i);
-                        if (Server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task))
-                        {
-                            try
-                            {
-                                var physicalDatabase = await task;
-                                await physicalDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, HttpContext.RequestAborted);
-                            }
-                            catch (Exception e)
-                            {
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Failed to wait for an index {index} on shard {i}", e);
-                            }
-                        }
-                    }
+                    await WaitForIndexToBeAppliedAsync(context, index);
                 }
             }
         }
