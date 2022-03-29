@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import clientConfigurationModel = require("models/database/settings/clientConfigurationModel");
 import getGlobalClientConfigurationCommand = require("commands/resources/getGlobalClientConfigurationCommand");
 import saveClientConfigurationCommand = require("commands/resources/saveClientConfigurationCommand");
@@ -6,8 +5,10 @@ import getClientConfigurationCommand = require("commands/resources/getClientConf
 import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
 import accessManager = require("common/shell/accessManager");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database = require("models/resources/database");
 
-class clientConfiguration extends viewModelBase {
+class clientConfiguration extends shardViewModelBase {
 
     view = require("views/database/settings/clientConfiguration.html");
     
@@ -33,6 +34,10 @@ class clientConfiguration extends viewModelBase {
 
     isSaveEnabled: KnockoutComputed<boolean>;
 
+    constructor(db: database) {
+        super(db);
+    }
+    
     activate(args: any) {
         super.activate(args);
 
@@ -47,7 +52,7 @@ class clientConfiguration extends viewModelBase {
                 this.hasGlobalConfiguration(dto && !dto.Disabled);
             });
         
-        const localTask = new getClientConfigurationCommand(this.activeDatabase())
+        const localTask = new getClientConfigurationCommand(this.db)
             .execute()
             .done((dto) => this.model = new clientConfigurationModel(dto));
         
@@ -167,7 +172,7 @@ class clientConfiguration extends viewModelBase {
         this.spinners.save(true);
         this.model.disabled(this.hasGlobalConfiguration() ? !this.overrideServer() : this.model.isDefined().length === 0);
 
-        new saveClientConfigurationCommand(this.model.toDto(), this.activeDatabase())
+        new saveClientConfigurationCommand(this.model.toDto(), this.db)
             .execute()
             .done(() => this.dirtyFlag().reset())
             .always(() => this.spinners.save(false));
