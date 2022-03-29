@@ -26,6 +26,38 @@ namespace SlowTests.Corax
         {
         }
 
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SortingTest(Options options)
+        {
+            var expected = new List<Person>();
+            using var store = GetDocumentStore(options);
+            {
+                using var bulk = store.BulkInsert();
+                foreach (Person person in Enumerable.Range(0, 10_000).Select(i => new Person() {Name = $"ItemNo{i}", Age = i % 100, Height = i % 200}))
+                {
+                    bulk.Store(person);
+                    expected.Add(person);
+                }
+            }
+            expected = expected.OrderBy(y => y.Age).ThenByDescending(y => y.Height).ToList();
+            {
+                using var session = store.OpenSession();
+                var result = session.Query<Person>().Where(p => p.Age < 200).OrderBy(y => y.Age).ThenByDescending(y => y.Height).ToList();
+                Assert.Equal(10_000, result.Count);
+                for (int i = 0; i < 10_000; ++i)
+                {
+                    var e = expected[i];
+                    var r = result[i];
+                    Assert.Equal(e.Age, r.Age);
+                    Assert.Equal(e.Height, r.Height);
+                }
+
+                Assert.False(result.GroupBy(x => x.Name).Any(g => g.Count() > 1));
+            }
+        }
+
+
         [Theory]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Corax)]
         public void CompoundOrderByWithPagination(RavenTestParameters config, int size = 10_000)
@@ -48,7 +80,7 @@ namespace SlowTests.Corax
                     for (int i = 0; i < size; ++i)
                     {
                         bulkInsert.Store(new Person() {Name = $"ItemNo{i}", Age = i % 100, Height = i % 200});
-                        expected.Add(new Result() {Age = i % 100, Height = i % 200});
+                        expected.Add(new Result() {Name = $"ItemNo{i}", Age = i % 100, Height = i % 200});
                     }
                 }
 
@@ -58,14 +90,60 @@ namespace SlowTests.Corax
                 {
                     List<Result> actual = new();
                     for (int i = 0; i < size; i += 70)
-                        actual.AddRange(session.Query<Person>().OrderBy(y => y.Age).ThenByDescending(y => y.Height)
-                            .Select(z => new Result() {Age = z.Age, Height = z.Height}).Skip(i).Take(70).ToList());
+                        actual.AddRange(session.Query<Person>().Where(p => p.Age < 200).OrderBy(y => y.Age).ThenByDescending(y => y.Height)
+                            .Select(z => new Result() {Name = z.Name, Age = z.Age, Height = z.Height}).Skip(i).Take(70).ToList());
 
+
+                    var duplicates = actual.GroupBy(x => x.Name).Where(g => g.Count() > 1).Select(i => i.Key).ToList();
+                    WaitForUserToContinueTheTest(store);
+                    Assert.Equal(expected.Count, actual.Count);
                     for (var i = 0; i < expected.Count; ++i)
                     {
                         Assert.Equal(expected[i].Age, actual[i].Age);
                         Assert.Equal(expected[i].Height, actual[i].Height);
                     }
+                }
+            }
+        }
+
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Corax)]
+        public void DistinctBigTestWithPagination(RavenTestParameters config, int size = 100_00)
+        {
+            List<Result> expected = new();
+            var option = new Options()
+            {
+                ModifyDatabaseRecord = d =>
+                {
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                    d.Client = new ClientConfiguration() {MaxNumberOfRequestsPerSession = int.MaxValue};
+                }
+            };
+
+            using (var store = GetDocumentStore(option))
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 0; i < size; ++i)
+                    {
+                        bulkInsert.Store(new Person() {Name = $"ItemNo{i}", Age = i % 27, Height = i % 13});
+                        expected.Add(new Result() {Age = i % 27, Height = i % 13});
+                    }
+                }
+
+                expected = expected.DistinctBy(x => x.Height).ToList();
+
+                using (var session = store.OpenSession())
+                {
+                    List<int> actual = new();
+                    for (int i = 0; i < size; i += 70)
+                        actual.AddRange(session.Query<Person>().Where(p => p.Age < 123)
+                            .Select(z => z.Height).Distinct().Skip(i).Take(70).ToList());
+WaitForUserToContinueTheTest(store);
+                    Assert.Equal(expected.Count, actual.Count);
+                    actual.Sort();
+                    Assert.True(actual.SequenceEqual(expected.Select(p => p.Height).ToList()));
                 }
             }
         }
@@ -252,9 +330,9 @@ namespace SlowTests.Corax
             using var store = GetDocumentStore(options);
             {
                 using var s = store.OpenSession();
-                s.Store(new ListOfNames(new []{"Maciej", "Gracjan", "Marcin", "Arek", "Tomek", "Pawel"}));
-                s.Store(new ListOfNames(new []{"Lukasz", "Damian", "Grzesiu", "Bartek", "Oliwia"}));
-                s.Store(new ListOfNames(new []{"Krzysiu", "Rafal", "Mateusz"}));
+                s.Store(new ListOfNames(new[] {"Maciej", "Gracjan", "Marcin", "Arek", "Tomek", "Pawel"}));
+                s.Store(new ListOfNames(new[] {"Lukasz", "Damian", "Grzesiu", "Bartek", "Oliwia"}));
+                s.Store(new ListOfNames(new[] {"Krzysiu", "Rafal", "Mateusz"}));
 
                 s.SaveChanges();
             }
@@ -262,15 +340,29 @@ namespace SlowTests.Corax
                 using var s = store.OpenSession();
                 var r = s.Query<ListOfNames>().Search(p => p.Names, "maciej").ToList();
                 Assert.Equal(1, r.Count);
-                
             }
         }
 
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Test(Options options)
+        {
+            using var store = GetDocumentStore();
+            {
+                using var bulkInsert = store.BulkInsert();
+                for (int i = 0; i < 10_000; ++i)
+                    bulkInsert.Store(new Person {Height = i % 599});
+            }
+            WaitForUserToContinueTheTest(store);
+        }
+
+
         private record ListOfNames(string[] Names);
-        
-        
+
+
         private class Result
         {
+            public string Name { get; set; }
             public int Age { get; set; }
             public int Height { get; set; }
         }

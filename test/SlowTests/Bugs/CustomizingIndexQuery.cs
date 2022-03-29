@@ -21,9 +21,7 @@ namespace SlowTests.Bugs
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Distinct")]
-
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSkipTransformResults(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -48,7 +46,6 @@ namespace SlowTests.Bugs
                     });
                     session.SaveChanges();
                 }
-
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<Shipment, PurchaseHistoryIndex>()
@@ -61,8 +58,7 @@ namespace SlowTests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Distinct")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSkipTransformResults_Lucene(Options options)
         {
             using (var store = GetDocumentStore(options))
