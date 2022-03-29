@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
@@ -6,8 +5,9 @@ import messagePublisher = require("common/messagePublisher");
 import getRefreshConfigurationCommand = require("commands/database/documents/getRefreshConfigurationCommand");
 import saveRefreshConfigurationCommand = require("commands/database/documents/saveRefreshConfigurationCommand");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class refresh extends viewModelBase {
+class refresh extends shardViewModelBase {
 
     view = require("views/database/settings/refresh.html");
 
@@ -33,8 +33,8 @@ class refresh extends viewModelBase {
     
     validationGroup: KnockoutValidationGroup;
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         this.specifyRefreshFrequency.subscribe(enabled => {
             if (!enabled) {
@@ -56,9 +56,9 @@ class refresh extends viewModelBase {
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
 
-                this.fetchConfiguration(this.activeDatabase())
+                this.fetchConfiguration(this.db)
                     .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
+                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.db) }));
 
                 return deferred;
             });
@@ -125,7 +125,7 @@ class refresh extends viewModelBase {
             eventsCollector.default.reportEvent("refresh-configuration", "save");
 
             const dto = this.toDto();
-            const db = this.activeDatabase();
+            const db = this.db;
 
             new saveRefreshConfigurationCommand(db, dto)
                 .execute()

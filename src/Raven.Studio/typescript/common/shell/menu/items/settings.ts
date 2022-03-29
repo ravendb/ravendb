@@ -71,6 +71,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/refresh',
             moduleId: require('viewmodels/database/settings/refresh'),
+            shardingMode: "allShardsOnly",
             title: 'Document Refresh',
             nav: true,
             css: 'icon-expos-refresh',
