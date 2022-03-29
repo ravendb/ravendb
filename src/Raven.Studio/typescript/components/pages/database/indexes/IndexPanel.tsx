@@ -1,4 +1,4 @@
-﻿import React, { MouseEvent, useState } from "react";
+﻿import React, { memo, MouseEvent, useCallback, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { IndexNodeInfo, IndexNodeInfoDetails, IndexSharedInfo } from "../../../models/indexes";
@@ -12,10 +12,13 @@ import database = require("models/resources/database");
 import app from "durandal/app";
 import { IndexProgress } from "./IndexProgress";
 import { useAccessManager } from "../../../hooks/useAccessManager";
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import { UncontrolledTooltip } from "../../../common/UncontrolledTooltip";
 
 interface IndexPanelProps {
     database: database;
     index: IndexSharedInfo;
+    globalIndexingStatus: IndexRunningStatus;
     setPriority: (priority: IndexPriority) => Promise<void>;
     setLockMode: (lockMode: IndexLockMode) => Promise<void>;
     enableIndexing: () => Promise<void>;
@@ -31,7 +34,7 @@ interface IndexPanelProps {
 }
 
 export function IndexPanel(props: IndexPanelProps) {
-    const { index, selected, toggleSelection, database, hasReplacement } = props;
+    const { index, selected, toggleSelection, database, hasReplacement, globalIndexingStatus } = props;
     
     const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
     
@@ -133,6 +136,8 @@ export function IndexPanel(props: IndexPanelProps) {
     const termsUrl = urls.terms(index.name)();
     const editUrl = urls.editIndex(index.name)();
     
+    const [ reduceOutputId ] = useState(() => _.uniqueId("reduce-output-id"));
+    
     return (
         <div className={classNames({ "sidebyside-indexes": hasReplacement })}>
             <div className={classNames("panel panel-state panel-hover index", { "has-replacement": hasReplacement })}>
@@ -161,9 +166,7 @@ export function IndexPanel(props: IndexPanelProps) {
                                 )}
                             </div>
                             <div className="flex-horizontal clear-left index-info nospacing">
-                                <div className="index-type-icon" data-placement="right" data-toggle="tooltip"
-                                     data-animation="true" data-html="true"
-                                     data-bind="tooltipText: mapReduceIndexInfoTooltip">
+                                <div className="index-type-icon" data-bind="tooltipText: mapReduceIndexInfoTooltip" id={reduceOutputId}>
                                     { index.reduceOutputCollectionName && !index.patternForReferencesToReduceOutputCollection && (
                                         <span>
                                             <i className="icon-output-collection" />
@@ -173,6 +176,29 @@ export function IndexPanel(props: IndexPanelProps) {
                                         <span><i className="icon-reference-pattern"/></span>
                                     )}
                                 </div>
+                                <UncontrolledTooltip target={reduceOutputId} animation placement="right">
+                                    <>
+                                        {index.reduceOutputCollectionName && (
+                                            <span>
+                                                Reduce Results are saved in Collection:<br />
+                                                <strong>{index.reduceOutputCollectionName}</strong>
+                                            </span>
+                                        )}
+                                        {index.collectionNameForReferenceDocuments && (
+                                            <span>
+                                                <br />Referencing Documents are saved in Collection:
+                                                <br />
+                                                <strong>{index.collectionNameForReferenceDocuments}</strong>
+                                            </span>
+                                        )}
+                                        {!index.collectionNameForReferenceDocuments && index.patternForReferencesToReduceOutputCollection && (
+                                            <span>
+                                                <br />Referencing Documents are saved in Collection:<br />
+                                                <strong>{index.reduceOutputCollectionName}/References</strong>    
+                                            </span>
+                                        )}
+                                    </>
+                                </UncontrolledTooltip>
                                 <div className="index-type">
                                     <span>{IndexUtils.formatType(index.type)}</span>
                                     {hasReplacement && (
@@ -384,8 +410,8 @@ export function IndexPanel(props: IndexPanelProps) {
                                 <>
                                     <span className="margin-right">Errors: {nodeInfo.details.errorCount}</span>
                                     <span className="margin-right">Entries: {nodeInfo.details.entriesCount}</span>
-                                    <span className={classNames("badge margin-right", badgeClass(index, nodeInfo.details))}>
-                                        {badgeText(index, nodeInfo.details)}
+                                    <span className={classNames("badge margin-right", badgeClass(index, nodeInfo.details, globalIndexingStatus))}>
+                                        {badgeText(index, nodeInfo.details, globalIndexingStatus)}
                                     </span>
                                     {nodeInfo.details.stale ? (
                                         <span className="set-size">
@@ -417,7 +443,7 @@ export function IndexPanel(props: IndexPanelProps) {
     )
 }
 
-function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails) {
+function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
     if (IndexUtils.isFaulty(index)) {
         return "badge-danger";
     }
@@ -426,15 +452,15 @@ function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails) {
         return "badge-danger";
     }
 
-    if (IndexUtils.isPausedState(details)) {
+    if (IndexUtils.isPausedState(details, globalIndexingStatus)) {
         return "badge-warnwing";
     }
 
-    if (IndexUtils.isDisabledState(details)) {
+    if (IndexUtils.isDisabledState(details, globalIndexingStatus)) {
         return "badge-warning";
     }
 
-    if (IndexUtils.isIdleState(details)) {
+    if (IndexUtils.isIdleState(details, globalIndexingStatus)) {
         return "badge-warning";
     }
 
@@ -445,7 +471,7 @@ function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails) {
     return "badge-success";
 }
 
-function badgeText(index: IndexSharedInfo, details: IndexNodeInfoDetails) {
+function badgeText(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
     if (IndexUtils.isFaulty(index)) {
         return "Faulty";
     }
@@ -454,15 +480,15 @@ function badgeText(index: IndexSharedInfo, details: IndexNodeInfoDetails) {
         return "Error";
     }
 
-    if (IndexUtils.isPausedState(details)) {
+    if (IndexUtils.isPausedState(details, globalIndexingStatus)) {
         return "Paused";
     }
 
-    if (IndexUtils.isDisabledState(details)) {
+    if (IndexUtils.isDisabledState(details, globalIndexingStatus)) {
         return "Disabled";
     }
 
-    if (IndexUtils.isIdleState(details)) {
+    if (IndexUtils.isIdleState(details, globalIndexingStatus)) {
         return "Idle";
     }
 

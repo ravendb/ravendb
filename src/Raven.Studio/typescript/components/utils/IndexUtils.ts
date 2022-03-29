@@ -3,6 +3,7 @@ import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { IndexNodeInfoDetails, IndexSharedInfo, IndexStatus } from "../models/indexes";
 import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import collection from "models/database/documents/collection";
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 
 export default class IndexUtils {
 
@@ -70,42 +71,31 @@ export default class IndexUtils {
         return index.state === "Error";
     }
 
-    static isPausedState(index: IndexNodeInfoDetails) {
-        /* TODO
-        const localStatusIsPaused = this.status() === "Paused";
-            const globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
-            const isInDisableState = this.isDisabledState();
-            return (localStatusIsPaused || globalStatusIsPaused) && !isInDisableState;
-         */
-        
-        return index.status === "Paused";
+    static isPausedState(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+        const localStatusIsPaused = index.status === "Paused";
+        const globalStatusIsPaused = globalIndexingStatus === "Paused";
+        const isInDisableState = IndexUtils.isDisabledState(index, globalIndexingStatus);
+        return (localStatusIsPaused || globalStatusIsPaused) && !isInDisableState;
     }
     
-    static isDisabledState(index: IndexNodeInfoDetails) {
+    static isDisabledState(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
         const stateIsDisabled = index.state === "Disabled";
-        //TODO:const globalStatusIsDisabled = this.globalIndexingStatus() === "Disabled";
-        return stateIsDisabled; //TODO: || globalStatusIsDisableds
+        const globalStatusIsDisabled = globalIndexingStatus === "Disabled";
+        return stateIsDisabled || globalStatusIsDisabled;
     }
     
-    static isIdleState(index: IndexNodeInfoDetails) {
-        /* TODO
-        const stateIsIdle = this.state() === "Idle";
-            const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
-            const isPaused = this.isPausedState();
-            return stateIsIdle && globalStatusIsNotDisabled && !isPaused;
-         */
-        return index.state === "Idle";
+    static isIdleState(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+        const stateIsIdle = index.state === "Idle";
+        const globalStatusIsNotDisabled = globalIndexingStatus === "Running";
+        const isPaused = IndexUtils.isPausedState(index, globalIndexingStatus);
+        return stateIsIdle && globalStatusIsNotDisabled && !isPaused;
     }
 
-    static isNormalState(index: IndexNodeInfoDetails) {
-        /* TODO
-          const stateIsNormal = this.state() === "Normal";
-            const localStatusIsNormalOrPending = this.status() === "Running" || this.status() === "Pending";
-            const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
-            return stateIsNormal && globalStatusIsNotDisabled && localStatusIsNormalOrPending;
-         */
-        
-        return index.state === "Normal";
+    static isNormalState(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+        const stateIsNormal = index.state === "Normal";
+        const localStatusIsNormalOrPending = index.status === "Running" || index.status === "Pending";
+        const globalStatusIsNotDisabled = globalIndexingStatus === "Running";
+        return stateIsNormal && globalStatusIsNotDisabled && localStatusIsNormalOrPending;
     }
 
     static getIndexGroupName(index: IndexSharedInfo, allCollections: collection[]) {
@@ -132,4 +122,30 @@ export default class IndexUtils {
         return index.name.startsWith(IndexUtils.SideBySideIndexPrefix);
     }
     
+    static canBePaused(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+        const localStatusIsNotDisabled = index.status !== "Disabled";
+        const notInPausedState = !IndexUtils.isPausedState(index, globalIndexingStatus);
+        return localStatusIsNotDisabled && notInPausedState;
+    }
+    
+    static canBeResumed(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+        const localStatusIsNotDisabled = index.status !== "Disabled";
+        const inPausedState = IndexUtils.isPausedState(index, globalIndexingStatus);
+        const errored = IndexUtils.isErrorState(index);
+        return localStatusIsNotDisabled && inPausedState && !errored;
+    }
+    
+    static canBeDisabled(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+        return !IndexUtils.isDisabledState(index, globalIndexingStatus);
+    }
+
+    static canBeEnabled(index: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+        const disabled = IndexUtils.isDisabledState(index, globalIndexingStatus);
+        const errored = IndexUtils.isErrorState(index);
+        return disabled || errored;
+    }
+
+    static isPending(index: IndexNodeInfoDetails) {
+        return index.status === "Pending";
+    }
 }

@@ -25,7 +25,8 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import classNames from "classnames";
 import { useAppUrls } from "../../../hooks/useAppUrls";
 import { useAccessManager } from "../../../hooks/useAccessManager";
-import { data } from "jquery";
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import { shardingTodo } from "common/developmentHelper";
 
 interface IndexesPageProps {
     database: database;
@@ -85,7 +86,7 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
     searchText: ""
 };
 
-function matchesAnyIndexStatus(index: IndexSharedInfo, status: IndexStatus[]): boolean {
+function matchesAnyIndexStatus(index: IndexSharedInfo, status: IndexStatus[], globalIndexingStatus: IndexRunningStatus): boolean {
     if (status.length === 0) {
         return false;
     }
@@ -97,32 +98,42 @@ function matchesAnyIndexStatus(index: IndexSharedInfo, status: IndexStatus[]): b
     
     const anyMatch = (index: IndexSharedInfo, predicate: (index: IndexNodeInfoDetails) => boolean) => index.nodesInfo.some(x => x.status === "loaded" && predicate(x.details));
     
-    return status.includes("Normal") && anyMatch(index, IndexUtils.isNormalState)
+    return status.includes("Normal") && anyMatch(index, x => IndexUtils.isNormalState(x, globalIndexingStatus))
         || status.includes("ErrorOrFaulty") && (anyMatch(index, IndexUtils.isErrorState) || IndexUtils.isFaulty(index))
-        || status.includes("Paused") && anyMatch(index, IndexUtils.isPausedState)
-        || status.includes("Disabled") && anyMatch(index, IndexUtils.isDisabledState)
-        || status.includes("Idle") && anyMatch(index, IndexUtils.isIdleState);
+        || status.includes("Paused") && anyMatch(index, x => IndexUtils.isPausedState(x, globalIndexingStatus))
+        || status.includes("Disabled") && anyMatch(index, x => IndexUtils.isDisabledState(x, globalIndexingStatus))
+        || status.includes("Idle") && anyMatch(index, x => IndexUtils.isIdleState(x, globalIndexingStatus));
 }
 
-function indexMatchesFilter(index: IndexSharedInfo, filter: IndexFilterCriteria): boolean {
+function indexMatchesFilter(index: IndexSharedInfo, filter: IndexFilterCriteria, globalIndexingStatus: IndexRunningStatus): boolean {
     const nameMatch = !filter.searchText || index.name.toLowerCase().includes(filter.searchText.toLowerCase());
-    const statusMatch = matchesAnyIndexStatus(index, filter.status);
+    const statusMatch = matchesAnyIndexStatus(index, filter.status, globalIndexingStatus);
     const indexingErrorsMatch = true; //TODO:  !withIndexingErrorsOnly || (withIndexingErrorsOnly && !!this.errorsCount());
 
     return nameMatch && statusMatch && indexingErrorsMatch;
 }
 
-function groupAndFilterIndexStats(indexes: IndexSharedInfo[], collections: collection[], filter: IndexFilterCriteria): { groups: IndexGroup[], replacements: IndexSharedInfo[] } {
+function groupAndFilterIndexStats(indexes: IndexSharedInfo[], collections: collection[], filter: IndexFilterCriteria, globalIndexingStatus: IndexRunningStatus): { groups: IndexGroup[], replacements: IndexSharedInfo[] } {
     const result = new Map<string, IndexGroup>();
 
     const replacements = indexes.filter(IndexUtils.isSideBySide);
     const regularIndexes = indexes.filter(x => !IndexUtils.isSideBySide(x));
 
     regularIndexes.forEach(index => {
-        if (!indexMatchesFilter(index, filter)) {
-            return ;
+        let match = indexMatchesFilter(index, filter, globalIndexingStatus);
+
+        if (!match) {
+            // try to match replacement index (if exists)
+            const replacement = replacements.find(x => x.name === IndexUtils.SideBySideIndexPrefix + index.name);
+            if (replacement) {
+                match = indexMatchesFilter(replacement, filter, globalIndexingStatus);
+            }
         }
 
+        if (!match) {
+            return
+        }
+        
         const groupName = IndexUtils.getIndexGroupName(index, collections);
         if (!result.has(groupName)) {
             const group: IndexGroup = {
@@ -161,6 +172,9 @@ export function IndexesPage(props: IndexesPageProps) {
     const { canReadWriteDatabase } = useAccessManager();
     
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
+
+    shardingTodo("ANY");
+    const globalIndexingStatus: IndexRunningStatus = "Running"; //TODO:
     
     const nodeTag = clusterTopologyManager.default.localNodeTag();
     const initialLocation = database.getFirstLocation(nodeTag);
@@ -169,7 +183,7 @@ export function IndexesPage(props: IndexesPageProps) {
     
     const { groups, replacements } = useMemo(() => {
         const collections = collectionsTracker.default.collections();
-        return groupAndFilterIndexStats(stats.indexes, collections, filter);
+        return groupAndFilterIndexStats(stats.indexes, collections, filter, globalIndexingStatus);
     }, [stats, filter]);
     
     const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
@@ -569,6 +583,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                     <React.Fragment key={index.name}>
                                         <IndexPanel setPriority={p => setIndexPriority(index, p)}
                                                     setLockMode={l => setIndexLockMode(index, l)}
+                                                    globalIndexingStatus={globalIndexingStatus}
                                                     resetIndex={() => resetIndex(index)}
                                                     openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
                                                     enableIndexing={() => enableIndexing(index)}
@@ -605,6 +620,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                         {replacement && (
                                             <IndexPanel setPriority={p => setIndexPriority(replacement, p)}
                                                         setLockMode={l => setIndexLockMode(replacement, l)}
+                                                        globalIndexingStatus={globalIndexingStatus}
                                                         resetIndex={() => resetIndex(replacement)}
                                                         openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
                                                         enableIndexing={() => enableIndexing(replacement)}
