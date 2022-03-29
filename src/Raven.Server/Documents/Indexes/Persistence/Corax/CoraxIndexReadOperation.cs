@@ -7,10 +7,14 @@ using System.Threading;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
+using Size = Sparrow.Global.Constants.Size;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Explanation;
+using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
@@ -43,6 +47,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override long EntriesCount() => _entriesCount;
 
+
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<int> totalResults, Reference<int> skippedResults,
             Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
@@ -55,11 +60,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var position = query.Start;
 
             var take = pageSize + position;
-            if (take > _indexSearcher.NumberOfEntries)
+            if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
-            IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch, take);
-            if (result is null)
+            IQueryMatch queryMatch;
+            if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take)) is null)
                 yield break;
 
             if (query.Metadata.FilterScript != null)
@@ -67,54 +72,102 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 throw new NotSupportedException(
                     "Filter isn't supported by Corax. We need to extract the filter feature implementation so it won't be implemented inside the read operations");
             }
-
-            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize));
-
-            int read = 0;
+            
+            var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
+            Span<long> ids = longIds;
             int docsToLoad = pageSize;
-            Skip(ref result, position, ref read, skippedResults, out var readCounter, ref ids, token);
+            using var queryScope = new CoraxIndexQueryingScope(_index.Type, query, fieldsToFetch, retriever, _indexSearcher, _fieldMappings);
+            int queryStart = query.Start;
 
-            while (read != 0)
+            while (true)
             {
-                for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
+                token.ThrowIfCancellationRequested();
+                int i = queryScope.RecordAlreadyPagedItemsInPreviousPage(longIds.AsSpan(), queryMatch, totalResults, out var read, ref queryStart, token);
+                for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
-                    RetrieverInput retrieverInput = new(_fieldMappings, _indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
+                    token.ThrowIfCancellationRequested();
+                    if (queryScope.WillProbablyIncludeInResults(_indexSearcher.GetRawIdentityFor(longIds[i])) == false)
+                    {
+                        docsToLoad++;
+                        skippedResults.Value++;
+                        continue;
+                    }
+
+                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var key), key);
+                    bool markedAsSkipped = false;
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
 
                     if (fetchedDocument.Document != null)
                     {
-                        yield return new QueryResult {Result = fetchedDocument.Document};
+                        var qr = GetQueryResult(fetchedDocument.Document, ref markedAsSkipped);
+                        if (qr.Result is null)
+                        {
+                            docsToLoad++;
+                            continue;
+                        }
+
+                        yield return qr;
                     }
                     else if (fetchedDocument.List != null)
                     {
                         foreach (Document item in fetchedDocument.List)
                         {
-                            yield return new QueryResult {Result = item};
+                            var qr = GetQueryResult(item, ref markedAsSkipped);
+                            if (qr.Result is null)
+                            {
+                                docsToLoad++;
+                                continue;
+                            }
+
+                            yield return qr;
                         }
                     }
                 }
 
-                if (docsToLoad == 0)
+                if ((read = queryMatch.Fill(longIds)) == 0)
                     break;
-
-                read = result.Fill(ids);
-                readCounter += read;
+                totalResults.Value += read;
             }
 
-            if (result is SortingMatch sm)
-                totalResults.Value = Convert.ToInt32(sm.TotalResults);
-            else
+            if (isDistinctCount)
+                totalResults.Value -= skippedResults.Value;
+
+            QueryResult GetQueryResult(Document document, ref bool markedAsSkipped)
             {
-                while (read != 0)
+                if (queryScope.TryIncludeInResults(document) == false)
                 {
-                    read = result.Fill(ids);
-                    readCounter += read;
+                    document?.Dispose();
+
+                    if (markedAsSkipped == false)
+                    {
+                        skippedResults.Value++;
+                        markedAsSkipped = true;
+                    }
+
+                    return default;
                 }
 
-                totalResults.Value = Convert.ToInt32(readCounter);
+                if (isDistinctCount == false)
+                {
+                    Dictionary<string, Dictionary<string, string[]>> highlightings = null;
+                    if (query.Metadata.HasHighlightings)
+                    {
+                        throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Highlightings)} yet.");
+                    }
+
+                    ExplanationResult explanation = null;
+                    if (query.Metadata.HasExplanations)
+                    {
+                        throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
+                    }
+
+                    return new QueryResult {Result = document, Highlightings = null, Explanation = null};
+                }
+
+                return default;
             }
 
-            ArrayPool<long>.Shared.Return(ids);
+            ArrayPool<long>.Shared.Return(longIds);
         }
 
         public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
@@ -155,7 +208,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 if (fromValue != null && int.TryParse(fromValue, out skip) == false)
                     throw new InvalidDataException($"Wrong {fromValue} input. Please change it into integer number.");
 
-                Skip(ref allItems, skip, ref read, null, out _, ref ids, token);
+                Skip(ref allItems, skip, ref read, null, out _, ref ids, null, token);
 
                 var analyzer = _fieldMappings.GetByFieldId(fieldId).Analyzer;
                 analyzer.GetOutputBuffersSize(512, out int outputSize, out int tokenSize);
@@ -257,7 +310,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 ids = ArrayPool<long>.Shared.Rent(BufferSize);
 
                 var read = 0;
-                Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, token);
+                Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, null, token);
                 int returnedCounter = 0;
                 List<string> listItemInIndex = null;
 
@@ -380,13 +433,75 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
+        // private static void Skip2<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long fetchedResults, ref long[] ids,
+        //     CoraxIndexQueryingScope queryingScope,
+        //     CancellationToken token)
+        //     where TQueryMatch : IQueryMatch
+        // {
+        //     var bufferSize = ids.Length;
+        //     if (bufferSize is 0)
+        //         throw new OutOfMemoryException($"{nameof(Corax)} buffer has no memory.");
+        //     fetchedResults = 0;
+        //
+        //     if (position is 0)
+        //     {
+        //         //Nothing to skip, just perform first Fill()
+        //         fetchedResults = read = result.Fill(ids);
+        //         skippedResults.Value = 0;
+        //         return;
+        //     }
+        //
+        //     // This is the case when we've to skip some elements!
+        //
+        //     // We will "cut" the buffer into N chunks
+        //     int chunksAmount = position / bufferSize;
+        //     position %= bufferSize;
+        //     while (chunksAmount > 0)
+        //     {
+        //         token.ThrowIfCancellationRequested();
+        //         fetchedResults += read = result.Fill(ids);
+        //         queryingScope.RecordAlreadyPagedItemsInPreviousPage(ids, token);
+        //         chunksAmount -= 1;
+        //         skippedResults.Value += bufferSize;
+        //     }
+        //
+        //     //The case [ [..N], ..., [..N], [..K]] where K < N. We still have some elements to Skip but some af them are valid for the query.
+        //     if (position is not 0)
+        //     {
+        //         token.ThrowIfCancellationRequested();
+        //         fetchedResults += read = result.Fill(ids);
+        //         if (read <= position) // there is no enough items to return
+        //         {
+        //             skippedResults.Value += read;
+        //             read = 0;
+        //         }
+        //
+        //         //We want to register items probably for skipping.
+        //         queryingScope.RecordAlreadyPagedItemsInPreviousPage(ids[0..position], token);
+        //         ids[position..read].CopyTo(ids, 0);
+        //         skippedResults.Value += position;
+        //         read -= position;
+        //     }
+        //
+        //     //skippedResults.Value = (int)readCounter;
+        //
+        //
+        //     // if (queryingScope.AlreadySeenDocumentKeysInPreviousPage < amountToSkip)
+        //     //The case when a single document has multiple entries in the index and we should skip them.
+        //     //This would require making this code significantly more complicated or running it recursively (which may lead to SOEs).
+        //     //Therefore, in this case, I leave this work to a higher function.
+        // }
+
+
         private static void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
+            CoraxIndexQueryingScope queryingScope,
             CancellationToken token)
             where TQueryMatch : IQueryMatch
         {
             if (ids.Length is 0)
                 throw new OutOfMemoryException("Corax buffer has no memory.");
 
+            var retriever = default(RetrieverInput);
             readCounter = 0;
             if (position != 0)
             {
@@ -395,6 +510,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     token.ThrowIfCancellationRequested();
                     read = result.Fill(ids);
+                    // queryingScope?.RecordAlreadyPagedItemsInPreviousPage(ids, token);
                     readCounter += read;
                     emptyRead--;
                 }

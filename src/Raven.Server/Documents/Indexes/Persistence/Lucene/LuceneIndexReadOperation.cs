@@ -3,8 +3,6 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -21,7 +19,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Highlightings;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Explanation;
@@ -122,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             
             using (var queryFilter = GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings))
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
-            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
+            using (var scope = new LuceneIndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
                 if (query.Metadata.HasHighlightings)
                 {
@@ -391,7 +388,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             using (var queryFilter =  GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, null))
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
-            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
+            using (var scope = new LuceneIndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
                 //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
                 var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);

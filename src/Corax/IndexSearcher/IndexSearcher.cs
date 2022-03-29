@@ -74,11 +74,27 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new IndexEntryReader(data.Slice(size + len));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IndexEntryReader GetReaderAndIdentifyFor(long id, out string key)
+    {
+        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
+        int size = ZigZagEncoding.Decode<int>(data, out var len);
+        key = Encoding.UTF8.GetString(data.Slice(len, size));
+        return new(data.Slice(size + len));
+    }
+    
     public string GetIdentityFor(long id)
     {
         var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
         int size = ZigZagEncoding.Decode<int>(data, out var len);
         return Encoding.UTF8.GetString(data.Slice(len, size));
+    }
+
+    public UnmanagedSpan GetRawIdentityFor(long id)
+    {
+        var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToUnmanagedSpan();
+        int size = ZigZagEncoding.Decode<int>(data, out var len);
+        return data.Slice(len, size);
     }
     
     [SkipLocalsInit]
