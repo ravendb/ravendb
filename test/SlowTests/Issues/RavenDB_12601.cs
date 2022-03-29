@@ -162,8 +162,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("RAFT:1"));
-                    Assert.True(changeVector.Contains("TRXN:5"));
+                    Assert.True(changeVector.Contains("RAFT:1"), $"{changeVector}.Contains('RAFT:1')");
+                    Assert.True(changeVector.Contains("TRXN:5"), $"{changeVector}.Contains('TRXN:5')");
                 }
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
