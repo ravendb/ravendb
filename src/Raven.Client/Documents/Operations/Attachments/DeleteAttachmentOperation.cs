@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new DeleteAttachmentCommand(_documentId, _name, _changeVector);
         }
 
-        private class DeleteAttachmentCommand : RavenCommand
+        internal class DeleteAttachmentCommand : RavenCommand
         {
             private readonly string _documentId;
             private readonly string _name;
