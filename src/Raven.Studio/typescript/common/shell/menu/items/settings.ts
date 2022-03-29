@@ -29,6 +29,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',
             moduleId: require("viewmodels/database/settings/conflictResolution"),
+            shardingMode: "allShardsOnly",
             title: "Conflict Resolution",
             nav: true,
             css: 'icon-conflicts-resolution',
