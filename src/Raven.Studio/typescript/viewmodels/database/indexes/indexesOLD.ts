@@ -1,6 +1,20 @@
 class indexes {
     
     /* TODO
+    from index:
+    this.rollingDeploymentInProgress = ko.pureComputed(() => {
+            const progress = this.progress();
+            if (progress && progress.rollingProgress()) {
+                const rolling = progress.rollingProgress();
+                return rolling.some(x => x.state() !== "Done");
+            }
+            
+            return false;
+        })
+     */
+    
+    
+    /* TODO
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
     resetsInProgress = new Set<string>();
