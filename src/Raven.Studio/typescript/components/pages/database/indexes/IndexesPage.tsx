@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useReducer, useState } from "react"
+﻿import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react"
 import database from "models/resources/database";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import {
@@ -30,7 +30,8 @@ import { shardingTodo } from "common/developmentHelper";
 
 interface IndexesPageProps {
     database: database;
-    reload: () => Promise<void>;
+    stale?: boolean;
+    indexToHighlight?: string;
 }
 
 async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<boolean> {
@@ -161,9 +162,16 @@ function groupAndFilterIndexStats(indexes: IndexSharedInfo[], collections: colle
     }
 }
 
+function getAllIndexes(groups: IndexGroup[]) {
+    const allIndexes: IndexSharedInfo[] = [];
+    groups.forEach(group => allIndexes.push(...group.indexes));
+    return allIndexes;
+}
 
 export function IndexesPage(props: IndexesPageProps) {
-    const { database } = props;
+    
+    
+    const { database, stale, indexToHighlight } = props;
     const locations = database.getLocations();
     
     const { indexesService } = useServices();
@@ -178,16 +186,33 @@ export function IndexesPage(props: IndexesPageProps) {
     
     const nodeTag = clusterTopologyManager.default.localNodeTag();
     const initialLocation = database.getFirstLocation(nodeTag);
-    
-    const [filter, setFilter] = useState<IndexFilterCriteria>(defaultFilterCriteria);
+
+    const [filter, setFilter] = useState<IndexFilterCriteria>(() => {
+        if (stale) {
+            return {
+                ...defaultFilterCriteria,
+                status: ["Stale"]
+            }
+        } else {
+            return defaultFilterCriteria;
+        }
+    });
+
+    const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
+    const [swapNowProgress, setSwapNowProgress] = useState<string[]>([]);
     
     const { groups, replacements } = useMemo(() => {
         const collections = collectionsTracker.default.collections();
-        return groupAndFilterIndexStats(stats.indexes, collections, filter, globalIndexingStatus);
+        const groupedIndexes = groupAndFilterIndexStats(stats.indexes, collections, filter, globalIndexingStatus);
+        
+        const allVisibleIndexes = getAllIndexes(groupedIndexes.groups);
+        const newSelection = selectedIndexes.filter(x => allVisibleIndexes.some(idx => idx.name === x));
+        if (newSelection.length !== selectedIndexes.length) {
+            setSelectedIndexes(newSelection);
+        }
+        
+        return groupedIndexes;
     }, [stats, filter]);
-    
-    const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
-    const [swapNowProgress, setSwapNowProgress] = useState<string[]>([]);
     
     const fetchProgress = async (location: databaseLocationSpecifier) => {
         const progress = await indexesService.getProgress(database, location);
@@ -214,12 +239,27 @@ export function IndexesPage(props: IndexesPageProps) {
     
     useEffect(() => {
         const progressTimer = setInterval(() => {
-            database.getLocations().forEach(location => fetchProgress(location));
+            if (filter.autoRefresh) {
+                database.getLocations().forEach(location => fetchProgress(location));    
+            }
         }, 10_000);
         
         return () => clearInterval(progressTimer);
-    })
+    });
+    
+    const highlightUsed = useRef<boolean>(false);
+    
+    const highlightCallback = useCallback((node: HTMLElement) => {
+        if (node && !highlightUsed.current) {
+            node.scrollIntoView({ behavior: "smooth" });
+            highlightUsed.current = true;
 
+            setTimeout(() => {
+                node.classList.add("blink-style-basic");
+            }, 600);
+        }
+    }, []);
+    
     const getSelectedIndexes = (): IndexSharedInfo[] => stats.indexes.filter(x => selectedIndexes.includes(x.name));
     
     const deleteSelectedIndexes = () => {
@@ -451,12 +491,6 @@ export function IndexesPage(props: IndexesPageProps) {
              */
         }
     }
-    
-    const getAllIndexes = () => {
-        const allIndexes: IndexSharedInfo[] = [];
-        groups.forEach(group => allIndexes.push(...group.indexes));
-        return allIndexes;
-    }
 
     const swapSideBySide = async (index: IndexSharedInfo) => {
         setSwapNowProgress(x => [ ...x, index.name ]);
@@ -523,7 +557,7 @@ export function IndexesPage(props: IndexesPageProps) {
     
     const indexesSelectionState = (): checkbox => {
         const selectedCount = selectedIndexes.length;
-        const indexesCount = getAllIndexes().length;
+        const indexesCount = getAllIndexes(groups).length;
         if (indexesCount && selectedCount === indexesCount) {
             return "checked";
         }
@@ -597,6 +631,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                     selected={selectedIndexes.includes(index.name)}
                                                     toggleSelection={() => toggleSelection(index)}
                                                     key={index.name}
+                                                    ref={indexToHighlight === index.name ? highlightCallback : undefined}
                                         />
                                         {replacement && (
                                             <div className="sidebyside-actions">

@@ -1,4 +1,4 @@
-﻿import React, { memo, MouseEvent, useCallback, useMemo, useRef, useState } from "react";
+﻿import React, { ForwardedRef, forwardRef, memo, MouseEvent, useCallback, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { IndexNodeInfo, IndexNodeInfoDetails, IndexSharedInfo } from "../../../models/indexes";
@@ -31,9 +31,12 @@ interface IndexPanelProps {
     selected: boolean;
     hasReplacement?: boolean;
     toggleSelection: () => void;
+    ref?: any;
 }
 
-export function IndexPanel(props: IndexPanelProps) {
+export const IndexPanel = forwardRef(IndexPanelInternal);
+
+export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTMLDivElement>) {
     const { index, selected, toggleSelection, database, hasReplacement, globalIndexingStatus } = props;
     
     const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
@@ -140,7 +143,7 @@ export function IndexPanel(props: IndexPanelProps) {
     
     return (
         <div className={classNames({ "sidebyside-indexes": hasReplacement })}>
-            <div className={classNames("panel panel-state panel-hover index", { "has-replacement": hasReplacement })}>
+            <div className={classNames("panel panel-state panel-hover index", { "has-replacement": hasReplacement })} ref={ref}>
                 <div className="padding padding-sm js-index-template" id={indexUniqueId(index)}>
                     <div className="row">
                         <div className="col-xs-12 col-sm-6 col-xl-4 info-container">
