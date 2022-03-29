@@ -259,11 +259,9 @@ export class pathEntry extends databaseEntry<string> {
         super(data);
         _.bindAll(this, "pathHasChanged");
 
-        shardingTodo("Danielle");
-        // TODO: waiting for ep:  "/databases/*/admin/studio-tasks/folder-path-options" RavenDB-18222
-        // this.customizedDatabaseValue.throttle(300).subscribe((newPathValue) => {
-        //     this.getFolderPathOptions(newPathValue);
-        // });
+        this.customizedDatabaseValue.throttle(300).subscribe((newPathValue) => {
+            this.getFolderPathOptions(newPathValue);
+        });
     }
 
     initCustomizedValue(value: string) {
