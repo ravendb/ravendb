@@ -26,7 +26,6 @@ import deleteAttachmentCommand = require("commands/database/documents/attachment
 import setCounterCommand = require("commands/database/documents/counters/setCounterCommand");
 import CountersDetail = Raven.Client.Documents.Operations.Counters.CountersDetail;
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
-import viewModelBase = require("viewmodels/viewModelBase");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
 import getDocumentAtRevisionCommand = require("commands/database/documents/getDocumentAtRevisionCommand");
@@ -42,15 +41,15 @@ import forceRevisionCreationCommand = require("commands/database/documents/force
 import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeries/getTimeSeriesStatsCommand");
 import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
-import accessManager = require("common/shell/accessManager");
 import moment = require("moment");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 interface revisionToCompare {
     date: string;
     changeVector: string;
 }
 
-class editDocument extends viewModelBase {
+class editDocument extends shardViewModelBase {
 
     view = require("views/database/documents/editDocument.html");
 
@@ -123,18 +122,18 @@ class editDocument extends viewModelBase {
 
     private changeNotification: changeSubscription;
 
-    private normalActionProvider = new normalCrudActions(this.document, this.activeDatabase, 
-            docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation));
+    private normalActionProvider = new normalCrudActions(this.document, this.db, // todo !!
+        docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation));
     
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
     private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider);
 
-    connectedDocuments = new connectedDocuments(this.document, 
-        this.activeDatabase, 
-        (docId) => this.loadDocument(docId), 
-        changeVector => this.enterCompareModeAndCompareByChangeVector(changeVector), 
-        this.isCreatingNewDocument, 
-        this.crudActionsProvider, 
+    connectedDocuments = new connectedDocuments(this.document,
+        this.db,
+        (docId) => this.loadDocument(docId),
+        changeVector => this.enterCompareModeAndCompareByChangeVector(changeVector),
+        this.isCreatingNewDocument,
+        this.crudActionsProvider,
         this.inReadOnlyMode,
         this.isReadOnlyAccess,
         this.isClone);
@@ -161,8 +160,8 @@ class editDocument extends viewModelBase {
     isDocumentCollapsed = ko.observable<boolean>(false);
     forceFold: boolean = false;
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         aceEditorBindingHandler.install();
         this.initializeObservables();
@@ -256,7 +255,7 @@ class editDocument extends viewModelBase {
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
-                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) });
+                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.db) });
             });
         return canActivateResult;
     }
@@ -266,7 +265,7 @@ class editDocument extends viewModelBase {
 
         this.loadRevisionsBinEntry(id)
             .done(() => canActivateResult.resolve({ can: true }))
-            .fail(() => canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) }));
+            .fail(() => canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.db) }));
             
         return canActivateResult;
     }
@@ -278,7 +277,7 @@ class editDocument extends viewModelBase {
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
-                canActivateResult.resolve({ redirect: appUrl.forEditDoc(id, this.activeDatabase()) });
+                canActivateResult.resolve({ redirect: appUrl.forEditDoc(id, this.db) });
             });
         return canActivateResult;
     }
@@ -356,7 +355,7 @@ class editDocument extends viewModelBase {
             const docId = this.userSpecifiedId();
             const revisionChangeVector = this.revisionChangeVector();
 
-            const activeDb = this.activeDatabase();
+            const activeDb = this.db;
             if (!activeDb) {
                 return null;
             }
@@ -367,7 +366,7 @@ class editDocument extends viewModelBase {
         });
         
         this.documentExpirationEnabled = ko.pureComputed(() => {
-            const db = this.activeDatabase();
+            const db = this.db;
             if (db) {
                 return db.hasExpirationConfiguration();
             } else {
@@ -376,7 +375,7 @@ class editDocument extends viewModelBase {
         });
 
         this.documentRefreshEnabled = ko.pureComputed(() => {
-            const db = this.activeDatabase();
+            const db = this.db;
             if (db) {
                 return db.hasRefreshConfiguration();
             } else {
@@ -489,12 +488,12 @@ class editDocument extends viewModelBase {
 
         this.latestRevisionUrl = ko.pureComputed(() => {
             const id = this.document().getId();
-            return appUrl.forEditDoc(id, this.activeDatabase());
+            return appUrl.forEditDoc(id, this.db);
         });
         
         this.createTimeSeriesUrl = ko.pureComputed(() => {
             const id = this.document().getId();
-            return appUrl.forCreateTimeSeries(id, this.activeDatabase());
+            return appUrl.forCreateTimeSeries(id, this.db);
         });
 
         this.canViewAttachments = ko.pureComputed(() => {
@@ -590,7 +589,7 @@ class editDocument extends viewModelBase {
 
         if (collectionForNewDocument) {
             this.userSpecifiedId(this.defaultNameForNewDocument(collectionForNewDocument));
-            new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.activeDatabase()), 0, 3)
+            new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.db), 0, 3)
                 .execute()
                 .done((documents: pagedResult<document>) => {
                     const schemaDoc = documentHelpers.findSchema(documents.items);
@@ -722,7 +721,7 @@ class editDocument extends viewModelBase {
         // Show current document as a clone document...
         router.navigate(window.location.hash + "&isClone=true", { trigger: false, replace: false });
         
-        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.activeDatabase, attachments, timeseries, counters, () => this.connectedDocuments.reload()));
+        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.db, attachments, timeseries, counters, () => this.connectedDocuments.reload()));
 
         this.isCreatingNewDocument(true);
         this.isClone(true);
@@ -852,8 +851,8 @@ class editDocument extends viewModelBase {
         const newDoc = new document(updatedDto);
         
         const saveCommand = forceRevisionCreation ?
-                            new forceRevisionCreationCommand(documentId, this.activeDatabase()) :
-                            new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
+            new forceRevisionCreationCommand(documentId, this.db) :
+            new saveDocumentCommand(documentId, newDoc, this.db);
         
         this.isSaving(true);
         saveCommand
@@ -926,7 +925,7 @@ class editDocument extends viewModelBase {
         this.getDocumentPhysicalSize(metadata['@id']);
            
         if (!this.connectedDocuments.isRevisionsActive()) {
-            this.crudActionsProvider().fetchRevisionsCount(savedDocumentDto["@id"], this.activeDatabase());
+            this.crudActionsProvider().fetchRevisionsCount(savedDocumentDto["@id"], this.db);
         }
     }
 
@@ -939,7 +938,7 @@ class editDocument extends viewModelBase {
     private loadDocument(id: string): JQueryPromise<document> {
         this.isBusy(true);
 
-        const db = this.activeDatabase();
+        const db = this.db;
         const loadTask = $.Deferred<document>();
 
         new getDocumentWithMetadataCommand(id, db)
@@ -952,7 +951,7 @@ class editDocument extends viewModelBase {
                 
                 this.getDocumentPhysicalSize(id);
                 
-                this.crudActionsProvider().fetchRevisionsCount(id, this.activeDatabase());
+                this.crudActionsProvider().fetchRevisionsCount(id, this.db);
                 
                 loadTask.resolve(doc);
             })
@@ -981,7 +980,7 @@ class editDocument extends viewModelBase {
     }
 
     private enterCompareModeAndCompareByChangeVector(revisionChangeVector: string): JQueryPromise<document> {
-        return new getDocumentRevisionsCommand(this.document().getId(), this.activeDatabase(), 0, 1024, true)
+        return new getDocumentRevisionsCommand(this.document().getId(), this.db, 0, 1024, true)
             .execute()
             .then(revisions => {
                 const itemToCompare = revisions.items.find(x => x.__metadata.changeVector() === revisionChangeVector);
@@ -998,7 +997,7 @@ class editDocument extends viewModelBase {
         this.comparingWith(item);
         
         const revisionChangeVector = item.__metadata.changeVector();
-        return new getDocumentAtRevisionCommand(revisionChangeVector, this.activeDatabase())
+        return new getDocumentAtRevisionCommand(revisionChangeVector, this.db)
             .execute()
             .done((rightDoc: document) => {
                 const wasDirty = this.dirtyFlag().isDirty();
@@ -1025,7 +1024,7 @@ class editDocument extends viewModelBase {
     }
     
     private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Server.Documents.Handlers.DocumentSizeDetails> {
-        return new getDocumentPhysicalSizeCommand(id, this.activeDatabase())
+        return new getDocumentPhysicalSizeCommand(id, this.db)
             .execute()
             .done((size) => {
                 this.sizeOnDiskActual(size.HumaneActualSize);
@@ -1038,7 +1037,7 @@ class editDocument extends viewModelBase {
     }
     
     private loadRevisionsBinEntry(id: string): JQueryPromise<document> {
-        return new getRevisionsBinDocumentMetadataCommand(id, this.activeDatabase())
+        return new getRevisionsBinDocumentMetadataCommand(id, this.db)
             .execute()
             .done((doc: document) => {
                 this.document(doc);
@@ -1050,14 +1049,14 @@ class editDocument extends viewModelBase {
                 this.dirtyFlag().reset();
 
                 messagePublisher.reportError("Could not find revisions bin entry: " + id);
-                router.navigate(appUrl.forDocuments(null, this.activeDatabase()));
+                router.navigate(appUrl.forDocuments(null, this.db));
             });
     }
 
     private loadRevision(changeVector: string) : JQueryPromise<document> {
         this.isBusy(true);
 
-        return new getDocumentAtRevisionCommand(changeVector, this.activeDatabase())
+        return new getDocumentAtRevisionCommand(changeVector, this.db)
             .execute()
             .done((doc: document) => {
                 this.document(doc);
@@ -1101,7 +1100,7 @@ class editDocument extends viewModelBase {
         eventsCollector.default.reportEvent("document", "delete");
         const doc = this.document();
         if (doc) {
-            const viewModel = new deleteDocuments([doc.getId()], this.activeDatabase());
+            const viewModel = new deleteDocuments([doc.getId()], this.db);
             viewModel.deletionTask.done(() => {
                 this.dirtyFlag().reset();
                 this.connectedDocuments.onDocumentDeleted();
@@ -1123,12 +1122,12 @@ class editDocument extends viewModelBase {
     }
 
     navigateToCollection(collectionName: string) {
-        const collectionUrl = appUrl.forDocuments(collectionName, this.activeDatabase());
+        const collectionUrl = appUrl.forDocuments(collectionName, this.db);
         router.navigate(collectionUrl);
     }
 
     updateUrl(docId: string) {
-        const editDocUrl = appUrl.forEditDoc(docId, this.activeDatabase());
+        const editDocUrl = appUrl.forEditDoc(docId, this.db);
         router.navigate(editDocUrl, false);
     }
 
@@ -1136,7 +1135,7 @@ class editDocument extends viewModelBase {
         eventsCollector.default.reportEvent("document", "generate-csharp-class");
 
         const doc: document = this.document();
-        const generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
+        const generate = new generateClassCommand(this.db, doc.getId(), "csharp");
         const deferred = generate.execute();
         deferred.done((code: string) => app.showBootstrapDialog(new showDataDialog("The Generated C# Class", code, "csharp", null)));
     }
@@ -1227,7 +1226,7 @@ class editDocument extends viewModelBase {
 class normalCrudActions implements editDocumentCrudActions {
     
     private readonly document: KnockoutObservable<document>;
-    private readonly db: KnockoutObservable<database>;
+    private readonly db: database;
     private readonly loadDocument: (id: string) => JQueryPromise<document>;
     private readonly onDocumentSavedAction: (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => void | JQueryPromise<void>;
 
@@ -1236,7 +1235,7 @@ class normalCrudActions implements editDocumentCrudActions {
     revisionsCount = ko.observable<number>();
     timeSeriesCount: KnockoutComputed<number>;
 
-    constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (id: string) => JQueryPromise<document>,
+    constructor(document: KnockoutObservable<document>, db: database, loadDocument: (id: string) => JQueryPromise<document>,
                 onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any, forcedRevisionCreation: boolean) => void | JQueryPromise<void>) {
         this.document = document;
         this.db = db;
@@ -1320,7 +1319,7 @@ class normalCrudActions implements editDocumentCrudActions {
         };
         
         eventsCollector.default.reportEvent("counters", "set");
-        const setCounterView = new setCounterDialog(counter, this.db(), true, saveAction);
+        const setCounterView = new setCounterDialog(counter, this.db, true, saveAction);
 
         app.showBootstrapDialog(setCounterView);
     }
@@ -1332,7 +1331,7 @@ class normalCrudActions implements editDocumentCrudActions {
         })
             .done((result) => {
                 if (result.can) {
-                    new deleteAttachmentCommand(file.documentId, file.name, this.db())
+                    new deleteAttachmentCommand(file.documentId, file.name, this.db)
                         .execute()
                         .done(() => this.loadDocument(file.documentId));
                 }
@@ -1346,7 +1345,7 @@ class normalCrudActions implements editDocumentCrudActions {
         })
             .done((result) => {
                 if (result.can) {
-                    new deleteCounterCommand(counter.counterName, counter.documentId, this.db())
+                    new deleteCounterCommand(counter.counterName, counter.documentId, this.db)
                         .execute()
                         .done(() => this.loadDocument(counter.documentId));
                 }
@@ -1398,7 +1397,7 @@ class normalCrudActions implements editDocumentCrudActions {
         }
 
         const fetchTask = $.Deferred<pagedResult<counterItem>>();
-        new getCountersCommand(doc.getId(), this.db())
+        new getCountersCommand(doc.getId(), this.db)
             .execute()
             .done(result => {
                 if (nameFilter) {
@@ -1427,7 +1426,7 @@ class normalCrudActions implements editDocumentCrudActions {
         }
         
         const fetchTask = $.Deferred<pagedResult<timeSeriesItem>>();
-        new getTimeSeriesStatsCommand(doc.getId(), this.db())
+        new getTimeSeriesStatsCommand(doc.getId(), this.db)
             .execute()
             .done(result => {
                 if (nameFilter) {
@@ -1509,13 +1508,13 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     
     private readonly parentView: editDocument;
     private readonly sourceDocumentId: string;
-    private readonly db: KnockoutObservable<database>;
+    private readonly db: database;
     private readonly reload: () => void;
     
     private changeVector: string;
     private fromRevision: boolean;
     
-    constructor(parentView: editDocument, db: KnockoutObservable<database>, attachments: attachmentItem[], timeSeries: timeSeriesItem[], counters: counterItem[], reload: () => void) {
+    constructor(parentView: editDocument, db: database, attachments: attachmentItem[], timeSeries: timeSeriesItem[], counters: counterItem[], reload: () => void) {
         this.parentView = parentView;
         this.sourceDocumentId = parentView.editedDocId();
         
@@ -1571,7 +1570,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         };
         
         eventsCollector.default.reportEvent("counters", "set");
-        const setCounterView = new setCounterDialog(counter, this.db(), false, saveAction);
+        const setCounterView = new setCounterDialog(counter, this.db, false, saveAction);
 
         app.showBootstrapDialog(setCounterView);
     }
@@ -1646,8 +1645,8 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
                 }
             });
             
-            return new cloneRelatedItemsCommand(this.sourceDocumentId, this.fromRevision, this.changeVector, 
-                targetDocumentId, this.db(), attachmentNames, timeseries, counters)
+            return new cloneRelatedItemsCommand(this.sourceDocumentId, this.fromRevision, this.changeVector,
+                targetDocumentId, this.db, attachmentNames, timeseries, counters)
                 .execute();
         } else {
             // no need for extra call
@@ -1657,7 +1656,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     
     onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
         this.parentView.dirtyFlag().reset();
-        router.navigate(appUrl.forEditDoc(saveResult.Results[0]["@id"], this.db()));
+        router.navigate(appUrl.forEditDoc(saveResult.Results[0]["@id"], this.db));
     }
 }
 

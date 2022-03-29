@@ -12,7 +12,7 @@ class editDocumentUploader {
     static readonly filePickerSelector = "#uploadAttachmentFilePicker";
 
     private document: KnockoutObservable<document>;
-    private db: KnockoutObservable<database>;
+    private db: database;
     private afterUpload: () => void;
     currentUpload = ko.observable<attachmentUpload>();
     
@@ -27,7 +27,7 @@ class editDocumentUploader {
         upload: ko.observable<boolean>(false)
     };
 
-    constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, afterUpload: () => void) {
+    constructor(document: KnockoutObservable<document>, db: database, afterUpload: () => void) {
         this.document = document;
         this.db = db;
         this.afterUpload = afterUpload;
@@ -66,13 +66,13 @@ class editDocumentUploader {
     private uploadInternal(file: File) {
         this.spinners.upload(true);
 
-        const upload = attachmentUpload.forFile(this.db(), this.document().getId(), file.name);
+        const upload = attachmentUpload.forFile(this.db, this.document().getId(), file.name);
         
         this.currentUpload(upload);
         
         notificationCenter.instance.monitorAttachmentUpload(upload);
 
-        const command = new uploadAttachmentCommand(file, this.document().getId(), this.db(), event => upload.updateProgress(event));
+        const command = new uploadAttachmentCommand(file, this.document().getId(), this.db, event => upload.updateProgress(event));
         
         command
             .execute()
