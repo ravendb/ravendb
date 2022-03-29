@@ -814,16 +814,16 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/timeseries/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task GetTimeSeriesConfig()
+        public async Task GetTimeSeriesConfiguration()
         {
             using (var processor = new ConfigurationHandlerProcessorForGetTimeSeriesConfiguration(this))
                 await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/timeseries/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ConfigTimeSeries()
+        public async Task PostTimeSeriesConfiguration()
         {
-            using (var processor = new ConfigurationHandlerProcessorForTimeSeriesConfig(this))
+            using (var processor = new ConfigurationHandlerProcessorForPostTimeSeriesConfiguration(this))
                 await processor.ExecuteAsync();
         }
 

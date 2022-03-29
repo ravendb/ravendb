@@ -1,10 +1,12 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
+using Raven.Server.Json;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations.TimeSeries
+namespace Raven.Server.Documents.Commands.TimeSeries
 {
     internal class GetTimeSeriesConfigurationOperation : IMaintenanceOperation<TimeSeriesConfiguration>
     {
@@ -34,7 +36,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (response == null)
                     return;
 
-                Result = JsonDeserializationClient.TimeSeriesConfiguration(response);
+                Result = JsonDeserializationServer.TimeSeriesConfiguration(response);
             }
         }
     }

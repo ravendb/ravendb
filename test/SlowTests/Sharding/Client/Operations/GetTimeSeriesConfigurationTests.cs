@@ -2,8 +2,10 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.Documents.Commands.TimeSeries;
 using Sparrow;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,15 +40,14 @@ namespace SlowTests.Sharding.Client.Operations
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                TimeSeriesConfiguration timeSeriesConfiguration = null;
-                await AssertWaitForNotNullAsync(async () =>
+                await store.Maintenance.ForTesting(() => new GetTimeSeriesConfigurationOperation()).AssertAllAsync((key, timeSeriesConfiguration) =>
                 {
-                    timeSeriesConfiguration = await store.Maintenance.SendAsync(new GetTimeSeriesConfigurationOperation());
-                    return timeSeriesConfiguration;
-                }, interval: 1000);
-
-                Assert.Equal(1, timeSeriesConfiguration.Collections.Count);
-                Assert.Equal(3, timeSeriesConfiguration.Collections["Users"].Policies.Count);
+                    Assert.NotNull(timeSeriesConfiguration);
+                    Assert.Equal(1, timeSeriesConfiguration.Collections.Count);
+                    Assert.Equal(3, timeSeriesConfiguration.Collections["Users"].Policies.Count);
+                });
+              
+               
             }
         }
     }

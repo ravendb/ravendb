@@ -7,9 +7,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
     public class ShardedTimeSeriesHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/admin/timeseries/config", "POST")]
-        public async Task ConfigTimeSeries()
+        public async Task PostTimeSeriesConfiguration()
         {
-            using (var processor = new ShardedConfigurationHandlerProcessorForTimeSeriesConfig(this))
+            using (var processor = new ShardedConfigurationHandlerProcessorForPostTimeSeriesConfiguration(this))
                 await processor.ExecuteAsync();
         }
 
