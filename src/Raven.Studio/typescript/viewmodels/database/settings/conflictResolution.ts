@@ -1,5 +1,4 @@
 import app = require("durandal/app");
-import viewModelBase = require("viewmodels/viewModelBase");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import conflictResolutionModel = require("models/database/settings/conflictResolutionModel");
@@ -9,8 +8,10 @@ import conflictResolutionScriptSyntax = require("viewmodels/database/settings/co
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
 import eventsCollector = require("common/eventsCollector");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database = require("models/resources/database");
 
-class conflictResolution extends viewModelBase {
+class conflictResolution extends shardViewModelBase {
 
     view = require("views/database/settings/conflictResolution.html");
 
@@ -22,8 +23,9 @@ class conflictResolution extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
+        
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("saveEditedScript", "cancelEditedScript", "editScript", "removeScript", "syntaxHelp", "save");
 
@@ -33,7 +35,7 @@ class conflictResolution extends viewModelBase {
     activate(args: any): JQueryPromise<Raven.Client.ServerWide.ConflictSolver> {
         super.activate(args);
 
-        return new getConflictSolverConfigurationCommand(this.activeDatabase())
+        return new getConflictSolverConfigurationCommand(this.db)
             .execute()
             .done(config => {
                 if (config) {
@@ -84,7 +86,7 @@ class conflictResolution extends viewModelBase {
             return false;
         }
         
-        new saveConflictSolverConfigurationCommand(this.activeDatabase(), model.toDto())
+        new saveConflictSolverConfigurationCommand(this.db, model.toDto())
             .execute()
             .done(() => {
                 this.model().perCollectionResolvers().forEach(resolver => {
