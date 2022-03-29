@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var command = new RegisterReplicationHubAccessCommand(Database.Name, hubTaskName, access, cert, GetRaftRequestIdFromQuery());
                 var result = await Server.ServerStore.SendToLeaderAsync(command);
-                await WaitForIndexToBeApplied(context, result.Index);
+                await WaitForIndexToBeAppliedAsync(context, result.Index);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var command = new UnregisterReplicationHubAccessCommand(Database.Name, hub, thumbprint, GetRaftRequestIdFromQuery());
                 var result = await Server.ServerStore.SendToLeaderAsync(command);
-                await WaitForIndexToBeApplied(context, result.Index);
+                await WaitForIndexToBeAppliedAsync(context, result.Index);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

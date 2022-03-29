@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -63,23 +64,21 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return Task.CompletedTask;
         }
 
-        public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
+            await ServerStore.Cluster.WaitForIndexNotification(index);
+            await DatabaseContext.RachisLogIndexNotifications.WaitForIndexNotification(index, HttpContext.RequestAborted);
+
             var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).ToList();
-            if (dbs.Count == 0)
+            var tasks = new List<Task>();
+            
+            foreach (var task in dbs)
             {
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+                var db = await task;
+                tasks.Add(db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
             }
-            else
-            {
-                var tasks = new List<Task>();
-                foreach (var task in dbs)
-                {
-                    var db = await task;
-                    tasks.Add(db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
-                }
-                await tasks.WhenAll();
-            }
+
+            await tasks.WhenAll();
         }
     }
 }

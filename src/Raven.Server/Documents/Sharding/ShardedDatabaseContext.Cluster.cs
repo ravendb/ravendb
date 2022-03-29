@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Sharding.Operations;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -23,21 +19,22 @@ public partial class ShardedDatabaseContext
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async ValueTask WaitForExecutionOfRaftCommandsAsync(long index)
+        /// <summary>
+        /// Wait for the database context to be update on all cluster nodes regardless if a shard is actually reside on that node or not [Important when you need the ShardedDatabaseContext to be updated].
+        /// </summary>
+        public async ValueTask WaitForExecutionOnAllNodes(long index)
         {
-            await WaitForExecutionOnAllNodes(index);
+            var op = new WaitForIndexNotificationOperation(index);
+            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op);
         }
 
+        /// <summary>
+        /// Wait for indexes to be applied on the cluster nodes where the physical database shards are available
+        /// </summary>
         public async ValueTask WaitForExecutionOnShards(List<long> indexes)
         {
-            var op = new WaitForDatabaseContextUpdateOperation(indexes, useShardedName: true);
-            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op);
-        }
-
-        public async Task WaitForExecutionOnAllNodes(long index)
-        {
-            var op = new WaitForDatabaseContextUpdateOperation(index, useShardedName: false);
-            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op);
+            var op = new WaitForIndexNotificationOperation(indexes);
+            await _context.ShardExecutor.ExecuteParallelForAllAsync(op);
         }
     }
 }

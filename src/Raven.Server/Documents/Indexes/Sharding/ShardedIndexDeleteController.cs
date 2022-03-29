@@ -30,5 +30,5 @@ public class ShardedIndexDeleteController : AbstractIndexDeleteController
         await _context.Indexes.Create.CreateIndexAsync(definition, raftRequestId);
     }
 
-    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOfRaftCommandsAsync(index);
+    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodes(index);
 }

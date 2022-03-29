@@ -126,7 +126,7 @@ namespace Raven.Server.Documents
             beforeSetupConfiguration?.Invoke(databaseName, ref configurationJson, context, requestHandler.ServerStore);
 
             var (index, _) = await setupConfigurationFunc(context, databaseName, configurationJson, raftRequestId);
-            await requestHandler.WaitForIndexToBeApplied(context, index);
+            await requestHandler.WaitForIndexToBeAppliedAsync(context, index);
 
             return (index, configurationJson);
         }
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents
             return DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, this, configurationJson, beforeSetupConfiguration);
         }
 
-        public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             DatabaseTopology dbTopology;
             using (context.OpenReadTransaction())

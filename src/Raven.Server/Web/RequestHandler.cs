@@ -799,7 +799,7 @@ namespace Raven.Server.Web
             return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
         }
 
-        public virtual Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        public virtual Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             return Task.CompletedTask;
         }

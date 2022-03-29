@@ -1396,7 +1396,7 @@ namespace Raven.Server.Web.System
                 if (database == null)
                 {
                     // sharded database
-                    await requestHandler.WaitForIndexToBeApplied(context, index);
+                    await requestHandler.WaitForIndexToBeAppliedAsync(context, index);
                 }
                 else
                 {
@@ -1493,7 +1493,7 @@ namespace Raven.Server.Web.System
                     (index, _) = await requestHandler.ServerStore.DeleteOngoingTask(id, taskName, type, databaseName, $"{raftRequestId}/delete-ongoing-task");
                     if (sharded)
                     {
-                        await requestHandler.WaitForIndexToBeApplied(context, index);
+                        await requestHandler.WaitForIndexToBeAppliedAsync(context, index);
                     }
                     else
                     {
