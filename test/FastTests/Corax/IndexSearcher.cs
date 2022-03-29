@@ -244,6 +244,27 @@ namespace FastTests.Corax
                 Assert.Equal(0, andMatch.Fill(ids));
             }
         }
+        
+        [Fact]
+        public void SingleAndNoDuplication()
+        {
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+
+            {
+                using var searcher = new IndexSearcher(Env);
+                var match1 = searcher.InQuery("Content", new List<string>() {"road", "lake"});
+                var match2 = searcher.ExistsQuery("Content");
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, andMatch.Fill(ids));
+                Assert.Equal(0, andMatch.Fill(ids));
+            }
+        }
 
         [Fact]
         public void SingleAnd()

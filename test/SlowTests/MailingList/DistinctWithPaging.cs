@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanWorkProperly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -67,6 +67,7 @@ namespace SlowTests.MailingList
                                          .Take(10)
                                          .ToList();
 
+                    Assert.Equal(9, stats.SkippedResults);
                     Assert.Equal(Enumerable.Range(1, 10), results);
 
                     var skippedResults = stats.SkippedResults;
