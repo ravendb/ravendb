@@ -1,18 +1,18 @@
-﻿using JetBrains.Annotations;
+﻿using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Configuration;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Configuration
 {
-    internal class ShardedConfigurationHandlerProcessorForPostTimeSeriesConfiguration : AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal class ShardedConfigurationHandlerProcessorForPostTimeSeriesConfiguration : AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<ShardedDatabaseRequestHandler>
     {
-        public ShardedConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler)
+            : base(requestHandler)
         {
         }
 
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.DatabaseContext.DatabaseName;
-        }
+        protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
+
+        protected override ValueTask WaitForIndexNotificationAsync(long index) => RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodes(index);
     }
 }

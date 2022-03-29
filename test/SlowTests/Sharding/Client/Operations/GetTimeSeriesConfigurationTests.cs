@@ -38,6 +38,7 @@ namespace SlowTests.Sharding.Client.Operations
                         }
                     }
                 };
+
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await store.Maintenance.ForTesting(() => new GetTimeSeriesConfigurationOperation()).AssertAllAsync((key, timeSeriesConfiguration) =>
@@ -46,8 +47,6 @@ namespace SlowTests.Sharding.Client.Operations
                     Assert.Equal(1, timeSeriesConfiguration.Collections.Count);
                     Assert.Equal(3, timeSeriesConfiguration.Collections["Users"].Policies.Count);
                 });
-              
-               
             }
         }
     }
