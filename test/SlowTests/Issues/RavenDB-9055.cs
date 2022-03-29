@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
                 {
                     var forAllDocuments = documentStore.Changes().ForAllDocuments();
                     forAllDocuments.Subscribe(change => mre.Set());
-                    forAllDocuments.EnsureSubscribedNow().Wait();
+                    Assert.True(forAllDocuments.EnsureSubscribedNow().Wait(TimeSpan.FromMinutes(1)));
 
                     var user = session.Load<User>("users/1");
                     user.Name = "Shalom";
