@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldStopPullingTaskWhenSubscriptionIsDeleted()
+        public async Task ShouldStopPullingTaskWhenSubscriptionIsDeleted()
         {
             using (var store = GetDocumentStore())
             {
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
                 {
                     Query = "from Companies"
                 };
-                var id = store.Subscriptions.Create(subscriptionCreationParams);
+                var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
@@ -55,7 +56,7 @@ namespace SlowTests.Issues
                 Assert.True(SpinWait.SpinUntil(() => docs.Count == 10, TimeSpan.FromSeconds(60)));
 
                 // all documents were fetched - time to delete subscription
-                store.Subscriptions.DeleteAsync(id).Wait();
+                await store.Subscriptions.DeleteAsync(id);
 
                 // verify if we don't get new items
                 using (var session = store.OpenSession())
