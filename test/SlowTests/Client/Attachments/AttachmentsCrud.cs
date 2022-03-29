@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +10,9 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
@@ -344,14 +347,19 @@ namespace SlowTests.Client.Attachments
                 AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }
-
-        public static void AssertAttachmentCount(DocumentStore store, long uniqueAttachmentCount, long? attachmentCount = null, long documentsCount = 1)
+        
+        public static void AssertAttachmentCount(DocumentStore store, long uniqueAttachmentCount, long? attachmentCount = null, long documentsCount = 1, int? shardNumber = null)
         {
-            var statistics = store.Maintenance.Send(new GetStatisticsOperation());
-            Assert.Equal(documentsCount, statistics.CountOfDocuments);
-            Assert.Equal(0, statistics.CountOfRevisionDocuments);
-            Assert.Equal(attachmentCount ?? uniqueAttachmentCount, statistics.CountOfAttachments);
-            Assert.Equal(uniqueAttachmentCount, statistics.CountOfUniqueAttachments);
+            store.Maintenance.ForTesting(() => new GetStatisticsOperation()).AssertAll((key, statistics) =>
+            {
+                if (key.ShardNumber.HasValue == false || key.ShardNumber == shardNumber)
+                {
+                    Assert.Equal(documentsCount, statistics.CountOfDocuments);
+                    Assert.Equal(0, statistics.CountOfRevisionDocuments);
+                    Assert.Equal(attachmentCount ?? uniqueAttachmentCount, statistics.CountOfAttachments);
+                    Assert.Equal(uniqueAttachmentCount, statistics.CountOfUniqueAttachments);
+                }
+            });
         }
 
         [Fact]

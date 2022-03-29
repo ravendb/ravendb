@@ -8,12 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -363,23 +362,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/attachments", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Delete()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var processor = new AttachmentsHandlerProcessorForDeleteAttachment(this))
             {
-                var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
-
-                var cmd = new MergedDeleteAttachmentCommand
-                {
-                    Database = Database,
-                    ExpectedChangeVector = changeVector,
-                    DocumentId = id,
-                    Name = name
-                };
-                await Database.TxMerger.Enqueue(cmd);
-
-                NoContentStatus();
+                await processor.ExecuteAsync();
             }
         }
 

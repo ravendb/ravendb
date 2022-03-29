@@ -8,6 +8,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -366,6 +367,47 @@ namespace SlowTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
                 AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DeleteDocumentAndThanItsAttachments(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    await session.StoreAsync(user, "users/1");
+
+                    using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
+                    {
+                        session.Advanced.Attachments.Store(user, "file", stream, "image/png");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                int? shardNumber = null;
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    shardNumber = await Sharding.GetShardNumber(store, "users/1");
+                }
+
+                AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 1, shardNumber: shardNumber);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+
+                    session.Delete(user);
+                    
+                    await session.SaveChangesAsync();
+                }
+
+                await store.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "file"));
+                
+                AttachmentsCrud.AssertAttachmentCount(store, 0, documentsCount: 0, shardNumber: shardNumber);
             }
         }
 
