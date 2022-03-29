@@ -37,6 +37,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
             moduleId: require('viewmodels/database/settings/clientConfiguration'),
+            shardingMode: "allShardsOnly",
             title: 'Client Configuration',
             nav: true,
             css: 'icon-database-client-configuration',
@@ -44,8 +45,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/studioConfiguration',
-            shardingMode: "allShardsOnly",
             moduleId: require('viewmodels/database/settings/studioConfiguration'),
+            shardingMode: "allShardsOnly",
             title: 'Studio Configuration',
             nav: true,
             css: 'icon-database-studio-configuration',
@@ -154,8 +155,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/advanced/databaseRecord',
             moduleId: require('viewmodels/database/advanced/databaseRecord'),
-            title: 'Database Record',
             shardingMode: "allShardsOnly",
+            title: 'Database Record',
             nav: true,
             css: 'icon-database-record',
             dynamicHash: appUrls.databaseRecord,
