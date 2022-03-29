@@ -3,9 +3,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration
 {
-    internal class ConfigurationHandlerProcessorForTimeSeriesConfig : AbstractConfigurationHandlerProcessorForTimeSeriesConfig<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class ConfigurationHandlerProcessorForPostTimeSeriesConfiguration : AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public ConfigurationHandlerProcessorForTimeSeriesConfig([NotNull] DatabaseRequestHandler requestHandler)
+        public ConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] DatabaseRequestHandler requestHandler)
             : base(requestHandler, requestHandler.ContextPool)
         {
         }
