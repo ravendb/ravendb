@@ -77,15 +77,9 @@ public class IndexInformationHolder
 
     public static IndexInformationHolder CreateFor(Index index)
     {
-        switch (index.Type)
-        {
-            case IndexType.Map:
-            case IndexType.MapReduce:
-                return new StaticIndexInformationHolder(index);
-
-            default:
-                return new IndexInformationHolder(index);
-        }
+        return index.Type.IsStatic() 
+            ? new StaticIndexInformationHolder(index) 
+            : new IndexInformationHolder(index);
     }
 
     private static IndexType DetectIndexType(IndexDefinitionBaseServerSide definition)

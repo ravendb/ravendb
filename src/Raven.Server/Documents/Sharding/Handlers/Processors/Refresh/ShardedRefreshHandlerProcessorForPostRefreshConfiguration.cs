@@ -12,5 +12,5 @@ internal class ShardedRefreshHandlerProcessorForPostRefreshConfiguration : Abstr
 
     protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 
-    protected override ValueTask WaitForIndexNotificationAsync(long index) => RequestHandler.DatabaseContext.Cluster.WaitForExecutionOfRaftCommandsAsync(index);
+    protected override ValueTask WaitForIndexNotificationAsync(long index) => RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodes(index);
 }
