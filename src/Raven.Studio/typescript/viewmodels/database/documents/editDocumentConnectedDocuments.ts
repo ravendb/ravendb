@@ -42,7 +42,7 @@ class connectedDocuments {
     loadDocumentAction: (docId: string) => void;
     compareWithRevisionAction: (revisionChangeVector: string) => JQueryPromise<document>;
     document: KnockoutObservable<document>;
-    db: KnockoutObservable<database>;
+    db: database;
     
     isReadOnlyAccess: KnockoutObservable<boolean>;
     inReadOnlyMode: KnockoutObservable<boolean>;
@@ -85,7 +85,7 @@ class connectedDocuments {
     uploader: editDocumentUploader;
 
     constructor(document: KnockoutObservable<document>,
-        db: KnockoutObservable<database>,
+        db: database,
         loadDocument: (docId: string) => void,
         compareWithRevision: (revisionChangeVector: string) => JQueryPromise<document>,
         isCreatingNewDocument: KnockoutObservable<boolean>,
@@ -301,7 +301,7 @@ class connectedDocuments {
             relatedDocumentsCandidates = relatedDocumentsCandidates.filter(x => x.toLocaleLowerCase().includes(search));
         }
 
-        const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db());
+        const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db);
         docIDsVerifyCommand.execute()
             .done((verifiedIDs: string[]) => {
                 const connectedDocs: connectedDocumentItem[] = verifiedIDs.map(id => this.docIdToConnectedDoc(id));
@@ -317,7 +317,7 @@ class connectedDocuments {
     fetchRecentDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const doc = this.document();
 
-        const recentDocs = this.recentDocuments.getTopRecentDocuments(this.db(), doc.getId(), this.isClone());
+        const recentDocs = this.recentDocuments.getTopRecentDocuments(this.db, doc.getId(), this.isClone());
         
         return $.Deferred<pagedResult<connectedDocumentItem>>().resolve({
             items: recentDocs.map(x => ({ id: x.id, href: x.href, deletedRevision: false })),
@@ -334,7 +334,7 @@ class connectedDocuments {
 
         const fetchTask = $.Deferred<pagedResult<connectedDocumentItem>>();
         
-        new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
+        new getDocumentRevisionsCommand(doc.getId(), this.db, skip, take, true)
             .execute()
             .done(result => {
                 const mappedResults = result.items.map(x => this.revisionToConnectedDocument(x));
@@ -362,7 +362,7 @@ class connectedDocuments {
     private revisionToConnectedDocument(doc: document): connectedRevisionDocumentItem {
         const changeVector = doc.__metadata.changeVector();
         return {
-            href: appUrl.forViewDocumentAtRevision(doc.getId(), changeVector, this.db()),
+            href: appUrl.forViewDocumentAtRevision(doc.getId(), changeVector, this.db),
             id: doc.__metadata.lastModified(),
             deletedRevision: doc.__metadata.hasFlag("DeleteRevision"),
             revisionChangeVector: changeVector
@@ -395,7 +395,7 @@ class connectedDocuments {
             this.downloadAttachmentAtRevision(doc, args);
         } else {
             const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(args);
-            this.downloader.download(this.db(), url);    
+            this.downloader.download(this.db, url);
         }
     }
 
@@ -410,7 +410,7 @@ class connectedDocuments {
 
         const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(file);
 
-        $form.attr("action", appUrl.forDatabaseQuery(this.db()) + url);
+        $form.attr("action", appUrl.forDatabaseQuery(this.db) + url);
         
         $changeVector.val(JSON.stringify(payload));
         $form.submit();
@@ -449,25 +449,25 @@ class connectedDocuments {
     }
     
     onDocumentDeleted() {
-        this.recentDocuments.documentRemoved(this.db(), this.document().getId());
-        const previous = this.recentDocuments.getPreviousDocument(this.db());
+        this.recentDocuments.documentRemoved(this.db, this.document().getId());
+        const previous = this.recentDocuments.getPreviousDocument(this.db);
         if (previous) {
             this.loadDocumentAction(previous);
-            router.navigate(appUrl.forEditDoc(previous, this.db()), false);
+            router.navigate(appUrl.forEditDoc(previous, this.db), false);
         } else {
-            router.navigate(appUrl.forDocuments(null, this.db()));
+            router.navigate(appUrl.forDocuments(null, this.db));
         }
     }
 
     toggleStar() {
         this.currentDocumentIsStarred(!this.currentDocumentIsStarred());
-        starredDocumentsStorage.markDocument(this.db(), this.document().getId(), this.currentDocumentIsStarred());
+        starredDocumentsStorage.markDocument(this.db, this.document().getId(), this.currentDocumentIsStarred());
     }
 
     private onDocumentLoaded(document: document) {
         if (document) {
-            this.recentDocuments.appendRecentDocument(this.db(), this.document().getId());
-            this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
+            this.recentDocuments.appendRecentDocument(this.db, this.document().getId());
+            this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db, this.document().getId()));
 
             if (connectedDocuments.currentTab() === "revisions" && (!document.__metadata.hasFlag("HasRevisions") && !document.__metadata.hasFlag("DeleteRevision"))) {
                 // this will also reset grid
@@ -493,13 +493,13 @@ class connectedDocuments {
     private docIdToConnectedDoc(docId: string): connectedDocumentItem {
         return {
             id: docId,
-            href: appUrl.forEditDoc(docId, this.db()),
+            href: appUrl.forEditDoc(docId, this.db),
             deletedRevision: false
         }
     }
 
     goToTimeSeriesEdit(item: timeSeriesItem) { 
-        router.navigate(appUrl.forEditTimeSeries(item.name, this.document().getId(), this.db()));
+        router.navigate(appUrl.forEditTimeSeries(item.name, this.document().getId(), this.db));
     }
 }
 

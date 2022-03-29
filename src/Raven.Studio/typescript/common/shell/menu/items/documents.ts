@@ -47,6 +47,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/edit",
             moduleId: require("viewmodels/database/documents/editDocument"),
+            shardingMode: "both",
             title: "Edit Document",
             nav: false,
             itemRouteToHighlight: "databases/documents"
