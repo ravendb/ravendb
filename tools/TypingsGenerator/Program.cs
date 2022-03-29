@@ -345,6 +345,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TrafficWatchPayload));
             scripter.AddType(typeof(DatabaseTrafficWatchPayload));
             scripter.AddType(typeof(DatabaseOverviewPayload));
+            scripter.AddType(typeof(OngoingTasksPayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

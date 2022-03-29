@@ -112,55 +112,49 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public void MarkSegmentForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, DateTime timestamp, 
+        public void MarkSegmentForPolicy(
+            DocumentsOperationContext context, 
+            TimeSeriesSliceHolder slicerHolder, 
+            DateTime timestamp, 
             string changeVector,
             int numberOfEntries)
         {
-            if (Configuration.Collections.TryGetValue(slicerHolder.Collection, out var config) == false)
+            var status = numberOfEntries == 0 ? TimeSeriesValuesSegment.Dead : TimeSeriesValuesSegment.Live;
+            if (ShouldMarkForPolicy(context, slicerHolder, timestamp, status, out TimeSeriesPolicy nextPolicy) == false) 
                 return;
-
-            var currentIndex = config.GetPolicyIndexByTimeSeries(slicerHolder.Name);
-            if (currentIndex == -1) // policy not found
-                return;
-
-            var nextPolicy = config.GetNextPolicy(currentIndex);
-            if (nextPolicy == null)
-                return;
-
-            if (ReferenceEquals(nextPolicy, TimeSeriesPolicy.AfterAllPolices))
-                return; // this is the last policy
-
-            if (numberOfEntries == 0)
-            {
-                var currentPolicy = config.GetPolicy(currentIndex);
-                var now = context.DocumentDatabase.Time.GetUtcNow();
-                var nextRollup = new DateTime(TimeSeriesRollups.NextRollup(timestamp, nextPolicy));
-                var startRollup = nextRollup.Add(-currentPolicy.RetentionTime);
-                if (now - startRollup > currentPolicy.RetentionTime)
-                    return; // ignore this segment since it is outside our retention frame
-            }
 
             _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkSegmentForPolicy(context, slicerHolder, nextPolicy, timestamp, changeVector);
         }
 
         public void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, DateTime timestamp, ulong status)
         {
-            if (Configuration.Collections.TryGetValue(slicerHolder.Collection, out var config) == false)
+            if (ShouldMarkForPolicy(context, slicerHolder, timestamp, status, out TimeSeriesPolicy nextPolicy) == false)
                 return;
 
-            if (config.Disabled)
-                return;
+            _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkForPolicy(context, slicerHolder, nextPolicy, timestamp);
+        }
+
+        private bool ShouldMarkForPolicy(
+            DocumentsOperationContext context, 
+            TimeSeriesSliceHolder slicerHolder, 
+            DateTime timestamp, 
+            ulong status,
+            out TimeSeriesPolicy nextPolicy)
+        {
+            nextPolicy = default;
+            if (Configuration.Collections.TryGetValue(slicerHolder.Collection, out var config) == false)
+                return false;
 
             var currentIndex = config.GetPolicyIndexByTimeSeries(slicerHolder.Name);
             if (currentIndex == -1) // policy not found
-                return;
-            
-            var nextPolicy = config.GetNextPolicy(currentIndex);
+                return false;
+
+            nextPolicy = config.GetNextPolicy(currentIndex);
             if (nextPolicy == null)
-                return;
+                return false;
 
             if (ReferenceEquals(nextPolicy, TimeSeriesPolicy.AfterAllPolices))
-                return; // this is the last policy
+                return false;
 
             if (status == TimeSeriesValuesSegment.Dead)
             {
@@ -170,11 +164,11 @@ namespace Raven.Server.Documents.TimeSeries
                     var now = context.DocumentDatabase.Time.GetUtcNow();
                     var startRollup = new DateTime(TimeSeriesRollups.NextRollup(timestamp, nextPolicy)).Add(-currentPolicy.RetentionTime);
                     if (startRollup.Add(currentPolicy.RetentionTime) < now)
-                        return; // ignore this value since it is outside our retention frame
+                        return false; // ignore this since it is outside our retention frame
                 }
             }
 
-            _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkForPolicy(context, slicerHolder, nextPolicy, timestamp);
+            return true;
         }
 
         internal async Task HandleChanges()
