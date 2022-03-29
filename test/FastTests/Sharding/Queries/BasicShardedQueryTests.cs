@@ -290,8 +290,10 @@ select {{
             }
         }
 
-        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-17888")]
-        public void Auto_Map_With_Order_By_Multiple_Results()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [InlineData("long")]
+        [InlineData("double")]
+        public void Auto_Map_With_Order_By_Multiple_Results(string sortType)
         {
             using (var store = Sharding.GetDocumentStore())
             {
@@ -330,13 +332,13 @@ select {{
                     session.SaveChanges();
 
                     var queryResult = session.Advanced.RawQuery<OrderLine>(
-                            @"
-declare function project(o) {
+                            $@"
+declare function project(o) {{
     return o.Lines;
-}
+}}
 
 from Orders as o
-order by Freight as double
+order by Freight as {sortType}
 select project(o)")
                         .ToList();
 
@@ -349,7 +351,7 @@ select project(o)")
             }
         }
 
-        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-18192")]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Auto_Map_Reduce_With_Order_By()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -405,8 +407,10 @@ select {{
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        public void Map_Index_With_Order_By_Multiple_Results()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [InlineData("long")]
+        [InlineData("double")]
+        public void Map_Index_With_Order_By_Multiple_Results(string sortType)
         {
             using (var store = Sharding.GetDocumentStore())
             {
@@ -416,7 +420,7 @@ select {{
                 {
                     session.Store(new Order
                     {
-                        Freight = 20m,
+                        Freight = 20.5m,
                         Lines = new List<OrderLine>
                         {
                             new()
@@ -431,7 +435,7 @@ select {{
                     });
                     session.Store(new Order
                     {
-                        Freight = 10m,
+                        Freight = 10.3m,
                         Lines = new List<OrderLine>
                         {
                             new()
@@ -449,13 +453,13 @@ select {{
                     Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Advanced.RawQuery<OrderLine>(
-                            @"
-declare function project(o) {
+                            $@"
+declare function project(o) {{
     return o.Lines;
-}
+}}
 
 from index 'OrderMapIndex' as o
-order by o.Freight as double
+order by o.Freight as {sortType}
                     select project(o)")
                         .ToList();
 
@@ -468,8 +472,17 @@ order by o.Freight as double
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        public void Map_Reduce_Index_With_Order_By_Multiple_Results()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Foo(Options options)
+        {
+            
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [InlineData("long")]
+        [InlineData("double")]
+        public void Map_Reduce_Index_With_Order_By_Multiple_Results(string sortType)
         {
             using (var store = Sharding.GetDocumentStore())
             {
@@ -512,13 +525,13 @@ order by o.Freight as double
                     Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Advanced.RawQuery<OrderLine>(
-                            @"
-declare function project(o) {
+                            $@"
+declare function project(o) {{
     return o.Lines;
-}
+}}
 
 from index 'OrderMapReduceIndex' as o
-order by Freight as double
+order by Freight as {sortType}
 select project(o)")
                         .ToList();
 
@@ -743,9 +756,6 @@ select project(o)")
                                   dog.Age,
                                   dog.IsVaccinated
                               };
-
-                //TODO: remove when we have the fields from the index
-                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -764,9 +774,6 @@ select project(o)")
                     {
                         Name = user.Name
                     };
-
-                //TODO: remove when we have the fields from the index
-                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -785,9 +792,6 @@ select project(o)")
                     {
                         Freight = order.Freight
                     };
-
-                //TODO: remove when we have the fields from the index
-                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -817,9 +821,6 @@ select project(o)")
                         Freight = g.Key,
                         Lines = g.SelectMany(x => x.Lines).ToList()
                     };
-
-                //TODO: remove when we have the fields from the index
-                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -850,9 +851,6 @@ select project(o)")
                         Name = g.Key,
                         Sum = g.Sum(x => x.Sum)
                     };
-
-                //TODO: remove when we have the fields from the index
-                StoreAllFields(FieldStorage.Yes);
             }
         }
 

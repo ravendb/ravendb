@@ -16,7 +16,6 @@ using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
@@ -24,6 +23,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -2036,7 +2036,18 @@ namespace Raven.Server.Json
 
                     firstOrderByField = false;
                     writer.WritePropertyName(orderByField.Field);
-                    writer.WriteString(orderByField.Value);
+                    switch (orderByField.OrderType)
+                    {
+                        case OrderByFieldType.Long:
+                            writer.WriteInteger((long)orderByField.Value);
+                            break;
+                        case OrderByFieldType.Double:
+                            writer.WriteDouble((double)orderByField.Value);
+                            break;
+                        default:
+                            writer.WriteString((string)orderByField.Value);
+                            break;
+                    }
                 }
 
                 writer.WriteEndObject();

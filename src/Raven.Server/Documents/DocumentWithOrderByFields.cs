@@ -1,19 +1,20 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.Documents.Queries.AST;
 
 namespace Raven.Server.Documents;
 
 public class DocumentWithOrderByFields : Document
 {
-    public List<(string Field, string Value)> OrderByFields;
+    public List<(string Field, OrderByFieldType OrderType, object Value)> OrderByFields;
 
     private DocumentWithOrderByFields()
     {
     }
 
-    public void AddOrderByField(string fieldName, string value)
+    public void AddOrderByField(string fieldName, OrderByFieldType orderType, object value)
     {
-        OrderByFields ??= new List<(string Field, string Value)>();
-        OrderByFields.Add((fieldName, value));
+        OrderByFields ??= new List<(string Field, OrderByFieldType OrderType, object Value)>();
+        OrderByFields.Add((fieldName, orderType, value));
     }
 
     public static DocumentWithOrderByFields From(Document doc)
