@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             fieldName = GetField(methodExpression.Arguments[0]);
                             return _searcher.ExistsQuery(fieldName);
                         default:
-                            throw new NotImplementedException($"Method {nameof(expressionType)} is not implemented.");
+                            throw new NotImplementedException($"Method {expressionType} is not implemented.");
                     }
 
                 case InExpression inExpression:
