@@ -33,10 +33,6 @@ class clientConfiguration extends shardViewModelBase {
     };
 
     isSaveEnabled: KnockoutComputed<boolean>;
-
-    constructor(db: database) {
-        super(db);
-    }
     
     activate(args: any) {
         super.activate(args);
