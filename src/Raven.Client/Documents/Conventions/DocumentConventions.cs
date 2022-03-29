@@ -208,7 +208,11 @@ namespace Raven.Client.Documents.Conventions
 
             var httpCacheSizeInMb = PlatformDetails.Is32Bits ? 32 : 128;
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
+#if NETSTANDARD2_0
             HttpVersion = System.Net.HttpVersion.Version11;
+#else
+            HttpVersion = System.Net.HttpVersion.Version20;
+#endif
 
             OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
 
