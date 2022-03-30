@@ -55,9 +55,33 @@ namespace Corax.Queries
                 return char.ToUpperInvariant(c);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool IsSameLetterDifferentCase(byte a, byte b)
+            {
+                return (a >= 'A' && a <= 'z') && (b >= 'A' && b <= 'z') && (a - ('a' - 'A') == b || a + ('a' - 'A') == b);
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int CompareAlphanumericAscending(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b, bool foldCase = false)
+            private static bool IsSameLetterDifferentCase(char a, char b)
+            {
+                return (a >= 'A' && a <= 'z') && (b >= 'A' && b <= 'z') && (a - ('a' - 'A') == b || a + ('a' - 'A') == b);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool IsLetter(byte c)
+            {
+                return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool IsLetter(char c)
+            {
+                return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+            }
+
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static int CompareAlphanumericAscending(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
             {
                 if (a.Length == 0)
                     return b.Length == 0 ? 0 : -1;
@@ -110,27 +134,35 @@ namespace Corax.Queries
                         return 0;
                     }
 
-                    if (foldCase)
+                    // If both are letters... 
+                    if (IsLetter(ca) && IsLetter(cb))
                     {
-                        ca = ToUpper(ca);
-                        cb = ToUpper(cb);
+                        if (IsSameLetterDifferentCase(ca, cb))
+                        {
+                            return -(ca - cb);
+                        }
+
+                        var cca = ToUpper(ca);
+                        var ccb = ToUpper(cb);
+                        if (cca != ccb)
+                        {
+                            return cca - ccb;
+                        }
                     }
-
-                    if (ca < cb)
-                        return -1;
-
-                    if (ca > cb)
-                        return +1;
+                    else if (ca != cb)
+                    {
+                        return ca - cb;
+                    }
 
                     ++ai;
                     ++bi;
                 }
 
                 NotAscii:
-                return CompareAlphanumericAscendingUtf8(a.Slice(ai), b.Slice(bi), foldCase);
+                return CompareAlphanumericAscendingUtf8(a.Slice(ai), b.Slice(bi));
             }
 
-            private static int CompareAlphanumericAscendingUtf8(ReadOnlySpan<byte> byteA, ReadOnlySpan<byte> byteB, bool foldCase)
+            private static int CompareAlphanumericAscendingUtf8(ReadOnlySpan<byte> byteA, ReadOnlySpan<byte> byteB)
             {
                 var auxiliarMemory = ArrayPool<char>.Shared.Rent(byteA.Length + byteB.Length);
                 var a = auxiliarMemory.AsSpan().Slice(0, byteA.Length);
@@ -182,24 +214,26 @@ namespace Corax.Queries
                         goto End;
                     }
 
-                    if (foldCase)
+                    // If both are letters... 
+                    if (IsLetter(ca) && IsLetter(cb))
                     {
-                        ca = ToUpper(ca);
-                        cb = ToUpper(cb);
+                        if (IsSameLetterDifferentCase(ca, cb))
+                        {
+                            return -(ca - cb);
+                        }
+
+                        var cca = ToUpper(ca);
+                        var ccb = ToUpper(cb);
+                        if (cca != ccb)
+                        {
+                            return cca - ccb;
+                        }
+                    }
+                    else if (ca != cb)
+                    {
+                        return ca - cb;
                     }
 
-                    if (ca < cb)
-                    {
-                        result = -1;
-                        goto End;
-                    }
-
-                    if (ca > cb)
-                    {
-                        result = +1;
-                        goto End;
-                    }
-                        
                     ++ai;
                     ++bi;
                 }

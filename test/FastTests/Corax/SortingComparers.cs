@@ -29,6 +29,7 @@ namespace FastTests.Corax
         [InlineData("\u0245rfc822.txt", "\u0245rfc2086.txt", true)]
         [InlineData("\u0245x2-y08", "\u0245x2-y7", true)]
         [InlineData("x2-y\u0245\u0244", "x2-y\u0245\u0245", true)]
+        [InlineData("A1a", "a1a", false)]
         public void AscendingNaturalComparer(string input, string compareWith, bool isAscending)
         {
             var x = Encoding.UTF8.GetBytes(input);
