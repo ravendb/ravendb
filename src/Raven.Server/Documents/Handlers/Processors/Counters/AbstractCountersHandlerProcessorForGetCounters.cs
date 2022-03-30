@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Counters
 {
-    internal abstract class AbstractCountersHandlerProcessorForGetCounters<TRequestHandler, TOperationContext> : AbstractCountersHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractCountersHandlerProcessorForGetCounters<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
@@ -15,18 +15,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Counters
         {
         }
 
-        protected abstract ValueTask<CountersDetail> GetCountersAsync(string docId, StringValues counters, bool full);
+        protected abstract ValueTask<CountersDetail> GetCountersAsync(TOperationContext context, string docId, StringValues counters, bool full);
 
         public override async ValueTask ExecuteAsync()
         {
             var docId = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
             var full = RequestHandler.GetBoolValueQueryString("full", required: false) ?? false;
             var counters = RequestHandler.GetStringValuesQueryString("counter", required: false);
-            
-            var countersDetail = await GetCountersAsync(docId, counters, full);
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
+                var countersDetail = await GetCountersAsync(context, docId, counters, full);
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     context.Write(writer, countersDetail.ToJson());
