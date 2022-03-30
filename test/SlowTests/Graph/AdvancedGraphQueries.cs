@@ -79,7 +79,7 @@ namespace SlowTests.Graph
                                           o['Order Lines'] = o.Lines
                                       }"));
 
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {

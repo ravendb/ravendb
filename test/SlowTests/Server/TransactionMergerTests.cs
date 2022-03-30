@@ -146,7 +146,7 @@ from TestObjs as o where o.Prop = null update
         b *= i;
     }} 
 }}"));
-            await operation.WaitForCompletionAsync();
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
             tokenSource.Cancel();
             await Task.WhenAll(failingTasks);
 

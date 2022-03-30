@@ -16,9 +16,10 @@ internal sealed class TimeOnlyConverter : JsonConverter
 
     public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
     {
-        if (value is null)
+        if (value == null)
         {
-            throw new ArgumentNullException(nameof(value));
+            writer.WriteNull();
+            return;
         }
 
         var to = (TimeOnly)value;
@@ -28,7 +29,7 @@ internal sealed class TimeOnlyConverter : JsonConverter
     public override unsafe object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
     {
         if (reader.TokenType == JsonToken.Null)
-            return default(TimeOnly);
+            return null;
 
         if (reader.TokenType != JsonToken.String)
             throw new InvalidOperationException("Expected string, Got " + reader.TokenType);
@@ -48,7 +49,7 @@ internal sealed class TimeOnlyConverter : JsonConverter
 
     public override bool CanConvert(Type objectType)
     {
-        return objectType == typeof(TimeOnly);
+        return objectType == typeof(TimeOnly) || objectType == typeof(TimeOnly?);
     }
 }
 #endif

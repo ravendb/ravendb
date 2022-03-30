@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -30,7 +31,7 @@ namespace SlowTests.Server.Basic
                 }
 
                 var operation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Users" }));
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 

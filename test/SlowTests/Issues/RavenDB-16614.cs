@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -66,14 +67,14 @@ namespace SlowTests.Issues
             string tempFileName = GetTempFileName();
 
             var op = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), tempFileName, CancellationToken.None);
-            await op.WaitForCompletionAsync();
+            await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             // we are simulating a scenario where we took a backup midway through removing an atomic guard
 
             using var store2 = GetDocumentStore(caller: store.Database + "_Restored");
 
             op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), tempFileName, CancellationToken.None);
-            await op.WaitForCompletionAsync();
+            await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             using (var session = store2.OpenAsyncSession(new SessionOptions
             {

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -123,7 +124,7 @@ namespace SlowTests.SlowTests.Bugs
                     }
                 });
 
-                thread.Wait();
+                Assert.True(thread.Wait(TimeSpan.FromMinutes(1)));
             }
         }
 

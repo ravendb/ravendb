@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
 using Tests.Infrastructure;
@@ -94,11 +95,11 @@ namespace SlowTests.Tests.Faceted
 
         [RavenTheory(RavenTestCategory.Facets)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public void CanPerformFacetedSearch_Remotely_Asynchronously(Options options)
+        public async Task CanPerformFacetedSearch_Remotely_Asynchronously(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
-                ExecuteTestAsynchronously(store, _originalFacets, _originalRangeFacets);
+                await ExecuteTestAsynchronouslyAsync(store, _originalFacets, _originalRangeFacets);
             }
         }
 
@@ -239,7 +240,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        private void ExecuteTestAsynchronously(IDocumentStore store, List<Facet> facetsToUse, List<RangeFacet> rangeFacets)
+        private async Task ExecuteTestAsynchronouslyAsync(IDocumentStore store, List<Facet> facetsToUse, List<RangeFacet> rangeFacets)
         {
             Setup(store, facetsToUse, rangeFacets);
 
@@ -256,22 +257,20 @@ namespace SlowTests.Tests.Faceted
                 foreach (var exp in expressions)
                 {
                     var facetQueryTimer = Stopwatch.StartNew();
-                    var task = s.Query<Camera>("CameraCost")
+                    var facetResults = await s.Query<Camera>("CameraCost")
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .AggregateUsing("facets/CameraFacets")
                         .ExecuteAsync();
 
-                    task.Wait();
                     facetQueryTimer.Stop();
-                    var facetResults = task.Result;
                     var filteredData = _data.Where(exp.Compile()).ToList();
                     CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                 }
             }
         }
 
-        private void Setup(IDocumentStore store, List<Facet> facets,  List<RangeFacet> rangeFacets)
+        private void Setup(IDocumentStore store, List<Facet> facets, List<RangeFacet> rangeFacets)
         {
             using (var s = store.OpenSession())
             {

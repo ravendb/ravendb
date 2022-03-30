@@ -154,11 +154,11 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanUseLazilyAsyncNonSharded()
+        public async Task CanUseLazilyAsyncNonSharded()
         {
             using (var documentStore = SetupNonShardedStore())
             {
-                CanUseLazilyAsync(documentStore).Wait();
+                await CanUseLazilyAsync(documentStore);
             }
         }
 

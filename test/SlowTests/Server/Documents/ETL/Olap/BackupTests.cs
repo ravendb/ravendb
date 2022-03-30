@@ -49,7 +49,7 @@ loadToOrders(partitionBy(key),
                 SetupLocalOlapEtl(source, script, path);
 
                 var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), source.Smuggler.ForDatabase(destination1.Database));
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 var sourceRecord = await source.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(source.Database));
                 var destinationRecord1 = await source.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(destination1.Database));
