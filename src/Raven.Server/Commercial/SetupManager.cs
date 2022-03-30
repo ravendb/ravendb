@@ -58,7 +58,6 @@ namespace Raven.Server.Commercial
     public static class SetupManager
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-        public const string GoogleDnsApi = "https://dns.google.com";
 
         public static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
         {
@@ -2030,14 +2029,17 @@ namespace Raven.Server.Commercial
                 var expectedIps = expectedAddresses.Select(address => address.Address.ToString()).ToHashSet();
 
                 var hostname = new Uri(serverUrl).Host;
+                const string googleDnsApi = "https://dns.google.com";
+                const string googleDnsResolveApi = "https://dns.google/resolve?name=";
 
-                using (var client = new HttpClient { BaseAddress = new Uri(GoogleDnsApi) })
+                using (var client = new HttpClient { BaseAddress = new Uri(googleDnsApi) })
                 {
                     var response = await client.GetAsync($"/resolve?name={hostname}", cts.Token);
 
                     var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
                     if (response.IsSuccessStatusCode == false)
-                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({googleDnsResolveApi}{hostname}).{Environment.NewLine}"
                                                             + $"Request failed with status {response.StatusCode}.{Environment.NewLine}{responseString}");
 
                     dynamic dnsResult = JsonConvert.DeserializeObject(responseString);
@@ -2045,7 +2047,7 @@ namespace Raven.Server.Commercial
                     // DNS response format: https://developers.google.com/speed/public-dns/docs/dns-over-https
 
                     if (dnsResult.Status != 0)
-                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({googleDnsResolveApi}{hostname}).{Environment.NewLine}"
                                                             + $"Got a DNS failure response:{Environment.NewLine}{responseString}" +
                                                             Environment.NewLine + "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
 
@@ -2053,7 +2055,7 @@ namespace Raven.Server.Commercial
                     var googleIps = answers.Select(answer => answer["data"].ToString()).ToHashSet();
 
                     if (googleIps.SetEquals(expectedIps) == false)
-                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({googleDnsResolveApi}{hostname}).{Environment.NewLine}"
                                                             + $"Expected to get these ips: {string.Join(", ", expectedIps)} while Google's actual result was: {string.Join(", ", googleIps)}"
                                                             + Environment.NewLine + "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
                 }
@@ -2067,7 +2069,7 @@ namespace Raven.Server.Commercial
                 catch (Exception e)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot resolve '{hostname}' locally but succeeded resolving the address using Google's api ({GoogleDnsApi})."
+                        $"Cannot resolve '{hostname}' locally but succeeded resolving the address using Google's api ({googleDnsResolveApi}{hostname})."
                         + Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again."
                         + Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).", e);
                 }
@@ -2076,7 +2078,7 @@ namespace Raven.Server.Commercial
                     throw new InvalidOperationException(
                         $"Tried to resolve '{hostname}' locally but got an outdated result."
                         + Environment.NewLine + $"Expected to get these ips: {string.Join(", ", expectedIps)} while the actual result was: {string.Join(", ", actualIps)}"
-                        + Environment.NewLine + $"If we try resolving through Google's api ({GoogleDnsApi}), it works well."
+                        + Environment.NewLine + $"If we try resolving through Google's api ({googleDnsResolveApi}{hostname}), it works well."
                         + Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again."
                         + Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).");
             }
