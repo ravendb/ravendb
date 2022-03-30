@@ -6,10 +6,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedRachisDatabaseHandler : ShardedDatabaseRequestHandler
     {
-        [RavenShardedAction("/databases/*/admin/rachis/wait-for-raft-commands", "POST")]
+        [RavenShardedAction("/databases/*/admin/rachis/wait-for-index-notifications", "POST")]
         public async Task WaitFor()
         {
-            using (var processor = new ShardedRachisHandlerProcessorForWaitForRaftCommands(this))
+            using (var processor = new ShardedRachisHandlerProcessorForWaitForIndexNotifications(this))
             {
                 await processor.ExecuteAsync();
             }

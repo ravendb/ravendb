@@ -21,6 +21,6 @@ namespace Raven.Server.Documents.Sharding.Operations
         public object Combine(Memory<object> results) => throw new NotImplementedException();
 
         public RavenCommand<object> CreateCommandForShard(int shard)
-            =>  new WaitForIndexNotificationCommand(_indexes);
+            =>  new Documents.Commands.WaitForIndexNotificationOperation.WaitForIndexNotificationCommand(_indexes);
     }
 }
