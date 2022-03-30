@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
@@ -152,6 +153,19 @@ namespace Raven.Server.Documents
             }
 
             return str;
+        }
+
+        public static string CombineEtags<T>(Memory<RavenCommand<T>> cmds) => CombineEtags(EnumerateEtags(cmds));
+
+        private static IEnumerable<string> EnumerateEtags<T>(Memory<RavenCommand<T>> cmds)
+        {
+            for (var index = 0; index < cmds.Length; index++)
+            {
+                var cmd = cmds.Span[index];
+                string etag = cmd.Etag;
+                if (etag != null)
+                    yield return etag;
+            }
         }
 
         internal static unsafe void HashChangeVector(byte* state, string? changeVector)

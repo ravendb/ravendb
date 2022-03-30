@@ -10,6 +10,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;

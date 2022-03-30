@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Executors;
 
-public abstract class AbstractExecutor
+public abstract class AbstractExecutor : IDisposable
 {
     private Dictionary<int, Exception> _exceptions;
 
@@ -19,7 +19,7 @@ public abstract class AbstractExecutor
         store.Server.ServerCertificateChanged += OnCertificateChange;
     }
 
-    protected abstract RequestExecutor GetRequestExecutorAt(int position);
+    public abstract RequestExecutor GetRequestExecutorAt(int position);
     protected abstract Memory<int> GetAllPositions();
 
     protected abstract void OnCertificateChange(object sender, EventArgs e);
@@ -50,6 +50,10 @@ public abstract class AbstractExecutor
     public Task<TResult> ExecuteParallelForShardsAsync<TResult>(Memory<int> shards,
         IShardedOperation<TResult> operation, CancellationToken token = default)
         => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TResult>(shards, operation, token);
+
+    public Task<TCombinedResult> ExecuteParallelForShardsAsync<TResult, TCombinedResult>(Memory<int> shards,
+        IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(shards, operation, token);
 
     protected async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token)
@@ -196,6 +200,8 @@ public abstract class AbstractExecutor
         public Task Task;
         public IDisposable ContextReleaser;
     }
+
+    public abstract void Dispose();
 }
 
 public interface IExecutionMode

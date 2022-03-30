@@ -4,13 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 var cmd = new ShardedHeadCommand(this, Headers.IfNoneMatch);
 
-                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(cmd, index);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Result;
             }
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.None);
-                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
 
                 if (cmd.Result != null)
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 
                 var index = DatabaseContext.GetShardNumber(context, id);
                 var cmd = new ShardedCommand(this, Headers.IfMatch, content: doc);
-                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
@@ -100,7 +101,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 var cmd = new ShardedCommand(this, Headers.IfMatch, content: patch);
 
-                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
             }
@@ -175,7 +176,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.IfMatch);
-                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
             }
 
             NoContentStatus();
@@ -193,7 +194,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 var index = DatabaseContext.GetShardNumber(context, id);
 
                 var cmd = new ShardedCommand(this, Headers.None);
-                await DatabaseContext.RequestExecutors[index].ExecuteAsync(cmd, context);
+                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
                 var document = cmd.Result;
                 if (document == null)
                 {
@@ -280,117 +281,58 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         private async Task GetDocumentsByIdAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
         {
-            //TODO - sharding: make sure we maintain the order of returned results
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            var sb = new StringBuilder();
-            var cmds = new List<FetchDocumentsFromShardsCommand>();
-            List<FetchDocumentsFromShardsCommand> oldCmds = null;
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make sure we maintain the order of returned results");
 
-            var tasks = new List<Task>();
-            try
+            var idsByShard = ShardLocator.GetDocumentIdsByShards(context, DatabaseContext, ids);
+            var op = new FetchDocumentsFromShardsOperation(context, DatabaseContext, idsByShard, ids.Count, etag, includePaths, metadataOnly);
+            var shardedReadResult = await DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op);
+
+            // here we know that all of them are good
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
             {
-                await FetchDocumentsFromShards(ids, metadataOnly, context, sb, includePaths, cmds, tasks);
-
-                if (cmds.Count == 1 && includePaths.Any() == false)
-                {
-                    var singleEtag = cmds[0].Response?.Headers?.ETag?.Tag;
-                    if (etag == singleEtag)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                        return;
-                    }
-                    //TODO - sharding: verify all headers are taken care of
-                    HttpContext.Response.StatusCode = (int)cmds[0].StatusCode;
-                    HttpContext.Response.Headers[Constants.Headers.Etag] = singleEtag;
-                    if(cmds[0].Result != null)
-                        await cmds[0].Result.WriteJsonToAsync(ResponseBodyStream());
-                    return;
-                }
-
-                // here we know that all of them are good
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                var actualEtag = ComputeHttpEtags.CombineEtags(EnumerateEtags(cmds));
-                if (etag == actualEtag)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
-
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-
-
-                var results = new BlittableJsonReaderObject[ids.Count];
-                var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-                var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var cmd in cmds)
-                {
-                    if (cmd.Response == null)
-                        continue;
-                    cmd.Result.TryGet(nameof(GetDocumentsResult.Results), out BlittableJsonReaderArray cmdResults);
-                    if (cmd.Result.TryGet(nameof(GetDocumentsResult.Includes), out BlittableJsonReaderObject cmdIncludes))
-                    {
-                        BlittableJsonReaderObject.PropertyDetails prop = default;
-                        for (int i = 0; i < cmdIncludes.Count; i++)
-                        {
-                            cmdIncludes.GetPropertyByIndex(i, ref prop);
-                            includesMap[prop.Name] = (BlittableJsonReaderObject)prop.Value;
-                        }
-                    }
-
-                    for (var index = 0; index < cmd.PositionMatches.Count; index++)
-                    {
-                        int match = cmd.PositionMatches[index];
-                        var result = (BlittableJsonReaderObject)cmdResults[index];
-                        foreach (string includePath in includePaths)
-                        {
-                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes, DatabaseContext.IdentityPartsSeparator);
-                        }
-
-                        results[match] = result;
-                    }
-                }
-
-                foreach (var kvp in includesMap) // remove the items we already have
-                {
-                    missingIncludes.Remove(kvp.Key);
-                }
-
-                if (missingIncludes.Count > 0)
-                {
-                    oldCmds = cmds; //fetch missing includes will override the cmds and we can't dispose of them yet
-                    await FetchMissingIncludes(cmds, tasks, missingIncludes, context, sb, includePaths, includesMap, metadataOnly);
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
-                {
-                    writer.WriteStartObject();
-
-                    await writer.WriteArrayAsync(nameof(GetDocumentsResult.Results), results);
-
-                    writer.WriteComma();
-
-                    await WriteIncludesAsync(includesMap, writer);
-
-                    writer.WriteEndObject();
-                    await writer.OuterFlushAsync();
-                    //TODO - sharding: Add performance hints
-                }
-            
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
             }
-            finally
-            {
-                if (oldCmds != null)
-                {
-                    foreach (FetchDocumentsFromShardsCommand cmd in oldCmds)
-                    {
-                        cmd.Dispose();
-                    }
-                }
 
-                foreach (FetchDocumentsFromShardsCommand cmd in cmds)
+            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + shardedReadResult.CombinedEtag + "\"";
+            var result = shardedReadResult.Result;
+
+            await HandleMissingIncludes(context, metadataOnly, shardedReadResult.Result);
+
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), ServerStore.ServerShutdown))
+            {
+                writer.WriteStartObject();
+
+                await writer.WriteArrayAsync(nameof(GetDocumentsResult.Results), result.Results);
+
+                writer.WriteComma();
+
+                await WriteIncludesAsync(result.Includes, writer);
+
+                writer.WriteEndObject();
+                await writer.OuterFlushAsync();
+                //TODO - sharding: Add performance hints
+            }
+        }
+
+        private async Task HandleMissingIncludes(TransactionOperationContext context, bool metadataOnly, GetShardedDocumentsResult result)
+        {
+            if (result.MissingIncludes.Count > 0)
+            {
+                var ids = result.MissingIncludes;
+                var missingIncludes = result.MissingIncludes.ToList();
+                var idsByShard = ShardLocator.GetDocumentIdsByShards(context, DatabaseContext, ids);
+                var op = new FetchDocumentsFromShardsOperation(context, DatabaseContext, idsByShard, ids.Count, etag: null, includePaths: null, metadataOnly: metadataOnly);
+                var missingResult = await DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op);
+                for (var index = 0; index < missingIncludes.Count; index++)
                 {
-                    cmd.Dispose();
+                    var id = missingIncludes[index];
+                    var missing = missingResult.Result.Results[index];
+                    if (missing == null)
+                        continue;
+
+                    result.Includes.Add(id, missing);
                 }
             }
         }
@@ -415,82 +357,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     writer.WriteNull();
                 }
+
                 await writer.MaybeOuterFlushAsync();
             }
+
             writer.WriteEndObject();
-        }
-
-        private async Task FetchMissingIncludes(List<FetchDocumentsFromShardsCommand> cmds, List<Task> tasks, HashSet<string> missingIncludes, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
-            Dictionary<string, BlittableJsonReaderObject> includesMap, bool metadataOnly)
-        {
-            cmds = new List<FetchDocumentsFromShardsCommand>();
-            tasks.Clear();
-            var missingList = missingIncludes.ToList();
-            await FetchDocumentsFromShards(missingList, metadataOnly, context, sb.Clear(), includePaths, cmds, tasks, ignoreIncludes: true);
-            foreach (var cmd in cmds)
-            {
-                if (cmd.Response == null)
-                    continue;
-
-                cmd.Result.TryGet(nameof(GetDocumentsResult.Results), out BlittableJsonReaderArray cmdResults);
-                for (var index = 0; index < cmd.PositionMatches.Count; index++)
-                {
-                    var result = (BlittableJsonReaderObject)cmdResults[index];
-                    includesMap.Add(missingList[cmd.PositionMatches[index]], result);
-                }
-            }
-        }
-
-        private async Task FetchDocumentsFromShards(IList<string> ids, bool metadataOnly, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
-            List<FetchDocumentsFromShardsCommand> cmds, List<Task> tasks, bool ignoreIncludes = false)
-        {
-            var shards = ShardLocator.GetDocumentIdsShards(ids, DatabaseContext, context);
-            foreach (var shard in shards)
-            {
-                sb.Clear();
-                sb.Append("/docs?");
-                if (ignoreIncludes == false)
-                {
-                    foreach (string includePath in includePaths)
-                    {
-                        sb.Append("&include=").Append(Uri.EscapeDataString(includePath));
-                    }
-                }
-
-                if (metadataOnly)
-                {
-                    sb.Append("&metadataOnly=true");
-                }
-
-                var idsForShard = new List<string>();
-                var matches = new List<int>();
-                foreach (var idIdx in shard.Value)
-                {
-                    idsForShard.Add(ids[idIdx]);
-                    matches.Add(idIdx);
-                }
-
-                var cmd = new FetchDocumentsFromShardsCommand(this, idsForShard, sb)
-                {
-                    PositionMatches = matches, 
-                };
-
-                cmds.Add(cmd);
-                var task = DatabaseContext.RequestExecutors[shard.Key].ExecuteAsync(cmd, cmd.Context);
-                tasks.Add(task);
-            }
-
-            await Task.WhenAll(tasks); // if any failed, we explicitly let it throw here
-        }
-
-        private IEnumerable<string> EnumerateEtags(IEnumerable<ShardedCommand> cmds)
-        {
-            foreach (var cmd in cmds)
-            {
-                string etag = cmd.Response?.Headers?.ETag?.Tag;
-                if (etag != null)
-                    yield return etag;
-            }
         }
     }
 }

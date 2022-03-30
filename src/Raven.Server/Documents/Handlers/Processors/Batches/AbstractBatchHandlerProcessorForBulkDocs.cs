@@ -25,7 +25,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
     {
     }
 
-    protected abstract ValueTask<DynamicJsonArray> HandleTransactionAsync(TBatchCommand command);
+    protected abstract ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, TBatchCommand command);
 
     protected abstract ValueTask WaitForIndexesAsync(TimeSpan timeout, List<string> specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections);
 
@@ -96,7 +96,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (waitForIndexesTimeout != null)
                     command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                var results = await HandleTransactionAsync(command);
+                var results = await HandleTransactionAsync(context, command);
 
                 var waitForReplicasTimeout = RequestHandler.GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
                 if (waitForReplicasTimeout != null)

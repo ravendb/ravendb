@@ -6,13 +6,12 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.Sharding.Commands;
+namespace Raven.Server.Documents.Sharding.Operations;
 
 public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<GetDocumentsResult>
 {

@@ -859,7 +859,11 @@ namespace Raven.Client.Http
                     return;
 
                 var refreshTask = RefreshIfNeeded(chosenNode, response);
+                
                 command.StatusCode = response.StatusCode;
+
+                if (response.IsSuccessStatusCode || command.StatusCode == HttpStatusCode.NotModified)
+                    command.Etag = response.GetEtagHeader() ?? cachedChangeVector;
 
                 var responseDispose = ResponseDisposeHandling.Automatic;
                 try

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -29,7 +26,6 @@ namespace Raven.Server.Documents.Sharding
         private readonly ServerStore _serverStore;
 
         private DatabaseRecord _record;
-        public RequestExecutor[] RequestExecutors;
         public QueryMetadataCache QueryMetadataCache = new();
         private readonly Logger _logger;
 
@@ -39,9 +35,7 @@ namespace Raven.Server.Documents.Sharding
 
         public RavenConfiguration Configuration { get; internal set; }
 
-        public readonly SystemTime Time = new SystemTime();
-
-        public int[] FullRange;
+        public readonly SystemTime Time;
 
         public RachisLogIndexNotifications RachisLogIndexNotifications;
 
@@ -54,23 +48,12 @@ namespace Raven.Server.Documents.Sharding
             _record = record;
             _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
 
+            Time = serverStore.Server.Time;
+
             UpdateConfiguration(record.Settings);
 
             Indexes = new ShardedIndexesContext(this, serverStore);
 
-            RequestExecutors = new RequestExecutor[record.Shards.Length];
-            for (int i = 0; i < record.Shards.Length; i++)
-            {
-                var allNodes = serverStore.GetClusterTopology().AllNodes;
-                var urls = record.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
-                // TODO: pool request executors?
-                RequestExecutors[i] = RequestExecutor.CreateForServer(
-                    urls,
-                    ShardHelper.ToShardName(DatabaseName, i),
-                    serverStore.Server.Certificate.Certificate,
-                    DocumentConventions.DefaultForServer);
-            }
-            FullRange = Enumerable.Range(0, _record.Shards.Length).ToArray();
             ShardExecutor = new ShardExecutor(_serverStore, this);
             AllNodesExecutor = new AllNodesExecutor(_serverStore, DatabaseName);
 
@@ -134,16 +117,13 @@ namespace Raven.Server.Documents.Sharding
 
             _databaseShutdown.Cancel();
 
-            foreach (var re in RequestExecutors)
+            try
             {
-                try
-                {
-                    re.Dispose();
-                }
-                catch
-                {
-                    // ignored
-                }
+                ShardExecutor.Dispose();
+            }
+            catch
+            {
+                // ignored
             }
 
             try
