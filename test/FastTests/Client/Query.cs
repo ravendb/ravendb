@@ -544,7 +544,7 @@ namespace FastTests.Client
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Query_With_Customize(Options options)
         {
             using (var store = GetDocumentStore(options))
