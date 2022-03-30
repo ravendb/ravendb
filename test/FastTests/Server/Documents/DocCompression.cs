@@ -73,7 +73,7 @@ namespace FastTests.Server.Documents
                 Documents = true,
             }));
 
-            op.WaitForCompletion();
+            op.WaitForCompletion(TimeSpan.FromMinutes(5));
 
             Indexes.WaitForIndexing(store);
 
@@ -122,7 +122,7 @@ namespace FastTests.Server.Documents
                 Documents = true,
             }));
 
-            op.WaitForCompletion();
+            op.WaitForCompletion(TimeSpan.FromMinutes(5));
 
             Indexes.WaitForIndexing(store);
 
@@ -159,7 +159,7 @@ namespace FastTests.Server.Documents
                 Documents = true,
             }));
 
-            op.WaitForCompletion();
+            op.WaitForCompletion(TimeSpan.FromMinutes(5));
 
             var f = Path.GetTempFileName();
 
@@ -175,7 +175,7 @@ namespace FastTests.Server.Documents
 
             // this verifies that all the data is fine
 
-            operation.WaitForCompletion();
+            operation.WaitForCompletion(TimeSpan.FromMinutes(5));
         }
 
         [LicenseRequiredFact]

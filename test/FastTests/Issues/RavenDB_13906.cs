@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations;
+﻿using System;
+using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,7 +49,7 @@ namespace FastTests.Issues
                 {
                     session.Advanced.OnAfterSaveChanges += (_, __) => { condition = true; };
                     var operation = store.Operations.Send(new PatchByQueryOperation("from Users update { this.Name = this.Name + '_J'; }"));
-                    operation.WaitForCompletion();
+                    operation.WaitForCompletion(TimeSpan.FromMinutes(5));
                     session.SaveChanges();
 
                     Assert.False(condition);

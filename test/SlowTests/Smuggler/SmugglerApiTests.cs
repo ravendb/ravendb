@@ -274,7 +274,7 @@ namespace SlowTests.Smuggler
                     }
 
                     var exportOperation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                    var exportResult = (SmugglerResult)exportOperation.WaitForCompletion();
+                    var exportResult = (SmugglerResult)await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                     var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     var progress = (SmugglerResult.SmugglerProgress)exportResult.Progress;
@@ -283,7 +283,7 @@ namespace SlowTests.Smuggler
                     Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
 
                     var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                    var importResult = (SmugglerResult)importOperation.WaitForCompletion();
+                    var importResult = (SmugglerResult)await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                     stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     progress = (SmugglerResult.SmugglerProgress)importResult.Progress;
@@ -1691,7 +1691,7 @@ namespace SlowTests.Smuggler
                     };
                     var destination = store.Smuggler.ForDatabase("DestDatabase");
                     var operation = await store.Smuggler.ForDatabase("SrcDatabase").ExportAsync(exportOptions, destination);
-                    await operation.WaitForCompletionAsync();
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                     var stats = await store.Maintenance.ForDatabase("DestDatabase").SendAsync(new GetStatisticsOperation());
                     Assert.True(stats.CountOfDocuments >= documentCount);

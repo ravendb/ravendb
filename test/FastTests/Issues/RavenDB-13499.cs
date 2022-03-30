@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
@@ -19,7 +20,7 @@ namespace FastTests.Issues
             {
                 var smuggler = new DatabaseSmuggler(store);
                 var op = await smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), "./Issues/RavenDB-13499.ravendbdump");
-                var _ = await op.WaitForCompletionAsync();
+                var _ = await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                 
                 using (var session = store.OpenSession())
                 {

@@ -73,7 +73,7 @@ namespace StressTests.Issues
                         {
                             if (serverToggled)
                             {
-                                await operation.WaitForCompletionAsync();
+                                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                             }
                             else
                             {

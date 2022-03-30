@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
@@ -322,7 +323,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Fact]
-        public void Partial_match_if_analyzer_is_required_on_group_by_field()
+        public async Task Partial_match_if_analyzer_is_required_on_group_by_field()
         {
             Initialize();
 
@@ -334,7 +335,7 @@ group by Name
 where Name = 'arek'
 select Name, count()"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
+                await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users
@@ -351,7 +352,7 @@ select Name, count()"));
         }
 
         [Fact]
-        public void Partial_match_if_exact_is_required_on_group_by_field()
+        public async Task Partial_match_if_exact_is_required_on_group_by_field()
         {
             Initialize();
 
@@ -363,7 +364,7 @@ group by Name
 where Name = 'arek'
 select Name, count()"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
+                await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users

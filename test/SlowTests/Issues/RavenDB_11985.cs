@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -150,7 +151,7 @@ namespace SlowTests.Issues
                                   }"
                     }));
 
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {

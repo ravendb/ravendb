@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
                                         incrementCounter(this, i, countByDay[i])
                                     }
                                   }"
-                     })).WaitForCompletion();
+                     })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -118,7 +119,7 @@ namespace SlowTests.Issues
                                     };
                                     this.Name = 'Grisha';
                                   }"
-                     })).WaitForCompletion();
+                     })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -179,7 +180,7 @@ namespace SlowTests.Issues
                                     deleteCounter(this, 'likes');
                                     deleteCounter(this, 'downloads');
                                   }"
-                     })).WaitForCompletion();
+                     })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -201,8 +202,7 @@ namespace SlowTests.Issues
                                   {
                                     deleteCounter(this, 'dislikes');
                                   }"
-                    })).WaitForCompletion();
-
+                    })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {

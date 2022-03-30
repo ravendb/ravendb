@@ -1,4 +1,5 @@
 ﻿using System.Dynamic;
+using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,7 +13,7 @@ namespace SlowTests.Bugs.Async
         }
 
         [Fact]
-        public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()
+        public async Task AsyncMatchesSyncGeneratedIdForDynamicBehavior()
         {
             using (var store = GetDocumentStore())
             {
@@ -20,8 +21,7 @@ namespace SlowTests.Bugs.Async
                 {
                     dynamic client = new ExpandoObject();
                     client.Name = "Test";
-                    var result = session.StoreAsync(client);
-                    result.Wait();
+                    await session.StoreAsync(client);
 
                     Assert.Equal("ExpandoObjects/1-A", client.Id);
                 }
@@ -29,7 +29,7 @@ namespace SlowTests.Bugs.Async
         }
 
         [Fact]
-        public void GeneratedIdForDynamicTagNameAsync()
+        public async Task GeneratedIdForDynamicTagNameAsync()
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -42,8 +42,7 @@ namespace SlowTests.Bugs.Async
                     client.Name = "Test";
                     client.EntityName = "clients";
 
-                    var result = session.StoreAsync(client);
-                    result.Wait();
+                    await session.StoreAsync(client);
 
                     Assert.Equal("clients/1-A", client.Id);
                 }
