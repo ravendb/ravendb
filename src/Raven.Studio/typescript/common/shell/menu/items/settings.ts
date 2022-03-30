@@ -98,6 +98,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/timeSeries',
             moduleId: require('viewmodels/database/settings/timeSeries'),
+            shardingMode: "allShardsOnly",
             title: 'Time Series',
             nav: true, 
             css: 'icon-timeseries-settings',
