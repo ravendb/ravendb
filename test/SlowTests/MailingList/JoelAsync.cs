@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,19 +19,17 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public void AsyncQuery()
+        public async Task AsyncQuery()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var results = session.Query<Dummy>().ToListAsync();
-                    results.Wait();
+                    var results = await session.Query<Dummy>().ToListAsync();
 
-                    var results2 = session.Query<Dummy>().ToListAsync();
-                    results2.Wait();
+                    var results2 = await session.Query<Dummy>().ToListAsync();
                 
-                    Assert.Equal(0, results2.Result.Count);
+                    Assert.Equal(0, results2.Count);
                 }
             }
         }

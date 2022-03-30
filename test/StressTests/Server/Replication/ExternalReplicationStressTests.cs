@@ -125,7 +125,7 @@ namespace StressTests.Server.Replication
                     .ForDatabase(store2.Database)
                     .SendAsync(new PatchByQueryOperation("from Companies update { this.Name = this.Name + '_patched'; }"));
 
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 nextNow = DateTime.Now + TimeSpan.FromMinutes(2);
                 while (now < nextNow && server.ServerStore.IdleDatabases.Count > 0)

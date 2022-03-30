@@ -33,7 +33,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
     }
 
     protected abstract IDocumentStore InternalGetDocumentStore(Options options = null, [CallerMemberName] string caller = null);
-    
+
     class TestObj
     {
         public string Id { get; set; }
@@ -43,7 +43,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
     public virtual async Task ClusterWideTransaction_WhenStore_ShouldCreateCompareExchange()
     {
         var (nodes, leader) = await CreateRaftCluster(3);
-        using var store = InternalGetDocumentStore(new Options {Server = leader, ReplicationFactor = nodes.Count});
+        using var store = InternalGetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
         var entity = new TestObj();
         using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -60,10 +60,10 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
     public virtual async Task ClusterWideTransaction_WhenDisableAndStore_ShouldNotCreateCompareExchange()
     {
         var (nodes, leader) = await CreateRaftCluster(3);
-        using var store = InternalGetDocumentStore(new Options {Server = leader, ReplicationFactor = nodes.Count});
+        using var store = InternalGetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
         var entity = new TestObj();
-        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true }))
         {
             await session.StoreAsync(entity);
             await session.SaveChangesAsync();
@@ -76,7 +76,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
     public virtual async Task ClusterWideTransaction_WhenLoadAndUpdateInParallel_ShouldSucceedOnlyInTheFirst()
     {
         var (nodes, leader) = await CreateRaftCluster(3);
-        using var documentStore = InternalGetDocumentStore(new Options {Server = leader, ReplicationFactor = nodes.Count});
+        using var documentStore = InternalGetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
         using var disposable = LocalGetDocumentStores(nodes, documentStore.Database, out var stores);
 
@@ -93,7 +93,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
         var tasks = Enumerable.Range(0, stores.Length)
             .Select(i => Task.Run(async () =>
             {
-                using var session = stores[i].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide});
+                using var session = stores[i].OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
                 var loaded = await session.LoadAsync<TestObj>(entity.Id);
                 barrier.SignalAndWait();
 
@@ -121,7 +121,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
     {
         var (nodes, leader) = await CreateRaftCluster(3, shouldRunInMemory: false);
 
-        using var documentStore = InternalGetDocumentStore(new Options {Server = leader, ReplicationFactor = nodes.Count});
+        using var documentStore = InternalGetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
         var entity = new TestObj();
         using (var session = documentStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -164,7 +164,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
         var amre2 = new AsyncManualResetEvent();
         var task = Task.Run(async () =>
         {
-            using var session = stores[0].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide});
+            using var session = stores[0].OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
             var loaded = await session.LoadAsync<TestObj>(entityId);
 
             amre.Set();
@@ -200,7 +200,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
             var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
 
-            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide}))
+            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 for (int i = 0; i < count; i++)
                 {
@@ -210,7 +210,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             }
 
             var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus.WaitForCompletionAsync();
+            await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -219,12 +219,12 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
                 {
                     session.Delete($"TestObjs/{i}");
                 }
-                    
+
                 await session.SaveChangesAsync();
             }
 
             var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus2.WaitForCompletionAsync();
+            await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -237,7 +237,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             }
 
             var backupStatus3 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus3.WaitForCompletionAsync();
+            await backupStatus3.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
         }
@@ -247,7 +247,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
         //     using var session = s.OpenAsyncSession();
         //     return await session.LoadAsync<TestObj>(notDelete);
         // });
-            
+
         //Additional information for investigating RavenDB-17823 
         {
             var waitResults = await ClusterWaitForNotNull(nodes, documentStore.Database, async s =>
@@ -284,7 +284,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
             var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
 
-            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide}))
+            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 for (int i = 0; i < count; i++)
                 {
@@ -295,23 +295,23 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             }
 
             var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus.WaitForCompletionAsync();
+            await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 session.Advanced.MaxNumberOfRequestsPerSession += count;
                 for (int i = 0; i < count; i++)
                 {
-                    if(withLoad)
+                    if (withLoad)
                         await session.LoadAsync<TestObj>($"TestObjs/{i}");
                     session.Delete($"TestObjs/{i}");
                 }
-                    
+
                 await session.SaveChangesAsync();
             }
 
             var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus2.WaitForCompletionAsync();
+            await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
         }
@@ -340,7 +340,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
             var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
 
-            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide}))
+            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 for (int i = 0; i < count; i++)
                 {
@@ -351,7 +351,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             }
 
             var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus.WaitForCompletionAsync();
+            await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
@@ -368,7 +368,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             }
 
             var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus2.WaitForCompletionAsync();
+            await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
         }
@@ -378,14 +378,14 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             using var session = s.OpenAsyncSession();
             return await session.LoadAsync<TestObj>(notToModify);
         });
-            
+
         await AssertClusterWaitForValue(nodes, documentStore.Database, async s =>
         {
             using var session = s.OpenAsyncSession();
             var loadAsync = await session.LoadAsync<TestObj>($"TestObjs/{count - 1}");
             return loadAsync?.Prop;
         }, modified);
-            
+
         await AssertWaitForCountAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")), count + 1);
     }
 
@@ -405,12 +405,12 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
             await Assert.ThrowsAnyAsync<ConcurrencyException>(async () => await session.SaveChangesAsync());
         }
     }
-        
+
     public virtual async Task ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
     {
         var (nodes, leader) = await CreateRaftCluster(3, shouldRunInMemory: false);
 
-        using var documentStore = InternalGetDocumentStore(new Options {Server = leader, ReplicationFactor = nodes.Count});
+        using var documentStore = InternalGetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
         var entity = new TestObj();
         using (var session = documentStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -421,7 +421,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
 
         await LoadAndUpdateWhileDeleted(nodes, documentStore.Database, entity.Id);
     }
-        
+
     public virtual async Task ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
     {
         var (nodes, leader) = await CreateRaftCluster(3);
@@ -449,48 +449,48 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
         {
             WaitForDocument<object>(store, entityId, o => o != null);
         }
-            
-        using var session = stores[0].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide});
+
+        using var session = stores[0].OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
         var loaded = await session.LoadAsync<TestObj>(entityId);
 
-        using (var deleteSession = stores[1].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+        using (var deleteSession = stores[1].OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
             var toDelete = await deleteSession.LoadAsync<TestObj>(entityId);
             deleteSession.Delete(toDelete);
             await deleteSession.SaveChangesAsync();
         }
-            
+
         loaded.Prop = "Changed";
         await Assert.ThrowsAnyAsync<ConcurrencyException>(() => session.SaveChangesAsync());
     }
 
     public virtual async Task ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell()
     {
-        var customSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1"};
-        using var server = GetNewServer(new ServerCreationOptions {CustomSettings = customSettings,});
+        var customSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1" };
+        using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings, });
 
         using var source = InternalGetDocumentStore();
-        using var dest = InternalGetDocumentStore(new Options {Server = server});
+        using var dest = InternalGetDocumentStore(new Options { Server = server });
         await dest.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
         {
             Disabled = false,
             DeleteFrequencyInSec = 1
         }));
-            
+
         const string id = "testObjs/0";
-        using (var session = source.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+        using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
             var entity = new TestObj();
             await session.StoreAsync(entity, id);
-            
+
             var expires = SystemTime.UtcNow.AddMinutes(-5);
             session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.Expires] = expires.GetDefaultRavenFormat(isUtc: true);
-            await session.SaveChangesAsync();    
+            await session.SaveChangesAsync();
         }
 
         var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), dest.Smuggler);
         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-            
+
         await AssertWaitForNullAsync(async () =>
         {
             using var session = dest.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
@@ -506,24 +506,24 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
 
     public virtual async Task ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell()
     {
-        var customSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1"};
-        using var server = GetNewServer(new ServerCreationOptions {CustomSettings = customSettings,});
-        using var store = InternalGetDocumentStore(new Options{Server = server});
+        var customSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1" };
+        using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings, });
+        using var store = InternalGetDocumentStore(new Options { Server = server });
         await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
         {
             Disabled = false,
             DeleteFrequencyInSec = 10
         }));
-            
+
         const string id = "testObjs/0";
-        using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
             var entity = new TestObj();
             await session.StoreAsync(entity, id);
-            
+
             var expires = SystemTime.UtcNow.AddMinutes(-5);
             session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.Expires] = expires.GetDefaultRavenFormat(isUtc: true);
-            await session.SaveChangesAsync();    
+            await session.SaveChangesAsync();
         }
 
         await AssertWaitForNullAsync(async () =>
@@ -542,30 +542,30 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
     public virtual async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
     {
         using var store = InternalGetDocumentStore();
-        await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration {Disabled = false, DeleteFrequencyInSec = 1}));
+        await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration { Disabled = false, DeleteFrequencyInSec = 1 }));
 
         const string id = "testObjs/0";
         for (int i = 0; i < 5; i++)
         {
             await AssertWaitForNullAsync(async () =>
             {
-                using var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide});
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
                 return await session.LoadAsync<TestObj>(id);
             });
-                
-            using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var entity = new TestObj();
                 await session.StoreAsync(entity, id);
 
                 var expires = SystemTime.UtcNow.AddMinutes(-5);
                 session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.Expires] = expires.GetDefaultRavenFormat(isUtc: true);
-                
+
                 await session.SaveChangesAsync();
             }
         }
     }
-        
+
     private static IDisposable LocalGetDocumentStores(List<RavenServer> nodes, string database, out IDocumentStore[] stores)
     {
         var urls = nodes.Select(n => n.WebUrl).ToArray();
@@ -594,7 +594,7 @@ public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
 
         for (int i = 0; i < urls.Length; i++)
         {
-            var store = new DocumentStore {Urls = new[] {urls[i]}, Database = database, Conventions = new DocumentConventions {DisableTopologyUpdates = true}}
+            var store = new DocumentStore { Urls = new[] { urls[i] }, Database = database, Conventions = new DocumentConventions { DisableTopologyUpdates = true } }
                 .Initialize();
             stores[i] = store;
         }

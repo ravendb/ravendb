@@ -17,6 +17,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -107,7 +108,13 @@ namespace SlowTests.Cluster
         [InlineData(100)]
         public async Task CanAddManyCompareExchangeWithExpiration(int count)
         {
-            using var server = GetNewServer();
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>()
+                {
+                    { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval), "5" }
+                }
+            });
             using (var store = GetDocumentStore(new Options
             {
                 Server = server

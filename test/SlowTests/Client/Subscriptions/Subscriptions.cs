@@ -59,7 +59,8 @@ namespace SlowTests.Client.Subscriptions
                     ChangeVector = lastChangeVector
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
-                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId) {
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
@@ -166,7 +167,8 @@ namespace SlowTests.Client.Subscriptions
                 await CreateDocuments(store, 5);
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 using (
-                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId) {
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
+                    {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     }))
                 {
@@ -253,7 +255,8 @@ namespace SlowTests.Client.Subscriptions
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (
-                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId) {
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
+                    {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     }))
                 {
@@ -309,8 +312,7 @@ namespace SlowTests.Client.Subscriptions
                             }
                         }));
 
-                        Assert.ThrowsAsync<SubscriptionInUseException>(() => firstRun).Wait();
-
+                        await Assert.ThrowsAsync<SubscriptionInUseException>(() => firstRun);
 
                         await CreateDocuments(store, 5);
 
@@ -338,17 +340,17 @@ namespace SlowTests.Client.Subscriptions
                 Assert.True(ongoingTask.Disabled);
             }
         }
-        
+
         private class Command
         {
             public string Error { get; set; }
         }
-        
+
         [Fact]
         public async Task Subscription_WhenFilteredByNull_ShouldWork()
         {
             const string id = "A1";
-            
+
             using var store = GetDocumentStore();
             var subscriptionCreationParams = new SubscriptionCreationOptions
             {
@@ -364,7 +366,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     foreach (var item in x.Items)
                     {
-                        if(item.Id == id)
+                        if (item.Id == id)
                             isProcessed.Set();
                     }
                 });

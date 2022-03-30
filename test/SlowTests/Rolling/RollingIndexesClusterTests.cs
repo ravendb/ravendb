@@ -351,7 +351,7 @@ namespace SlowTests.Rolling
                     };
                 }
                 var t = store.ExecuteIndexAsync(new MyEditedRollingIndex());
-                mre.Wait();
+                Assert.True(mre.Wait(TimeSpan.FromMinutes(1)));
                 while (t.IsCompleted == false)
                 {
                     using (var session = store.OpenAsyncSession())
@@ -502,7 +502,7 @@ namespace SlowTests.Rolling
                 {
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     var indexStore = database.IndexStore;
-                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => mre.Wait();
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => Assert.True(mre.Wait(TimeSpan.FromMinutes(1)));
                     indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
                     {
                         dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);
@@ -714,7 +714,7 @@ namespace SlowTests.Rolling
                         throw new UnauthorizedAccessException("Simulate UnauthorizedAccessException OnOldIndexDeletion Once");
                     };
 
-                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => mre.Wait();
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => Assert.True(mre.Wait(TimeSpan.FromMinutes(1)));
                     indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
                     {
                         dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);
@@ -767,7 +767,7 @@ namespace SlowTests.Rolling
                         throw new IOException("Simulate IOException OnOldIndexDeletion Once");
                     };
 
-                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => mre.Wait();
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = _ => Assert.True(mre.Wait(TimeSpan.FromMinutes(1)));
                     indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
                     {
                         dic.AddOrUpdate(index.Name, 1, (_, val) => val + 1);

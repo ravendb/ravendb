@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Xunit;
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
                     update {
                         testDocument.Field = 2.34;
                     }"))
-                    .WaitForCompletion();
+                    .WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {
@@ -71,7 +72,7 @@ namespace SlowTests.Issues
                     update {
                         testDocument.Field -= 0.5;
                     }"))
-                    .WaitForCompletion();
+                    .WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
                 }
 
                 var operation = await store.Operations.SendAsync(new PatchByQueryOperation("from Users update { this.Test = 'test'; }"));
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {

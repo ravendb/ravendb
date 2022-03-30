@@ -72,7 +72,7 @@ loadToPeople(person);
                 Indexes.WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByQueryOperation("from @all_docs as doc update {  del(id(doc)); }"));
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(8, stats.CountOfDocuments); // hi-lo
