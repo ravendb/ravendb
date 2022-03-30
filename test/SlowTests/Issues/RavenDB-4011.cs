@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
                     };
                     var indexDefinition = builder.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = "TestIndex/Numer" + i;
-                    store.Maintenance.Send(new PutIndexesOperation(new [] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
                 }
 
                 Indexes.WaitForIndexing(store);
@@ -74,8 +75,8 @@ namespace SlowTests.Issues
             for (var i = 0; i < 2; i++)
             {
                 var indexNames = session.Advanced.DocumentStore.Maintenance.Send(new GetIndexNamesOperation(0, 999));
-                var cancellation = new CancellationToken();
-                await Task.WhenAll(indexNames.Select(t => session.Advanced.DocumentStore.Maintenance.SendAsync(new ResetIndexOperation(t), cancellation)).ToArray());
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+                    await Task.WhenAll(indexNames.Select(t => session.Advanced.DocumentStore.Maintenance.SendAsync(new ResetIndexOperation(t), cts.Token)).ToArray());
             }
         }
     }

@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.Migration
             {
                 var databaseDumpFilePath = Directory.GetFiles(path).FirstOrDefault();
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), databaseDumpFilePath);
-                operation.WaitForCompletion();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                 using (var session = store.OpenAsyncSession())
                 {
                     var actualBooks = await session.Query<Book>().ToListAsync();

@@ -76,8 +76,8 @@ namespace SlowTests.Issues
                 {
                     var operation1 = session.Advanced.DocumentStore.Operations.Send(new Raven.Client.Documents.Operations.DeleteByQueryOperation<Entity, EntityIndex>(r => r.Id.Any()));
                     var operation2 = session.Advanced.DocumentStore.Operations.Send(new Raven.Client.Documents.Operations.DeleteByQueryOperation<Entity2, Entity2Index>(r => r.Id.Any()));
-                    operation1.WaitForCompletion();
-                    operation2.WaitForCompletion();
+                    operation1.WaitForCompletion(TimeSpan.FromMinutes(5));
+                    operation2.WaitForCompletion(TimeSpan.FromMinutes(5));
                 }
 
                 using (var session = store.OpenSession())

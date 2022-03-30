@@ -58,7 +58,7 @@ namespace SlowTests.Issues
 
                         var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
 
-                        await operation.WaitForCompletionAsync();
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     }
                 }
 
@@ -114,7 +114,7 @@ namespace SlowTests.Issues
 
                     var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
 
-                    await operation.WaitForCompletionAsync();
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                 }
 
                 using (var session = store.OpenSession())
@@ -161,7 +161,7 @@ namespace SlowTests.Issues
                     {
                         await commands.ExecuteAsync(csvImportCommand);
                         var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
-                        await operation.WaitForCompletionAsync();
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     });
 
                     Assert.Contains("Please verify that only one character is used", exception.Message);

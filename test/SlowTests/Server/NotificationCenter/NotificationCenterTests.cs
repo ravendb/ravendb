@@ -503,7 +503,7 @@ namespace SlowTests.Server.NotificationCenter
                         }
                     }
 
-                    notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(500));
+                    notification = await actions.TryDequeueAsync(TimeSpan.FromSeconds(5));
                     Assert.True(notification.Item1);
 
                     var databaseStatsChanged = notification.Item2;

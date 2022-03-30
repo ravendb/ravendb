@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
@@ -91,11 +92,11 @@ namespace SlowTests.Tests.Faceted
         }
 
         [Fact]
-        public void CanPerformFacetedSearch_Remotely_Asynchronously()
+        public async Task CanPerformFacetedSearch_Remotely_Asynchronously()
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTestAsynchronously(store, _originalFacets, _originalRangeFacets);
+                await ExecuteTestAsynchronouslyAsync(store, _originalFacets, _originalRangeFacets);
             }
         }
 
@@ -231,7 +232,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        private void ExecuteTestAsynchronously(IDocumentStore store, List<Facet> facetsToUse, List<RangeFacet> rangeFacets)
+        private async Task ExecuteTestAsynchronouslyAsync(IDocumentStore store, List<Facet> facetsToUse, List<RangeFacet> rangeFacets)
         {
             Setup(store, facetsToUse, rangeFacets);
 
@@ -248,15 +249,13 @@ namespace SlowTests.Tests.Faceted
                 foreach (var exp in expressions)
                 {
                     var facetQueryTimer = Stopwatch.StartNew();
-                    var task = s.Query<Camera>("CameraCost")
+                    var facetResults = await s.Query<Camera>("CameraCost")
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(exp)
                         .AggregateUsing("facets/CameraFacets")
                         .ExecuteAsync();
 
-                    task.Wait();
                     facetQueryTimer.Stop();
-                    var facetResults = task.Result;
                     var filteredData = _data.Where(exp.Compile()).ToList();
                     CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                 }

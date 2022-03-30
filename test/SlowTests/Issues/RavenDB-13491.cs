@@ -177,14 +177,14 @@ namespace SlowTests.Issues
                     exportOptions.OperateOnTypes &= ~DatabaseItemType.Documents;
 
                     var exportOperation = await store1.Smuggler.ExportAsync(exportOptions, file);
-                    var exportResult = (SmugglerResult)exportOperation.WaitForCompletion();
+                    var exportResult = (SmugglerResult)await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     var progress = (SmugglerResult.SmugglerProgress)exportResult.Progress;
 
                     Assert.Equal(0, progress.Documents.ReadCount);
                     Assert.Equal(2, progress.Counters.ReadCount);
 
                     var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                    var importResult = (SmugglerResult)importOperation.WaitForCompletion();
+                    var importResult = (SmugglerResult)await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                     progress = (SmugglerResult.SmugglerProgress)importResult.Progress;
 

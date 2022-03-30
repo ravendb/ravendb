@@ -131,9 +131,9 @@ namespace SlowTests.Issues
 
                 var stats = await source.Maintenance.SendAsync(new GetStatisticsOperation());
                 var databaseChangeVector = stats.DatabaseChangeVector;
-                Assert.True(databaseChangeVector.Contains("A:") && 
-                            databaseChangeVector.Contains("B:") && 
-                            databaseChangeVector.Contains("RAFT:1"), 
+                Assert.True(databaseChangeVector.Contains("A:") &&
+                            databaseChangeVector.Contains("B:") &&
+                            databaseChangeVector.Contains("RAFT:1"),
                     $"changeVector is: {databaseChangeVector}");
             }
         }
@@ -162,14 +162,14 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("RAFT:1"));
-                    Assert.True(changeVector.Contains("TRXN:5"));
+                    Assert.True(changeVector.Contains("RAFT:1"), $"{changeVector}.Contains('RAFT:1')");
+                    Assert.True(changeVector.Contains("TRXN:5"), $"{changeVector}.Contains('TRXN:5')");
                 }
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 var databaseChangeVector = stats.DatabaseChangeVector;
-                Assert.True(databaseChangeVector.Contains("RAFT:1"));
-                Assert.False(databaseChangeVector.Contains("TRXN"));
+                Assert.True(databaseChangeVector.Contains("RAFT:1"), $"{databaseChangeVector}.Contains('RAFT:1')");
+                Assert.False(databaseChangeVector.Contains("TRXN"), $"{databaseChangeVector}.Contains('TRXN')");
 
                 using (var session = store.OpenSession())
                 {
@@ -178,14 +178,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("RAFT:1")&& changeVector.Contains("A:2"));
+                    Assert.True(changeVector.Contains("RAFT:1"), $"{changeVector}.Contains('RAFT:1')");
+                    Assert.True(changeVector.Contains("A:2"), $"{changeVector}.Contains('A:2')");
                 }
 
                 stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 databaseChangeVector = stats.DatabaseChangeVector;
-                Assert.True(databaseChangeVector.Contains("A:2"));
-                Assert.True(databaseChangeVector.Contains("RAFT:1"));
-                Assert.False(databaseChangeVector.Contains("TRXN"));
+                Assert.True(databaseChangeVector.Contains("A:2"), $"{databaseChangeVector}.Contains('A:2')");
+                Assert.True(databaseChangeVector.Contains("RAFT:1"), $"{databaseChangeVector}.Contains('RAFT:1')");
+                Assert.False(databaseChangeVector.Contains("TRXN"), $"{databaseChangeVector}.Contains('TRXN')");
 
                 using (var session = store.OpenSession(new SessionOptions
                 {
@@ -197,35 +198,35 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("RAFT:2"));
-                    Assert.True(changeVector.Contains("TRXN:6"));
+                    Assert.True(changeVector.Contains("RAFT:2"), $"{changeVector}.Contains('RAFT:2')");
+                    Assert.True(changeVector.Contains("TRXN:6"), $"{changeVector}.Contains('TRXN:6')");
 
                 }
 
                 stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 databaseChangeVector = stats.DatabaseChangeVector;
-                Assert.True(databaseChangeVector.Contains("A:2"));
-                Assert.True(databaseChangeVector.Contains("RAFT:2"));
-                Assert.False(databaseChangeVector.Contains("TRXN"));
+                Assert.True(databaseChangeVector.Contains("A:2"), $"{databaseChangeVector}.Contains('A:2')");
+                Assert.True(databaseChangeVector.Contains("RAFT:2"), $"{databaseChangeVector}.Contains('RAFT:2')");
+                Assert.False(databaseChangeVector.Contains("TRXN"), $"{databaseChangeVector}.Contains('TRXN')");
 
 
                 using (var session = store.OpenSession())
                 {
-                    
+
                     session.Store(new User(), "new-user");
                     session.SaveChanges();
 
                     var user = session.Load<User>("new-user");
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    Assert.True(changeVector.Contains("RAFT:2"));
-                    Assert.True(changeVector.Contains("A:5"));
-                    Assert.False(changeVector.Contains("TRXN"));
+                    Assert.True(changeVector.Contains("RAFT:2"), $"{changeVector}.Contains('RAFT:2')");
+                    Assert.True(changeVector.Contains("A:5"), $"{changeVector}.Contains('A:5')");
+                    Assert.False(changeVector.Contains("TRXN"), $"{changeVector}.Contains('TRXN')");
 
                     stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     databaseChangeVector = stats.DatabaseChangeVector;
-                    Assert.True(databaseChangeVector.Contains("A:5"));
-                    Assert.True(databaseChangeVector.Contains("RAFT:2"));
-                    Assert.False(databaseChangeVector.Contains("TRXN"));
+                    Assert.True(databaseChangeVector.Contains("A:5"), $"{databaseChangeVector}.Contains('A:5')");
+                    Assert.True(databaseChangeVector.Contains("RAFT:2"), $"{databaseChangeVector}.Contains('RAFT:2')");
+                    Assert.False(databaseChangeVector.Contains("TRXN"), $"{databaseChangeVector}.Contains('TRXN')");
                 }
 
                 WaitForUserToContinueTheTest(store);
