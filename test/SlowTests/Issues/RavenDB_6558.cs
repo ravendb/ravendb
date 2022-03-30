@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseDifferentPreAndPostTagsPerField()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseDifferentPreAndPostTagsPerField(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -25,8 +27,7 @@ namespace SlowTests.Issues
                     {
                         Slug = "ravendb-indexes-explained",
                         Title = "RavenDB indexes explained",
-                        Content =
-                            "Itamar Syn-Hershko: Afraid of Map/Reduce? In this session, core RavenDB developer Itamar Syn-Hershko will walk through the RavenDB indexing process, grok it and much more.",
+                        Content = "Itamar Syn-Hershko: Afraid of Map/Reduce? In this session, core RavenDB developer Itamar Syn-Hershko will walk through the RavenDB indexing process, grok it and much more.",
                     }, "items/1");
                     session.SaveChanges();
                 }

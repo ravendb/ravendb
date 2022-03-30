@@ -25,8 +25,8 @@ namespace SlowTests.Tests.Querying
         {
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection(Options options)
         {
             var blogOne = new Blog
@@ -80,8 +80,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryUsingClientLinqQuery(Options options)
         {
             var blogOne = new Blog
@@ -146,8 +146,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryUsingClientLuceneQuery(Options options)
         {
             var blogOne = new Blog

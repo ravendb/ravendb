@@ -103,30 +103,25 @@ namespace SlowTests.Tests.Querying
                         .Search("Content", q)
                         .ToArray();
 
-                    var orderedResults = new List<SearchResults>();
+                    Assert.Equal(1, results.Length);
 
-                    foreach (var searchable in results)
+                    var docId = session.Advanced.GetDocumentId(results.First());
+
+                    var highlights = new List<string>();
+                    string title = null;
+                    var titles = titleHighlighting.GetFragments(docId);
+                    if (titles.Count() == 1)
                     {
-
-                        var docId = session.Advanced.GetDocumentId(searchable);
-
-                        var highlights = new List<string>();
-                        string title = null;
-                        var titles = titleHighlighting.GetFragments(docId);
-                        if (titles.Count() == 1)
-                        {
-                            title = titles[0];
-                        }
-                        else
-                        {
-                            highlights.AddRange(titleHighlighting.GetFragments(docId));
-                        }
-                        highlights.AddRange(slugHighlighting.GetFragments(docId));
-                        highlights.AddRange(contentHighlighting.GetFragments(docId));
-
-
-                        orderedResults.Add(new SearchResults { Result = searchable, Highlights = highlights, Title = title });
+                        title = titles[0];
                     }
+                    else
+                    {
+                        highlights.AddRange(titleHighlighting.GetFragments(docId));
+                    }
+                    highlights.AddRange(slugHighlighting.GetFragments(docId));
+                    highlights.AddRange(contentHighlighting.GetFragments(docId));
+
+                    Assert.Equal(1, highlights.Count);                    
                 }
             }
         }

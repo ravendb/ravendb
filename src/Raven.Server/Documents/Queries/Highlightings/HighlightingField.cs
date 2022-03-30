@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Highlightings
 
         public int FragmentCount => _fragmentCount;
 
-        public int FragmentLength => _fragmentLength;
+        public int FragmentLength => _fragmentLength;        
 
         public HighlightingOptions GetOptions(JsonOperationContext context, BlittableJsonReaderObject parameters)
         {

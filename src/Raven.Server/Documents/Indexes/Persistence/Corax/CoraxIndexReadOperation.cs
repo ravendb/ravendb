@@ -95,8 +95,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             bool hasHighlights = query.Metadata.HasHighlightings;
             if (hasHighlights)
             {
-                // If we have highlightings then we need to setup the Corax objects that will attach to the evaluator in order
-                // to retrieve the fields and perform the transformations required by Highlightings. 
                 using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
                     SetupHighlighter(query, documentsContext);
             }
@@ -158,9 +156,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     QueryResult CreateQueryResult(Document d)
                     {
+                        Dictionary<string, Dictionary<string, string[]>> highlightings = null;
+                        if (hasHighlights)
+                        {
+                            using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
+                            {
+                                highlightings = new ();
+
+                                // If we have highlightings then we need to setup the Corax objects that will attach to the evaluator in order
+                                // to retrieve the fields and perform the transformations required by Highlightings. 
+                                foreach (var current in query.Metadata.Highlightings)
+                                {                                    
+                                    var fieldName = current.Field.Value;
+                                    if (fetchedDocument.Document.Data.TryGetMember(fieldName, out var element))
+                                    {
+                                        throw new NotImplementedException();
+                                    }
+                                }
+                            }
+                        }                        
+
                         return new QueryResult
                         {
-                            Result = d
+                            Result = d,
+                            Highlightings = highlightings,
                         };
                     }
                 }
@@ -208,8 +227,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             ArrayPool<long>.Shared.Return(longIds);
         }
-
-        private Dictionary<string, (string[] PreTags, string[] PostTags)> _tagsPerField;
+        
+        private Dictionary<string, (string[] PreTags, string[] PostTags, string Term)> _tagsPerField;
 
         private void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context)
         {
@@ -230,13 +249,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     continue;
 
                 if (_tagsPerField == null)
-                    _tagsPerField = new Dictionary<string, (string[] PreTags, string[] PostTags)>();
+                    _tagsPerField = new();
 
                 var fieldName = query.Metadata.IsDynamic
                     ? throw new NotSupportedException("AutoIndex dynamic field is not supported yet.")
                     : highlighting.Field.Value;
+                
+                throw new NotImplementedException();
+                var term = string.Empty;
 
-                _tagsPerField[fieldName] = (options.PreTags, options.PostTags);
+                _tagsPerField[fieldName] = (options.PreTags, options.PostTags, term);
             }
         }
 
