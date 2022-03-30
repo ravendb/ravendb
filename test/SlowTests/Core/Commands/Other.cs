@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -176,6 +177,18 @@ namespace SlowTests.Core.Commands
                     Assert.NotNull(doc);
                     Assert.Equal("For store1", doc.Name.ToString());
                 }
+            }
+        }
+
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetDatabaseIdentities(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var databaseIdentities = await store.Maintenance.SendAsync(new GetIdentitiesOperation());
+
+                Assert.NotNull(databaseIdentities);
             }
         }
     }
