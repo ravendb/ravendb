@@ -13,16 +13,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask DeleteAttachmentAsync(string docId, string name, LazyStringValue changeVector)
+        protected override async ValueTask DeleteAttachmentAsync(TransactionOperationContext context, string docId, string name, LazyStringValue changeVector)
         {
             var cmd = new DeleteAttachmentOperation.DeleteAttachmentCommand(docId, name, changeVector);
 
-            int shardNumber;
-            using (RequestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
-            }
-
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+            
             using (var token = RequestHandler.CreateOperationToken())
             {
                 await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token.Token);

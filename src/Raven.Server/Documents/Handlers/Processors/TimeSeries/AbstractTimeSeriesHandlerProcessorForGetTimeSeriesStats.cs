@@ -15,22 +15,22 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected abstract ValueTask<TimeSeriesStatistics> GetTimeSeriesStatsAsync(string docId);
+        protected abstract ValueTask<TimeSeriesStatistics> GetTimeSeriesStatsAsync(TOperationContext context, string docId);
 
         public override async ValueTask ExecuteAsync()
         {
-            var documentId = RequestHandler.GetStringQueryString("docId");
-
-            var tsStats = await GetTimeSeriesStatsAsync(documentId);
-
-            if (tsStats == null)
+            using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
+                var documentId = RequestHandler.GetStringQueryString("docId");
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
+                var tsStats = await GetTimeSeriesStatsAsync(context, documentId);
+
+                if (tsStats == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+                
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                         {
                             writer.WriteComma();
                         }
+
                         first = false;
 
                         writer.WriteStartObject();

@@ -12,14 +12,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override async ValueTask<TimeSeriesStatistics> GetTimeSeriesStatsAsync(string docId)
+        protected override async ValueTask<TimeSeriesStatistics> GetTimeSeriesStatsAsync(TransactionOperationContext context, string docId)
         {
-            int shardNumber;
-            using (RequestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
-            }
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
             
             var op = new GetTimeSeriesStatisticsOperation.GetTimeSeriesStatisticsCommand(docId);
             return await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(op, shardNumber);

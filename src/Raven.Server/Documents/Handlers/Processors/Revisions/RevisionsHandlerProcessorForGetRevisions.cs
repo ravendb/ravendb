@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,15 +27,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
 
-        protected override async ValueTask GetRevisionByChangeVectorAsync(StringValues changeVectors, bool metadataOnly, CancellationToken token)
+        protected override async ValueTask GetRevisionByChangeVectorAsync(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly, CancellationToken token)
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
                 var sw = Stopwatch.StartNew();
-
-                int total = 0;
+                
                 var revisions = new List<Document>(changeVectors.Count);
 
                 foreach (var changeVector in changeVectors)
@@ -48,36 +45,29 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                         return;
                     }
 
-                    if (revision != null)
-                        total++;
-
                     revisions.Add(revision);
                 }
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForRevisions(revisions);
-                CheckNotModified(actualEtag);
+                if (NotModified(actualEtag))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(actualEtag) == false)
+                    HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
                 var blittable = RequestHandler.GetBoolValueQueryString("blittable", required: false) ?? false;
                 if (blittable)
                 {
-                    var revisionResult = new RevisionsResult()
-                    {
-                        Results = revisions.Select(x => x?.Data).ToArray(),
-                        TotalResults = total
-                    };
-
-                    WriteRevisionsBlittable(context, revisionResult, out numberOfResults, out totalDocumentsSizeInBytes);
+                    WriteRevisionsBlittable(context, GetDataArrayFromDocumentList(revisions), out numberOfResults, out totalDocumentsSizeInBytes);
                 }
                 else
                 {
-                    var revisionResult = new RevisionsResult<Document>()
-                    {
-                        Results = revisions, 
-                        TotalResults = total
-                    };
-                    (numberOfResults, totalDocumentsSizeInBytes) = await WriteRevisionsJsonAsync(context, metadataOnly, revisionResult, token);
+                    (numberOfResults, totalDocumentsSizeInBytes) = await WriteRevisionsJsonAsync(context, metadataOnly, revisions, token);
                 }
 
                 //using this function's legacy name GetRevisionByChangeVector
@@ -86,17 +76,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             }
         }
 
-        protected override async ValueTask GetRevisionsAsync(bool metadataOnly, CancellationToken token)
+        protected override async ValueTask GetRevisionsAsync(DocumentsOperationContext context, string id, DateTime? before, int start, int pageSize, bool metadataOnly, CancellationToken token)
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var sw = Stopwatch.StartNew();
-
-                var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-                var before = RequestHandler.GetDateTimeQueryString("before", required: false);
-                var start = RequestHandler.GetStart();
-                var pageSize = RequestHandler.GetPageSize();
 
                 Document[] revisions = Array.Empty<Document>();
                 long count = 0;
@@ -115,19 +99,26 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 }
 
                 var actualChangeVector = revisions.Length == 0 ? "" : revisions[0].ChangeVector;
-                CheckNotModified(actualChangeVector);
-
+                if (NotModified(actualChangeVector))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+                
+                if(string.IsNullOrEmpty(actualChangeVector) == false)
+                    HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualChangeVector + "\"";
+                
                 long loadedRevisionsCount;
                 long totalDocumentsSizeInBytes;
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(RevisionsResult.Results));
+                    writer.WritePropertyName(nameof(RevisionsResult<Document>.Results));
                     (loadedRevisionsCount, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisions, metadataOnly, token);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(RevisionsResult.TotalResults));
+                    writer.WritePropertyName(nameof(RevisionsResult<Document>.TotalResults));
                     writer.WriteInteger(count);
                     writer.WriteEndObject();
                 }
@@ -138,36 +129,42 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             }
         }
 
-        protected override void CheckNotModified(string actualEtag)
+        protected override bool NotModified(string actualEtag)
         {
             var etag = RequestHandler.GetStringFromHeaders("If-None-Match");
             if (etag == actualEtag)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-
-            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
+                return true;
+            
+            return false;
         }
 
-        protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, RevisionsResult<Document> revisionsResult, CancellationToken token)
+        protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, List<Document> revisionsResult, CancellationToken token)
         {
             long numberOfResults;
             long totalDocumentsSizeInBytes;
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName(nameof(revisionsResult.Results));
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisionsResult.Results, metadataOnly, token);
-
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(revisionsResult.TotalResults));
-                writer.WriteInteger(revisionsResult.TotalResults);
+                writer.WritePropertyName(nameof(RevisionsResult<Document>.Results));
+                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisionsResult, metadataOnly, token);
                 writer.WriteEndObject();
             }
 
             return (numberOfResults, totalDocumentsSizeInBytes);
         }
+
+        private static BlittableJsonReaderObject[] GetDataArrayFromDocumentList(List<Document> documents)
+        {
+            var dataArr = new BlittableJsonReaderObject[documents.Count];
+            int i = 0;
+            foreach (var doc in documents)
+            {
+                dataArr[i] = doc.Data;
+                i++;
+            }
+
+            return dataArr;
+        }
+
     }
 }
