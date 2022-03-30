@@ -191,5 +191,29 @@ namespace SlowTests.Core.Commands
                 Assert.NotNull(databaseIdentities);
             }
         }
+
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSeedIdentity(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    var entity = new User
+                    {
+                        LastName = "SRN"
+                    };
+
+                    session.Store(entity, "users/1");
+                    session.SaveChanges();
+                }
+
+                var seedIdentity = store.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
+                
+                Assert.NotNull(seedIdentity);
+                Assert.Equal(1990, seedIdentity);
+            }
+        }
     }
 }
