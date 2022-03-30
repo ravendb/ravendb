@@ -23,7 +23,7 @@ public class CombinedReadContinuationState : IDisposable
         States = new ReadContinuationState[shards];
         for (int i = 0; i < shards; i++)
         {
-            var contextPool = _databaseContext.RequestExecutors[i].ContextPool;
+            var contextPool = _databaseContext.ShardExecutor.GetRequestExecutorAt(i).ContextPool;
             var state = new ReadContinuationState(contextPool, _combinedStream.Results.Span[i], token);
             await state.InitializeAsync();
             States[i] = state;

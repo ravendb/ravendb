@@ -66,6 +66,8 @@ namespace Raven.Client.Http
 
         internal long FailoverTopologyEtag = -2;
 
+        internal string Etag; // for NotModified use
+
         protected RavenCommand(RavenCommand<TResult> copy)
         {
             CancellationToken = copy.CancellationToken;

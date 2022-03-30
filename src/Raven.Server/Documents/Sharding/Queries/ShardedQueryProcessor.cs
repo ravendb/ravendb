@@ -182,7 +182,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
     {
         const string listParameterName = "p0";
 
-        var shards = ShardLocator.GroupIdsByShardNumber(ids, _parent.DatabaseContext, context);
+        var shards = ShardLocator.GetDocumentIdsByShards(context, _parent.DatabaseContext, ids);
         var sb = new StringBuilder();
         sb.Append("from '").Append(_query.Metadata.CollectionName).AppendLine("'")
             .AppendLine($"where id() in (${listParameterName})");
@@ -196,7 +196,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
 
         var query = sb.ToString();
 
-        foreach ((int shardId, List<Slice> documentIds) in shards)
+        foreach ((int shardId, ShardLocator.IdsByShard<Slice> documentIds) in shards)
         {
             if (_filteredShardIndexes?.Contains(shardId) == false)
                 continue;
@@ -224,7 +224,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
 
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            var task = _parent.DatabaseContext.RequestExecutors[shardNumber].ExecuteAsync(cmd, context);
+            var task = _parent.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context);
             tasks.Add(task);
         }
 
@@ -286,7 +286,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
             _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-            tasks.Add(_parent.DatabaseContext.RequestExecutors[shardNumber].ExecuteAsync(cmd, context));
+            tasks.Add(_parent.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ExecuteAsync(cmd, context));
         }
 
         await Task.WhenAll(tasks);

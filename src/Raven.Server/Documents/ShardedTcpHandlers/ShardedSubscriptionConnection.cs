@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
             for (int i = 0; i < TcpConnection.DatabaseContext.ShardCount; i++)
             {
-                var re = TcpConnection.DatabaseContext.RequestExecutors[i];
+                var re = TcpConnection.DatabaseContext.ShardExecutor.GetRequestExecutorAt(i);
                 var shard = ShardHelper.ToShardName(TcpConnection.DatabaseContext.DatabaseName, i);
                 var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
 

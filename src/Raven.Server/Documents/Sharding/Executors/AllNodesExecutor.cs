@@ -104,7 +104,7 @@ public class AllNodesExecutor : AbstractExecutor
         }
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         foreach (var executor in _current)
         {
@@ -121,7 +121,7 @@ public class AllNodesExecutor : AbstractExecutor
         _current.Clear();
     }
 
-    protected override RequestExecutor GetRequestExecutorAt(int position)
+    public override RequestExecutor GetRequestExecutorAt(int position)
     {
         return _state.Executors[position];
     }

@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -24,7 +25,7 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
     {
     }
 
-    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(BatchHandler.MergedBatchCommand command)
+    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, BatchHandler.MergedBatchCommand command)
     {
         try
         {

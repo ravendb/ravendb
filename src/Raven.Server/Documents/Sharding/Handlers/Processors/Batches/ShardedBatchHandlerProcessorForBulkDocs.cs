@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Batches;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
@@ -16,46 +20,34 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     {
     }
 
-    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(ShardedBatchCommand command)
+    protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, ShardedBatchCommand command)
     {
         var shardedBatchCommands = new Dictionary<int, SingleNodeShardedBatchCommand>(); // TODO sharding : consider cache those
         foreach (var c in command)
         {
             var shardNumber = c.ShardNumber;
-            var requestExecutor = RequestHandler.DatabaseContext.RequestExecutors[shardNumber];
-
             if (shardedBatchCommands.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
             {
-                shardedBatchCommand = new SingleNodeShardedBatchCommand(RequestHandler, requestExecutor.ContextPool);
+                shardedBatchCommand = new SingleNodeShardedBatchCommand(RequestHandler);
                 shardedBatchCommands.Add(shardNumber, shardedBatchCommand);
             }
-
             shardedBatchCommand.AddCommand(c);
         }
 
-        var tasks = new List<Task>();
-        foreach (var c in shardedBatchCommands)
-        {
-            tasks.Add(RequestHandler.DatabaseContext.RequestExecutors[c.Key].ExecuteAsync(c.Value, c.Value.Context));
-        }
-
-        await Task.WhenAll(tasks);
-
-        var reply = new object[command.ParsedCommands.Count];
-        foreach (var c in shardedBatchCommands.Values)
-            c.AssembleShardedReply(reply);
-
-        return new DynamicJsonArray(reply);
+        var op = new SingleNodeShardedBatchOperation(context, shardedBatchCommands, command.ParsedCommands.Count);
+        return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardedBatchCommands.Keys.ToArray(), op);
     }
 
     protected override ValueTask WaitForIndexesAsync(TimeSpan timeout, List<string> specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections)
     {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Implement WaitForIndexesAsync");
         throw new NotImplementedException();
     }
 
     protected override ValueTask WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, string numberOfReplicasStr, bool throwOnTimeoutInWaitForReplicas, string lastChangeVector)
     {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Implement WaitForReplicationAsync");
         throw new NotImplementedException();
     }
 

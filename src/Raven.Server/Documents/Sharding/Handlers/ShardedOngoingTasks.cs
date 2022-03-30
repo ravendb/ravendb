@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                                 throw new ArgumentException($"ETL task '{name}' is sharded, you must specify the shard index, for example : '{name}$0'");
 
                             var cmd = new ShardedCommand(this, Headers.None);
-                            await DatabaseContext.RequestExecutors[shardNumber].ExecuteAsync(cmd, context);
+                            await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, shardNumber);
 
                             HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                             HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
