@@ -7,13 +7,13 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors
 {
-    internal class ShardedRachisHandlerProcessorForWaitForRaftCommands : AbstractRachisHandlerProcessorForWaitForRaftCommands<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal class ShardedRachisHandlerProcessorForWaitForIndexNotifications : AbstractRachisHandlerProcessorForWaitForIndexNotifications<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedRachisHandlerProcessorForWaitForRaftCommands([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedRachisHandlerProcessorForWaitForIndexNotifications([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
 
-        protected override async ValueTask WaitForCommandsAsync(TransactionOperationContext context, WaitForCommandsRequest commands)
+        protected override async ValueTask WaitForCommandsAsync(TransactionOperationContext context, WaitForIndexNotificationRequest commands)
         {
             foreach (var index in commands.RaftCommandIndexes)
             {

@@ -102,7 +102,7 @@ public partial class RavenTestBase
         public static async Task WaitForIndexOnCluster(IDocumentStore store, long index, string database = null)
         {
             database ??= store.Database;
-            await store.Maintenance.ForDatabase(database).SendAsync(new WaitForRaftCommandsOperation(index));
+            await store.Maintenance.ForDatabase(database).SendAsync(new WaitForIndexNotificationOperation(index));
         }
 
         public async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(long index, TimeSpan? timeout = null)
