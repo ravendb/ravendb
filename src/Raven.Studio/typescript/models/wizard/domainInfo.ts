@@ -56,19 +56,16 @@ class domainInfo {
                                                         }
                                                     });
                              };
-        
-        const rg1 = /^[a-zA-Z0-9-]+$/;
-        const rg2 = /^(?!-)(?!.*-$)/;
 
         this.domain.extend({
             required: true,
             validation: [
                 {
-                    validator: (val: string) => rg1.test(val),
+                    validator: (val: string) => /^[a-zA-Z0-9-]+$/.test(val),
                     message: "Domain name can only contain A-Z, a-z, 0-9, '-'"
                 },
                 {
-                    validator: (val: string) => rg2.test(val),
+                    validator: (val: string) => !val.startsWith("-") && !val.endsWith("-"),
                     message: "Domain name cannot start or end with '-'"
                 },
                 {
