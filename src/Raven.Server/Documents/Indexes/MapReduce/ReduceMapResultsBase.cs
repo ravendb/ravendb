@@ -633,7 +633,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
             catch
             {
-                OnErrorResult = CurrentlyProcessedResult.Clone(indexContext);
+                OnErrorResult = CurrentlyProcessedResult?.Clone(indexContext);
                 throw;
             }
         }
