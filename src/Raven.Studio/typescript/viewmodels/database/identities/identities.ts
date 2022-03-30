@@ -10,6 +10,8 @@ import seedIdentityCommand = require("commands/database/identities/seedIdentityC
 import getClientConfigurationCommand = require("commands/resources/getClientConfigurationCommand");
 import getGlobalClientConfigurationCommand = require("commands/resources/getGlobalClientConfigurationCommand");
 import genUtils = require("common/generalUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database = require("models/resources/database");
 
 class identity {
     prefix = ko.observable<string>();
@@ -97,7 +99,7 @@ class identity {
     }
 }
 
-class identities extends viewModelBase {
+class identities extends shardViewModelBase {
     
     view = require("views/database/identities/identities.html");
 
@@ -117,8 +119,9 @@ class identities extends viewModelBase {
     databaseIdentitySeparator = ko.observable<string>();
     effectiveIdentitySeparator: KnockoutComputed<string>;
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
+        
         this.bindToCurrentInstance("saveIdentity", "addNewIdentity", "cancel");
         this.initObservables();
     }
@@ -142,7 +145,7 @@ class identities extends viewModelBase {
                 this.serverIdentitySeparator(serverSeparator);
              });
 
-        const databaseClientConfigurationTask = new getClientConfigurationCommand(this.activeDatabase())
+        const databaseClientConfigurationTask = new getClientConfigurationCommand(this.db)
             .execute()
             .done((dto) => {
                 const databaseSeparator = dto ? (dto.Disabled ? null : (dto.IdentityPartsSeparator || identity.defaultIdentitySeparator)) : null;
@@ -156,7 +159,7 @@ class identities extends viewModelBase {
         const task = $.Deferred<pagedResult<identity>>();
         
         this.fetchIdentitySeparator().then(() => {
-            new getIdentitiesCommand(this.activeDatabase())
+            new getIdentitiesCommand(this.db)
                 .execute()
                 .done((identities: dictionary<number>) => {
                     const mappedIdentities = _.map(identities, (value, key): identity => {
@@ -244,7 +247,7 @@ class identities extends viewModelBase {
             return;
         }
 
-        new seedIdentityCommand(this.activeDatabase(), prefix, item.value())
+        new seedIdentityCommand(this.db, prefix, item.value())
             .execute()
             .done(() => {
                 this.editedIdentityItem(null);
