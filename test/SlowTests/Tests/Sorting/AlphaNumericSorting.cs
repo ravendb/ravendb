@@ -22,7 +22,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void basic_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
@@ -95,7 +95,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void number_and_decimal_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
@@ -148,7 +148,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void basic_sequence_of_characters(Options options)
         {
             var titles = new List<string>
@@ -205,7 +205,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void order_by_two_parameters_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();
@@ -256,7 +256,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void order_by_two_parameters_first_alphanumeric_than_long(Options options)
         {
             var localTracks = new List<Track>();
@@ -308,7 +308,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void order_by_two_parameters_first_long_than_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();

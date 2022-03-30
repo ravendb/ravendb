@@ -320,6 +320,7 @@ WaitForUserToContinueTheTest(store);
                 }
             }
             {
+                WaitForUserToContinueTheTest(coraxStore);
                 using var coraxSession = coraxStore.OpenSession();
                 using var luceneSession = luceneStore.OpenSession();
 
