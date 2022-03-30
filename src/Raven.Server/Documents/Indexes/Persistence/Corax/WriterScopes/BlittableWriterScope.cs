@@ -9,12 +9,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 public class BlittableWriterScope : IDisposable
 {
     private readonly byte[] _buffer;
-    private int _currentIndex;
     private BlittableJsonReaderObject _reader;
 
     public BlittableWriterScope(BlittableJsonReaderObject reader)
     {
-        _currentIndex = 0;
         _reader = reader;
         _buffer = ArrayPool<byte>.Shared.Rent(_reader.Size);
     }
@@ -35,8 +33,6 @@ public class BlittableWriterScope : IDisposable
             }
         }
     }
-
-    
     
     public void Dispose()
     {
