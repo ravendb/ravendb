@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Processors.Identities;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -33,26 +34,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task SeedIdentityFor()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var value = GetLongQueryString("value", true);
-            var forced = GetBoolValueQueryString("force", false) ?? false;
-            if (value == null)
-                throw new ArgumentException("Query string value 'value' must have a non empty value");
-
-            if (name[name.Length - 1] != '|')
-                name += '|';
-
-            var newIdentityValue = await Database.ServerStore.UpdateClusterIdentityAsync(name, Database.Name, value.Value, forced, GetRaftRequestIdFromQuery());
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName("NewSeedValue");
-                writer.WriteInteger(newIdentityValue);
-
-                writer.WriteEndObject();
-            }
+            using (var processor = new IdentityHandlerProcessorForPostIdentity(this))
+                await processor.ExecuteAsync();
         }
     }
 }
