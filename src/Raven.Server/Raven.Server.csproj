@@ -195,6 +195,8 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Dashboard\Server\" />
+    <Folder Include="Documents\Handlers\Processors\BulkInsert\" />
+    <Folder Include="Documents\Sharding\Handlers\Processors\BulkInsert\" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>

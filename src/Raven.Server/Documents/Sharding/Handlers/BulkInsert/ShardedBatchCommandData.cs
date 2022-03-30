@@ -1,16 +1,17 @@
 ﻿using System;
 using System.IO;
-using Raven.Server.Documents.Handlers;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers.Batches;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.BulkInsert;
 
-public class ShardedCommandData : IDisposable
+public class ShardedBatchCommandData : IDisposable, IBatchCommandData
 {
     private readonly JsonOperationContext _ctx;
 
-    public ShardedCommandData(BatchRequestParser.CommandData command, JsonOperationContext ctx)
+    public ShardedBatchCommandData(BatchRequestParser.CommandData command, JsonOperationContext ctx)
     {
         _ctx = ctx;
         Data = command;
@@ -25,4 +26,10 @@ public class ShardedCommandData : IDisposable
     {
         _ctx.ReturnMemoryStream(Stream);
     }
+
+    public CommandType Type => Data.Type;
+
+    public string Id => Data.Id;
+
+    public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; } // TODO arek
 }

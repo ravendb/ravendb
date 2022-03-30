@@ -83,8 +83,9 @@ namespace FastTests.Client
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
-        public async Task Simple_Bulk_Insert_Should_Work()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Simple_Bulk_Insert_Should_Work(Options options)
         {
             var fooBars = new[]
             {
@@ -105,7 +106,7 @@ namespace FastTests.Client
                     Name = "Mega Jane"
                 }
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {

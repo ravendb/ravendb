@@ -298,7 +298,7 @@ public class MergedBatchCommand : TransactionMergedCommand
 
                 case CommandType.TimeSeries:
                 case CommandType.TimeSeriesWithIncrements:
-                    EtlGetDocIdFromPrefixIfNeeded(ref cmd.Id, cmd, lastPutResult);
+                    cmd.Id = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
                     var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Id, cmd.TimeSeries, cmd.FromEtl);
 
                     tsCmd.ExecuteDirectly(context);
@@ -338,7 +338,7 @@ public class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.Counters:
-                    EtlGetDocIdFromPrefixIfNeeded(ref cmd.Counters.DocumentId, cmd, lastPutResult);
+                    cmd.Counters.DocumentId = EtlGetDocIdFromPrefixIfNeeded(cmd.Counters.DocumentId, cmd, lastPutResult);
 
                     var counterBatchCmd = new CountersHandler.ExecuteCounterBatchCommand(Database, new CounterBatch
                     {
@@ -453,17 +453,17 @@ public class MergedBatchCommand : TransactionMergedCommand
         return Reply.Count;
     }
 
-    private void EtlGetDocIdFromPrefixIfNeeded(ref string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)
+    private string EtlGetDocIdFromPrefixIfNeeded(string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)
     {
         if (!cmd.FromEtl || docId[^1] != Database.IdentityPartsSeparator)
-            return;
+            return docId;
         // counter/time-series sent by Raven ETL, only prefix is defined
 
         if (lastPutResult == null)
             ThrowUnexpectedOrderOfRavenEtlCommands();
 
         Debug.Assert(lastPutResult.HasValue && lastPutResult.Value.Id.StartsWith(docId));
-        docId = lastPutResult.Value.Id;
+        return lastPutResult.Value.Id;
     }
 
     public override void Dispose()

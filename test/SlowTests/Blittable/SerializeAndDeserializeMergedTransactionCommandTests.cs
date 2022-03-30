@@ -14,7 +14,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
-using Raven.Server.Documents.Handlers.BulkInsert;
+using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
@@ -427,7 +427,7 @@ namespace SlowTests.Blittable
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
-                var expected = new BulkInsertHandler.MergedInsertBulkCommand
+                var expected = new MergedInsertBulkCommand
                 {
                     NumberOfCommands = commands.Length,
                     Commands = commands
@@ -446,7 +446,7 @@ namespace SlowTests.Blittable
                 }
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
-                BulkInsertHandler.MergedInsertBulkCommand actual;
+                MergedInsertBulkCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
                     reader.Initialize(fromStream);
@@ -456,7 +456,7 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<BulkInsertHandler.MergedInsertBulkCommand>(context));
+                Assert.Equal(expected, actual, new CustomComparer<MergedInsertBulkCommand>(context));
             }
         }
 

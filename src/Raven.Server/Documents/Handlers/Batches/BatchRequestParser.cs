@@ -31,10 +31,10 @@ namespace Raven.Server.Documents.Handlers.Batches
         internal static BatchRequestParser Instance = new BatchRequestParser(); // TODO arek - remove me
 
         // TODO sharding: CommandData seems to grew beyond the good practice of struct
-        public struct CommandData
+        public struct CommandData : IBatchCommandData
         {
-            public CommandType Type;
-            public string Id;
+            public CommandType Type { get; set; }
+            public string Id { get; set; }
             public BlittableJsonReaderArray Ids;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
-            public MergedBatchCommand.AttachmentStream AttachmentStream; // used for bulk insert only
+            public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
 
             #endregion Attachment
 

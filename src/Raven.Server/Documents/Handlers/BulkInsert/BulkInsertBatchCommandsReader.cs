@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.BulkInsert;
 
-public class BulkInsertBatchCommandsReader : AbstractBulkInsertBatchCommandsReader<BatchRequestParser.CommandData, JsonOperationContext>
+public class BulkInsertBatchCommandsReader : AbstractBulkInsertBatchCommandsReader<BatchRequestParser.CommandData>
 {
     public BulkInsertBatchCommandsReader(JsonOperationContext ctx, Stream stream, JsonOperationContext.MemoryBuffer buffer, CancellationToken token)
     : base(ctx, stream, buffer, BatchRequestParser.Instance, token)

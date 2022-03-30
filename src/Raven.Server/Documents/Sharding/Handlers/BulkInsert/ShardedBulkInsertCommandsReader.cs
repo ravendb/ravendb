@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.BulkInsert;
 
-public class ShardedBulkInsertCommandsReader : AbstractBulkInsertBatchCommandsReader<ShardedCommandData, JsonOperationContext>
+public class ShardedBulkInsertCommandsReader : AbstractBulkInsertBatchCommandsReader<ShardedBatchCommandData>
 {
     private readonly BatchCommandStreamCopier _commandStreamCopier;
 
@@ -16,7 +16,7 @@ public class ShardedBulkInsertCommandsReader : AbstractBulkInsertBatchCommandsRe
         BatchRequestParser.CommandParsingObserver = _commandStreamCopier = new BatchCommandStreamCopier(ctx);
     }
 
-    public override Task<ShardedCommandData> GetCommandAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier)
+    public override Task<ShardedBatchCommandData> GetCommandAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier)
     {
         var moveNext = MoveNext(ctx, modifier);
 
@@ -26,11 +26,11 @@ public class ShardedBulkInsertCommandsReader : AbstractBulkInsertBatchCommandsRe
         return CopyCommandStream(ctx, moveNext);
     }
 
-    private async Task<ShardedCommandData> CopyCommandStream(JsonOperationContext ctx, Task<BatchRequestParser.CommandData> task)
+    private async Task<ShardedBatchCommandData> CopyCommandStream(JsonOperationContext ctx, Task<BatchRequestParser.CommandData> task)
     {
         var command = await task;
 
-        var shardedCommandData = new ShardedCommandData(command, ctx);
+        var shardedCommandData = new ShardedBatchCommandData(command, ctx);
 
         await _commandStreamCopier.CopyToAsync(shardedCommandData.Stream);
 
