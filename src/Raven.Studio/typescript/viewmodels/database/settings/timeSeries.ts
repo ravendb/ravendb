@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import saveTimeSeriesConfigurationCommand = require("commands/database/documents/timeSeries/saveTimeSeriesConfigurationCommand");
@@ -9,8 +8,9 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import getTimeSeriesConfigurationCommand = require("commands/database/documents/timeSeries/getTimeSeriesConfigurationCommand");
 import timeSeriesConfigurationEntry = require("models/database/documents/timeSeriesConfigurationEntry");
 import popoverUtils = require("common/popoverUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class timeSeries extends viewModelBase {
+class timeSeries extends shardViewModelBase {
 
     view = require("views/database/settings/timeSeries.html");
 
@@ -29,8 +29,8 @@ class timeSeries extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
 
         this.bindToCurrentInstance("saveChanges",
             "deleteItem", "editItem", "applyChanges",
@@ -57,9 +57,9 @@ class timeSeries extends viewModelBase {
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
 
-                this.fetchConfiguration(this.activeDatabase())
+                this.fetchConfiguration(this.db)
                     .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
+                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.db) }));
 
                 return deferred;
             });
@@ -291,7 +291,7 @@ class timeSeries extends viewModelBase {
 
         const dto = this.toDto();
 
-        new saveTimeSeriesConfigurationCommand(this.activeDatabase(), dto)
+        new saveTimeSeriesConfigurationCommand(this.db, dto)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();
@@ -299,7 +299,7 @@ class timeSeries extends viewModelBase {
             })
             .always(() => {
                 this.spinners.save(false);
-                const db = this.activeDatabase();
+                const db = this.db;
                 db.hasRevisionsConfiguration(true);
                 collectionsTracker.default.configureRevisions(db);
             });
