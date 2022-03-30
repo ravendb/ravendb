@@ -1,3 +1,4 @@
+using System;
 using System.IO.Compression;
 using FastTests;
 using Raven.Client.ServerWide;
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
                     DatabaseName = databaseName
                 }));
 
-                op.WaitForCompletion();
+                op.WaitForCompletion(TimeSpan.FromMinutes(5));
             }
         }
 
