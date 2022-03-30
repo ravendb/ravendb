@@ -12,8 +12,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.BulkInsert;
 
-public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData, TOperationContext> : IDisposable
-    where TOperationContext : JsonOperationContext
+public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDisposable where TCommandData : IBatchCommandData
 {
     private readonly Stream _stream;
     private readonly UnmanagedJsonParser _parser;
@@ -44,9 +43,9 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData, TOpera
         }
     }
 
-    public abstract Task<TCommandData> GetCommandAsync(TOperationContext ctx, BlittableMetadataModifier modifier);
+    public abstract Task<TCommandData> GetCommandAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier);
 
-    protected Task<BatchRequestParser.CommandData> MoveNext(TOperationContext ctx, BlittableMetadataModifier modifier)
+    protected Task<BatchRequestParser.CommandData> MoveNext(JsonOperationContext ctx, BlittableMetadataModifier modifier)
     {
         if (_parser.Read())
         {

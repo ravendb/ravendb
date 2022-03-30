@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
@@ -28,8 +29,11 @@ namespace Raven.Server.Documents.Sharding.Operations
 
             OperationMultipleExceptionsResult operationExceptionsResult = null;
             SmugglerResult smugglerResult = null;
+            BulkOperationResult bulkResult = null;
 
             var span = results.Span;
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "We might get different operations states from different nodes e.g. two BulkOperationResults which succeeded and one OperationExceptionResult");
 
             for (int i = 0; i < results.Length; i++)
             {
@@ -56,8 +60,24 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                         GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, smuggler);
                         break;
+                    case BulkOperationResult bulk:
+                        if (bulkResult == null)
+                        {
+                            bulkResult = new BulkOperationResult();
+                            combined.Result = bulkResult;
+                        }
+
+                        bulkResult.AttachmentsProcessed += bulk.AttachmentsProcessed;
+                        bulkResult.CountersProcessed += bulk.CountersProcessed;
+                        bulkResult.DocumentsProcessed += bulk.DocumentsProcessed;
+                        bulkResult.Details.AddRange(bulk.Details);
+                        bulkResult.Query = bulk.Query;
+                        bulkResult.TimeSeriesProcessed += bulk.TimeSeriesProcessed;
+                        bulkResult.Total += bulk.Total;
+
+                        break;
                     default:
-                        throw new ArgumentException($"Not supported type {result.GetType()}");
+                        throw new ArgumentException($"Not supported operation type result {result.GetType()}");
                 }
             }
 

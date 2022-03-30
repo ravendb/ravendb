@@ -13,6 +13,7 @@ using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.BulkInsert;
+using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -204,7 +205,7 @@ namespace Raven.Server.Documents
                 case nameof(MergedPutCommand):
                     return jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
 
-                case nameof(BulkInsertHandler.MergedInsertBulkCommand):
+                case nameof(MergedInsertBulkCommand):
                     return jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
 
                 case nameof(AttachmentHandler.MergedPutAttachmentCommand):
