@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
@@ -293,9 +294,7 @@ namespace SlowTests.Client.Counters
                                   {
                                       incrementCounter(u, ""Downloads"", 100)
                                   }"
-                     })).WaitForCompletion();
-
-
+                     })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 var val = store.Operations
                     .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
@@ -483,7 +482,7 @@ namespace SlowTests.Client.Counters
                                       var name = this[""@metadata""][""@counters""][0];
                                       deleteCounter(u, name);
                                   }"
-                     })).WaitForCompletion();
+                     })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 foreach (var id in new [] { "users/1-A" , "users/2-A", "users/3-A", "users/4-A" })
                 {

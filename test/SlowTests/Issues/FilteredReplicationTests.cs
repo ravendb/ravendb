@@ -1411,13 +1411,13 @@ namespace SlowTests.Issues
 
             var file = GetTempFileName();
             var op = await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-            await op.WaitForCompletionAsync();
+            await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             var accessResults = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
             Assert.Empty(accessResults);
 
             op = await storeB.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-            await op.WaitForCompletionAsync();
+            await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             accessResults = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
             Assert.NotEmpty(accessResults);

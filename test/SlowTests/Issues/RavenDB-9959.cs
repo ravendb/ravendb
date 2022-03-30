@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -42,7 +43,7 @@ update {
                       AllowStale = false
                   }));
 
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromMinutes(5));
             }
         }
     }
