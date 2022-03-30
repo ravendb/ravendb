@@ -21,12 +21,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
 {
     private readonly IndexFieldOptions _allFields;
+
     public JintCoraxDocumentConverter(MapIndex index, bool storeValue = false)
         : base(index, storeValue, false, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
     {
         index.Definition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields);
     }
-    
+
     public JintCoraxDocumentConverter(MapReduceIndex index, bool storeValue = false)
         : base(index, storeValue, false, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
     {
@@ -42,7 +43,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             id = null;
             return Span<byte>.Empty;
         }
-        
+
         var entryWriter = new CoraxLib.IndexEntryWriter(writerBuffer, _knownFields);
 
         id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
@@ -145,7 +146,8 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                 }
             }
 
-            value = Utils.TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
+            value = Utils.TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
+                context: indexContext);
             InsertRegularField(field, value, indexContext, ref entryWriter, scope);
 
             if (value is IDisposable toDispose)
@@ -172,24 +174,15 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                 }
             }
         }
-        
+
         entryWriter.Finish(out var output);
         return output;
-        
+
         static bool IsObject(JsValue value)
         {
             return value.IsObject() && value.IsArray() == false;
         }
-
-        static object CreateValueForIndexing(object value, float? boost)
-        {
-            if (boost.HasValue == false)
-                return value;
-
-            return new BoostedValue { Boost = boost.Value, Value = value };
-        }
     }
-
 
     public override void Dispose()
     {
@@ -209,7 +202,6 @@ public abstract class JintCoraxDocumentConverterBase : CoraxDocumentConverterBas
         string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
         keyFieldName, storeValueFieldName, fields)
     {
-        
     }
 
     protected static bool TryGetBoostedValue(ObjectInstance valueToCheck, out JsValue value, out float? boost)

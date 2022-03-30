@@ -149,13 +149,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 if (isDistinctCount == false)
                 {
-                    Dictionary<string, Dictionary<string, string[]>> highlightings = null;
                     if (query.Metadata.HasHighlightings)
                     {
                         throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Highlightings)} yet.");
                     }
 
-                    ExplanationResult explanation = null;
                     if (query.Metadata.HasExplanations)
                     {
                         throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
@@ -432,67 +430,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 yield return field.Name;
             }
         }
-
-        // private static void Skip2<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long fetchedResults, ref long[] ids,
-        //     CoraxIndexQueryingScope queryingScope,
-        //     CancellationToken token)
-        //     where TQueryMatch : IQueryMatch
-        // {
-        //     var bufferSize = ids.Length;
-        //     if (bufferSize is 0)
-        //         throw new OutOfMemoryException($"{nameof(Corax)} buffer has no memory.");
-        //     fetchedResults = 0;
-        //
-        //     if (position is 0)
-        //     {
-        //         //Nothing to skip, just perform first Fill()
-        //         fetchedResults = read = result.Fill(ids);
-        //         skippedResults.Value = 0;
-        //         return;
-        //     }
-        //
-        //     // This is the case when we've to skip some elements!
-        //
-        //     // We will "cut" the buffer into N chunks
-        //     int chunksAmount = position / bufferSize;
-        //     position %= bufferSize;
-        //     while (chunksAmount > 0)
-        //     {
-        //         token.ThrowIfCancellationRequested();
-        //         fetchedResults += read = result.Fill(ids);
-        //         queryingScope.RecordAlreadyPagedItemsInPreviousPage(ids, token);
-        //         chunksAmount -= 1;
-        //         skippedResults.Value += bufferSize;
-        //     }
-        //
-        //     //The case [ [..N], ..., [..N], [..K]] where K < N. We still have some elements to Skip but some af them are valid for the query.
-        //     if (position is not 0)
-        //     {
-        //         token.ThrowIfCancellationRequested();
-        //         fetchedResults += read = result.Fill(ids);
-        //         if (read <= position) // there is no enough items to return
-        //         {
-        //             skippedResults.Value += read;
-        //             read = 0;
-        //         }
-        //
-        //         //We want to register items probably for skipping.
-        //         queryingScope.RecordAlreadyPagedItemsInPreviousPage(ids[0..position], token);
-        //         ids[position..read].CopyTo(ids, 0);
-        //         skippedResults.Value += position;
-        //         read -= position;
-        //     }
-        //
-        //     //skippedResults.Value = (int)readCounter;
-        //
-        //
-        //     // if (queryingScope.AlreadySeenDocumentKeysInPreviousPage < amountToSkip)
-        //     //The case when a single document has multiple entries in the index and we should skip them.
-        //     //This would require making this code significantly more complicated or running it recursively (which may lead to SOEs).
-        //     //Therefore, in this case, I leave this work to a higher function.
-        // }
-
-
+        
         private static void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
             CoraxIndexQueryingScope queryingScope,
             CancellationToken token)
@@ -501,7 +439,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (ids.Length is 0)
                 throw new OutOfMemoryException("Corax buffer has no memory.");
 
-            var retriever = default(RetrieverInput);
             readCounter = 0;
             if (position != 0)
             {
@@ -510,7 +447,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     token.ThrowIfCancellationRequested();
                     read = result.Fill(ids);
-                    // queryingScope?.RecordAlreadyPagedItemsInPreviousPage(ids, token);
                     readCounter += read;
                     emptyRead--;
                 }
