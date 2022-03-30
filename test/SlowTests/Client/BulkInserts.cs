@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Client.Http;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,9 +15,17 @@ namespace SlowTests.Client
         [Fact]
         public async Task Simple_Bulk_Insert_With_Ssl()
         {
-            using (var x = new FastTests.Client.BulkInserts(Output))
+            try
             {
-                await x.Simple_Bulk_Insert(useSsl: true);
+                NodeSelector.ShowDebugMessages = true;
+                using (var x = new FastTests.Client.BulkInserts(Output))
+                {
+                    await x.Simple_Bulk_Insert(useSsl: true);
+                }
+            }
+            finally
+            {
+                NodeSelector.ShowDebugMessages = false;
             }
         }
     }

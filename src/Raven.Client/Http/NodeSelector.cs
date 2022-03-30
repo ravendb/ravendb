@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -24,7 +26,7 @@ namespace Raven.Client.Http
                 Failures = new int[topology.Nodes.Count];
                 FastestRecords = new int[topology.Nodes.Count];
             }
-        }        
+        }
 
         public Topology Topology => _state.Topology;
 
@@ -37,8 +39,13 @@ namespace Raven.Client.Http
             _state = new NodeSelectorState(topology);
         }
 
-        public void OnFailedRequest(int nodeIndex)
+        public static bool ShowDebugMessages = false;
+
+        public void OnFailedRequest(int nodeIndex, string url, HttpStatusCode? statusCode, Exception exception, [CallerMemberName] string caller = null)
         {
+            if (ShowDebugMessages)
+                Console.WriteLine($"NodeSelector.OnFailedRequest({nodeIndex}, {url}, {statusCode}, {exception}, {caller})");
+
             var state = _state;
             if (nodeIndex < 0 || nodeIndex >= state.Failures.Length)
                 return; // probably already changed
@@ -110,8 +117,8 @@ namespace Raven.Client.Http
         {
             var state = _state;
             var preferredNode = GetPreferredNodeInternal(state);
-            return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag??-2);
-            
+            return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag ?? -2);
+
         }
 
         private static ValueTuple<int, ServerNode> UnlikelyEveryoneFaultedChoice(NodeSelectorState state)
@@ -144,20 +151,20 @@ namespace Raven.Client.Http
                 if (state.Failures[i] == 0 && state.Nodes[i].ServerRole == ServerNode.Role.Member)
                     return (i, state.Nodes[i]);
             }
-            
+
             return GetPreferredNode();
         }
 
         public (int Index, ServerNode Node) GetFastestNode()
-        {            
+        {
             var state = _state;
             if (state.Failures[state.Fastest] == 0 && state.Nodes[state.Fastest].ServerRole == ServerNode.Role.Member)
                 return (state.Fastest, state.Nodes[state.Fastest]);
-            
+
             // if the fastest node has failures, we'll immediately schedule
             // another run of finding who the fastest node is, in the meantime
             // we'll just use the server preferred node or failover as usual
-            
+
             SwitchToSpeedTestPhase(null);
             return GetPreferredNode();
         }
@@ -188,7 +195,7 @@ namespace Raven.Client.Http
             if (Interlocked.CompareExchange(ref state.SpeedTestMode, 1, 0) != 0)
                 return;
 
-            Array.Clear(state.FastestRecords,0, state.Failures.Length);
+            Array.Clear(state.FastestRecords, 0, state.Failures.Length);
 
             Interlocked.Increment(ref state.SpeedTestMode);
         }

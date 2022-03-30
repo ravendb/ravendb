@@ -1387,7 +1387,7 @@ namespace Raven.Client.Http
                         return false;
 
                     if (nodeIndex != null)
-                        _nodeSelector.OnFailedRequest(nodeIndex.Value);
+                        _nodeSelector.OnFailedRequest(nodeIndex.Value, url, response?.StatusCode, null);
 
                     if (command.FailedNodes == null)
                         command.FailedNodes = new Dictionary<ServerNode, Exception>();
@@ -1431,7 +1431,7 @@ namespace Raven.Client.Http
                         return false;
 
                     if (nodeIndex != null)
-                        _nodeSelector.OnFailedRequest(nodeIndex.Value);
+                        _nodeSelector.OnFailedRequest(nodeIndex.Value, url, null, null);
 
                     if (command.FailedNodes == null)
                         command.FailedNodes = new Dictionary<ServerNode, Exception>();
@@ -1509,7 +1509,7 @@ namespace Raven.Client.Http
             // As the server is down, we discard the server version to ensure we update when it goes up. 
             chosenNode.DiscardServerVersion();
 
-            _nodeSelector.OnFailedRequest(nodeIndex.Value);
+            _nodeSelector.OnFailedRequest(nodeIndex.Value, url, response?.StatusCode, null);
 
             if (ShouldBroadcast(command))
             {
@@ -1616,7 +1616,7 @@ namespace Raven.Client.Http
 
                     command.FailedNodes[node] = completed.Exception?.ExtractSingleInnerException() ?? new UnsuccessfulRequestException(failed.Node.Url);
 
-                    _nodeSelector.OnFailedRequest(failed.Index);
+                    _nodeSelector.OnFailedRequest(failed.Index, null, null, null);
                     SpawnHealthChecks(node, failed.Index);
 
                     tasks.Remove(completed);
@@ -1655,7 +1655,7 @@ namespace Raven.Client.Http
         public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)
         {
             SpawnHealthChecks(chosenNode, nodeIndex);
-            _nodeSelector?.OnFailedRequest(nodeIndex);
+            _nodeSelector?.OnFailedRequest(nodeIndex, url, null, e);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
 
             if (_disableTopologyUpdates)
