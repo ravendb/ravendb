@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Server.Documents.Commands;
 using Sparrow.Json;
 
 namespace FastTests.Utils
@@ -33,7 +34,8 @@ namespace FastTests.Utils
             modifyConfiguration?.Invoke(configuration);
 
             var index = await SetupRevisions(serverStore, database, configuration);
-            await RavenTestBase.ClusterTestBase2.WaitForIndexOnCluster(store, index, database);
+            await store.Maintenance.ForDatabase(database).SendAsync(new WaitForIndexNotificationOperation(index));
+
             return index;
         }
 
