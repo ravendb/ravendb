@@ -14,17 +14,16 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override ValueTask<TimeSeriesStatistics> GetTimeSeriesStatsAsync(string docId)
+        protected override ValueTask<TimeSeriesStatistics> GetTimeSeriesStatsAsync(DocumentsOperationContext context, string docId)
         {
-            var tsStats = new TimeSeriesStatistics()
-            {
-                DocumentId = docId, 
-                TimeSeries = new()
-            };
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
+                var tsStats = new TimeSeriesStatistics()
+                {
+                    DocumentId = docId,
+                    TimeSeries = new()
+                };
+
                 var document = RequestHandler.Database.DocumentsStorage.Get(context, docId, DocumentFields.Data);
                 if (document == null)
                 {
@@ -44,9 +43,9 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                         EndDate = end
                     });
                 }
-            }
 
-            return ValueTask.FromResult(tsStats);
+                return ValueTask.FromResult(tsStats);
+            }
         }
 
         private static List<string> GetTimesSeriesNames(Document document)

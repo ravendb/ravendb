@@ -12,13 +12,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Counters
         {
         }
 
-        protected override async ValueTask<CountersDetail> GetCountersAsync(string docId, StringValues counters, bool full)
+        protected override ValueTask<CountersDetail> GetCountersAsync(string docId, StringValues counters, bool full)
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 using (context.OpenReadTransaction())
                 {
-                    return GetInternal(RequestHandler.Database, context, counters, docId, full);
+                    return ValueTask.FromResult(GetInternal(RequestHandler.Database, context, counters, docId, full));
                 }
             }
         }

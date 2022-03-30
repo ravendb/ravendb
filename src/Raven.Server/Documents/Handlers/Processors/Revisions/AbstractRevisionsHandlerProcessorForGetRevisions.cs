@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Json;
@@ -19,14 +21,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         protected abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
             long totalDocumentsSizeInBytes);
 
-        protected abstract void CheckNotModified(string actualEtag);
+        protected abstract bool NotModified(string actualEtag);
 
-        protected abstract ValueTask GetRevisionByChangeVectorAsync(Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly, CancellationToken token);
+        protected abstract ValueTask GetRevisionByChangeVectorAsync(TOperationContext context, Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly, CancellationToken token);
         
-        protected abstract ValueTask GetRevisionsAsync(bool metadataOnly, CancellationToken token);
+        protected abstract ValueTask GetRevisionsAsync(TOperationContext context, string id, DateTime? before, int start, int pageSize, bool metadataOnly, CancellationToken token);
 
         public override async ValueTask ExecuteAsync()
         {
+            using(ContextPool.AllocateOperationContext(out TOperationContext context))
             using (var token = RequestHandler.CreateOperationToken())
             {
                 var changeVectors = RequestHandler.GetStringValuesQueryString("changeVector", required: false);
@@ -34,17 +37,22 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 
                 if (changeVectors.Count > 0)
                 {
-                    await GetRevisionByChangeVectorAsync(changeVectors, metadataOnly, token.Token);
+                    await GetRevisionByChangeVectorAsync(context, changeVectors, metadataOnly, token.Token);
                 }
                 else
                 {
+                    var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+                    var before = RequestHandler.GetDateTimeQueryString("before", required: false);
+                    var start = RequestHandler.GetStart();
+                    var pageSize = RequestHandler.GetPageSize();
+
                     //get revisions by id is sent to a single shard on sharded
-                    await GetRevisionsAsync(metadataOnly, token.Token);
+                    await GetRevisionsAsync(context, id, before, start, pageSize, metadataOnly, token.Token);
                 }
             }
         }
 
-        protected void WriteRevisionsBlittable(JsonOperationContext context, RevisionsResult documentsToWrite, out long numberOfResults, out long totalDocumentsSizeInBytes)
+        protected void WriteRevisionsBlittable(JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> documentsToWrite, out long numberOfResults, out long totalDocumentsSizeInBytes)
         {
             numberOfResults = 0;
             totalDocumentsSizeInBytes = 0;
@@ -60,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 writer.WritePropertyName(nameof(BlittableArrayResult.Results));
 
                 writer.StartWriteArray();
-                foreach (BlittableJsonReaderObject document in documentsToWrite.Results)
+                foreach (BlittableJsonReaderObject document in documentsToWrite)
                 {
                     numberOfResults++;
                     writer.WriteEmbeddedBlittableDocument(document);
@@ -68,19 +76,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 }
                 writer.WriteArrayEnd();
 
-                writer.WritePropertyName(nameof(BlittableArrayResult.TotalResults));
-                writer.WriteValue(documentsToWrite.TotalResults);
-
                 writer.WriteObjectEnd();
 
                 writer.FinalizeDocument();
             }
         }
-    }
-
-    public class RevisionsResult
-    {
-        public BlittableJsonReaderObject[] Results;
-        public long TotalResults;
     }
 }

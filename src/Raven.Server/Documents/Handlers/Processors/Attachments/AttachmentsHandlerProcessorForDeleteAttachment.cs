@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask DeleteAttachmentAsync(string docId, string name, LazyStringValue changeVector)
+        protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext _, string docId, string name, LazyStringValue changeVector)
         {
             var cmd = new AttachmentHandler.MergedDeleteAttachmentCommand
             {

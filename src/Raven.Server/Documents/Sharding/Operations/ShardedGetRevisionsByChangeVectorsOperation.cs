@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    internal readonly struct ShardedGetRevisionsByChangeVectorsOperation : IShardedOperation<BlittableArrayResult, RevisionsResult>
+    internal readonly struct ShardedGetRevisionsByChangeVectorsOperation : IShardedOperation<BlittableArrayResult, BlittableJsonReaderObject[]>
     {
         private readonly string[] _changeVectors;
         private readonly bool _metadataOnly;
@@ -20,30 +20,24 @@ namespace Raven.Server.Documents.Sharding.Operations
             _context = context;
         }
 
-        public RevisionsResult Combine(Memory<BlittableArrayResult> results)
+        public BlittableJsonReaderObject[] Combine(Memory<BlittableArrayResult> results)
         {
             var span = results.Span;
 
             int len = 0;
-            long total = 0;
             foreach (var s in span)
             {
                 if (s != null)
                 {
                     len = s.Results.Length;
-                    total += s.TotalResults;
                 }
             }
 
             //expecting to get null if single cv is sent and revision not found anywhere
-            if (total == 0 && _changeVectors.Length == 1)
+            if (len == 0 && _changeVectors.Length == 1)
                 return null;
 
-            var combined = new RevisionsResult()
-            {
-                Results = new BlittableJsonReaderObject[len],
-                TotalResults = total
-            };
+            var combined = new BlittableJsonReaderObject[len];
 
             for (int j = 0; j < len; j++)
             {
@@ -54,7 +48,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                     if (s.Results[j] != null && s.Results[j] is BlittableJsonReaderObject rev)
                     {
-                        combined.Results[j] = rev.Clone(_context);
+                        combined[j] = rev.Clone(_context);
                         break;
                     }
                 }

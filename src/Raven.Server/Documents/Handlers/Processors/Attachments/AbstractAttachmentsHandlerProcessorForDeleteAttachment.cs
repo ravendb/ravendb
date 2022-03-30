@@ -13,18 +13,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected abstract ValueTask DeleteAttachmentAsync(string docId, string name, LazyStringValue changeVector);
+        protected abstract ValueTask DeleteAttachmentAsync(TOperationContext context, string docId, string name, LazyStringValue changeVector);
 
         public override async ValueTask ExecuteAsync()
         {
             var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
                 var changeVector = context.GetLazyString(RequestHandler.GetStringFromHeaders("If-Match"));
 
-                await DeleteAttachmentAsync(id, name, changeVector);
+                await DeleteAttachmentAsync(context, id, name, changeVector);
             }
 
             RequestHandler.NoContentStatus();
