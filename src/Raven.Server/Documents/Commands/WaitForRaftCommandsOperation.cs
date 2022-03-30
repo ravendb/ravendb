@@ -6,24 +6,15 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands
 {
-    public class WaitForRaftCommandOperation : IMaintenanceOperation
-    {
-        private readonly long _raftIndex;
-
-        public WaitForRaftCommandOperation(long index)
-        {
-            _raftIndex = index;
-        }
-
-        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
-        {
-            return new WaitForRaftCommands(new List<long> { _raftIndex });
-        }
-    }
-
     public class WaitForRaftCommandsOperation : IMaintenanceOperation
     {
         private readonly List<long> _raftIndexes;
+
+        public WaitForRaftCommandsOperation(long index) : this(new List<long>(1) {index})
+        {
+
+        }
+
         public WaitForRaftCommandsOperation(List<long> indexes)
         {
             _raftIndexes = indexes;
@@ -31,7 +22,7 @@ namespace Raven.Server.Documents.Commands
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new WaitForRaftCommands(_raftIndexes);
+            return new WaitForIndexNotificationCommand(_raftIndexes);
         }
     }
 
