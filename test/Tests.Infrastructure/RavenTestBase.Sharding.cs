@@ -57,6 +57,7 @@ public partial class RavenTestBase
             var bucket = ShardHelper.GetBucket(id);
             return ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
         }
+
         public async Task<IEnumerable<DocumentDatabase>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, string database = null)
         {
             var dbs = new List<DocumentDatabase>();

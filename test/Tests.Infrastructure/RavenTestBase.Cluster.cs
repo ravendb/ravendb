@@ -99,12 +99,6 @@ public partial class RavenTestBase
             return sb.ToString();
         }
 
-        public static async Task WaitForIndexOnCluster(IDocumentStore store, long index, string database = null)
-        {
-            database ??= store.Database;
-            await store.Maintenance.ForDatabase(database).SendAsync(new WaitForIndexNotificationOperation(index));
-        }
-
         public async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(long index, TimeSpan? timeout = null)
         {
             var notDisposed = _parent.Servers.Count(s => s.ServerStore.Disposed == false);
