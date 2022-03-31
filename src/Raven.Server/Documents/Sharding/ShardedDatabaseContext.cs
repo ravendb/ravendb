@@ -52,11 +52,11 @@ namespace Raven.Server.Documents.Sharding
 
             _serverStore = serverStore;
             _record = record;
+            _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
 
             UpdateConfiguration(record.Settings);
 
             Indexes = new ShardedIndexesContext(this, serverStore);
-            _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
             for (int i = 0; i < record.Shards.Length; i++)
@@ -86,9 +86,7 @@ namespace Raven.Server.Documents.Sharding
         {
             UpdateConfiguration(record.Settings);
 
-            UpdateAnalyzers(record, index);
-
-            Indexes.Update(record);
+            Indexes.Update(record, index);
 
             Interlocked.Exchange(ref _record, record);
 
@@ -125,20 +123,6 @@ namespace Raven.Server.Documents.Sharding
         private void UpdateConfiguration(Dictionary<string, string> settings)
         {
             Configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, DatabaseName, settings);
-        }
-
-        private void UpdateAnalyzers(DatabaseRecord record, long index)
-        {
-            try
-            {
-                AnalyzerCompilationCache.Instance.AddItems(record);
-            }
-            catch (Exception e)
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Could not update analyzers", e);
-            }
         }
 
         public void Dispose()

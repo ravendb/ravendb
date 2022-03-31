@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.ServerWide;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Analyzers;
@@ -16,12 +15,12 @@ namespace Raven.Server.Documents.Indexes.Analysis
         {
         }
 
-        protected override bool DatabaseRecordContainsItem(DatabaseRecord databaseRecord, string name)
+        protected override bool DatabaseRecordContainsItem(RawDatabaseRecord databaseRecord, string name)
         {
             return databaseRecord.Analyzers != null && databaseRecord.Analyzers.ContainsKey(name);
         }
 
-        protected override IEnumerable<(string Name, string Code)> GetItemsFromDatabaseRecord(DatabaseRecord databaseRecord)
+        protected override IEnumerable<(string Name, string Code)> GetItemsFromDatabaseRecord(RawDatabaseRecord databaseRecord)
         {
             if (databaseRecord.Analyzers == null || databaseRecord.Analyzers.Count == 0)
                 yield break;
