@@ -8,6 +8,7 @@ using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Sharding.Executors;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
@@ -69,26 +70,29 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index);
-            using (var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted))
+
+            using (var cts = CreateOperationToken())
             {
-                cancellationTokenSource.CancelAfter(TimeSpan.FromMinutes(5));
-                await DatabaseContext.RachisLogIndexNotifications.WaitForIndexNotification(index, cancellationTokenSource.Token);
+                await DatabaseContext.RachisLogIndexNotifications.WaitForIndexNotification(index, cts.Token);
 
                 var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).ToList();
-                var tasks = new List<Task>();
 
                 foreach (var task in dbs)
                 {
-                    var notificationTask = task.ContinueWith(async t =>
-                    {
-                        var db = await t;
-                        await db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
-                    });
-                    tasks.Add(notificationTask);
+                    var database = await task.WithCancellation(cts.Token);
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout).WithCancellation(cts.Token);
                 }
-                
-                await tasks.WhenAll().WaitAndThrowOnTimeout(TimeSpan.FromMinutes(5));
             }
+        }
+
+        public override OperationCancelToken CreateOperationToken()
+        {
+            return new OperationCancelToken(DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
+        }
+
+        protected override OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        {
+            return new OperationCancelToken(cancelAfter, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
         }
     }
 }
