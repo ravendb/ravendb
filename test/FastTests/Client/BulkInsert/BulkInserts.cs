@@ -9,6 +9,7 @@ using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,8 +21,9 @@ namespace FastTests.Client.BulkInsert
         {
         }
 
-        [Fact]
-        public void SimpleBulkInsertShouldWork()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SimpleBulkInsertShouldWork(Options options)
         {
             var fooBars = new[]
             {
@@ -31,7 +33,7 @@ namespace FastTests.Client.BulkInsert
                 new FooBar { Name = "Mega Jane" }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -61,7 +63,7 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public async Task AsyncSimpleBulkInsertShouldWork()
         {
             var fooBars = new[]
@@ -102,7 +104,7 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public async Task KilledTooEarly()
         {
             var exception = await Assert.ThrowsAnyAsync<Exception>(async () =>
@@ -124,7 +126,7 @@ namespace FastTests.Client.BulkInsert
             Assert.True(exception is BulkInsertAbortedException);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void ShouldNotAcceptIdsEndingWithPipeLine()
         {
             using (var store = GetDocumentStore())
@@ -138,7 +140,7 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanModifyMetadataWithBulkInsert()
         {
             var expirationDate = DateTime.Today.AddYears(1).ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
@@ -165,7 +167,7 @@ namespace FastTests.Client.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public async Task BulkInsertDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
         {
             const string customCollection = "CustomCollection";

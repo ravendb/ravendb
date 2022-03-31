@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
+using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,13 +24,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [InlineData(10)]
-        [InlineData(500)]
-        [InlineData(5_000)]
-        public async Task Can_SkipOverwriteIfUnchanged(int docsCount)
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(500, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5_000, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_SkipOverwriteIfUnchanged(Options options, int docsCount)
         {
-            using (IDocumentStore store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore(options))
             {
                 var docs = new List<User>();
 
@@ -39,8 +44,14 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                var lastEtag = stats.LastDocEtag;
+                var tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
+
+                var lastEtags = new Dictionary<UniqueDatabaseInstanceKey, long?>();
+
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    lastEtags[key] = stats.LastDocEtag;
+                });
 
                 using (var bulk = store.BulkInsert(new BulkInsertOptions
                 {
@@ -54,18 +65,20 @@ namespace SlowTests.Issues
                     }
                 }
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(lastEtag, stats.LastDocEtag);
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    Assert.Equal(lastEtags[key], stats.LastDocEtag);
+                });
             }
         }
 
-        [Theory]
-        [InlineData(10)]
-        [InlineData(500)]
-        [InlineData(5_000)]
-        public async Task Can_SkipOverwriteIfUnchanged_SomeDocuments(int docsCount)
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(10, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(500, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(5_000, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task Can_SkipOverwriteIfUnchanged_SomeDocuments(Options options, int docsCount)
         {
-            using (IDocumentStore store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore(options))
             {
                 var docs = new List<User>();
 
@@ -79,9 +92,15 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                var lastEtag = stats.LastDocEtag;
+                var tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
 
+                var lastEtags = new Dictionary<UniqueDatabaseInstanceKey, long?>();
+
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    lastEtags[key] = stats.LastDocEtag;
+                });
+                
                 using (var bulk = store.BulkInsert(new BulkInsertOptions
                 {
                     SkipOverwriteIfUnchanged = true
@@ -97,15 +116,27 @@ namespace SlowTests.Issues
                     }
                 }
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(lastEtag + docsCount / 2, stats.LastDocEtag);
+                tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
+
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    if (options.DatabaseMode == RavenDatabaseMode.Single)
+                    {
+                        Assert.Equal(lastEtags[key] + docsCount / 2, stats.LastDocEtag);
+                    }
+                    else
+                    {
+                        Assert.True(stats.LastDocEtag < lastEtags[key] + docsCount / 2);
+                    }
+                });
             }
         }
 
-        [Fact]
-        public async Task Can_SkipOverwriteIfUnchanged_With_Attachment()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task Can_SkipOverwriteIfUnchanged_With_Attachment(Options options)
         {
-            using (IDocumentStore store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore(options))
             {
                 var docId = Guid.NewGuid().ToString();
                 var attachmentName = Guid.NewGuid().ToString();
@@ -122,8 +153,14 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                var lastEtag = stats.LastDocEtag;
+                var tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
+
+                var lastEtags = new Dictionary<UniqueDatabaseInstanceKey, long?>();
+
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    lastEtags[key] = stats.LastDocEtag;
+                });
 
                 using (var bulk = store.BulkInsert(new BulkInsertOptions
                 {
@@ -134,8 +171,10 @@ namespace SlowTests.Issues
                     await bulk.StoreAsync(user, docId);
                 }
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(lastEtag, stats.LastDocEtag);
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    Assert.Equal(lastEtags[key], stats.LastDocEtag);
+                });
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -145,10 +184,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_SkipOverwriteIfUnchanged_With_Counter()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task Can_SkipOverwriteIfUnchanged_With_Counter(Options options)
         {
-            using (IDocumentStore store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore(options))
             {
                 var docId = Guid.NewGuid().ToString();
                 var counterName = Guid.NewGuid().ToString();
@@ -165,8 +205,14 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                var lastEtag = stats.LastDocEtag;
+                var tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
+
+                var lastEtags = new Dictionary<UniqueDatabaseInstanceKey, long?>();
+
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    lastEtags[key] = stats.LastDocEtag;
+                });
 
                 using (var bulk = store.BulkInsert(new BulkInsertOptions
                 {
@@ -177,8 +223,10 @@ namespace SlowTests.Issues
                     await bulk.StoreAsync(user, docId);
                 }
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(lastEtag, stats.LastDocEtag);
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    Assert.Equal(lastEtags[key], stats.LastDocEtag);
+                });
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -188,10 +236,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Can_SkipOverwriteIfUnchanged_With_TimeSeries()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task Can_SkipOverwriteIfUnchanged_With_TimeSeries(Options options)
         {
-            using (IDocumentStore store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore(options))
             {
                 var docId = Guid.NewGuid().ToString();
                 var timeSeriesName = Guid.NewGuid().ToString();
@@ -208,8 +257,14 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                var lastEtag = stats.LastDocEtag;
+                var tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
+
+                var lastEtags = new Dictionary<UniqueDatabaseInstanceKey, long?>();
+
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    lastEtags[key] = stats.LastDocEtag;
+                });
 
                 using (var bulk = store.BulkInsert(new BulkInsertOptions
                 {
@@ -220,8 +275,10 @@ namespace SlowTests.Issues
                     await bulk.StoreAsync(user, docId);
                 }
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(lastEtag, stats.LastDocEtag);
+                await tester.AssertAllAsync((key, stats) =>
+                {
+                    Assert.Equal(lastEtags[key], stats.LastDocEtag);
+                });
 
                 using (var session = store.OpenAsyncSession())
                 {

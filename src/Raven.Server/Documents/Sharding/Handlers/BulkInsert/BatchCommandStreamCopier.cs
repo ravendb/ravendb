@@ -56,6 +56,8 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver, IDi
         await CommandStream.CopyToAsync(stream);
 
         CommandStream.Position = 0;
+        CommandStream.SetLength(0);
+
         stream.Position = 0;
 
 #if DEBUG
