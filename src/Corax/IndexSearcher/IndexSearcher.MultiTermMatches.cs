@@ -1,10 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Corax.Pipeline;
 using Corax.Queries;
-using Voron;
 
 namespace Corax;
 
@@ -69,15 +65,13 @@ public partial class IndexSearcher
 
     public MultiTermMatch InQuery(string field, List<string> inTerms, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
-        // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        if (fields is null)
-            return MultiTermMatch.CreateEmpty(_transaction.Allocator);
-
-        var terms = fields.CompactTreeFor(field);
-
+        var terms = fields?.CompactTreeFor(field);
         if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+        }
 
         if (inTerms.Count is > 1 and <= 16)
         {
@@ -116,9 +110,12 @@ public partial class IndexSearcher
         where TScoreFunction : IQueryScoreFunction
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields.CompactTreeFor(field);
+        var terms = fields?.CompactTreeFor(field);
         if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+        }
 
         if (inTerms.Count is > 1 and <= 16)
         {
@@ -165,11 +162,13 @@ public partial class IndexSearcher
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider
     {
-        // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields.CompactTreeFor(field);
+        var terms = fields?.CompactTreeFor(field);
         if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+        }
 
         var slicedTerm = EncodeAndApplyAnalyzer(term, fieldId);
         if (typeof(TTermProvider) == typeof(StartWithTermProvider))

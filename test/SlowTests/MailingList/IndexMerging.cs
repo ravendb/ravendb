@@ -17,11 +17,11 @@ namespace SlowTests.MailingList
         public AutoIndexMerging(ITestOutputHelper output) : base(output)
         {
         }
-
+        
         private const string SampleLogfileStoreId = "123";
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void AutoIndexReuseFails(Options options)
         {
             using (var store = GetDocumentStore(options))

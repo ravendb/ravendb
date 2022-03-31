@@ -13,11 +13,12 @@ public unsafe partial class IndexSearcher
     public TermMatch TermQuery(string field, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        if (fields == null)
-            return TermMatch.CreateEmpty();
-        var terms = fields.CompactTreeFor(field);
+        var terms = fields?.CompactTreeFor(field);
         if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
             return TermMatch.CreateEmpty();
+        }
 
         var termSlice = EncodeAndApplyAnalyzer(term, fieldId);
         return TermQuery(terms, termSlice, fieldId);
@@ -33,11 +34,12 @@ public unsafe partial class IndexSearcher
     internal TermMatch TermQuery(string field, Slice term)
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        if (fields == null)
-            return TermMatch.CreateEmpty();
-        var terms = fields.CompactTreeFor(field);
+        var terms = fields?.CompactTreeFor(field);
         if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
             return TermMatch.CreateEmpty();
+        }
 
         return TermQuery(terms, term);
     }
