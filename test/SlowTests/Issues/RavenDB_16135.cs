@@ -28,7 +28,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);

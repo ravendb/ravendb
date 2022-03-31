@@ -20,13 +20,10 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 // setup revision with PurgeOnDelete = false
-                var index = await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });
-
-                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, Server.ServerStore.Engine.OperationTimeout);
 
                 // store a document "users/1" under 'Users' collection
                 // and create some revisions for it
@@ -91,11 +88,11 @@ namespace SlowTests.Issues
                     }
                 };
 
-                index = await RevisionsHelper.SetupRevisions(store, configuration: configuration);
-                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, Server.ServerStore.Engine.OperationTimeout);
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
                 // make sure we don't have a tombstone for "users/1"
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TombstoneCleaner.ExecuteCleanup();
 
                 // delete document "users/1"
                 using (var session = store.OpenSession())

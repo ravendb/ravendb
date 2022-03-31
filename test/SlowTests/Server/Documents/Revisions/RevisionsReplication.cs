@@ -55,8 +55,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
-                await RevisionsHelper.SetupRevisions(store2);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -88,8 +88,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
-                await RevisionsHelper.SetupRevisions(store2);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -115,8 +115,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
-                await RevisionsHelper.SetupRevisions(store2);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -162,8 +162,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
-                await RevisionsHelper.SetupRevisions(store2);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -203,7 +203,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store2);
+                await RevisionsHelper.SetupRevisionsAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -526,11 +526,11 @@ namespace SlowTests.Server.Documents.Revisions
                 database.TombstoneCleaner.Subscribe(this);
                 database2.TombstoneCleaner.Subscribe(this);
 
-                await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: configuration =>
                  {
                      configuration.Collections["Users"].PurgeOnDelete = false;
                  });
-                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = false;
                 });
@@ -636,8 +636,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: modifyConfiguration);
-                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: modifyConfiguration);
+                await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: modifyConfiguration);
+                await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: modifyConfiguration);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -742,8 +742,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store2 = GetDocumentStore())
             {
                 //setup revisions on both stores and setup replication 
-                await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: modifyConfiguration);
-                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: modifyConfiguration);
+                await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: modifyConfiguration);
+                await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: modifyConfiguration);
                 await SetupReplicationAsync(store1, store2);
 
                 // create some revisions on store1
@@ -823,8 +823,8 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store2 = GetDocumentStore())
             {
                 //setup revisions on both stores and setup replication 
-                await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: modifyConfiguration);
-                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: modifyConfiguration);
+                await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: modifyConfiguration);
+                await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: modifyConfiguration);
 
                 await SetupReplicationAsync(store1, store2);
 
@@ -898,7 +898,7 @@ namespace SlowTests.Server.Documents.Revisions
             {
                 foreach (var store in new[] { store1, store2 })
                 {
-                    await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
+                    await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration
                     {
                         Default = new RevisionsCollectionConfiguration
                         {

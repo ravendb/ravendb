@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             var id = "user/1";
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     {
                         Default = null
                     };
-                    await RevisionsHelper.SetupRevisions(store, configuration: configuration);
+                    await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
                     session.Delete(id);
                     await session.SaveChangesAsync();
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(user, id);
                     session.SaveChanges();
-                    await RevisionsHelper.SetupRevisions(store);
+                    await RevisionsHelper.SetupRevisionsAsync(store);
                 }
 
                 using (var session = store.OpenAsyncSession())

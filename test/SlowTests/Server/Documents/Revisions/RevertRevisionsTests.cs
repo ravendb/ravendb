@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -76,7 +76,7 @@ namespace SlowTests.Server.Documents.Revisions
 
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -113,7 +113,7 @@ namespace SlowTests.Server.Documents.Revisions
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -176,7 +176,7 @@ namespace SlowTests.Server.Documents.Revisions
 
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 var name = "Hibernating Rhinos";
                 var company = new Company();
 
@@ -223,7 +223,7 @@ namespace SlowTests.Server.Documents.Revisions
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -269,7 +269,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = DateTime.UtcNow;
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -306,7 +306,7 @@ namespace SlowTests.Server.Documents.Revisions
             {
                 DateTime last = default;
 
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -348,7 +348,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -411,7 +411,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store2 = GetDocumentStore())
             {
                 DateTime last = default;
-                await RevisionsHelper.SetupRevisions(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
 
                 using (var session = store2.OpenAsyncSession())
                 {
@@ -485,7 +485,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
 
                 using (var session = store1.OpenAsyncSession())
@@ -566,7 +566,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
 
                 using (var session = store2.OpenAsyncSession())
@@ -652,7 +652,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
 
                 using (var session = store1.OpenAsyncSession())
@@ -738,7 +738,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
                 DateTime last = default;
 
                 using (var session = store2.OpenAsyncSession())

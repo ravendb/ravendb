@@ -24,7 +24,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     // revision 1

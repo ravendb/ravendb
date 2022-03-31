@@ -116,7 +116,7 @@ namespace SlowTests.Issues
                     }
                 };
 
-                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
                 using (var session = store.OpenSession())
                 {

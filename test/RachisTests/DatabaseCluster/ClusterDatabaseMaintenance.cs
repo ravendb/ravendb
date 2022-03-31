@@ -1539,7 +1539,7 @@ namespace RachisTests.DatabaseCluster
             var nonDeletedStores = allStores.Where(s => s.Urls[0] != toDelete.WebUrl).ToArray();
             var nonDeletedNodes = cluster.Nodes.Where(n => n.ServerStore.NodeTag != toDelete.ServerStore.NodeTag).ToArray();
 
-            await RevisionsHelper.SetupRevisions(toBeDeletedStore, database, new RevisionsConfiguration
+            await RevisionsHelper.SetupRevisionsAsync(toBeDeletedStore, database, new RevisionsConfiguration
             {
                 Default = new RevisionsCollectionConfiguration
                 {
@@ -1574,7 +1574,7 @@ namespace RachisTests.DatabaseCluster
             var rep1 = await BreakReplication(nonDeletedNodes[0].ServerStore, database);
             var rep2 = await BreakReplication(nonDeletedNodes[1].ServerStore, database);
 
-            await RevisionsHelper.SetupRevisions(nonDeletedStores[0], database, new RevisionsConfiguration
+            await RevisionsHelper.SetupRevisionsAsync(nonDeletedStores[0], database, new RevisionsConfiguration
             {
                 Default = new RevisionsCollectionConfiguration
                 {

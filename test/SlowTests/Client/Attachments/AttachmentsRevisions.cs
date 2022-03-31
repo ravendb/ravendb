@@ -30,7 +30,7 @@ namespace SlowTests.Client.Attachments
             using (var store = GetDocumentStore())
             {
                 await Databases.SetDatabaseId(store, dbId);
-                await RevisionsHelper.SetupRevisions(store, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = false;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;

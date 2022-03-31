@@ -26,8 +26,8 @@ namespace SlowTests.Issues
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
-                //await RevisionsHelper.SetupRevisions(store2); // not setting up revisions on purpose
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                //await RevisionsHelper.SetupRevisionsAsync(store2); // not setting up revisions on purpose
                 await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -59,8 +59,8 @@ namespace SlowTests.Issues
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
-                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration => configuration.Collections["Companies"] = new RevisionsCollectionConfiguration
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration => configuration.Collections["Companies"] = new RevisionsCollectionConfiguration
                 {
                     Disabled = true
                 });
@@ -95,8 +95,8 @@ namespace SlowTests.Issues
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store1);
-                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration => configuration.Collections["Companies"] = new RevisionsCollectionConfiguration
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration => configuration.Collections["Companies"] = new RevisionsCollectionConfiguration
                 {
                     Disabled = true
                 });

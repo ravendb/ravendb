@@ -361,7 +361,7 @@ namespace SlowTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await RevisionsHelper.SetupRevisions(store1);
+                        await RevisionsHelper.SetupRevisionsAsync(store1);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
@@ -431,7 +431,7 @@ namespace SlowTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await RevisionsHelper.SetupRevisions(store1);
+                        await RevisionsHelper.SetupRevisionsAsync(store1);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
@@ -548,7 +548,7 @@ namespace SlowTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await RevisionsHelper.SetupRevisions(store1);
+                        await RevisionsHelper.SetupRevisionsAsync(store1);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
@@ -626,7 +626,7 @@ namespace SlowTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await RevisionsHelper.SetupRevisions(store1);
+                        await RevisionsHelper.SetupRevisionsAsync(store1);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
@@ -802,7 +802,7 @@ namespace SlowTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await RevisionsHelper.SetupRevisions(store1);
+                        await RevisionsHelper.SetupRevisionsAsync(store1);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
