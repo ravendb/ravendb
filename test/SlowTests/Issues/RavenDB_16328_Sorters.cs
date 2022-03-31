@@ -7,7 +7,6 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Sorters;
 using Raven.Client.Documents.Queries.Sorting;
@@ -20,11 +19,11 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,14 +35,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseCustomSorter()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseCustomSorter(Options options)
         {
             var sorterName = GetDatabaseName();
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => sorterName
-            }))
+            options.ModifyDatabaseName = _ => sorterName;
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -101,14 +100,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanOverrideCustomSorter()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanOverrideCustomSorter(Options options)
         {
             var sorterName = GetDatabaseName();
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => sorterName
-            }))
+            options.ModifyDatabaseName = _ => sorterName;
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -146,7 +145,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCustomSorter_Restart()
         {
             var serverPath = NewDataPath();
@@ -217,7 +216,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCustomSorter_Restart_Faulty()
         {
             var serverPath = NewDataPath();
@@ -326,7 +325,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetCustomSorterDiagnostics()
         {
             var sorterName = GetDatabaseName();
