@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
                 };
 
                 var operation = documentStore.Maintenance.Server.Send(new CompactDatabaseOperation(settings));
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromMinutes(5));
             }
         }
 

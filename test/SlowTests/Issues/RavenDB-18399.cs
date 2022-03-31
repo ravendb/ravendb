@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -12,16 +12,13 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_17250 : RavenTestBase
+public class RavenDB_18399 : RavenTestBase
 {
-    //This tests will fail after updating Raven into new .NET version.
-    //Remember to add new version into FEATURE_DATEONLY_TIMEONLY_SUPPORT const.
-    // Nullable TimeOnly & DateOnly tests here: RavenDB_18399
+    // No nullable TimeOnly & DateOnly tests here: RavenDB_17250
 
-    public RavenDB_17250(ITestOutputHelper output) : base(output)
+    public RavenDB_18399(ITestOutputHelper output) : base(output)
     {
     }
-
 
     [Fact]
     public void DateAndTimeOnlyTestInIndex()
@@ -51,7 +48,8 @@ public class RavenDB_17250 : RavenTestBase
         var data = CreateDatabaseData(store);
         var index = new IndexWithLet();
         index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        WaitForUserToContinueTheTest(store);
+        // Indexes.WaitForIndexing(store);
         {
             var @do = DateOnly.MaxValue;
             var ts = @do.ToString("O", CultureInfo.InvariantCulture);
@@ -61,7 +59,7 @@ public class RavenDB_17250 : RavenTestBase
             var result = resultRaw2.ToList();
             result.ForEach(i =>
             {
-                Assert.Equal(5, i.DateOnly.Year);
+                Assert.Equal(5, i.DateOnly?.Year);
             });
         }
     }
@@ -84,7 +82,7 @@ public class RavenDB_17250 : RavenTestBase
             var result = resultRaw2.ToList();
             result.ForEach(i =>
             {
-                Assert.Equal(5, i.DateOnly.Year);
+                Assert.Equal(5, i.DateOnly?.Year);
             });
             WaitForUserToContinueTheTest(store);
         }
@@ -136,7 +134,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
 
         {
             using var session = store.OpenSession();
-            session.Advanced.Patch<DateAndTimeOnly, DateOnly>(id, x => x.DateOnly, @do.AddDays(1));
+            session.Advanced.Patch<DateAndTimeOnly, DateOnly>(id, x => x.DateOnly.Value, @do.AddDays(1));
             session.SaveChanges();
         }
 
@@ -148,7 +146,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
 
         {
             using var session = store.OpenSession();
-            session.Advanced.Patch<DateAndTimeOnly, TimeOnly>(id, x => x.TimeOnly, to.AddHours(1));
+            session.Advanced.Patch<DateAndTimeOnly, TimeOnly>(id, x => x.TimeOnly.Value, to.AddHours(1));
             session.SaveChanges();
         }
 
@@ -174,7 +172,6 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
             var resultRawQuery = session.Query<DateAndTimeOnly>().Where(p => p.DateOnly >= date && p.TimeOnly > time);
             var result = resultRawQuery.ToList();
             Assert.Equal(500, result.Count);
-            WaitForUserToContinueTheTest(store);
             var definitions = store.Maintenance.Send(new GetIndexesOperation(0, 1));
             foreach (var indexDefinition in definitions)
             {
@@ -185,6 +182,15 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
             }
 
             result.ForEach(i => Assert.True(i.DateOnly >= date && i.TimeOnly > time));
+            
+            Assert.Equal(1, session.Query<DateAndTimeOnly>().Count(p => p.DateOnly == null));
+            Assert.Equal(1, session.Query<DateAndTimeOnly>().Count(p => p.TimeOnly == null));
+            var nullResult = session.Query<DateAndTimeOnly>().Single(p => p.DateOnly == null);
+            Assert.Null(nullResult.Age);
+            Assert.Null(nullResult.DateOnly);
+            Assert.Null(nullResult.TimeOnly);
+            Assert.Null(nullResult.DateTime);
+
         }
     }
 
@@ -256,7 +262,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         var today = DateOnly.FromDateTime(DateTime.Today);
         {
             using var s = store.OpenSession();
-            var q = s.Query<DateAndTimeOnly>().Select(p => new DateAndTimeOnly() {Age = today.Year - p.DateOnly.Year}).Single();
+            var q = s.Query<DateAndTimeOnly>().Select(p => new DateAndTimeOnly() {Age =  (today.Year - p.DateOnly.Value.Year)}).Single();
             Assert.Equal(today.Year - 1947, q.Age);
         }
     }
@@ -267,6 +273,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         DateOnly dateOnly;
         var database = Enumerable.Range(0, 1000).Select(
             i => new DateAndTimeOnly() {TimeOnly = timeOnly.AddMinutes(i), DateOnly = dateOnly.AddDays(i), DateTime = DateTime.Now}).ToList();
+        database.Add(new DateAndTimeOnly() {Age = null, DateOnly = null, DateTime = null, TimeOnly = null});
         using var bulkInsert = store.BulkInsert();
         database.ForEach(i => bulkInsert.Store(i));
         return database;
@@ -274,9 +281,9 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
 
     private class DateAndTimeOnly
     {
-        public DateOnly DateOnly { get; set; }
-        public TimeOnly TimeOnly { get; set; }
-        public DateTime DateTime { get; set; }
+        public DateOnly? DateOnly { get; set; }
+        public TimeOnly? TimeOnly { get; set; }
+        public DateTime? DateTime { get; set; }
 
         public int? Age { get; set; }
     }
@@ -285,14 +292,14 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
     {
         public class IndexEntry
         {
-            public DateOnly DateOnly { get; set; }
+            public DateOnly? DateOnly { get; set; }
 
             public int Year { get; set; }
 
-            public DateOnly DateOnlyString { get; set; }
+            public DateOnly? DateOnlyString { get; set; }
 
-            public TimeOnly TimeOnlyString { get; set; }
-            public TimeOnly TimeOnly { get; set; }
+            public TimeOnly? TimeOnlyString { get; set; }
+            public TimeOnly? TimeOnly { get; set; }
         }
 
         public DateAndTimeOnlyIndex()
@@ -306,16 +313,16 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
     {
         public class IndexEntry
         {
-            public DateOnly DateOnly { get; set; }
+            public DateOnly? DateOnly { get; set; }
             public int Year { get; set; }
-            public TimeOnly TimeOnly { get; set; }
+            public TimeOnly? TimeOnly { get; set; }
         }
 
         public IndexWithLet()
         {
             Map = dates => from date in dates
-                let x = date.DateOnly
-                select new IndexEntry() {Year = x.Year, DateOnly = new DateOnly(2020, 12, 24), TimeOnly = date.TimeOnly,};
+                let x = date.DateOnly ?? default
+                select new IndexEntry() {Year = x.Year, DateOnly = new DateOnly(2020, 12, 24), TimeOnly = date.TimeOnly};
         }
     }
 
@@ -332,7 +339,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         {
             Map = dates => from date in dates
                 let x = date.DateTime
-                select new IndexEntry() {Year = x.Year, DateOnly = DateOnly.FromDateTime(x), DateTime = x};
+                select new IndexEntry() {Year = x.Value.Year, DateOnly = DateOnly.FromDateTime(x.Value), DateTime = x.Value};
         }
     }
 }

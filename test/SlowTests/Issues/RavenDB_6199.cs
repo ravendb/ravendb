@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                     Indexes.WaitForIndexing(store);
 
                     // we might have other notifications like StatsChanged
-                    Assert.True(notificationsQueue.Count > 0);
+                    Assert.True(WaitForValue(() => notificationsQueue.Count > 0, true, interval: 100));
 
                     Tuple<bool, DynamicJsonValue> performanceHint;
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -79,7 +80,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
             }
 
             using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 1 }))
@@ -91,7 +92,7 @@ namespace SlowTests.Server.Replication
                 var dest = nodes.First(n => n.ServerStore.NodeTag != srcTag);
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenAsyncSession())
                 {

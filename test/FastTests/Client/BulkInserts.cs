@@ -46,7 +46,12 @@ namespace FastTests.Client
             {
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
-                ModifyDatabaseName = s => dbName
+                ModifyDatabaseName = s => dbName,
+                ModifyDocumentStore = s =>
+                {
+                    if (useSsl)
+                        s.OnFailedRequest += (_, args) => Console.WriteLine($"Failed Request ('{args.Database}'): {args.Url}. Exception: {args.Exception}");
+                }
             }))
             {
                 using (var bulkInsert = store.BulkInsert())

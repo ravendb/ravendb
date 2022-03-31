@@ -50,7 +50,7 @@ function loadCountersOfOrdersBehavior(doc, counter)
 
                 src.Operations.Send(new PatchByQueryOperation(@"from Orders update{
     incrementCounter(this, 'Foo', 1);
-}")).WaitForCompletion();
+}")).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 if (collection == null)
                 {

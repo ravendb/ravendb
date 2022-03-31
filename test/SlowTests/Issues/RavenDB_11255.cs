@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -39,7 +40,7 @@ namespace SlowTests.Issues
                             index.SetPriority(IndexPriority.High);
                         }, TaskCreationOptions.LongRunning);
 
-                        task.Wait();
+                        Assert.True(task.Wait(TimeSpan.FromMinutes(1)));
                     }
 
                     index.Start(); // will persist the introduced changes

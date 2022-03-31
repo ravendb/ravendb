@@ -799,7 +799,7 @@ namespace SlowTests.Client.Counters
             });
 
             var result = await restoreStore.Maintenance.Server.SendAsync(restore);
-            result.WaitForCompletion();
+            await result.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
         }
 
         private static async Task AssertCounters(IAsyncDocumentSession session)

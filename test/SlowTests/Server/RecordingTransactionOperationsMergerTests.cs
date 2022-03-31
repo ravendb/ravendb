@@ -772,7 +772,7 @@ namespace SlowTests.Server
                             // to avoid a race condition where we will wait for an operation
                             // before it starts (request is send to the server)
 
-                var result = await operation.WaitForCompletionAsync<ReplayTxOperationResult>();
+                var result = await operation.WaitForCompletionAsync<ReplayTxOperationResult>(TimeSpan.FromMinutes(5));
 
                 //Assert
                 //Todo To think how to assert this test and if this test should be exist
@@ -1282,7 +1282,7 @@ namespace SlowTests.Server
                 var parameters = new Parameters { ["age"] = newAge };
                 store.Operations
                     .Send(new PatchByQueryOperation(new IndexQuery { Query = query, QueryParameters = parameters }))
-                    .WaitForCompletion();
+                    .WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }

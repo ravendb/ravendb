@@ -320,7 +320,7 @@ namespace RachisTests.DatabaseCluster
             };
             var cluster = await CreateRaftCluster(clusterSize, false, 0, watcherCluster: true, customSettings: settings);
 
-            Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
+            //Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
 
             using (var store = new DocumentStore { Urls = new[] { cluster.Leader.WebUrl } }.Initialize())
             {
@@ -355,7 +355,7 @@ namespace RachisTests.DatabaseCluster
                     CustomSettings = settings
                 });
 
-                cluster.Nodes[2].ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true;
+                //cluster.Nodes[2].ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true;
 
                 var preferredCount = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };
 
