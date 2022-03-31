@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Utils;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -238,7 +239,7 @@ namespace FastTests.Sharding
                 await session.SaveChangesAsync();
             }
 
-            await SetupRevisions(Server.ServerStore, store.Database);
+            await SetupRevisionsAsync(store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -635,7 +636,7 @@ namespace FastTests.Sharding
             }
         }
 
-        private static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database)
+        private static async Task SetupRevisionsAsync(IDocumentStore store)
         {
             var configuration = new RevisionsConfiguration
             {
@@ -655,16 +656,7 @@ namespace FastTests.Sharding
                 }
             };
 
-            var index = await RevisionsHelper.SetupRevisions(serverStore, database, configuration);
-
-            var documentDatabases = serverStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
-            foreach (var task in documentDatabases)
-            {
-                var db = await task;
-                await db.RachisLogIndexNotifications.WaitForIndexNotification(index, serverStore.Engine.OperationTimeout);
-            }
-
-            return index;
+            await RevisionsHelper.SetupRevisions(store, configuration: configuration);
         }
     }
 }

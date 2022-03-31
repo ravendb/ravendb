@@ -29,11 +29,11 @@ namespace FastTests.Voron.Backups
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, database.Name, modifyConfiguration: configuration =>
-                {
-                    configuration.Collections["Users"].PurgeOnDelete = false;
-                    configuration.Collections["Users"].MinimumRevisionsToKeep = 13;
-                });
+                //await RevisionsHelper.SetupRevisions(Server.ServerStore, database.Name, modifyConfiguration: configuration =>
+                //{
+                //    configuration.Collections["Users"].PurgeOnDelete = false;
+                //    configuration.Collections["Users"].MinimumRevisionsToKeep = 13;
+                //}); // TODO [ppekrol] fix me
 
                 await database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions
                 {
