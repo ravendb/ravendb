@@ -8,7 +8,7 @@ namespace FastTests.Utils
 {
     public class RevisionsHelper
     {
-        public static async Task<long> SetupRevisions(
+        public static async Task<long> SetupRevisionsAsync(
             IDocumentStore store,
             string database = null,
             RevisionsConfiguration configuration = null,

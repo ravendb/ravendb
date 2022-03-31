@@ -1323,7 +1323,7 @@ namespace SlowTests.Server.Replication
             var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             string nodeTagToRemove = res.Topology.Members.Last(m => m.Equals("A") == false);
             var config = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration() };
-            await RevisionsHelper.SetupRevisions(store, configuration: config);
+            await RevisionsHelper.SetupRevisionsAsync(store, configuration: config);
 
             var entity = new User();
             using (var session = store.OpenAsyncSession())

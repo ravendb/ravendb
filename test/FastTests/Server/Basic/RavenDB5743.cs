@@ -17,7 +17,7 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

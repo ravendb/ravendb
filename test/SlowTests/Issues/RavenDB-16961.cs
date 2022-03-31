@@ -29,7 +29,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration()
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration()
                 {
                     Default = new RevisionsCollectionConfiguration()
                     {
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration());
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration());
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
             }))
             {
                 await SetupReplicationAsync(store1, store2);
-                await RevisionsHelper.SetupRevisions(store1, configuration: new RevisionsConfiguration()
+                await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration()
                 {
                     Default = new RevisionsCollectionConfiguration()
                     {
@@ -115,7 +115,7 @@ namespace SlowTests.Issues
                     }, 1
                 );
                 Assert.Equal(1, val2);
-                await RevisionsHelper.SetupRevisions(store1, configuration: new RevisionsConfiguration());
+                await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration());
 
                 db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 IOperationResult enforceResult;
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
             }))
             {
 
-                await RevisionsHelper.SetupRevisions(store1, configuration: new RevisionsConfiguration()
+                await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration()
                 {
                     Default = new RevisionsCollectionConfiguration()
                     {
@@ -221,7 +221,7 @@ namespace SlowTests.Issues
 
                 await SetupReplicationAsync(store2, store1);
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
-                await RevisionsHelper.SetupRevisions(store1, configuration: new RevisionsConfiguration());
+                await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration());
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))

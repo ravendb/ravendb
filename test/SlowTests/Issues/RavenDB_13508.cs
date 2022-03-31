@@ -24,7 +24,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store, modifyConfiguration: configuration => { });
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => { });
 
                 using (var session = store.OpenAsyncSession())
                 {

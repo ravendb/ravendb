@@ -51,8 +51,8 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await RevisionsHelper.SetupRevisions(master);
-                await RevisionsHelper.SetupRevisions(slave);
+                await RevisionsHelper.SetupRevisionsAsync(master);
+                await RevisionsHelper.SetupRevisionsAsync(slave);
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenAsyncSession())
@@ -106,8 +106,8 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await RevisionsHelper.SetupRevisions(master);
-                await RevisionsHelper.SetupRevisions(slave);
+                await RevisionsHelper.SetupRevisionsAsync(master);
+                await RevisionsHelper.SetupRevisionsAsync(slave);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -448,8 +448,8 @@ namespace SlowTests.Server.Replication
             {
                 if (configureVersioning)
                 {
-                    await RevisionsHelper.SetupRevisions(storeA);
-                    await RevisionsHelper.SetupRevisions(storeB);
+                    await RevisionsHelper.SetupRevisionsAsync(storeA);
+                    await RevisionsHelper.SetupRevisionsAsync(storeB);
                 }
 
                 var company = new Company { Name = "Name" };
@@ -516,8 +516,8 @@ namespace SlowTests.Server.Replication
                 var expectedRevisionsCount = 3;
                 if (configureVersioning)
                 {
-                    await RevisionsHelper.SetupRevisions(storeA);
-                    await RevisionsHelper.SetupRevisions(storeB);
+                    await RevisionsHelper.SetupRevisionsAsync(storeA);
+                    await RevisionsHelper.SetupRevisionsAsync(storeB);
                     expectedRevisionsCount = 4;
                 }
 
@@ -600,8 +600,8 @@ namespace SlowTests.Server.Replication
                 var expectedRevisionsCount = 3;
                 if (configureVersioning)
                 {
-                    await RevisionsHelper.SetupRevisions(storeA);
-                    await RevisionsHelper.SetupRevisions(storeB);
+                    await RevisionsHelper.SetupRevisionsAsync(storeA);
+                    await RevisionsHelper.SetupRevisionsAsync(storeB);
                     expectedRevisionsCount = 4;
                 }
 
@@ -680,8 +680,8 @@ namespace SlowTests.Server.Replication
 
             if (configureVersioning)
             {
-                await RevisionsHelper.SetupRevisions(storeA);
-                await RevisionsHelper.SetupRevisions(storeB);
+                await RevisionsHelper.SetupRevisionsAsync(storeA);
+                await RevisionsHelper.SetupRevisionsAsync(storeB);
             }
 
             using (var session = storeB.OpenAsyncSession())
@@ -742,9 +742,9 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await RevisionsHelper.SetupRevisions(storeA);
-                await RevisionsHelper.SetupRevisions(storeB);
-                await RevisionsHelper.SetupRevisions(storeC);
+                await RevisionsHelper.SetupRevisionsAsync(storeA);
+                await RevisionsHelper.SetupRevisionsAsync(storeB);
+                await RevisionsHelper.SetupRevisionsAsync(storeC);
 
                 await SetupReplicationAsync(storeA, storeB);
 

@@ -156,7 +156,7 @@ namespace SlowTests.Smuggler
             {
                 Assert.NotNull(stream);
 
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -218,7 +218,7 @@ namespace SlowTests.Smuggler
             {
                 Assert.NotNull(stream);
 
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -270,7 +270,7 @@ namespace SlowTests.Smuggler
             {
                 Assert.NotNull(stream);
 
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -315,7 +315,7 @@ namespace SlowTests.Smuggler
             {
                 Assert.NotNull(stream);
 
-                await RevisionsHelper.SetupRevisions(store, modifyConfiguration: x => x.Default.PurgeOnDelete = true);
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: x => x.Default.PurgeOnDelete = true);
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));

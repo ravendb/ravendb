@@ -22,7 +22,7 @@ namespace SlowTests.Issues
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(storeA);
+                await RevisionsHelper.SetupRevisionsAsync(storeA);
 
                 using (var session = storeA.OpenAsyncSession())
                 {

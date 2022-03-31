@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                         MinimumRevisionsToKeep = 1000000
                     },
                 };
-                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -90,7 +90,7 @@ namespace SlowTests.Issues
                     }
 
                 };
-                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -165,7 +165,7 @@ namespace SlowTests.Issues
                         MinimumRevisionsToKeep = 1000000
                     },
                 };
-                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -223,7 +223,7 @@ namespace SlowTests.Issues
                     }
 
                 };
-                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
+                await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))

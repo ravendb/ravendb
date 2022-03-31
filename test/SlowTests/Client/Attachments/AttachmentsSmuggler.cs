@@ -327,7 +327,7 @@ namespace SlowTests.Client.Attachments
                 {
                     await Databases.SetDatabaseId(store1, dbId);
 
-                    await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
+                    await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: configuration =>
                      {
                          configuration.Collections["Users"].PurgeOnDelete = false;
                          configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
@@ -429,7 +429,7 @@ namespace SlowTests.Client.Attachments
                 }))
                 {
                     await Databases.SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
-                    await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
+                    await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: configuration =>
                     {
                         configuration.Collections["Users"].PurgeOnDelete = false;
                         configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
@@ -462,7 +462,7 @@ namespace SlowTests.Client.Attachments
                     var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
                     await Databases.SetDatabaseId(store2, dbId);
 
-                    await RevisionsHelper.SetupRevisions(store2);
+                    await RevisionsHelper.SetupRevisionsAsync(store2);
 
                     for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite
                     {

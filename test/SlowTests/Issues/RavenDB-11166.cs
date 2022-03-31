@@ -84,7 +84,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Person
@@ -154,7 +154,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store);
+                await RevisionsHelper.SetupRevisionsAsync(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Person

@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
                 using (var store2 = GetDocumentStore())
                 {
-                    await RevisionsHelper.SetupRevisions(store2, configuration: new RevisionsConfiguration
+                    await RevisionsHelper.SetupRevisionsAsync(store2, configuration: new RevisionsConfiguration
                     {
                         Default = new RevisionsCollectionConfiguration()
                     });
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
                     using (var store3 = GetDocumentStore())
                     {
-                        await RevisionsHelper.SetupRevisions(store3, configuration: new RevisionsConfiguration
+                        await RevisionsHelper.SetupRevisionsAsync(store3, configuration: new RevisionsConfiguration
                         {
                             Default = new RevisionsCollectionConfiguration()
                         });

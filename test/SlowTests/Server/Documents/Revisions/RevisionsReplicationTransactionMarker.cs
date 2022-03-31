@@ -28,11 +28,11 @@ namespace SlowTests.Server.Documents.Revisions
                 var database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 using (var controller = new ReplicationController(database1))
                 {
-                    await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
+                    await RevisionsHelper.SetupRevisionsAsync(store1, modifyConfiguration: configuration =>
                     {
                         configuration.Collections["Users"].PurgeOnDelete = false;
                     });
-                    await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration =>
+                    await RevisionsHelper.SetupRevisionsAsync(store2, modifyConfiguration: configuration =>
                     {
                         configuration.Collections["Users"].PurgeOnDelete = false;
                     });

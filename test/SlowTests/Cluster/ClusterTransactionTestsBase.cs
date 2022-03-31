@@ -957,7 +957,7 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             {
                 Name = "Indych"
             };
-            var index = await RevisionsHelper.SetupRevisions(leaderStore, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+            var index = await RevisionsHelper.SetupRevisionsAsync(leaderStore, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
             await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
             // bring our SUT node down, but we still have a cluster and can execute cluster transaction.

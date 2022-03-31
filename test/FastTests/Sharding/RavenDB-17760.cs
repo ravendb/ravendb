@@ -656,7 +656,7 @@ namespace FastTests.Sharding
                 }
             };
 
-            await RevisionsHelper.SetupRevisions(store, configuration: configuration);
+            await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
         }
     }
 }
