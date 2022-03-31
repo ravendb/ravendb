@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var s = store.OpenAsyncSession())
             {

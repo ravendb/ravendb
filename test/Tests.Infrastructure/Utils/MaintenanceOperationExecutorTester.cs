@@ -10,17 +10,37 @@ using Xunit.Sdk;
 
 namespace Tests.Infrastructure.Utils;
 
-public class MaintenanceOperationExecutorTester<TResult>
+public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperationExecutorReadTester<TResult>, IMaintenanceOperationExecutorActionTester
 {
     private readonly MaintenanceOperationExecutor _executor;
-    private readonly Func<IMaintenanceOperation<TResult>> _factory;
+    private readonly Func<IMaintenanceOperation<TResult>> _factoryWithResult;
+    private readonly Func<IMaintenanceOperation> _factoryWithoutResult;
 
     private DatabaseRecord _databaseRecord;
 
     public MaintenanceOperationExecutorTester(MaintenanceOperationExecutor executor, Func<IMaintenanceOperation<TResult>> factory)
     {
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        _factoryWithResult = factory ?? throw new ArgumentNullException(nameof(factory));
+    }
+
+    public MaintenanceOperationExecutorTester(MaintenanceOperationExecutor executor, Func<IMaintenanceOperation> factory)
+    {
+        _executor = executor ?? throw new ArgumentNullException(nameof(executor));
+        _factoryWithoutResult = factory ?? throw new ArgumentNullException(nameof(factory));
+    }
+
+    public async Task ExecuteOnAllAsync()
+    {
+        await foreach (var _ in ExecuteAsync())
+        {
+            // just executing
+        }
+    }
+
+    public void ExecuteOnAll()
+    {
+        AsyncHelpers.RunSync(ExecuteOnAllAsync);
     }
 
     public async Task AssertAllAsync(Action<Key, TResult> assert)
@@ -57,7 +77,7 @@ public class MaintenanceOperationExecutorTester<TResult>
                     var shardKey = nKey.ForShard(i);
                     var shardExecutor = nExecutor.ForShard(i);
 
-                    yield return (shardKey, await shardExecutor.SendAsync(_factory()));
+                    yield return (shardKey, await shardExecutor.SendAsync(_factoryWithResult()));
                 }
             }
 
@@ -66,7 +86,36 @@ public class MaintenanceOperationExecutorTester<TResult>
 
         foreach (var (key, executor) in GetExecutors(_databaseRecord.Topology))
         {
-            yield return (key, await executor.SendAsync(_factory()));
+            yield return (key, await executor.SendAsync(_factoryWithResult()));
+        }
+    }
+
+    private async IAsyncEnumerable<Key> ExecuteAsync()
+    {
+        _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
+        if (_databaseRecord.IsSharded)
+        {
+            for (var i = 0; i < _databaseRecord.Shards.Length; i++)
+            {
+                var shardTopology = _databaseRecord.Shards[i];
+
+                foreach (var (nKey, nExecutor) in GetExecutors(shardTopology))
+                {
+                    var shardKey = nKey.ForShard(i);
+                    var shardExecutor = nExecutor.ForShard(i);
+                    await shardExecutor.SendAsync(_factoryWithoutResult());
+
+                    yield return shardKey;
+                }
+            }
+
+            yield break;
+        }
+
+        foreach (var (key, executor) in GetExecutors(_databaseRecord.Topology))
+        {
+            await executor.SendAsync(_factoryWithoutResult());
+            yield return key;
         }
     }
 
@@ -113,4 +162,18 @@ public class MaintenanceOperationExecutorTester<TResult>
             return builder.ToString();
         }
     }
+}
+
+public interface IMaintenanceOperationExecutorActionTester
+{
+    Task ExecuteOnAllAsync();
+
+    void ExecuteOnAll();
+}
+
+public interface IMaintenanceOperationExecutorReadTester<TResult>
+{
+    Task AssertAllAsync(Action<MaintenanceOperationExecutorTester<TResult>.Key, TResult> assert);
+
+    void AssertAll(Action<MaintenanceOperationExecutorTester<TResult>.Key, TResult> assert);
 }

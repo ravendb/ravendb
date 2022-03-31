@@ -2,9 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
@@ -13,15 +11,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -32,12 +26,8 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
 using Sparrow.Utils;
 using Tests.Infrastructure;
-using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -116,29 +106,6 @@ namespace FastTests
                 throw ex;
             }
             return false;
-        }
-
-        protected static void CreateNorthwindDatabase(DocumentStore store, DatabaseItemType operateOnTypes = DatabaseItemType.Documents)
-        {
-            store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes));
-        }
-
-        protected static async Task CreateLegacyNorthwindDatabase(DocumentStore store)
-        {
-            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Tests.Infrastructure.Data.Northwind.4.2.ravendbdump"))
-            {
-                Assert.NotNull(stream);
-
-                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-            }
-        }
-
-        protected async Task SetDatabaseId(DocumentStore store, Guid dbId)
-        {
-            var database = await GetDocumentDatabaseInstanceFor(store);
-            var type = database.GetAllStoragesEnvironment().Single(t => t.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents);
-            type.Environment.FillBase64Id(dbId);
         }
 
         private readonly object _getDocumentStoreSync = new object();
@@ -413,287 +380,6 @@ namespace FastTests
                 }
             }
             return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
-        }
-
-        public static void WaitForIndexing(IDocumentStore store, string databaseName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
-        {
-            databaseName ??= store.Database;
-            var admin = store.Maintenance.ForDatabase(databaseName);
-            var databaseRecord = admin.Server.Send(new GetDatabaseRecordOperation(databaseName));
-
-            timeout ??= (Debugger.IsAttached
-                ? TimeSpan.FromMinutes(15)
-                : TimeSpan.FromMinutes(1));
-
-            var sp = Stopwatch.StartNew();
-            var nonStaleShards = new HashSet<int>();
-
-            while (sp.Elapsed < timeout.Value)
-            {
-                var staleStatus = RavenTestBase.StaleStatus.NonStale;
-
-                if (databaseRecord.IsSharded)
-                {
-                    for (var i = 0; i < databaseRecord.Shards.Length; i++)
-                    {
-                        if (nonStaleShards.Contains(i))
-                            continue;
-
-                        var shardStatus = StaleStatus(shardId: i);
-                        if (shardStatus == RavenTestBase.StaleStatus.NonStale)
-                            nonStaleShards.Add(i);
-
-                        staleStatus |= shardStatus;
-                    }
-                }
-                else
-                {
-                    staleStatus = StaleStatus();
-                }
-
-                if (staleStatus.HasFlag(RavenTestBase.StaleStatus.Error))
-                    break;
-
-                if (staleStatus == RavenTestBase.StaleStatus.NonStale)
-                    return;
-            }
-
-            if (allowErrors)
-            {
-                return;
-            }
-
-            var files = new List<string>();
-            if (databaseRecord.IsSharded)
-            {
-                for (var i = 0; i < databaseRecord.Shards.Length; i++)
-                {
-                    files.Add(OutputIndexInfo(i));
-                }
-            }
-            else
-            {
-                files.Add(OutputIndexInfo(null));
-            }
-
-            string OutputIndexInfo(int? shard)
-            {
-                IndexPerformanceStats[] perf;
-                IndexErrors[] errors;
-                IndexStats[] stats;
-                if (shard.HasValue == false)
-                {
-                    perf = admin.Send(new GetIndexPerformanceStatisticsOperation());
-                    errors = admin.Send(new GetIndexErrorsOperation());
-                    stats = admin.Send(new GetIndexesStatisticsOperation());
-                }
-                else
-                {
-                    perf = admin.ForShard(shard.Value).Send(new GetIndexPerformanceStatisticsOperation());
-                    errors = admin.ForShard(shard.Value).Send(new GetIndexErrorsOperation());
-                    stats = admin.ForShard(shard.Value).Send(new GetIndexesStatisticsOperation());
-                }
-
-                var total = new
-                {
-                    Errors = errors,
-                    Stats = stats,
-                    Performance = perf,
-                    NodeTag = nodeTag
-                };
-
-                var file = $"{Path.GetTempFileName()}{(shard != null ? $"_shard{shard}" : "")}.json";
-
-                using (var stream = File.Open(file, FileMode.OpenOrCreate))
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (var writer = new BlittableJsonTextWriter(context, stream))
-                {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(total);
-                    var json = context.ReadObject(djv, "errors");
-                    writer.WriteObject(json);
-                    writer.Flush();
-                }
-
-                return file;
-            }
-
-            List<IndexInformation> allIndexes = new();
-
-            if (databaseRecord.IsSharded)
-            {
-                for (var i = 0; i < databaseRecord.Shards.Length; i++)
-                {
-                    var statistics = admin.ForShard(i).Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
-                    allIndexes.AddRange(statistics.Indexes);
-                }
-            }
-            else
-            {
-                allIndexes.AddRange(admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag)).Indexes);
-            }
-
-            var corrupted = allIndexes.Where(x => x.State == IndexState.Error).ToList();
-            if (corrupted.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + string.Join(", ", files));
-            }
-
-            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + string.Join(", ", files));
-
-            StaleStatus StaleStatus(int? shardId = null)
-            {
-                var executor = shardId.HasValue ? admin.ForShard(shardId.Value) : admin;
-                var databaseStatistics = executor.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
-                var indexes = databaseStatistics.Indexes
-                    .Where(x => x.State != IndexState.Disabled);
-
-                var staleIndexesCount = indexes.Count(x => x.IsStale || x.Name.StartsWith("ReplacementOf/"));
-                if (staleIndexesCount == 0)
-                    return RavenTestBase.StaleStatus.NonStale;
-
-                var erroredIndexesCount = databaseStatistics.Indexes.Count(x => x.State == IndexState.Error);
-                if (allowErrors)
-                {
-                    // wait for all indexes to become non stale
-                }
-                else if (erroredIndexesCount > 0)
-                {
-                    // have at least some errors
-                    return RavenTestBase.StaleStatus.Error;
-                }
-
-                Thread.Sleep(32);
-                return RavenTestBase.StaleStatus.Stale;
-            }
-        }
-
-        [Flags]
-        public enum StaleStatus
-        {
-            NonStale = 0x1,
-            Stale = 0x2,
-            Error = 0x4
-        }
-        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)
-        {
-            var databaseName = store.Database;
-            var admin = store.Maintenance.ForDatabase(databaseName);
-            var databaseRecord = admin.Server.Send(new GetDatabaseRecordOperation(databaseName));
-
-            if (errorsShouldExists is null)
-            {
-                timeout ??= Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
-            }
-            else
-            {
-                timeout ??= errorsShouldExists is true
-                    ? TimeSpan.FromSeconds(5)
-                    : TimeSpan.FromSeconds(1);
-            }
-
-            var toWait = new HashSet<string>(indexNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
-            var shardsDict = new Dictionary<string, HashSet<string>>();
-            var sp = Stopwatch.StartNew();
-
-            var errors = new List<IndexErrors>();
-            List<string> shardNames;
-            if (databaseRecord.IsSharded)
-            {
-                shardNames = ShardHelper.GetShardNames(databaseName, databaseRecord.Shards.Length).ToList();
-                foreach (var name in shardNames)
-                {
-                    shardsDict.TryAdd(name, toWait);
-                }
-            }
-            
-            while (sp.Elapsed < timeout.Value)
-            {
-                try
-                {
-                    if (databaseRecord.IsSharded)
-                    {
-                        var names = shardsDict.Keys;
-                        foreach (var name in names)
-                        {
-                            var shardNumber = ShardHelper.GetShardNumber(name);
-                            var indexes = store.Maintenance.ForShard(shardNumber).Send(new GetIndexErrorsOperation(indexNames));
-
-                            foreach (var index in indexes)
-                            {
-                                if (index.Errors.Length > 0)
-                                {
-                                    shardsDict[name].Remove(index.Name);
-                                    errors.Add(index);
-
-                                    if (shardsDict[name].Count == 0)
-                                        shardsDict.Remove(name);
-                                }
-
-                                if (shardsDict.Count == 0)
-                                    return errors.ToArray();
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames, nodeTag));
-                        foreach (var index in indexes)
-                        {
-                            if (index.Errors.Length > 0)
-                            {
-                                toWait.Remove(index.Name);
-
-                                if (toWait.Count == 0)
-                                    return indexes;
-                            }
-                        }
-                    }
-
-                }
-                catch (IndexDoesNotExistException)
-                {
-
-                }
-
-                Thread.Sleep(32);
-            }
-
-            var msg = $"Got no index error for more than {timeout.Value}.";
-            if (toWait.Count != 0)
-                msg += $" Still waiting for following indexes: {string.Join(",", toWait)}";
-
-            if (errorsShouldExists is null)
-                throw new TimeoutException(msg);
-
-            return null;
-        }
-
-        public static int WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)
-        {
-            timeout ??= (Debugger.IsAttached
-                ? TimeSpan.FromMinutes(15)
-                : TimeSpan.FromMinutes(1));
-
-            var sp = Stopwatch.StartNew();
-            var entriesCount = -1;
-
-            while (sp.Elapsed < timeout.Value)
-            {
-                MaintenanceOperationExecutor operations = string.IsNullOrEmpty(databaseName) == false ? store.Maintenance.ForDatabase(databaseName) : store.Maintenance;
-
-                entriesCount = operations.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount;
-
-                if (entriesCount >= minEntriesCount)
-                    return entriesCount;
-
-                Thread.Sleep(32);
-            }
-
-            if (throwOnTimeout)
-                throw new TimeoutException($"It didn't get min entries count {minEntriesCount} for index {indexName}. The index has {entriesCount} entries.");
-
-            return entriesCount;
         }
 
         protected static async Task<TC> AssertWaitForSingleAsync<TC>(Func<Task<TC>> act, int timeout = 15000, int interval = 100) where TC : ICollection

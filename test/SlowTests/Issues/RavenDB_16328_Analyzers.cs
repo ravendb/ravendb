@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -12,11 +11,12 @@ using Raven.Client.ServerWide.Operations.Analyzers;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Analysis;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,15 +28,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseCustomAnalyzer()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseCustomAnalyzer(Options options)
         {
             var analyzerName = GetDatabaseName();
+            options.ModifyDatabaseName = _ => analyzerName;
 
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => analyzerName
-            }))
+            using (var store = GetDocumentStore(options))
             {
                 var e = Assert.Throws<IndexCompilationException>(() => store.ExecuteIndex(new MyIndex(analyzerName)));
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", e.Message);
@@ -57,7 +56,8 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Server.Send(new DeleteServerWideAnalyzerOperation(analyzerName));
 
-                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+                var resetIndex = store.Maintenance.ForTesting(() => new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+                resetIndex.ExecuteOnAll();
 
                 var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
@@ -66,15 +66,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanOverrideCustomAnalyzer()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanOverrideCustomAnalyzer(Options options)
         {
             var analyzerName = GetDatabaseName();
+            options.ModifyDatabaseName = _ => analyzerName;
 
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => analyzerName
-            }))
+            using (var store = GetDocumentStore(options))
             {
                 var e = Assert.Throws<IndexCompilationException>(() => store.ExecuteIndex(new MyIndex(analyzerName)));
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", e.Message);
@@ -99,7 +98,8 @@ namespace SlowTests.Issues
                     Code = GetAnalyzer("RavenDB_16328.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
                 }));
 
-                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+                var resetIndex = store.Maintenance.ForTesting(() => new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+                resetIndex.ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -107,7 +107,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new DeleteAnalyzerOperation(analyzerName));
 
-                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+                resetIndex.ExecuteOnAll();
 
                 Indexes.WaitForIndexing(store);
 
@@ -115,7 +115,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Server.Send(new DeleteServerWideAnalyzerOperation(analyzerName));
 
-                store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
+                resetIndex.ExecuteOnAll();
 
                 var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
