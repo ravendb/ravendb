@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
@@ -67,18 +69,26 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index);
-            await DatabaseContext.RachisLogIndexNotifications.WaitForIndexNotification(index, HttpContext.RequestAborted);
-
-            var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).ToList();
-            var tasks = new List<Task>();
-            
-            foreach (var task in dbs)
+            using (var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted))
             {
-                var db = await task;
-                tasks.Add(db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
-            }
+                cancellationTokenSource.CancelAfter(TimeSpan.FromMinutes(5));
+                await DatabaseContext.RachisLogIndexNotifications.WaitForIndexNotification(index, cancellationTokenSource.Token);
 
-            await tasks.WhenAll();
+                var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).ToList();
+                var tasks = new List<Task>();
+
+                foreach (var task in dbs)
+                {
+                    var notificationTask = task.ContinueWith(async t =>
+                    {
+                        var db = await t;
+                        await db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+                    });
+                    tasks.Add(notificationTask);
+                }
+                
+                await tasks.WhenAll().WaitAndThrowOnTimeout(TimeSpan.FromMinutes(5));
+            }
         }
     }
 }
