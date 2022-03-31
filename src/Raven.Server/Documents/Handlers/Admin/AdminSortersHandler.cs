@@ -18,22 +18,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/sorters", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task Delete()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-            {
-                var clientCert = GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
-                auditLog.Info($"Sorter {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
-            }
-
-            var command = new DeleteSorterCommand(name, Database.Name, GetRaftRequestIdFromQuery());
-            var index = (await ServerStore.SendToLeaderAsync(command)).Index;
-
-            await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
-
-            NoContentStatus();
+            using (var processor = new AdminSortersHandlerProcessorForDelete(this))
+                await processor.ExecuteAsync();
         }
     }
 }

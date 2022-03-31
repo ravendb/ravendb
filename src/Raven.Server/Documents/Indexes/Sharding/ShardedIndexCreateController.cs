@@ -50,5 +50,5 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
 
     protected override IEnumerable<IndexInformationHolder> GetIndexes() => _context.Indexes.GetIndexes();
 
-    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodes(index);
+    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodesAsync(index);
 }

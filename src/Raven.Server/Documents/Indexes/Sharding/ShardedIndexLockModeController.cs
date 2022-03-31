@@ -33,5 +33,5 @@ public class ShardedIndexLockModeController : AbstractIndexLockModeController
         return _context.DatabaseName;
     }
 
-    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodes(index);
+    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodesAsync(index);
 }
