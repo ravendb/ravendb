@@ -577,6 +577,10 @@ namespace FastTests
         }
         public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)
         {
+            var databaseName = store.Database;
+            var admin = store.Maintenance.ForDatabase(databaseName);
+            var databaseRecord = admin.Server.Send(new GetDatabaseRecordOperation(databaseName));
+
             if (errorsShouldExists is null)
             {
                 timeout ??= Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
@@ -589,23 +593,63 @@ namespace FastTests
             }
 
             var toWait = new HashSet<string>(indexNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
-
+            var shardsDict = new Dictionary<string, HashSet<string>>();
             var sp = Stopwatch.StartNew();
+
+            var errors = new List<IndexErrors>();
+            List<string> shardNames;
+            if (databaseRecord.IsSharded)
+            {
+                shardNames = ShardHelper.GetShardNames(databaseName, databaseRecord.Shards.Length).ToList();
+                foreach (var name in shardNames)
+                {
+                    shardsDict.TryAdd(name, toWait);
+                }
+            }
+            
             while (sp.Elapsed < timeout.Value)
             {
                 try
                 {
-                    var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames, nodeTag));
-                    foreach (var index in indexes)
+                    if (databaseRecord.IsSharded)
                     {
-                        if (index.Errors.Length > 0)
+                        var names = shardsDict.Keys;
+                        foreach (var name in names)
                         {
-                            toWait.Remove(index.Name);
+                            var shardNumber = ShardHelper.GetShardNumber(name);
+                            var indexes = store.Maintenance.ForShard(shardNumber).Send(new GetIndexErrorsOperation(indexNames));
 
-                            if (toWait.Count == 0)
-                                return indexes;
+                            foreach (var index in indexes)
+                            {
+                                if (index.Errors.Length > 0)
+                                {
+                                    shardsDict[name].Remove(index.Name);
+                                    errors.Add(index);
+
+                                    if (shardsDict[name].Count == 0)
+                                        shardsDict.Remove(name);
+                                }
+
+                                if (shardsDict.Count == 0)
+                                    return errors.ToArray();
+                            }
                         }
                     }
+                    else
+                    {
+                        var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames, nodeTag));
+                        foreach (var index in indexes)
+                        {
+                            if (index.Errors.Length > 0)
+                            {
+                                toWait.Remove(index.Name);
+
+                                if (toWait.Count == 0)
+                                    return indexes;
+                            }
+                        }
+                    }
+
                 }
                 catch (IndexDoesNotExistException)
                 {

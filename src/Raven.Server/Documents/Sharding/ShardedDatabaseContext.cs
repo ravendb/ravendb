@@ -8,6 +8,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.Documents.Sharding.Executors;
@@ -85,6 +86,8 @@ namespace Raven.Server.Documents.Sharding
         {
             UpdateConfiguration(record.Settings);
 
+            UpdateAnalyzers(record, index);
+
             Indexes.Update(record);
 
             Interlocked.Exchange(ref _record, record);
@@ -122,6 +125,20 @@ namespace Raven.Server.Documents.Sharding
         private void UpdateConfiguration(Dictionary<string, string> settings)
         {
             Configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, DatabaseName, settings);
+        }
+
+        private void UpdateAnalyzers(DatabaseRecord record, long index)
+        {
+            try
+            {
+                AnalyzerCompilationCache.Instance.AddItems(record);
+            }
+            catch (Exception e)
+            {
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not update analyzers", e);
+            }
         }
 
         public void Dispose()
