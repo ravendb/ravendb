@@ -90,7 +90,7 @@ namespace SlowTests.Issues
 
             using (var store1 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(store1);
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User

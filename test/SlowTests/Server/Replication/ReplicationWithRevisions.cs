@@ -25,8 +25,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task CanReplicateRevisions()
         {
-            var company = new Company {Name = "Company Name"};
-            var company2 = new Company {Name = "Company Name2"};
+            var company = new Company { Name = "Company Name" };
+            var company2 = new Company { Name = "Company Name2" };
 
             using (var master = GetDocumentStore(options: new Options
             {
@@ -51,8 +51,8 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, master.Database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, slave.Database);
+                await RevisionsHelper.SetupRevisions(master);
+                await RevisionsHelper.SetupRevisions(slave);
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenAsyncSession())
@@ -78,10 +78,10 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task CreateRevisionsAndReplicateThemAll()
         {
-            var company = new Company {Name = "Company Name"};
-            var company2 = new Company {Name = "Company Name2"};
-            var company3 = new Company {Name = "Company Name3"};
-            var company4 = new Company {Name = "Company Name4"};
+            var company = new Company { Name = "Company Name" };
+            var company2 = new Company { Name = "Company Name2" };
+            var company3 = new Company { Name = "Company Name3" };
+            var company4 = new Company { Name = "Company Name4" };
 
             using (var master = GetDocumentStore(options: new Options
             {
@@ -106,8 +106,8 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, master.Database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, slave.Database);
+                await RevisionsHelper.SetupRevisions(master);
+                await RevisionsHelper.SetupRevisions(slave);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -171,7 +171,7 @@ namespace SlowTests.Server.Replication
             {
                 await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB);
 
-               
+
 
                 using (var session = storeA.OpenSession())
                 {
@@ -220,7 +220,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                EnsureReplicating(storeA,storeB);
+                EnsureReplicating(storeA, storeB);
 
                 using (var session = storeB.OpenAsyncSession())
                 {
@@ -241,7 +241,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 EnsureReplicating(storeA, storeB);
-              
+
                 using (var session = storeB.OpenSession())
                 {
                     Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
@@ -262,7 +262,7 @@ namespace SlowTests.Server.Replication
 
                 var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database);
                 await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
-                
+
                 using (var session = storeB.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
@@ -352,7 +352,7 @@ namespace SlowTests.Server.Replication
 
                     var metadata = session.Advanced.Revisions.GetMetadataFor("foo/bar");
                     var flags = metadata[0]["@flags"];
-                    Assert.Equal((DocumentFlags.Revision| DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
+                    Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
                     flags = metadata[1]["@flags"];
                     Assert.Equal((DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString(), flags);
                     flags = metadata[2]["@flags"];
@@ -448,8 +448,8 @@ namespace SlowTests.Server.Replication
             {
                 if (configureVersioning)
                 {
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                    await RevisionsHelper.SetupRevisions(storeA);
+                    await RevisionsHelper.SetupRevisions(storeB);
                 }
 
                 var company = new Company { Name = "Name" };
@@ -516,8 +516,8 @@ namespace SlowTests.Server.Replication
                 var expectedRevisionsCount = 3;
                 if (configureVersioning)
                 {
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                    await RevisionsHelper.SetupRevisions(storeA);
+                    await RevisionsHelper.SetupRevisions(storeB);
                     expectedRevisionsCount = 4;
                 }
 
@@ -600,8 +600,8 @@ namespace SlowTests.Server.Replication
                 var expectedRevisionsCount = 3;
                 if (configureVersioning)
                 {
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                    await RevisionsHelper.SetupRevisions(storeA);
+                    await RevisionsHelper.SetupRevisions(storeB);
                     expectedRevisionsCount = 4;
                 }
 
@@ -680,8 +680,8 @@ namespace SlowTests.Server.Replication
 
             if (configureVersioning)
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
+                await RevisionsHelper.SetupRevisions(storeA);
+                await RevisionsHelper.SetupRevisions(storeB);
             }
 
             using (var session = storeB.OpenAsyncSession())
@@ -742,15 +742,15 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeA.Database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeB.Database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, storeC.Database);
+                await RevisionsHelper.SetupRevisions(storeA);
+                await RevisionsHelper.SetupRevisions(storeB);
+                await RevisionsHelper.SetupRevisions(storeC);
 
                 await SetupReplicationAsync(storeA, storeB);
 
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
                     await session.SaveChangesAsync();
                 }
                 using (var session = storeA.OpenSession())

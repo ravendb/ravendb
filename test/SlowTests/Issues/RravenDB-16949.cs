@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                         MinimumRevisionsToKeep = 1000000
                     },
                 };
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
+                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -90,7 +90,7 @@ namespace SlowTests.Issues
                     }
 
                 };
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
+                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -112,8 +112,8 @@ namespace SlowTests.Issues
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = "A" + i }, "users/1");
-                        await session.StoreAsync(new User { Name = "B" + i}, "users/2");
-                        await session.StoreAsync(new Order { Employee = "C" + i}, "orders/1");
+                        await session.StoreAsync(new User { Name = "B" + i }, "users/2");
+                        await session.StoreAsync(new Order { Employee = "C" + i }, "orders/1");
                         await session.SaveChangesAsync();
                     }
                 }
@@ -165,7 +165,7 @@ namespace SlowTests.Issues
                         MinimumRevisionsToKeep = 1000000
                     },
                 };
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
+                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -181,7 +181,7 @@ namespace SlowTests.Issues
                     {
                         await session.StoreAsync(new User { Name = "Toli" + i }, "users/1");
                         await session.StoreAsync(new User { Name = "Mitzi" + i }, "users/2");
-                        await session.StoreAsync(new Order { Employee = "Daniel" + i}, "orders/1");
+                        await session.StoreAsync(new Order { Employee = "Daniel" + i }, "orders/1");
                         await session.SaveChangesAsync();
                     }
                 }
@@ -223,7 +223,7 @@ namespace SlowTests.Issues
                     }
 
                 };
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
+                await RevisionsHelper.SetupRevisions(store, configuration: configuration);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))

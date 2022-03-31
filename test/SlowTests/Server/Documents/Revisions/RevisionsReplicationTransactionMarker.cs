@@ -28,20 +28,20 @@ namespace SlowTests.Server.Documents.Revisions
                 var database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 using (var controller = new ReplicationController(database1))
                 {
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
+                    await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
                     {
                         configuration.Collections["Users"].PurgeOnDelete = false;
                     });
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, configuration =>
+                    await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration =>
                     {
                         configuration.Collections["Users"].PurgeOnDelete = false;
                     });
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Id = "users/oren", Name = "Oren", Balance = 10});
-                        await session.StoreAsync(new User {Id = "users/fitzchak", Name = "Fitzchak", Balance = 10});
-                        await session.StoreAsync(new User {Id = "users/michael", Name = "Michael", Balance = 10});
+                        await session.StoreAsync(new User { Id = "users/oren", Name = "Oren", Balance = 10 });
+                        await session.StoreAsync(new User { Id = "users/fitzchak", Name = "Fitzchak", Balance = 10 });
+                        await session.StoreAsync(new User { Id = "users/michael", Name = "Michael", Balance = 10 });
                         await session.SaveChangesAsync();
                     }
 
@@ -77,7 +77,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Id = "users/michael", Name = "Michael", Balance = 10});
+                        await session.StoreAsync(new User { Id = "users/michael", Name = "Michael", Balance = 10 });
                         var oren = await session.LoadAsync<User>("users/oren");
                         oren.Balance -= 10;
                         await session.SaveChangesAsync();

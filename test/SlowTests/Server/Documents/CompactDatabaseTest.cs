@@ -119,7 +119,7 @@ namespace SlowTests.Server.Documents
                 ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(k => k.Storage.MaxScratchBufferSize)] = "1"
             }))
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 var buffer = new byte[16 * 1024];
 
                 for (int i = 0; i < 32; i++)

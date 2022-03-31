@@ -20,8 +20,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var id = "users/1";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database,
-                    modifyConfiguration: conf => conf.Default.MinimumRevisionsToKeep = 1000);
+                await RevisionsHelper.SetupRevisions(store, modifyConfiguration: conf => conf.Default.MinimumRevisionsToKeep = 1000);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company { Name = "Fitzchak" }, id);

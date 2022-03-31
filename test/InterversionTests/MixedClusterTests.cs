@@ -1009,7 +1009,7 @@ namespace InterversionTests
                 var dbName = await CreateDatabase(storeA, 3);
                 await Task.Delay(500);
 
-                await RevisionsHelper.SetupRevisions(leader.ServerStore, dbName);
+                await RevisionsHelper.SetupRevisions(storeA, dbName);
                 using (var session = storeA.OpenAsyncSession(dbName))
                 {
                     await session.StoreAsync(company);
@@ -1128,7 +1128,7 @@ namespace InterversionTests
                 var dbName = await CreateDatabase(storeA, nodesAmount);
                 await Task.Delay(500);
 
-                await RevisionsHelper.SetupRevisions(leader.ServerStore, dbName).ConfigureAwait(false);
+                await RevisionsHelper.SetupRevisions(storeA, dbName).ConfigureAwait(false);
 
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
                 var ackSent = new AsyncManualResetEvent();

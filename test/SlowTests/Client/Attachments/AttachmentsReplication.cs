@@ -484,12 +484,12 @@ namespace SlowTests.Client.Attachments
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
                 await Databases.SetDatabaseId(store1, dbId1);
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = false;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
                 });
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, configuration =>
+                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = false;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;

@@ -772,7 +772,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact(Skip= "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
+        [Fact(Skip = "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
         public async Task Conflict_should_be_created_and_resolved_for_document_in_different_collections()
         {
             const string dbName1 = "FooBar-1";
@@ -1040,7 +1040,7 @@ namespace SlowTests.Server.Replication
             }))
             using (var store2 = GetDocumentStore())
             {
-                
+
                 using (var session = store1.OpenSession())
                 {
                     var user = new User
@@ -1187,13 +1187,13 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task BackgroundResolutionIsTheSameAsOnTheFly()
         {
-                    
+
             //          no resolution      auto resolution  
             //  s1    ->      s2      ->      s3
-            
+
             // put doc on s2 so it will be replicated to s3
             // put doc on s1 so it will be conflicted with s3 & s2
-            
+
             // s3 will resolve on the fly while s2 has still conflicts
             // set resolution on s2
 
@@ -1323,7 +1323,7 @@ namespace SlowTests.Server.Replication
             var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             string nodeTagToRemove = res.Topology.Members.Last(m => m.Equals("A") == false);
             var config = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration() };
-            await RevisionsHelper.SetupRevisions(store, leader.ServerStore, config);
+            await RevisionsHelper.SetupRevisions(store, configuration: config);
 
             var entity = new User();
             using (var session = store.OpenAsyncSession())
@@ -1355,7 +1355,7 @@ namespace SlowTests.Server.Replication
             Assert.True(await WaitForValueAsync(async () =>
             {
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database, nodeTagToRemove));
-                return true; 
+                return true;
             }, true, interval: 1000));
 
             Assert.True(await WaitForValueAsync(async () =>
@@ -1375,7 +1375,7 @@ namespace SlowTests.Server.Replication
             {
                 var conflicts = await store.Commands().GetConflictsForAsync(entity.Id);
                 return conflicts.Length;
-            }, 0), 0 );
+            }, 0), 0);
 
             using var storeA = new DocumentStore
             {
@@ -1438,7 +1438,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
-                
+
                 var database = await GetDatabase(store1.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1452,7 +1452,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    session.CountersFor("foo/bar").Increment("likes",10);
+                    session.CountersFor("foo/bar").Increment("likes", 10);
                     await session.SaveChangesAsync();
                 }
 
@@ -1491,7 +1491,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
-                
+
                 var database = await GetDatabase(store1.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
