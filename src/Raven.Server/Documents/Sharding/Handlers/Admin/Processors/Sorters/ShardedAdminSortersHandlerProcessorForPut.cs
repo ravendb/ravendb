@@ -14,5 +14,5 @@ internal class ShardedAdminSortersHandlerProcessorForPut : AbstractAdminSortersH
 
     protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 
-    protected override ValueTask WaitForIndexNotificationAsync(long index) => RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodes(index);
+    protected override ValueTask WaitForIndexNotificationAsync(long index) => RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index);
 }

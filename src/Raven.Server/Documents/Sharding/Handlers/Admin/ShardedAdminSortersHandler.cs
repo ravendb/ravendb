@@ -12,4 +12,11 @@ public class ShardedAdminSortersHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedAdminSortersHandlerProcessorForPut(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/admin/sorters", "DELETE")]
+    public async Task Delete()
+    {
+        using (var processor = new ShardedAdminSortersHandlerProcessorForDelete(this))
+            await processor.ExecuteAsync();
+    }
 }
