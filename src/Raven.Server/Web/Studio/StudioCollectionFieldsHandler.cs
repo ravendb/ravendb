@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Raven.Client;
 
 namespace Raven.Server.Web.Studio
 {
@@ -43,7 +44,7 @@ namespace Raven.Server.Web.Studio
                         etag = $"{changeVector}/{totalResults}";
                 }
 
-                if (etag != null && GetStringFromHeaders("If-None-Match") == etag)
+                if (etag != null && GetStringFromHeaders(Constants.Headers.IfNoneMatch) == etag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return;
