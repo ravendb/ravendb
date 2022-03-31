@@ -17,6 +17,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents;
@@ -1807,7 +1808,8 @@ namespace FastTests.Server.Documents.Revisions
                     }
                 };
 
-                await Assert.ThrowsAsync<ArgumentException>(() => RevisionsHelper.SetupRevisions(store, configuration: configuration));
+                var e = await Assert.ThrowsAsync<RavenException>(() => RevisionsHelper.SetupRevisions(store, configuration: configuration));
+                Assert.Contains("Cannot have two different revision configurations on the same collection", e.Message);
             }
         }
 
