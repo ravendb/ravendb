@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
+using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
@@ -19,7 +20,10 @@ public partial class ShardedDatabaseContext
 
     public class ShardedIndexesContext
     {
+        private readonly Logger _logger;
+
         private readonly ShardedDatabaseContext _context;
+
         private Dictionary<string, IndexInformationHolder> _indexes;
 
         public readonly ScriptRunnerCache ScriptRunnerCache;
@@ -37,6 +41,7 @@ public partial class ShardedDatabaseContext
         public ShardedIndexesContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _logger = LoggingSource.Instance.GetLogger<ShardedIndexesContext>(context.DatabaseName);
 
             LockMode = new ShardedIndexLockModeController(context, serverStore);
             Priority = new ShardedIndexPriorityController(context, serverStore);
@@ -46,21 +51,15 @@ public partial class ShardedDatabaseContext
 
             ScriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
 
-            var indexes = new Dictionary<string, IndexInformationHolder>(StringComparer.OrdinalIgnoreCase);
-
-            UpdateStaticIndexes(context.DatabaseRecord.Indexes
-                .ToDictionary(x => x.Key, x => x.Value), indexes);
-
-            UpdateAutoIndexes(context.DatabaseRecord.AutoIndexes
-                .ToDictionary(x => x.Key, x => x.Value), indexes);
-
-            _indexes = indexes;
+            Update(context.DatabaseRecord, 0);
         }
 
-        public void Update(RawDatabaseRecord record)
+        public void Update(RawDatabaseRecord record, long index)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for updated configuration (for projections)");
             ScriptRunnerCache.UpdateConfiguration(_context.Configuration);
+
+            UpdateAnalyzers(record, index);
 
             var indexes = new Dictionary<string, IndexInformationHolder>(StringComparer.OrdinalIgnoreCase);
 
@@ -138,6 +137,21 @@ public partial class ShardedDatabaseContext
         }
 
         public IEnumerable<IndexInformationHolder> GetIndexes() => _indexes.Values;
+
+
+        private void UpdateAnalyzers(RawDatabaseRecord record, long index)
+        {
+            try
+            {
+                AnalyzerCompilationCache.Instance.AddItems(record);
+            }
+            catch (Exception e)
+            {
+                _context.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not update analyzers", e);
+            }
+        }
     }
 
 }
