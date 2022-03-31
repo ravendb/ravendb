@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.Databases;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;

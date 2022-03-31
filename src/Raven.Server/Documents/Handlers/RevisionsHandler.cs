@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
     public class RevisionsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/revisions/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task GetRevisionsConfig()
+        public async Task GetRevisionsConfiguration()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -101,33 +101,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task ConfigRevisions()
+        public async Task PostRevisionsConfiguration()
         {
-            return DatabaseConfigurations(
-                ServerStore.ModifyDatabaseRevisions,
-                "read-revisions-config",
-                GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context, ServerStore serverStore) =>
-                {
-                    if (configuration == null ||
-                        configuration.TryGet(nameof(RevisionsConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||
-                        collections?.Count > 0 == false)
-                        return;
-
-                    var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                    for (var i = 0; i < collections.Count; i++)
-                    {
-                        collections.GetPropertyByIndex(i, ref prop);
-
-                        if (uniqueKeys.Add(prop.Name) == false)
-                        {
-                            throw new InvalidOperationException("Cannot have two different revision configurations on the same collection. " +
-                                                                $"Collection name : '{prop.Name}'");
-                        }
-                    }
-                });
+            using (var processor = new RevisionsHandlerProcessorForPostRevisionsConfiguration(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/revisions/config/enforce", "POST", AuthorizationStatus.DatabaseAdmin)]
