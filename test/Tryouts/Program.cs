@@ -1,9 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Blittable;
 using FastTests.Client.Subscriptions;
 using FastTests.Client;
+using FastTests.Server.Documents.Revisions;
 using RachisTests;
 using SlowTests.Issues;
 using SlowTests.MailingList;
@@ -31,10 +33,10 @@ namespace Tryouts
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
                     //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                    using (var test = new SubscriptionsBasic(testOutputHelper))
+                    using (var test = new RevisionsTests(testOutputHelper))
                     {
                         //await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                        await test.ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault();
+                        await test.CanGetRevisionsCountFor(RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
                     }
                 }
                 catch (Exception e)
