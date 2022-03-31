@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -71,7 +72,7 @@ namespace SlowTests.Issues
                                         incrementCounter(newDocId, i, countByDay[i])
                                     }
                                   }"
-                     })).WaitForCompletion();
+                     })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {

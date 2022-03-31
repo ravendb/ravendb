@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
 
                 var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Companies" }));
 
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);

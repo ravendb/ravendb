@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents;
 using Raven.Client.ServerWide;
@@ -152,7 +153,7 @@ namespace SlowTests.Server.Documents
                 Documents = true
             };
             var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
-            await operation.WaitForCompletionAsync();
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             long compressedUserSize, compressedCompanySize;
             using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))

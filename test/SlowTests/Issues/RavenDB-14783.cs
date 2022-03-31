@@ -49,7 +49,7 @@ namespace SlowTests.Issues
 ",
                     }, ms);
 
-                    await operation.WaitForCompletionAsync();
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                     var stats = store.Maintenance.Send(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);

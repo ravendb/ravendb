@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.Operations.Send(new PatchByQueryOperation("from Users update { delete this.Name; }")).WaitForCompletion();
+                store.Operations.Send(new PatchByQueryOperation("from Users update { delete this.Name; }")).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 using (var session = store.OpenSession())
                 {

@@ -60,7 +60,7 @@ namespace EmbeddedTests
                                 OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange
                             }, fileName, cts.Token);
 
-                            await operation.WaitForCompletionAsync();
+                            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                         }
                         catch (Exception exception)
                         {
@@ -119,7 +119,7 @@ namespace EmbeddedTests
                                         }, ms, cts.Token);
                                 
 
-                                await operation.WaitForCompletionAsync();
+                                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                             }
                             catch (Exception exception)
                             {

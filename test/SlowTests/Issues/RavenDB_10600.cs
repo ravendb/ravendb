@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -32,7 +33,7 @@ namespace SlowTests.Issues
                 initialStats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportPath);
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
             }
 
             using (var store = GetDocumentStore(options))
@@ -44,7 +45,7 @@ namespace SlowTests.Issues
                     },
                     exportPath);
 
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
                     },
                     exportPath);
 
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 

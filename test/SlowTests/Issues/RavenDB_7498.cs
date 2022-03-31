@@ -83,7 +83,7 @@ namespace SlowTests.Issues
 
                 backgroundUpdatesCts.Cancel();
 
-                backgroundUpdatesTask.Wait();
+                Assert.True(backgroundUpdatesTask.Wait(TimeSpan.FromMinutes(1)));
             }
         }
 
@@ -134,7 +134,7 @@ namespace SlowTests.Issues
 
                 backgroundUpdatesCts.Cancel();
 
-                backgroundUpdatesTask.Wait();
+                Assert.True(backgroundUpdatesTask.Wait(TimeSpan.FromMinutes(1)));
             }
         }
 
@@ -231,7 +231,7 @@ namespace SlowTests.Issues
 
                 backgroundUpdatesCts.Cancel();
 
-                backgroundUpdatesTask.Wait();
+                Assert.True(backgroundUpdatesTask.Wait(TimeSpan.FromMinutes(1)));
             }
         }
 

@@ -178,7 +178,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             });
 
             AddIndex(definition);
-            
+
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends[].Name = 'Jon'"));
 
             var result = _sut.Match(dynamicQuery, null);
@@ -330,7 +330,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Fact]
-        public void Partial_match_if_analyzer_is_required()
+        public async Task Partial_match_if_analyzer_is_required()
         {
             Initialize();
             using (var db = CreateDocumentDatabase())
@@ -338,7 +338,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where Name = 'arek'"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
+                await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where search(Name, 'arek')"));
@@ -352,7 +352,7 @@ where search(Name, 'arek')"));
         }
 
         [Fact]
-        public void Partial_match_if_exact_is_required()
+        public async Task Partial_match_if_exact_is_required()
         {
             Initialize();
             using (var db = CreateDocumentDatabase())
@@ -360,7 +360,7 @@ where search(Name, 'arek')"));
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where Name = 'arek'"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
+                await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where exact(Name = 'arek')"));
@@ -374,7 +374,7 @@ where exact(Name = 'arek')"));
         }
 
         [Fact]
-        public void Partial_match_when_highlighting_is_required()
+        public async Task Partial_match_when_highlighting_is_required()
         {
             Initialize();
             using (var db = CreateDocumentDatabase())
@@ -383,7 +383,7 @@ where exact(Name = 'arek')"));
 where search(Name, 'arek')"));
 
                 var definition = mapping.CreateAutoIndexDefinition();
-                db.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()).Wait();
+                await db.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString());
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where search(Name, 'arek')
@@ -399,7 +399,7 @@ include highlight(Name, 18, 2)
                 mapping.ExtendMappingBasedOn(definition);
 
                 definition = mapping.CreateAutoIndexDefinition();
-                db.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()).Wait();
+                await db.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString());
 
                 result = matcher.Match(mapping, null);
 
@@ -546,15 +546,15 @@ include highlight(Name, 18, 2)
             });
 
             AddIndex(extendedIndexDefinition);
-            
+
             _documentDatabase.IndexStore.RunIdleOperations();
             Assert.Equal(2, _documentDatabase.IndexStore.GetIndexes().Count());
-            
+
             _documentDatabase.IndexStore.StartIndexing();
-            
+
             var extendedIndex = GetIndex(extendedIndexDefinition.Name);
             WaitForIndexMap(extendedIndex, 1);
-            
+
             _documentDatabase.IndexStore.RunIdleOperations();
             Assert.Equal(2, _documentDatabase.IndexStore.GetIndexes().Count());
         }

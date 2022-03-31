@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
@@ -35,8 +36,7 @@ namespace SlowTests.Issues
                                   {
                                       incrementCounter(u, 'Downloads')
                                   }"
-                    })).WaitForCompletion();
-
+                    })).WaitForCompletion(TimeSpan.FromMinutes(5));
 
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
 

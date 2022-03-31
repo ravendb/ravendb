@@ -211,7 +211,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus.WaitForCompletionAsync();
+                await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -225,7 +225,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus2.WaitForCompletionAsync();
+                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -238,7 +238,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus3 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus3.WaitForCompletionAsync();
+                await backupStatus3.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
@@ -300,7 +300,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus.WaitForCompletionAsync();
+                await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -316,7 +316,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus2.WaitForCompletionAsync();
+                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
@@ -359,7 +359,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus.WaitForCompletionAsync();
+                await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -376,7 +376,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus2.WaitForCompletionAsync();
+                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
