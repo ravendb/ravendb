@@ -60,7 +60,10 @@ namespace SlowTests.Issues
                 resetIndex.ExecuteOnAll();
 
                 var errors = Indexes.WaitForIndexingErrors(store);
-                Assert.Equal(1, errors.Length);
+
+                var expectedNumberOfErrors = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 3;
+
+                Assert.Equal(expectedNumberOfErrors, errors.Length);
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", errors[0].Errors[0].Error);
             }
@@ -103,7 +106,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                AssertCount<MyIndex>(store, expectedCount: 2);
+                AssertCount<MyIndex>(store, expectedCount: 3);
 
                 store.Maintenance.Send(new DeleteAnalyzerOperation(analyzerName));
 
@@ -118,7 +121,10 @@ namespace SlowTests.Issues
                 resetIndex.ExecuteOnAll();
 
                 var errors = Indexes.WaitForIndexingErrors(store);
-                Assert.Equal(1, errors.Length);
+
+                var expectedNumberOfErrors = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 3;
+
+                Assert.Equal(expectedNumberOfErrors, errors.Length);
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", errors[0].Errors[0].Error);
             }
@@ -402,11 +408,13 @@ namespace SlowTests.Issues
                 session.Store(new Customer { Name = "Rogerio" });
                 session.Store(new Customer { Name = "Paulo Rogerio" });
                 session.Store(new Customer { Name = "Paulo Rogério" });
+                session.Store(new Customer { Name = "Paulo Rogerio Secondado" });
+                session.Store(new Customer { Name = "Paulo Rogério Secondado" });
                 session.SaveChanges();
             }
         }
 
-        private void AssertCount<TIndex>(IDocumentStore store, int expectedCount = 4)
+        private void AssertCount<TIndex>(IDocumentStore store, int expectedCount = 6)
             where TIndex : AbstractIndexCreationTask, new()
         {
             Indexes.WaitForIndexing(store);
