@@ -68,7 +68,7 @@ namespace FastTests.Sharding.Queries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -147,7 +147,7 @@ namespace FastTests.Sharding.Queries
                     session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Query<UserMapIndex.Result, UserMapIndex>()
                         .OrderBy(x => x.Name)
@@ -180,7 +180,7 @@ namespace FastTests.Sharding.Queries
                     session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = (from user in session.Query<User, UserMapIndex>()
                                        let age = user.Age
@@ -213,7 +213,7 @@ namespace FastTests.Sharding.Queries
                     session.Store(new User { Name = "a10", Age = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Query<UserMapIndex.Result, UserMapIndex>()
                         .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
@@ -246,7 +246,7 @@ namespace FastTests.Sharding.Queries
                     session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = (session.Advanced.RawQuery<AgeResult>(@$"from index {new UserMapIndex().IndexName} as user
 order by user.Name
@@ -277,7 +277,7 @@ select {{
                     session.Store(new User { Name = "Jane", Count = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
                         .ToList();
@@ -444,7 +444,7 @@ select {{
                     });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Advanced.RawQuery<OrderLine>(
                             @"
@@ -507,7 +507,7 @@ order by o.Freight as double
                     });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Advanced.RawQuery<OrderLine>(
                             @"
@@ -543,7 +543,7 @@ select project(o)")
                     session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
                         .OrderBy(x => x.Name)
@@ -575,7 +575,7 @@ select project(o)")
                     session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
                                        let sum = user.Sum + 1
@@ -613,7 +613,7 @@ select project(o)")
                     session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
                                        let sum = user.Sum
@@ -656,7 +656,7 @@ select project(o)")
                     session.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var exception = Assert.Throws<RavenException>(() => (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
                                                                          let anotherUser = RavenQuery.Load<User>(user.Name)

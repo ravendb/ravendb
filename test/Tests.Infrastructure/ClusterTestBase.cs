@@ -1001,7 +1001,6 @@ namespace Tests.Infrastructure
             }
         }
 
-
         public async Task StoreInTransactionMode(IDocumentStore store, int n)
         {
             for (int i = 0; i < n; i++)
