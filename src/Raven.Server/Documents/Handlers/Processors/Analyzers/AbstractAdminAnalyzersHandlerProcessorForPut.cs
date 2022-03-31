@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
+﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -27,10 +20,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
         }
 
         protected abstract string GetDatabaseName();
-
-        /*protected abstract IndexInformationHolder GetIndex(string name);
-
-        protected abstract AbstractIndexCreateController GetIndexCreateProcessor();*/
 
         protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
@@ -65,9 +54,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 
                     command.Analyzers.Add(analyzerDefinition);
                 }
-             
+
                 var index = (await RequestHandler.ServerStore.SendToLeaderAsync(command)).Index;
-              
+
                 await WaitForIndexNotificationAsync(index);
 
                 RequestHandler.NoContentStatus(HttpStatusCode.Created);
