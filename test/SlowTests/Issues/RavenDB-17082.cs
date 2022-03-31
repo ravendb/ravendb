@@ -34,7 +34,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1"}, "users/1");
@@ -87,7 +87,7 @@ namespace SlowTests.Issues
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisions(store1);
 
                 DateTime last = default;
 
@@ -180,7 +180,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" }, "users/1");
@@ -243,7 +243,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" }, "users/1");
@@ -296,7 +296,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" }, "users/1");
@@ -351,7 +351,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" }, "users/1");
@@ -404,7 +404,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 DateTime last = default;
 
@@ -480,7 +480,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 DateTime last = default;
 
@@ -554,7 +554,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 DateTime last = default;
 
@@ -637,7 +637,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" }, "users/1");

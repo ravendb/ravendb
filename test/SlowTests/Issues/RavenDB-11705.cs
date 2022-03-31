@@ -20,7 +20,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, conf => {
+                await RevisionsHelper.SetupRevisions(store, modifyConfiguration: conf =>
+                {
                     conf.Default.Disabled = false;
                     conf.Collections.Clear();
                 });

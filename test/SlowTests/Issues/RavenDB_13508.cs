@@ -24,11 +24,11 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration => { });
+                await RevisionsHelper.SetupRevisions(store, modifyConfiguration: configuration => { });
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "John"});
+                    await session.StoreAsync(new User { Name = "John" });
                     await session.SaveChangesAsync();
                 }
 

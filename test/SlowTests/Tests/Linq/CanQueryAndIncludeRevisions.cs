@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -107,7 +107,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -184,7 +184,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
                 string changeVector;
                 using (var session = store.OpenSession())
                 {
@@ -216,7 +216,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 string changeVector;
                 using (var session = store.OpenAsyncSession())
                 {
@@ -251,7 +251,7 @@ namespace SlowTests.Tests.Linq
                 const string id = "users/rhino";
                 var cvList = new List<string>();
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -305,7 +305,7 @@ namespace SlowTests.Tests.Linq
                 const string id = "users/rhino";
                 var cvList = new List<string>();
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -374,7 +374,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -452,7 +452,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -525,7 +525,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Omer", },
@@ -564,7 +564,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Omer", },
@@ -601,7 +601,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Omer", },
@@ -638,7 +638,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/rhino";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Omer", },
@@ -675,7 +675,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -719,7 +719,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -764,7 +764,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 string changeVector;
                 using (var session = store.OpenSession())
@@ -804,7 +804,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 string changeVector;
                 using (var session = store.OpenAsyncSession())
                 {
@@ -845,7 +845,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -900,7 +900,7 @@ select Foo(u)"
                 Indexes.WaitForIndexing(store);
                 const string id = "users/rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -953,7 +953,7 @@ select Foo(u)"
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1005,7 +1005,7 @@ select Foo(u)"
             {
                 const string id = "users/rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
                 string changeVector;
                 using (var session = store.OpenSession())
                 {
@@ -1054,7 +1054,7 @@ select Foo(u)"
             {
                 const string id = "users/Rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 string changeVector;
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1103,7 +1103,7 @@ select Foo(u)"
             {
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1155,7 +1155,7 @@ select Foo(u)"
             {
                 const string id = "users/Rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1212,7 +1212,7 @@ select Foo(u)"
                 const string id = "users/Rhino";
                 var cvList = new List<string>();
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1303,7 +1303,7 @@ select Foo(u)"
                 const string id = "users/Rhino";
                 var cvList = new List<string>();
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1384,7 +1384,7 @@ select Foo(u)"
             {
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1429,7 +1429,7 @@ select Foo(u)"
             {
                 const string id = "users/Rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1476,7 +1476,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1553,7 +1553,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1627,7 +1627,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1700,7 +1700,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                RevisionsHelper.SetupRevisions(store).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1744,7 +1744,7 @@ select Foo(u)"
 
                 const string id = "users/Rhino";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             {
                 const string id = "users/Hibernating";
                 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 
                 using (var session = store.OpenAsyncSession())
                 {

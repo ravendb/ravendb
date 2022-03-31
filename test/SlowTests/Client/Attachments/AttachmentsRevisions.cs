@@ -30,7 +30,7 @@ namespace SlowTests.Client.Attachments
             using (var store = GetDocumentStore())
             {
                 await Databases.SetDatabaseId(store, dbId);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration =>
+                await RevisionsHelper.SetupRevisions(store, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = false;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
@@ -58,7 +58,7 @@ namespace SlowTests.Client.Attachments
                 // Create another revision which should delete old revision
                 using (var session = store.OpenSession()) // This will delete the revision #1 which is without attachment
                 {
-                    session.Store(new User {Name = "Fitzchak 2"}, "users/1");
+                    session.Store(new User { Name = "Fitzchak 2" }, "users/1");
                     session.SaveChanges();
                 }
                 AssertRevisions(store, names, (session, revisions) =>
@@ -114,7 +114,7 @@ namespace SlowTests.Client.Attachments
         {
             using (var session = store.OpenSession())
             {
-                session.Store(new User {Name = "Fitzchak"}, "users/1");
+                session.Store(new User { Name = "Fitzchak" }, "users/1");
                 session.SaveChanges();
             }
 
@@ -124,7 +124,7 @@ namespace SlowTests.Client.Attachments
                 "background-photo.jpg",
                 "fileNAME_#$1^%_בעברית.txt"
             };
-            using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+            using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
                 Assert.Contains("A:3", result.ChangeVector);
@@ -133,7 +133,7 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal("image/png", result.ContentType);
                 Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
             }
-            using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
+            using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
                 Assert.Contains("A:7", result.ChangeVector);
@@ -142,7 +142,7 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal("ImGgE/jPeG", result.ContentType);
                 Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
             }
-            using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+            using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
                 Assert.Contains("A:12", result.ChangeVector);
@@ -239,7 +239,7 @@ namespace SlowTests.Client.Attachments
                             Assert.Contains("A:13", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
-                        Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
+                        Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                         Assert.Equal("image/png", attachment.Details.ContentType);
                         Assert.Equal(3, attachmentStream.Position);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
@@ -252,7 +252,7 @@ namespace SlowTests.Client.Attachments
                             Assert.Contains("A:13", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
-                        Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
+                        Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
                         Assert.Equal("ImGgE/jPeG", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
                         Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", attachment.Details.Hash);
@@ -263,7 +263,7 @@ namespace SlowTests.Client.Attachments
                             Assert.Contains("A:13", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
-                        Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
+                        Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
                         Assert.Equal("", attachment.Details.ContentType);
                         Assert.Equal(5, attachmentStream.Position);
                         Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", attachment.Details.Hash);

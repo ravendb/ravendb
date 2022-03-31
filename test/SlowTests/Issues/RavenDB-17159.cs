@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     ModifyDatabaseName = s => $"{s}_2"
                 }))
                 {
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                    await RevisionsHelper.SetupRevisions(store1);
                     using (var session = store1.OpenAsyncSession())
                     {
                         var user = new User {Name = "Name1", LastName = "LastName1"};

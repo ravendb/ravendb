@@ -327,11 +327,11 @@ namespace SlowTests.Client.Attachments
                 {
                     await Databases.SetDatabaseId(store1, dbId);
 
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
-                    {
-                        configuration.Collections["Users"].PurgeOnDelete = false;
-                        configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
-                    });
+                    await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
+                     {
+                         configuration.Collections["Users"].PurgeOnDelete = false;
+                         configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                     });
 
                     using (var session = store1.OpenSession())
                     {
@@ -429,7 +429,7 @@ namespace SlowTests.Client.Attachments
                 }))
                 {
                     await Databases.SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
+                    await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration =>
                     {
                         configuration.Collections["Users"].PurgeOnDelete = false;
                         configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
@@ -462,7 +462,7 @@ namespace SlowTests.Client.Attachments
                     var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
                     await Databases.SetDatabaseId(store2, dbId);
 
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
+                    await RevisionsHelper.SetupRevisions(store2);
 
                     for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite
                     {
@@ -472,7 +472,7 @@ namespace SlowTests.Client.Attachments
                         {
                             var backupOperation = await store2.Maintenance.SendAsync(new GetOperationStateOperation(importOperation.Id));
                             return backupOperation.Status;
-                        },OperationStatus.Completed), OperationStatus.Completed);
+                        }, OperationStatus.Completed), OperationStatus.Completed);
 
                         var importResult = (SmugglerResult)await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 

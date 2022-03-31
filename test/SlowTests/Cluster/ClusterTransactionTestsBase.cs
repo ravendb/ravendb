@@ -38,7 +38,7 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
     {
     }
 
-    protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
+    protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName] string caller = null)
     {
         if (options == null)
         {
@@ -54,17 +54,17 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
 
         return base.GetNewServer(options, caller);
     }
-        
+
     protected abstract IDocumentStore InternalGetDocumentStore(Options options = null, [CallerMemberName] string caller = null);
 
     public virtual async Task CanCreateClusterTransactionRequest()
     {
         var (_, leader) = await CreateRaftCluster(3);
         using (var leaderStore = InternalGetDocumentStore(new Options
-               {
-                   Server = leader,
-                   ReplicationFactor = 3
-               }))
+        {
+            Server = leader,
+            ReplicationFactor = 3
+        }))
         {
             var user1 = new User()
             {
@@ -76,9 +76,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             };
 
             using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                 await session.StoreAsync(user3, "foo/bar");
@@ -91,16 +91,16 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
         }
     }
-        
+
     public virtual async Task CanCreateClusterTransactionRequest2()
     {
         DebuggerAttachedTimeout.DisableLongTimespan = true;
         var (_, leader) = await CreateRaftCluster(2);
         using (var leaderStore = InternalGetDocumentStore(new Options
-               {
-                   Server = leader,
-                   ReplicationFactor = 2
-               }))
+        {
+            Server = leader,
+            ReplicationFactor = 2
+        }))
         {
             var count = 0;
             var parallelism = RavenTestHelper.DefaultParallelOptions.MaxDegreeOfParallelism;
@@ -113,9 +113,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
                     tasks.Add(Task.Run(async () =>
                     {
                         using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                               {
-                                   TransactionMode = TransactionMode.ClusterWide
-                               }))
+                        {
+                            TransactionMode = TransactionMode.ClusterWide
+                        }))
                         {
                             session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
                             await session.SaveChangesAsync();
@@ -131,9 +131,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
 
                 await Task.WhenAll(tasks.ToArray());
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     var results = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(
                         Enumerable.Range(i * parallelism, parallelism).Select(x =>
@@ -143,14 +143,14 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
         }
     }
-        
+
     public virtual async Task ServeSeveralClusterTransactionRequests()
     {
         using (var store = InternalGetDocumentStore())
         using (var session = store.OpenAsyncSession(new SessionOptions
-               {
-                   TransactionMode = TransactionMode.ClusterWide
-               }))
+        {
+            TransactionMode = TransactionMode.ClusterWide
+        }))
         {
             var user1 = new User()
             {
@@ -183,17 +183,17 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         }
         return new string(str);
     }
-        
+
     public virtual async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
     {
         var numOfSessions = 10;
         var docsPerSession = 2;
         var (_, leader) = await CreateRaftCluster(numberOfNodes);
         using (var store = InternalGetDocumentStore(new Options
-               {
-                   Server = leader,
-                   ReplicationFactor = numberOfNodes
-               }))
+        {
+            Server = leader,
+            ReplicationFactor = numberOfNodes
+        }))
         {
             for (int j = 0; j < numOfSessions; j++)
             {
@@ -203,9 +203,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
                     try
                     {
                         using (var session = store.OpenAsyncSession(new SessionOptions
-                               {
-                                   TransactionMode = TransactionMode.ClusterWide
-                               }))
+                        {
+                            TransactionMode = TransactionMode.ClusterWide
+                        }))
                         {
                             for (int i = 0; i < docsPerSession; i++)
                             {
@@ -258,18 +258,18 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
     {
         var (_, leader) = await CreateRaftCluster(3);
         using (var leaderStore = InternalGetDocumentStore(new Options
-               {
-                   Server = leader,
-                   ReplicationFactor = 3
-               }))
+        {
+            Server = leader,
+            ReplicationFactor = 3
+        }))
         {
             new UserByName().Execute(leaderStore);
 
             var users = new List<User>();
             using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 session.Advanced.WaitForIndexesAfterSaveChanges();
                 for (int i = 0; i < docs; i++)
@@ -294,27 +294,28 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         var file = GetTempFileName();
 
         var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
-        var user1 = new User() {Name = "Karmel"};
-        var user2 = new User() {Name = "Oren"};
-        var user3 = new User() {Name = "Indych"};
+        var user1 = new User() { Name = "Karmel" };
+        var user2 = new User() { Name = "Oren" };
+        var user3 = new User() { Name = "Indych" };
 
         var toDispose = Servers.First(s => s != leader);
         var removedTag = toDispose.ServerStore.NodeTag;
 
-        var members = new List<string> {"A", "B", "C"};
+        var members = new List<string> { "A", "B", "C" };
         members.Remove(removedTag);
 
         leader.ServerStore.Observer.Suspended = true;
 
-        using (var store = InternalGetDocumentStore(new Options {Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = members}}))
+        using (var store = InternalGetDocumentStore(new Options { Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology { Members = members } }))
         {
             // we kill one server so we would not clean the pending cluster transactions.
             await DisposeAndRemoveServer(toDispose);
 
-            using (var session = store.OpenAsyncSession(new SessionOptions {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
                 await session.StoreAsync(user1, "foo/bar");
@@ -344,7 +345,7 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
         }
 
-        using (var store = InternalGetDocumentStore(new Options {Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = members}}))
+        using (var store = InternalGetDocumentStore(new Options { Server = leader, ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology { Members = members } }))
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -391,10 +392,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
 
         using (var store = InternalGetDocumentStore())
         using (var session = store.OpenAsyncSession(new SessionOptions
-               {
-                   TransactionMode = TransactionMode.ClusterWide,
-                   DisableAtomicDocumentWritesInClusterWideTransaction = true
-               }))
+        {
+            TransactionMode = TransactionMode.ClusterWide,
+            DisableAtomicDocumentWritesInClusterWideTransaction = true
+        }))
         {
             session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
             await session.StoreAsync(user1, "users/1");
@@ -429,9 +430,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store1.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 await session.StoreAsync(user1, "users/1");
                 await session.SaveChangesAsync();
@@ -461,10 +462,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var store = InternalGetDocumentStore())
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                 await session.StoreAsync(user1);
@@ -474,10 +475,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 session.Advanced.ClusterTransaction.DeleteCompareExchangeValue("usernames/ayende", ((DocumentStore)store).GetLastTransactionIndex(store.Database) ?? 0);
                 await session.StoreAsync(user1);
@@ -487,10 +488,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                 await session.StoreAsync(user1);
@@ -529,9 +530,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             var task1 = Task.Run(async () =>
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     mre1.Set();
                     mre2.WaitOne(TimeSpan.FromSeconds(30));
@@ -544,9 +545,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             var task2 = Task.Run(async () =>
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     mre2.Set();
                     mre1.WaitOne(TimeSpan.FromSeconds(30));
@@ -586,9 +587,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         {
             string changeVector = null;
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                 await session.StoreAsync(user1);
@@ -609,10 +610,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         var (_, leader) = await CreateRaftCluster(3);
 
         using (var store = InternalGetDocumentStore(new Options
-               {
-                   Server = leader,
-                   ReplicationFactor = 3
-               }))
+        {
+            Server = leader,
+            ReplicationFactor = 3
+        }))
         {
             var email = "grisha@ayende.com";
             var userId = $"users/{email}";
@@ -621,7 +622,7 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             var task2 = Task.Run(async () => await AddUser(store, email, userId));
             var task3 = Task.Run(async () =>
             {
-                using (var session = store.OpenAsyncSession(new SessionOptions{NoTracking = true}))
+                using (var session = store.OpenAsyncSession(new SessionOptions { NoTracking = true }))
                 {
                     while (true)
                     {
@@ -653,7 +654,7 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         try
         {
             using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                       { TransactionMode = TransactionMode.ClusterWide }))
+            { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var user = new UniqueUser
                 {
@@ -678,9 +679,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
     {
         using (var store = InternalGetDocumentStore())
         using (var session = store.OpenAsyncSession(new SessionOptions
-               {
-                   TransactionMode = TransactionMode.ClusterWide
-               }))
+        {
+            TransactionMode = TransactionMode.ClusterWide
+        }))
         {
             var user1 = new User()
             {
@@ -710,9 +711,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var storeA = InternalGetDocumentStore())
         {
             using (var session = storeA.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
                 await session.SaveChangesAsync();
@@ -747,9 +748,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store.OpenSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 var user = session.Load<User>("users/1-A");
                 user.Name = "karmel";
@@ -778,9 +779,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store.OpenSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 var user = session.Load<User>("users/1-A");
                 user.Name = "karmel";
@@ -802,9 +803,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store.OpenSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 var user = session.Load<User>("users/1-A");
                 user.Name = "karmel";
@@ -822,20 +823,20 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
                 await session.SaveChangesAsync();
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
                 await session.SaveChangesAsync();
@@ -845,10 +846,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 session.Delete("users/1");
                 await session.SaveChangesAsync();
@@ -873,20 +874,20 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var store = InternalGetDocumentStore())
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
                 await session.SaveChangesAsync();
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");
                 await session.SaveChangesAsync();
@@ -902,20 +903,20 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
                 await session.SaveChangesAsync();
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide,
-                       DisableAtomicDocumentWritesInClusterWideTransaction = true
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
             {
                 await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");
                 await session.SaveChangesAsync();
@@ -941,12 +942,12 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
     {
         var (_, leader) = await CreateRaftCluster(5, shouldRunInMemory: false, leaderIndex: 0);
         using (var leaderStore = InternalGetDocumentStore(new Options
-               {
-                   DeleteDatabaseOnDispose = false,
-                   Server = leader,
-                   ReplicationFactor = 5,
-                   ModifyDocumentStore = (store) => store.Conventions.DisableTopologyUpdates = true
-               }))
+        {
+            DeleteDatabaseOnDispose = false,
+            Server = leader,
+            ReplicationFactor = 5,
+            ModifyDocumentStore = (store) => store.Conventions.DisableTopologyUpdates = true
+        }))
         {
             var user1 = new User()
             {
@@ -956,7 +957,7 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             {
                 Name = "Indych"
             };
-            var index = await RevisionsHelper.SetupRevisions(leader.ServerStore, leaderStore.Database, configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+            var index = await RevisionsHelper.SetupRevisions(leaderStore, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
             await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
             // bring our SUT node down, but we still have a cluster and can execute cluster transaction.
@@ -964,9 +965,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
 
             using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 Assert.Equal(1, session.Advanced.RequestExecutor.TopologyNodes.Count);
                 Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
@@ -986,7 +987,7 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
                 Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
             }
 
-            using (var session = leaderStore.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+            using (var session = leaderStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 session.Delete("foo/bar/2");
                 session.Advanced.WaitForIndexesAfterSaveChanges();
@@ -1033,14 +1034,14 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
                 RegisterForDisposal = false
             });
             using (var revivedStore = new DocumentStore()
-                   {
-                       Urls = new[] { revived.WebUrl },
-                       Database = leaderStore.Database,
-                       Conventions = new DocumentConventions
-                       {
-                           DisableTopologyUpdates = true
-                       }
-                   }.Initialize())
+            {
+                Urls = new[] { revived.WebUrl },
+                Database = leaderStore.Database,
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
             {
                 // let the document with the revision to replicate
                 Assert.True(WaitForDocument(revivedStore, "foo/bar"));
@@ -1094,9 +1095,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
     {
         using (var store = InternalGetDocumentStore())
         using (var session = store.OpenAsyncSession(new SessionOptions
-               {
-                   TransactionMode = TransactionMode.ClusterWide
-               }))
+        {
+            TransactionMode = TransactionMode.ClusterWide
+        }))
         {
             session.Advanced.Attachments.Store("asd", "test", new MemoryStream(new byte[] { 1, 2, 3, 4 }));
             await Assert.ThrowsAsync<NotSupportedException>(async () => await session.SaveChangesAsync());
@@ -1108,9 +1109,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var store = InternalGetDocumentStore())
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 session.Advanced.UseOptimisticConcurrency = true;
                 await Assert.ThrowsAsync<NotSupportedException>(async () => await session.SaveChangesAsync());
@@ -1123,9 +1124,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var store = InternalGetDocumentStore())
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 await session.StoreAsync(new User { Name = "Some Other Name" }, changeVector: string.Empty, "user/1");
                 await Assert.ThrowsAsync<NotSupportedException>(async () => await session.SaveChangesAsync());
@@ -1149,9 +1150,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                 session.Advanced.SetTransactionMode(TransactionMode.SingleNode);
@@ -1170,9 +1171,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var store = InternalGetDocumentStore())
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 const string id = "test/user";
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue<string>(id, null);
@@ -1189,9 +1190,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var store = InternalGetDocumentStore())
         {
             using (var session = store.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 var value = new List<string> { "1", null, "2" };
                 const string id = "test/user";
@@ -1210,9 +1211,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         using (var store2 = InternalGetDocumentStore())
         {
             using (var session = store1.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 await session.StoreAsync(new User()
                 {
@@ -1222,9 +1223,9 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             }
 
             using (var session = store2.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 await session.StoreAsync(new User()
                 {
@@ -1233,27 +1234,27 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
                 await session.SaveChangesAsync();
             }
 
-            await Task.WhenAll(SetupReplicationAsync(store1, store2),SetupReplicationAsync(store2, store1));
+            await Task.WhenAll(SetupReplicationAsync(store1, store2), SetupReplicationAsync(store2, store1));
 
             await EnsureReplicatingAsync(store1, store2);
             await EnsureReplicatingAsync(store2, store1);
 
             using (var session = store1.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 var u = await session.LoadAsync<User>("users/1");
-                Assert.Equal("Grisha",u.Name);
+                Assert.Equal("Grisha", u.Name);
             }
 
             using (var session = store2.OpenAsyncSession(new SessionOptions
-                   {
-                       TransactionMode = TransactionMode.ClusterWide
-                   }))
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
             {
                 var u = await session.LoadAsync<User>("users/1");
-                Assert.Equal("Grisha",u.Name);
+                Assert.Equal("Grisha", u.Name);
             }
 
             var t1 = EnsureNoReplicationLoop(Server, store1.Database);
@@ -1274,8 +1275,8 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             {
                 TransactionMode = TransactionMode.ClusterWide
             });
-                
-            var entity = new User {Id = id};
+
+            var entity = new User { Id = id };
             await session.StoreAsync(entity);
             await session.SaveChangesAsync();
         });
@@ -1287,10 +1288,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
             {
                 if (e.ToString().Contains(nameof(RachisApplyException)))
                     return true;
-                if (e is AggregateException ae) 
+                if (e is AggregateException ae)
                     return ae.InnerExceptions.Any(ex => ContainsRachisException(ex));
 
-                if (e.InnerException == null) 
+                if (e.InnerException == null)
                     return false;
                 e = e.InnerException;
             }
@@ -1304,10 +1305,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         var dbCreation = await CreateDatabaseInClusterInner(new DatabaseRecord(database), 2, leader.WebUrl, null);
 
         using (var storeB = new DocumentStore
-               {
-                   Database = database,
-                   Urls = new[] { dbCreation.Servers[0].WebUrl }
-               }.Initialize())
+        {
+            Database = database,
+            Urls = new[] { dbCreation.Servers[0].WebUrl }
+        }.Initialize())
         {
             await StoreInRegularMode(storeB, 3);
 
@@ -1349,10 +1350,10 @@ public abstract class ClusterTransactionTestsBase : ReplicationTestBase
         public UserByName()
         {
             Map = users => from user in users
-                select new
-                {
-                    user.Name
-                };
+                           select new
+                           {
+                               user.Name
+                           };
         }
     }
 }

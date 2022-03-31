@@ -549,7 +549,7 @@ namespace SlowTests.Server.Replication
             }));
 
             //enable revisions
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, sinkStore.Database, r => r.Collections["Users"].PurgeOnDelete = false);
+            await RevisionsHelper.SetupRevisions(sinkStore, modifyConfiguration: r => r.Collections["Users"].PurgeOnDelete = false);
 
             //create doc in sink
             using (var s = sinkStore.OpenAsyncSession())

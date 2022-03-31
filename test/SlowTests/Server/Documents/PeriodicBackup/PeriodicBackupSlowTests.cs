@@ -545,7 +545,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using var store = GetDocumentStore();
-            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+            await RevisionsHelper.SetupRevisions(store);
 
             using (var session = store.OpenAsyncSession(new SessionOptions
             {

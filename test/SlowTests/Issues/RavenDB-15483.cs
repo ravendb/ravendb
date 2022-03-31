@@ -24,14 +24,14 @@ namespace SlowTests.Issues
 
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
                 var externalTask = new ExternalReplication(store2.Database, "ExternalReplication");
                 await AddWatcherToReplicationTopology(store1, externalTask);
 
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(){Name = "Toli"}, "foo/bar");
+                    s1.Store(new User() { Name = "Toli" }, "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                     }
 
                 }, true);
-                var database  =await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
                 var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -96,7 +96,7 @@ namespace SlowTests.Issues
 
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+                await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
                 var externalTask = new ExternalReplication(store2.Database, "ExternalReplication");
                 await AddWatcherToReplicationTopology(store1, externalTask);
@@ -159,8 +159,8 @@ namespace SlowTests.Issues
 
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+                await RevisionsHelper.SetupRevisions(store1, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
                 var externalTask = new ExternalReplication(store2.Database, "ExternalReplication");
                 await AddWatcherToReplicationTopology(store1, externalTask);
@@ -230,7 +230,7 @@ namespace SlowTests.Issues
 
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = true);
+                await RevisionsHelper.SetupRevisions(store2, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = true);
 
                 var externalTask = new ExternalReplication(store2.Database, "ExternalReplication");
                 await AddWatcherToReplicationTopology(store1, externalTask);

@@ -656,7 +656,7 @@ namespace SlowTests.Server.Replication
             using (var store = GetDocumentStore())
             {
                 var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
 
                 using (var session = store.OpenSession())
                 using (var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))

@@ -73,7 +73,7 @@ namespace SlowTests.Sharding.Backup
         {
             using (var session = store1.OpenAsyncSession())
             {
-                await RevisionsHelper.SetupRevisions(store1, server.ServerStore, new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisions(store1, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration
                     {

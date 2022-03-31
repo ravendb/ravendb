@@ -20,7 +20,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 // setup revision with PurgeOnDelete = false
-                var index = await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, new RevisionsConfiguration
+                var index = await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
                     }
                 };
 
-                index = await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
+                index = await RevisionsHelper.SetupRevisions(store, configuration: configuration);
                 await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, Server.ServerStore.Engine.OperationTimeout);
 
                 // make sure we don't have a tombstone for "users/1"

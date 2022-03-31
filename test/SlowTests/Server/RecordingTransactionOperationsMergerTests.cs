@@ -503,7 +503,7 @@ namespace SlowTests.Server
 
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });
@@ -527,7 +527,7 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });
@@ -554,7 +554,7 @@ namespace SlowTests.Server
 
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });
@@ -576,7 +576,7 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });
@@ -1373,7 +1373,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });
@@ -1406,7 +1406,7 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisions(store, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration()
                 });

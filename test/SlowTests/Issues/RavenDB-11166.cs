@@ -84,14 +84,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Person
                     {
                         Name = "Arava"
                     }, "people/1");
-                    
+
                     session.Store(new Person
                     {
                         Name = "Karmel"
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
                     {
                         Name = "Oscar",
                         Owner = "people/1"
-                    },"dogs/1");
+                    }, "dogs/1");
                     session.SaveChanges();
                 }
 
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
                     {
                         Name = "Oscar",
                         Owner = "people/2"
-                    },"dogs/1");
+                    }, "dogs/1");
                     session.SaveChanges();
                 }
 
@@ -154,14 +154,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Person
                     {
                         Name = "Arava"
                     }, "people/1");
-                    
+
                     session.Store(new Person
                     {
                         Name = "Karmel"
@@ -171,7 +171,7 @@ namespace SlowTests.Issues
                     {
                         Name = "Oscar",
                         Owner = "people/1"
-                    },"dogs/1");
+                    }, "dogs/1");
                     session.SaveChanges();
                 }
 
@@ -181,7 +181,7 @@ namespace SlowTests.Issues
                     {
                         Name = "Oscar",
                         Owner = "people/2"
-                    },"dogs/1");
+                    }, "dogs/1");
                     session.SaveChanges();
                 }
 

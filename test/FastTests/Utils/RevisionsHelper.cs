@@ -8,7 +8,7 @@ namespace FastTests.Utils
 {
     public class RevisionsHelper
     {
-        public static async Task SetupRevisions(
+        public static async Task<long> SetupRevisions(
             IDocumentStore store,
             string database = null,
             RevisionsConfiguration configuration = null,
@@ -21,7 +21,8 @@ namespace FastTests.Utils
 
             modifyConfiguration?.Invoke(configuration);
 
-            await store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new ConfigureRevisionsOperation(configuration));
+            var result = await store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new ConfigureRevisionsOperation(configuration));
+            return result.RaftCommandIndex ?? -1;
         }
 
         private static RevisionsConfiguration Default => new RevisionsConfiguration
