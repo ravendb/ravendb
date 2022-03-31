@@ -49,7 +49,7 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         AsyncHelpers.RunSync(() => ExecuteOnAllAsync());
     }
 
-    public async Task AssertAllAsync(Action<Key, TResult> assert)
+    public async Task AssertAllAsync(Action<UniqueDatabaseInstanceKey, TResult> assert)
     {
         await foreach (var (key, result) in GetResultsAsync())
         {
@@ -64,12 +64,12 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         }
     }
 
-    public void AssertAll(Action<Key, TResult> assert)
+    public void AssertAll(Action<UniqueDatabaseInstanceKey, TResult> assert)
     {
         AsyncHelpers.RunSync(() => AssertAllAsync(assert));
     }
 
-    private async IAsyncEnumerable<(Key Key, TResult Result)> GetResultsAsync()
+    private async IAsyncEnumerable<(UniqueDatabaseInstanceKey Key, TResult Result)> GetResultsAsync()
     {
         _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
         if (_databaseRecord.IsSharded)
@@ -123,47 +123,14 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         }
     }
 
-    private IEnumerable<(Key Key, MaintenanceOperationExecutor Executor)> GetExecutors(DatabaseTopology topology)
+    private IEnumerable<(UniqueDatabaseInstanceKey Key, MaintenanceOperationExecutor Executor)> GetExecutors(DatabaseTopology topology)
     {
         foreach (string member in topology.Members)
         {
-            var key = new Key(member);
+            var key = new UniqueDatabaseInstanceKey(member);
             var executor = _executor.ForNode(member);
 
             yield return (key, executor);
-        }
-    }
-
-    public class Key
-    {
-        public string NodeTag { get; }
-
-        public int? ShardNumber { get; }
-
-        public Key(string nodeTag)
-        {
-            NodeTag = nodeTag ?? throw new ArgumentNullException(nameof(nodeTag));
-        }
-
-        private Key(string nodeTag, int shardNumber)
-        {
-            NodeTag = nodeTag;
-            ShardNumber = shardNumber;
-        }
-
-        public Key ForShard(int shardNumber)
-        {
-            return new Key(NodeTag, shardNumber);
-        }
-
-        public override string ToString()
-        {
-            var builder = new StringBuilder();
-            builder.Append($"{nameof(NodeTag)} = {NodeTag}");
-            if (ShardNumber != null)
-                builder.Append($", {nameof(ShardNumber)} = {ShardNumber}");
-
-            return builder.ToString();
         }
     }
 }

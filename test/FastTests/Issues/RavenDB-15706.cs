@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void BulkInsertWithoutDB()
         {
             using (var store = new DocumentStore())
