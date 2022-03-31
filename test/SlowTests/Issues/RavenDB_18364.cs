@@ -48,28 +48,22 @@ namespace SlowTests.Issues
             var firstNode = record.Topology.Members.First();
             var firstServer = nodes.Single(n => n.ServerStore.NodeTag == firstNode);
 
-            //WaitForUserToContinueTheTest(store);
+            WaitForUserToContinueTheTest(store);
 
             await DisposeServerAndWaitForFinishOfDisposalAsync(firstServer);
 
             using (var session = store.OpenAsyncSession())
             {
                 var lazilyLoaded0 = session.Advanced.Lazily.LoadAsync<TestObj>(id);
-
                 var loaded0 = await lazilyLoaded0.Value;
-
-                // var lazilyLoaded1 = session.Advanced.Lazily.LoadAsync<TestObj>(id);
-                //
-                // var loaded1 = await lazilyLoaded0.Value;
-
-                //Assert.NotNull(loaded0);
+                Assert.NotNull(loaded0);
             }
 
             using (var session = store.OpenAsyncSession())
             {
                 var lazilyLoaded0 = session.Advanced.Lazily.LoadAsync<TestObj>(id);
                 var loaded0 = await lazilyLoaded0.Value;
-                //Assert.NotNull(loaded0);
+                Assert.NotNull(loaded0);
             }
         }
 
