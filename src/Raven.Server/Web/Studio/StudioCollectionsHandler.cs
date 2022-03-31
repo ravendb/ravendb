@@ -61,7 +61,7 @@ namespace Raven.Server.Web.Studio
                         etag = $"{changeVector}/{totalResults}";
                 }
 
-                if (etag != null && GetStringFromHeaders("If-None-Match") == etag)
+                if (etag != null && GetStringFromHeaders(Constants.Headers.IfNoneMatch) == etag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return;

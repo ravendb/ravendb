@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var actualEtag = CombineHashesFromMultipleRanges(ranges);
 
-                var etag = GetStringFromHeaders("If-None-Match");
+                var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
                 if (etag == actualEtag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Handlers
                 var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includesCommand);
                 var hash = rangeResult?.Hash ?? string.Empty;
 
-                var etag = GetStringFromHeaders("If-None-Match");
+                var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
                 if (etag == hash)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;

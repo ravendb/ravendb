@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Handlers
 
             var actualEtag = ComputeHttpEtags.ComputeEtagForRevisions(revisions);
 
-            var etag = GetStringFromHeaders("If-None-Match");
+            var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
             if (etag == actualEtag)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Handlers
 
             var actualChangeVector = revisions.Length == 0 ? "" : revisions[0].ChangeVector;
 
-            if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
+            if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
@@ -402,7 +402,7 @@ namespace Raven.Server.Documents.Handlers
                 revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out var actualChangeVector);
                 if (actualChangeVector != null)
                 {
-                    if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
+                    if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;
