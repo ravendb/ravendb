@@ -9,13 +9,14 @@ using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Handlers.BulkInsert;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Sharding.Operations.BulkInsert;
 
-internal class ShardedBulkInsertOperation : BulkInsertOperationBase<Stream>, IShardedOperation<HttpResponseMessage>, IAsyncDisposable
+internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatchCommandData>, IShardedOperation<HttpResponseMessage>, IAsyncDisposable
 {
     // TODO arek - logging
 
@@ -106,7 +107,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<Stream>, ISh
         return Task.CompletedTask;
     }
 
-    public override async Task StoreAsync(Stream command, string id)
+    public override async Task StoreAsync(ShardedBatchCommandData command, string id)
     {
         await ExecuteBeforeStore();
 
@@ -119,7 +120,14 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<Stream>, ISh
 
         _first[shardNumber] = false;
 
-        await command.CopyToAsync(_currentWriters[shardNumber], _token);
+        command.Stream.Position = 0;
+        await command.Stream.CopyToAsync(_currentWriters[shardNumber], _token);
+
+        if (command.AttachmentStream.Stream != null)
+        {
+            command.AttachmentStream.Stream.Position = 0;
+            await command.AttachmentStream.Stream.CopyToAsync(_currentWriters[shardNumber], _token);
+        }
 
         await FlushIfNeeded(shardNumber);
     }

@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using FastTests;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
@@ -18,7 +19,7 @@ namespace StressTests.Client.Attachments
         {
             using (var test = new BulkInsertAttachments(Output))
             {
-                await test.StoreManyAttachments(count, size);
+                await test.StoreManyAttachments(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single), count, size);
             }
         }
 

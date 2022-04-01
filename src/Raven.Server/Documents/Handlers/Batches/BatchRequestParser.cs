@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
             #region ravendata
 
-            public long ContentLength;
+            public long ContentLength { get; set; }
 
             #endregion ravendata
         }
