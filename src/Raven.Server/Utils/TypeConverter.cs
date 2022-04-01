@@ -213,7 +213,8 @@ namespace Raven.Server.Utils
                 type == typeof(string) || type == typeof(bool) || type == typeof(int) || type == typeof(long) ||
                 type == typeof(double) || type == typeof(decimal) || type == typeof(float) || type == typeof(short) ||
                 type == typeof(byte) ||
-                type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(TimeSpan))
+                type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(TimeSpan) ||
+                type == typeof(DateOnly) || type == typeof(TimeOnly))
                 return BlittableSupportedReturnType.Same;
 
             if (value is JsValue)

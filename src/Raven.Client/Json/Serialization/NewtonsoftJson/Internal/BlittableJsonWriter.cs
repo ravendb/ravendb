@@ -267,6 +267,14 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 case TimeSpan ts:
                     WriteValue(ts);
                     break;
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                case TimeOnly to:
+                    WriteValue(to);
+                    break;
+                case DateOnly @do:
+                    WriteValue(@do);
+                    break;
+#endif
                 case IDictionary<string, string> dics:
                     WriteDictionary(dics);
                     break;
@@ -441,6 +449,36 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+        public void WriteValue(TimeOnly to)
+        {
+            var value = to.ToString(DefaultFormat.TimeOnlyFormatToWrite);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+        }
+        
+        public void WriteValue(DateOnly @do)
+        {
+            var value = @do.ToString(DefaultFormat.DateOnlyFormatToWrite);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+        }
+        
+        public void WriteValue(TimeOnly? to)
+        {
+            if (to != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(to.Value.ToString(DefaultFormat.TimeOnlyFormatToWrite));
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
+        }
+        
+        public void WriteValue(DateOnly? @do)
+        {
+            if (@do != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(@do.Value.ToString(DefaultFormat.DateOnlyFormatToWrite));
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
+        }
+#endif
+
         public override void WriteValue(int? value)
         {
             if (value != null)
@@ -526,7 +564,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
-
+        
         protected override void Dispose(bool disposing)
         {
             _manualBlittableJsonDocumentBuilder.Dispose();
