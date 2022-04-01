@@ -22,14 +22,16 @@ public class ShardedBatchCommandData : IDisposable, IBatchCommandData
 
     public BatchRequestParser.CommandData Data { get; }
 
-    public void Dispose()
-    {
-        _ctx.ReturnMemoryStream(Stream);
-    }
-
     public CommandType Type => Data.Type;
 
     public string Id => Data.Id;
 
-    public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; } // TODO arek
+    public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }
+
+    public long ContentLength => Data.ContentLength;
+
+    public void Dispose()
+    {
+        _ctx.ReturnMemoryStream(Stream);
+    }
 }

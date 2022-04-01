@@ -133,7 +133,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_SkipOverwriteIfUnchanged_With_Attachment(Options options)
         {
             using (IDocumentStore store = GetDocumentStore(options))
@@ -176,16 +176,21 @@ namespace SlowTests.Issues
                     Assert.Equal(lastEtags[key], stats.LastDocEtag);
                 });
 
-                using (var session = store.OpenAsyncSession())
+                var sessionTester = store.ForSessionTesting();
+
+                await sessionTester.AssertOneAsync((_, session) =>
                 {
-                    var attachment = await session.Advanced.Attachments.GetAsync(docId, attachmentName);
-                    Assert.NotNull(attachment);
-                }
+                    using (session)
+                    {
+                        var attachment = session.Advanced.Attachments.Get(docId, attachmentName);
+                        Assert.NotNull(attachment);
+                    }
+                });
             }
         }
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_SkipOverwriteIfUnchanged_With_Counter(Options options)
         {
             using (IDocumentStore store = GetDocumentStore(options))
@@ -228,16 +233,21 @@ namespace SlowTests.Issues
                     Assert.Equal(lastEtags[key], stats.LastDocEtag);
                 });
 
-                using (var session = store.OpenAsyncSession())
+                var sessionTester = store.ForSessionTesting();
+
+                await sessionTester.AssertOneAsync((_, session) =>
                 {
-                    var counter = await session.CountersFor(docId).GetAsync(counterName);
-                    Assert.Equal(1, counter);
-                }
+                    using (session)
+                    {
+                        var counter = session.CountersFor(docId).Get(counterName);
+                        Assert.Equal(1, counter);
+                    }
+                });
             }
         }
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Can_SkipOverwriteIfUnchanged_With_TimeSeries(Options options)
         {
             using (IDocumentStore store = GetDocumentStore(options))
@@ -280,11 +290,16 @@ namespace SlowTests.Issues
                     Assert.Equal(lastEtags[key], stats.LastDocEtag);
                 });
 
-                using (var session = store.OpenAsyncSession())
+                var sessionTester = store.ForSessionTesting();
+
+                await sessionTester.AssertOneAsync((_, session) =>
                 {
-                    var entries = await session.TimeSeriesFor(docId, timeSeriesName).GetAsync();
-                    Assert.Equal(1, entries.Length);
-                }
+                    using (session)
+                    {
+                        var entries = session.TimeSeriesFor(docId, timeSeriesName).Get();
+                        Assert.Equal(1, entries.Length);
+                    }
+                });
             }
         }
     }

@@ -96,7 +96,7 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         }
     }
 
-    private async IAsyncEnumerable<(Key Key, MaintenanceOperationExecutor Executor)> ExecuteAsync()
+    private async IAsyncEnumerable<(UniqueDatabaseInstanceKey Key, MaintenanceOperationExecutor Executor)> ExecuteAsync()
     {
         _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
         if (_databaseRecord.IsSharded)
@@ -144,7 +144,7 @@ public interface IMaintenanceOperationExecutorActionTester
 
 public interface IMaintenanceOperationExecutorReadTester<TResult>
 {
-    Task AssertAllAsync(Action<MaintenanceOperationExecutorTester<TResult>.Key, TResult> assert);
+    Task AssertAllAsync(Action<UniqueDatabaseInstanceKey, TResult> assert);
 
-    void AssertAll(Action<MaintenanceOperationExecutorTester<TResult>.Key, TResult> assert);
+    void AssertAll(Action<UniqueDatabaseInstanceKey, TResult> assert);
 }

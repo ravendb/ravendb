@@ -20,19 +20,19 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
     where TCommandData : IBatchCommandData
     where TOperationContext : JsonOperationContext
 {
-    private readonly CancellationToken _token;
+    private readonly CancellationTokenSource _cts;
     private readonly BulkInsertProgress _progress;
 
     private readonly Action<IOperationProgress> _onProgress;
     protected readonly bool SkipOverwriteIfUnchanged;
-    protected List<StreamsTempFile> _streamsTempFiles; // TODO arek
+    protected List<StreamsTempFile> AttachmentStreamsTempFiles;
 
     protected AbstractBulkInsertHandlerProcessor([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool, Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token)
         : base(requestHandler, contextPool)
     {
         _onProgress = onProgress;
         SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged;
-        _token = token;
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(token, requestHandler.AbortRequestToken);
         _progress = new BulkInsertProgress();
     }
 
@@ -40,7 +40,35 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
 
     protected abstract ValueTask ExecuteCommands(Task currentTask, int numberOfCommands, TCommandData[] array, long totalSize);
 
-    protected abstract ValueTask<MergedBatchCommand.AttachmentStream> StoreAttachmentStream(TCommandData command, AbstractBulkInsertBatchCommandsReader<TCommandData> abstractBulkInsertBatchCommandsReader);
+    protected async ValueTask<MergedBatchCommand.AttachmentStream> WriteAttachmentStream(long size, Stream stream)
+    {
+        var attachmentStream = new MergedBatchCommand.AttachmentStream();
+
+        if (size <= 32 * 1024)
+        {
+            attachmentStream.Stream = new MemoryStream();
+        }
+        else
+        {
+            AttachmentStreamsTempFiles ??= new List<StreamsTempFile>();
+
+            var attachmentStreamsTempFile = GetTempFile();
+
+            attachmentStream.Stream = attachmentStreamsTempFile.StartNewStream();
+
+            AttachmentStreamsTempFiles.Add(attachmentStreamsTempFile);
+        }
+
+        attachmentStream.Hash = await CopyAttachmentStream(stream, attachmentStream.Stream);
+        
+        await attachmentStream.Stream.FlushAsync();
+
+        return attachmentStream;
+    }
+
+    protected abstract StreamsTempFile GetTempFile();
+
+    protected abstract ValueTask<string> CopyAttachmentStream(Stream sourceStream, Stream attachmentStream);
 
     protected abstract (long, int) GetSizeAndOperationsCount(TCommandData commandData);
 
@@ -60,7 +88,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                     currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                     var requestBodyStream = RequestHandler.RequestBodyStream();
 
-                    using (var reader = GetCommandsReader(context, requestBodyStream, buffer, _token))
+                    using (var reader = GetCommandsReader(context, requestBodyStream, buffer, _cts.Token))
                     {
                         await reader.Init();
 
@@ -77,7 +105,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                                 if (task == null)
                                     break;
 
-                                _token.ThrowIfCancellationRequested();
+                                _cts.Token.ThrowIfCancellationRequested();
 
                                 // if we are going to wait on the network, flush immediately
                                 if ((task.Wait(5) == false && numberOfCommands > 0) ||
@@ -86,7 +114,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                                 {
                                     await ExecuteCommands(task, numberOfCommands, array, totalSize);
 
-                                    ClearStreamsTempFiles();
+                                    ClearAttachmentStreamsTempFiles();
 
                                     _progress.BatchCount++;
                                     _progress.Total += numberOfCommands;
@@ -109,7 +137,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
 
                                 if (commandData.Type == CommandType.AttachmentPUT)
                                 {
-                                    commandData.AttachmentStream = await StoreAttachmentStream(commandData, reader); // TODO arek - IMPORTANT
+                                    commandData.AttachmentStream = await WriteAttachmentStream(commandData.ContentLength, reader.GetBlob(commandData.ContentLength));
                                 }
 
                                 (long size, int opsCount) = GetSizeAndOperationsCount(commandData);
@@ -160,7 +188,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
             {
                 currentCtxReset?.Dispose();
                 previousCtxReset?.Dispose();
-                ClearStreamsTempFiles();
+                ClearAttachmentStreamsTempFiles();
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -182,17 +210,17 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
         }
     }
 
-    private void ClearStreamsTempFiles()
+    private void ClearAttachmentStreamsTempFiles()
     {
-        if (_streamsTempFiles == null)
+        if (AttachmentStreamsTempFiles == null)
             return;
 
-        foreach (var file in _streamsTempFiles)
+        foreach (var file in AttachmentStreamsTempFiles)
         {
             file.Dispose();
         }
 
-        _streamsTempFiles = null;
+        AttachmentStreamsTempFiles = null;
     }
 
     protected static (long, int) GetSizeAndOperationsCount(BatchRequestParser.CommandData commandData, long estimatedChangeVectorSize)
@@ -235,5 +263,12 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
             default:
                 throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
         }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        _cts.Dispose();
     }
 }

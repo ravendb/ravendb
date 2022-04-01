@@ -49,22 +49,15 @@ namespace FastTests.Client
             options.ClientCertificate = clientCertificate;
             options.ModifyDatabaseName = s => dbName;
 
+            if (useSsl)
+                options.ModifyDocumentStore = s => s.OnFailedRequest += (_, args) => Console.WriteLine($"Failed Request ('{args.Database}'): {args.Url}. Exception: {args.Exception}");
+
             using (var store = GetDocumentStore(options))
             {
-                AdminCertificate = adminCertificate,
-                ClientCertificate = clientCertificate,
-                ModifyDatabaseName = s => dbName,
-                ModifyDocumentStore = s =>
+                using (var bulkInsert = store.BulkInsert(new BulkInsertOptions()
                 {
-                    if (useSsl)
-                        s.OnFailedRequest += (_, args) => Console.WriteLine($"Failed Request ('{args.Database}'): {args.Url}. Exception: {args.Exception}");
-                }
-            }))
-            {
-                using (var bulkInsert = store.BulkInsert(var bulkInsert = store.BulkInsert(new BulkInsertOptions()
-                       {
-                           CompressionLevel = compressionLevel
-                       }))
+                    CompressionLevel = compressionLevel
+                }))
                 {
                     for (int i = 0; i < 1000; i++)
                     {

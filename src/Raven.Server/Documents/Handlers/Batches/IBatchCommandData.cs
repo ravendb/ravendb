@@ -10,4 +10,6 @@ public interface IBatchCommandData
     string Id { get;  }
 
     MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }
+
+    long ContentLength { get; }
 }

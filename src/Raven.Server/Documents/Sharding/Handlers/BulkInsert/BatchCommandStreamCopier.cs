@@ -58,11 +58,11 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver, IDi
         CommandStream.Position = 0;
         CommandStream.SetLength(0);
 
-        stream.Position = 0;
-
 #if DEBUG
         if (ValidateCommands)
         {
+            stream.Position = 0;
+
             var state = new JsonParserState();
             var batchRequestParser = new BatchRequestParser();
 

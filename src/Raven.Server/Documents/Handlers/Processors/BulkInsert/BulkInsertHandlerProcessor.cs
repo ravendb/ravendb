@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -7,7 +6,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Handlers.Batches;
-using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.BulkInsert;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -51,9 +49,18 @@ internal class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProcessor<Ba
         }
     }
 
-    protected override ValueTask<MergedBatchCommand.AttachmentStream> StoreAttachmentStream(BatchRequestParser.CommandData command, AbstractBulkInsertBatchCommandsReader<BatchRequestParser.CommandData> reader)
+    protected override StreamsTempFile GetTempFile()
     {
-        return WriteAttachment(command.ContentLength, reader.GetBlob(command.ContentLength));
+        return _database.DocumentsStorage.AttachmentsStorage.GetTempFile("bulk-insert");
+    }
+
+    protected override async ValueTask<string> CopyAttachmentStream(Stream sourceStream, Stream attachmentStream)
+    {
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+        {
+            var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, sourceStream, attachmentStream, _database.DatabaseShutdown);
+            return hash;
+        }
     }
 
     protected override (long, int) GetSizeAndOperationsCount(BatchRequestParser.CommandData commandData)
@@ -90,34 +97,5 @@ internal class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProcessor<Ba
             }
         }
         return disposable;
-    }
-
-    private async ValueTask<MergedBatchCommand.AttachmentStream> WriteAttachment(long size, Stream stream)
-    {
-        var attachmentStream = new MergedBatchCommand.AttachmentStream();
-
-        if (size <= 32 * 1024)
-        {
-            attachmentStream.Stream = new MemoryStream();
-        }
-        else
-        {
-            StreamsTempFile attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("bulk");
-            attachmentStream.Stream = attachmentStreamsTempFile.StartNewStream();
-
-            if (_streamsTempFiles == null)
-                _streamsTempFiles = new List<StreamsTempFile>();
-
-            _streamsTempFiles.Add(attachmentStreamsTempFile);
-        }
-
-        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-        using (ctx.OpenWriteTransaction())
-        {
-            attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, stream, attachmentStream.Stream, _database.DatabaseShutdown);
-            await attachmentStream.Stream.FlushAsync();
-        }
-
-        return attachmentStream;
     }
 }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -16,31 +15,21 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
     public List<Stream> Streams;
     public List<BufferedCommand> BufferedCommands = new();
 
-    private readonly bool _encrypted;
     private readonly ShardedDatabaseContext _databaseContext;
 
     public ShardedBatchCommandsReader(ShardedDatabaseRequestHandler handler) :
             base(handler, handler.DatabaseContext.DatabaseName, handler.DatabaseContext.IdentityPartsSeparator, BatchRequestParser.Instance)
     {
         _databaseContext = handler.DatabaseContext;
-        _encrypted = handler.DatabaseContext.Encrypted;
     }
 
     public override async Task SaveStream(JsonOperationContext context, Stream input)
     {
         Streams ??= new List<Stream>();
-        var attachment = GetServerTempFile("sharded").StartNewStream();
+        var attachment = ServerStore.GetTempFile($"{_databaseContext.DatabaseName}.attachment", "sharded").StartNewStream();
         await input.CopyToAsync(attachment, Handler.AbortRequestToken);
         await attachment.FlushAsync(Handler.AbortRequestToken);
         Streams.Add(attachment);
-    }
-
-    public StreamsTempFile GetServerTempFile(string prefix)
-    {
-        var name = $"{_databaseContext.DatabaseName}.attachment.{Guid.NewGuid():N}.{prefix}";
-        var tempPath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(name);
-
-        return new StreamsTempFile(tempPath.FullPath, _encrypted);
     }
 
     public override async Task<BatchRequestParser.CommandData> ReadCommand(
