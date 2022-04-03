@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Indexes.Static
             EngineHandle.ForceGarbageCollection();
             if (isMemorySnapshotMade)
             {
-                EngineHandle.CheckForMemoryLeaks(memorySnapshotName);
+                EngineHandle.CheckForMemoryLeaks(memorySnapshotName, shouldRemove: false);
             }
         }
         
