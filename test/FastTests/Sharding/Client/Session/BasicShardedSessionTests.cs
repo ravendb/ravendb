@@ -28,10 +28,11 @@ namespace FastTests.Sharding.Client.Session
         {
         }
 
-        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
-        public void Should_Put_Documents_To_The_Same_Shard()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Should_Put_Documents_To_The_Same_Shard(Options options)
         {
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string companyId = "Companies/1";
                 const string orderId = $"orders/1${companyId}";
@@ -53,7 +54,7 @@ namespace FastTests.Sharding.Client.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var order = session.Include<Order, Company>(x => x.Company).Load<Order>(orderId);
+                    var order = session.Load<Order>(orderId, builder => builder.IncludeDocuments(o => o.Company));
                     Assert.NotNull(order);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.True(session.Advanced.IsLoaded(companyId));
