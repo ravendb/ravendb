@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
@@ -127,6 +128,8 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
             _handler = handler;
             _token = token;
         }
+
+        public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
         public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>
             new ShardedCollectionPreviewCommand(_handler, _token.Pages[shard].Start, _token.PageSize);

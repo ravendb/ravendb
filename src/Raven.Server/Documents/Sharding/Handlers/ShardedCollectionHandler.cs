@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session.Operations;
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/collections/stats", "GET")]
         public async Task GetCollectionStats()
         {
-            var op = new ShardedCollectionStatisticsOperation();
+            var op = new ShardedCollectionStatisticsOperation(HttpContext);
 
             var stats = await ShardExecutor.ExecuteParallelForAllAsync(op);
 
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/collections/stats/detailed", "GET")]
         public async Task GetDetailedCollectionStats()
         {
-            var op = new ShardedDetailedCollectionStatisticsOperation();
+            var op = new ShardedDetailedCollectionStatisticsOperation(HttpContext);
             var stats = await ShardExecutor.ExecuteParallelForAllAsync(op);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -51,7 +52,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var token = ContinuationTokens.GetOrCreateContinuationToken(context);
 
-                var op = new ShardedStreamDocumentsOperation(token);
+                var op = new ShardedStreamDocumentsOperation(HttpContext, token);
                 var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
                 using var streams = await results.InitializeAsync(DatabaseContext, HttpContext.RequestAborted);
 
@@ -94,19 +95,22 @@ namespace Raven.Server.Documents.Sharding.Handlers
             private readonly string _matches;
             private readonly string _exclude;
             private readonly string _startAfter;
+            private readonly HttpContext _httpContext;
             private readonly ShardedPagingContinuation _token;
 
-            public ShardedStreamDocumentsOperation(ShardedPagingContinuation token)
+            public ShardedStreamDocumentsOperation(HttpContext httpContext, ShardedPagingContinuation token)
             {
                 _startsWith = null;
                 _matches = null;
                 _exclude = null;
                 _startAfter = null;
+                _httpContext = httpContext;
                 _token = token;
             }
 
-            public ShardedStreamDocumentsOperation(string startsWith, string matches, string exclude, string startAfter, ShardedPagingContinuation token)
+            public ShardedStreamDocumentsOperation(HttpContext httpContext, string startsWith, string matches, string exclude, string startAfter, ShardedPagingContinuation token)
             {
+                _httpContext = httpContext;
                 _startsWith = startsWith;
                 _matches = matches;
                 _exclude = exclude;
@@ -114,12 +118,23 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _token = token;
             }
 
+            public HttpRequest HttpRequest => _httpContext.Request;
+
             public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>
                 StreamOperation.CreateStreamCommand(_startsWith, _matches, _token.Pages[shard].Start, _token.PageSize, _exclude, _startAfter);
         }
 
-        internal struct ShardedCollectionStatisticsOperation : IShardedOperation<CollectionStatistics>
+        internal readonly struct ShardedCollectionStatisticsOperation : IShardedOperation<CollectionStatistics>
         {
+            private readonly HttpContext _httpContext;
+
+            public ShardedCollectionStatisticsOperation(HttpContext httpContext)
+            {
+                _httpContext = httpContext;
+            }
+
+            public HttpRequest HttpRequest => _httpContext.Request;
+
             public CollectionStatistics Combine(Memory<CollectionStatistics> results)
             {
                 var stats = new CollectionStatistics();
@@ -143,8 +158,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
             public RavenCommand<CollectionStatistics> CreateCommandForShard(int shard) => new GetCollectionStatisticsOperation.GetCollectionStatisticsCommand();
         }
 
-        private struct ShardedDetailedCollectionStatisticsOperation : IShardedOperation<DetailedCollectionStatistics>
+        private readonly struct ShardedDetailedCollectionStatisticsOperation : IShardedOperation<DetailedCollectionStatistics>
         {
+            private readonly HttpContext _httpContext;
+
+            public ShardedDetailedCollectionStatisticsOperation(HttpContext httpContext)
+            {
+                _httpContext = httpContext;
+            }
+
+            public HttpRequest HttpRequest => _httpContext.Request;
+
             public DetailedCollectionStatistics Combine(Memory<DetailedCollectionStatistics> results)
             {
                 var stats = new DetailedCollectionStatistics();

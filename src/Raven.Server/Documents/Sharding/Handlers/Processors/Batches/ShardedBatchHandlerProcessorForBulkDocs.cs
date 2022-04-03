@@ -34,7 +34,7 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
             shardedBatchCommand.AddCommand(c);
         }
 
-        var op = new SingleNodeShardedBatchOperation(context, shardedBatchCommands, command.ParsedCommands.Count);
+        var op = new SingleNodeShardedBatchOperation(HttpContext, context, shardedBatchCommands, command.ParsedCommands.Count);
         return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardedBatchCommands.Keys.ToArray(), op);
     }
 

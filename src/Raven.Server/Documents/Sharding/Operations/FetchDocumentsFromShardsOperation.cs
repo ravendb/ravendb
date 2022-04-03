@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -13,6 +15,7 @@ namespace Raven.Server.Documents.Sharding.Operations
     public readonly struct FetchDocumentsFromShardsOperation : IShardedReadOperation<GetDocumentsResult, GetShardedDocumentsResult>
     {
         private readonly TransactionOperationContext _context;
+        private readonly ShardedDocumentHandler _handler;
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
         private readonly int _size;
@@ -21,8 +24,9 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly bool _metadataOnly;
 
 
-        public FetchDocumentsFromShardsOperation(TransactionOperationContext context,
-            ShardedDatabaseContext databaseContext,
+        public FetchDocumentsFromShardsOperation(
+            TransactionOperationContext context,
+            ShardedDocumentHandler handler,
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
             int size,
             string etag,
@@ -30,7 +34,8 @@ namespace Raven.Server.Documents.Sharding.Operations
             bool metadataOnly)
         {
             _context = context;
-            _databaseContext = databaseContext;
+            _handler = handler;
+            _databaseContext = handler.DatabaseContext;
             _idsByShards = idsByShards;
             _size = size;
             _etag = etag;
@@ -98,6 +103,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             };
         }
 
+        public HttpRequest HttpRequest => _handler.HttpContext.Request;
         public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shard) => new GetDocumentsCommand(_idsByShards[shard].Ids.ToArray(), _includePaths, _metadataOnly);
     }
 
