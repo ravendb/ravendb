@@ -1,12 +1,12 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getDocumentsCompressionConfigurationCommand = require("commands/database/documents/getDocumentsCompressionConfigurationCommand");
 import saveDocumentsCompressionCommand = require("commands/database/documents/saveDocumentsCompressionCommand");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class documentsCompression extends viewModelBase {
+class documentsCompression extends shardViewModelBase {
 
     view = require("views/database/settings/documentsCompression.html");
 
@@ -27,8 +27,9 @@ class documentsCompression extends viewModelBase {
 
     storageReportUrl: KnockoutComputed<string>;
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
+        
         this.bindToCurrentInstance("saveChanges", "addCollection", "removeCollection", "addAllCollections", "addWithBlink");
         this.initObservables();
     }
@@ -48,7 +49,7 @@ class documentsCompression extends viewModelBase {
            return !!_.difference(this.allExistingCollections(), this.collectionsToCompress()).length;
         });
         
-        this.storageReportUrl = ko.pureComputed(() => appUrl.forStatusStorageReport(this.activeDatabase()));
+        this.storageReportUrl = ko.pureComputed(() => appUrl.forStatusStorageReport(this.db));
     }
 
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
@@ -56,9 +57,9 @@ class documentsCompression extends viewModelBase {
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
 
-                this.fetchCompressionConfiguration(this.activeDatabase())
+                this.fetchCompressionConfiguration(this.db)
                     .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
+                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.db) }));
 
                 return deferred;
             });
@@ -123,7 +124,7 @@ class documentsCompression extends viewModelBase {
         eventsCollector.default.reportEvent("documents-compression", "save");
         const dto = this.toDto();
 
-        new saveDocumentsCompressionCommand(this.activeDatabase(), dto)
+        new saveDocumentsCompressionCommand(this.db, dto)
             .execute()
             .done(() => this.dirtyFlag().reset())
             .always(() => this.spinners.save(false));

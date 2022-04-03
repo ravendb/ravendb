@@ -90,6 +90,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/documentsCompression',
             moduleId: require('viewmodels/database/settings/documentsCompression'),
+            shardingMode: "allShardsOnly",
             title: 'Document Compression',
             nav: true,
             css: 'icon-documents-compression',
