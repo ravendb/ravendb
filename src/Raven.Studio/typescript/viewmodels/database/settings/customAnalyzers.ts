@@ -9,24 +9,24 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import generalUtils = require("common/generalUtils");
 import analyzerListItemModel = require("models/database/settings/analyzerListItemModel");
 import accessManager = require("common/shell/accessManager");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-
-class customAnalyzers extends viewModelBase {
+class customAnalyzers extends shardViewModelBase {
 
     view = require("views/database/settings/customAnalyzers.html");
     
     analyzers = ko.observableArray<analyzerListItemModel>([]);
     serverWideAnalyzers = ko.observableArray<analyzerListItemModel>([]);
     
-    addUrl = ko.pureComputed(() => appUrl.forEditCustomAnalyzer(this.activeDatabase()));
+    addUrl = ko.pureComputed(() => appUrl.forEditCustomAnalyzer(this.db));
     
     serverWideCustomAnalyzersUrl = appUrl.forServerWideCustomAnalyzers();
     canNavigateToServerWideCustomAnalyzers: KnockoutComputed<boolean>;
     
     clientVersion = viewModelBase.clientVersion;
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("confirmRemoveAnalyzer", "editAnalyzer");
@@ -50,7 +50,7 @@ class customAnalyzers extends viewModelBase {
     }
     
     private loadAnalyzers() {
-        return new getCustomAnalyzersCommand(this.activeDatabase())
+        return new getCustomAnalyzersCommand(this.db)
             .execute()
             .done(analyzers => this.analyzers(analyzers.map(x => new analyzerListItemModel(x))));
     }
@@ -68,7 +68,7 @@ class customAnalyzers extends viewModelBase {
     }
     
     editAnalyzer(analyzer: analyzerListItemModel) {
-        const url = appUrl.forEditCustomAnalyzer(this.activeDatabase(), analyzer.name);
+        const url = appUrl.forEditCustomAnalyzer(this.db, analyzer.name);
         router.navigate(url);
     }
     
@@ -81,7 +81,7 @@ class customAnalyzers extends viewModelBase {
             .done(result => {
                 if (result.can) {
                     this.analyzers.remove(analyzer);
-                    this.deleteAnalyzer(this.activeDatabase(), analyzer.name);
+                    this.deleteAnalyzer(this.db, analyzer.name);
                 }
             })
     }
