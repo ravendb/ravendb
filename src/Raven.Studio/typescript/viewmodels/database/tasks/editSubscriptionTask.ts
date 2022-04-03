@@ -75,7 +75,7 @@ class editSubscriptionTask extends viewModelBase {
         this.bindToCurrentInstance("setStartingPointType", "goToTab", "setState");
         aceEditorBindingHandler.install();
         
-        this.languageService = new rqlLanguageService(this.activeDatabase, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
+        this.languageService = new rqlLanguageService(this.activeDatabase(), ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
     }
 
     activate(args: any) { 

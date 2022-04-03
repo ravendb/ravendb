@@ -174,7 +174,7 @@ class patch extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
 
-        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes, "Update");
+        this.languageService = new rqlLanguageService(this.activeDatabase(), this.indexes, "Update");
 
         this.bindToCurrentInstance("savePatch");
         this.initObservables();

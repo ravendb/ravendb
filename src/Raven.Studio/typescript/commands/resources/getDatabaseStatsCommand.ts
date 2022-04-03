@@ -9,7 +9,7 @@ class getDatabaseStatsCommand extends commandBase {
 
     constructor(private db: database, private location: databaseLocationSpecifier = null) {
         super();
-        shardingTodo("Danielle"); // TODO - handle the location param
+        shardingTodo("Danielle"); // TODO - handle the location param, calling methods should pass either a known location or the 'getFirstLocation' info
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {

@@ -15,13 +15,13 @@ class rqlLanguageService {
     private readonly queryType: rqlQueryType;
     
     constructor(
-        activeDatabase: KnockoutObservable<database>, 
+        db: database, 
         indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>,
         queryType: rqlQueryType) {
         this.worker = new Worker("/studio/assets/rql_worker.js");
         this.queryType = queryType;
         
-        this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(activeDatabase, indexes));
+        this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(db, indexes));
         
         _.bindAll(this, "complete");
         

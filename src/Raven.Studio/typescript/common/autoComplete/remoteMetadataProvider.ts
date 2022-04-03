@@ -4,11 +4,11 @@ import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexE
 
 class remoteMetadataProvider implements queryCompleterProviders {
     
-    private readonly database: KnockoutObservable<database>;
+    private readonly db: database;
     private readonly indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>;
     
-    constructor(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
-        this.database = activeDatabase;
+    constructor(database: database, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
+        this.db = database;
         this.indexes = indexes;
     }
 
@@ -17,7 +17,7 @@ class remoteMetadataProvider implements queryCompleterProviders {
     }
 
     indexFields(indexName: string, callback: (fields: string[]) => void): void {
-        new getIndexEntriesFieldsCommand(indexName, this.database(), false)
+        new getIndexEntriesFieldsCommand(indexName, this.db, false)
             .execute()
             .done(result => {
                 callback(result.Static);
