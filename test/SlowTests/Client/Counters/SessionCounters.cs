@@ -151,15 +151,17 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void SessionGetCounters()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SessionGetCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Aviv1" }, "users/1-A");
                     session.Store(new User { Name = "Aviv2" }, "users/2-A");
+                    session.Store(new Order { Company = "hiber" }, "orders/1-A");
                     session.SaveChanges();
                 }
 
@@ -198,6 +200,19 @@ namespace SlowTests.Client.Counters
                                     Delta = 1000
                                 }
                             }
+                        },
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = "orders/1-A",
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "votes",
+                                    Delta = 1000
+                                }
+                            }
                         }
                     }
                 };
@@ -214,6 +229,10 @@ namespace SlowTests.Client.Counters
 
                     var val = session.CountersFor("users/2-A").Get("votes");
                     Assert.Equal(1000, val);
+
+                    var dic2 = session.CountersFor("orders/1-A").GetAll();
+                    Assert.Equal(1, dic2.Count);
+                    Assert.Equal(1000, dic2["votes"]);
                 }
 
                 using (var session = store.OpenSession())
