@@ -1,1 +1,1 @@
-﻿{ "Version": "5.3.0-custom-53" }
+﻿{ "Version": "6.0.0-custom-60" }
