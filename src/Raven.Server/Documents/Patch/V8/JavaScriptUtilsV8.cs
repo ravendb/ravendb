@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Patch.V8
                 !(args[0].BoundObject is BlittableObjectInstanceV8 boi))
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
-            return boi.GetMetadata();
+            return boi.GetMetadata(toReturnCopy: true);
         }
 
         internal InternalHandle AttachmentsFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)

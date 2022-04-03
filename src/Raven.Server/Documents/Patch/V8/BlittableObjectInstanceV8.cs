@@ -554,7 +554,7 @@ namespace Raven.Server.Documents.Patch.V8
             return list;
         }
 
-        public InternalHandle GetMetadata()
+        public InternalHandle GetMetadata(bool toReturnCopy = false)
         {
             _CheckIsNotDisposed($"GetMetadata");
 
@@ -584,7 +584,8 @@ namespace Raven.Server.Documents.Patch.V8
                     var jsMetadata = _javaScriptUtils.TranslateToJs(_javaScriptUtils.Context, metadata, keepAlive: false, parent: this);
                     if (jsMetadata.IsError)
                         return jsMetadata;
-                    return SetOwnProperty(propertyName, jsMetadata, toReturnCopy: false);
+                    using (jsMetadata)
+                        return SetOwnProperty(propertyName, jsMetadata, toReturnCopy: toReturnCopy);
                 }
             }
             catch (Exception e) 
