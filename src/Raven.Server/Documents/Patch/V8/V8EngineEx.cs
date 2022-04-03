@@ -407,14 +407,18 @@ var process = {
 
         public static void DisposeAndCollectGarbage(List<object> items, string snapshotName)
         {
-            V8Engine? engine = null;
+            V8Engine? engineV8 = null;
             for (int i = items.Count - 1; i >= 0; i--)
             {
                 var v8Handle = items[i] is InternalHandle ? (InternalHandle)items[i] : InternalHandle.Empty;
                 if (!v8Handle.IsEmpty)
                 {
-                    if (engine == null)
-                        engine = v8Handle.Engine;
+                    if (engineV8 == null)
+                        engineV8 = v8Handle.Engine;
+
+                    if (engineV8 != null && engineV8.IsMemoryChecksOn)
+                        engineV8.RemoveFromLastMemorySnapshotBefore(v8Handle);
+
                     v8Handle.Dispose();
                 }
                 else
@@ -422,19 +426,22 @@ var process = {
                     var jsHandle = items[i] is JsHandle ? (JsHandle)items[i] : JsHandle.Empty;
                     if (!jsHandle.IsEmpty)
                     {
-                        if (engine == null)
-                            engine = (V8Engine)jsHandle.Engine;
+                        if (engineV8 == null)
+                            engineV8 = (V8Engine)jsHandle.Engine;
+
+                        if (engineV8 != null && engineV8.IsMemoryChecksOn)
+                            engineV8.RemoveFromLastMemorySnapshotBefore(jsHandle.V8.Item);
+
                         jsHandle.Dispose();
                     }
                 }
             }
 
-            if (engine != null && engine.IsMemoryChecksOn)
+            if (engineV8 != null && engineV8.IsMemoryChecksOn)
             {
-                engine.ForceV8GarbageCollection();
-                engine.CheckForMemoryLeaks(snapshotName);
+                engineV8.ForceV8GarbageCollection();
+                engineV8.CheckForMemoryLeaks(snapshotName, shouldRemove: false);
             }
-
         }
 
         private ContextEx? _contextEx;

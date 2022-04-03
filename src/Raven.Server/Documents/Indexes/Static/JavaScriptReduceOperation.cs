@@ -268,7 +268,6 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (isMemorySnapshotMade)
                         {
                             EngineHandle.CheckForMemoryLeaks(memorySnapshotName, shouldRemove: false);
-                            EngineHandle.RemoveFromLastMemorySnapshotBefore(jsRes);
                         }
                     }
                     // memory snapshot is removed after removing all reduce results and the final check in AggregatedAnonymousObjects.Dispose() 
@@ -283,7 +282,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private void ProcessRunException(JsHandle jsRes, string memorySnapshotName, bool isMemorySnapshotMade)
         {
-            jsRes.Dispose();
+            EngineHandle.AddToLastMemorySnapshotBefore(jsRes); // as jsRes has been saved in V8Exception
+            jsRes.Dispose(); // jsRes still has one reference
 
             EngineHandle.ForceGarbageCollection();
             if (isMemorySnapshotMade)
