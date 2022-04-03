@@ -116,6 +116,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/customAnalyzers',
             moduleId: require('viewmodels/database/settings/customAnalyzers'),
+            shardingMode: "allShardsOnly",
             title: 'Custom Analyzers',
             nav: true,
             css: 'icon-custom-analyzers',
