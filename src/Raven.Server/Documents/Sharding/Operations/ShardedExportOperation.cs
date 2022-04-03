@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Commands;
@@ -30,6 +31,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         }
         public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shard) => new ShardedExportCommand(_handler, _operationId, _options, _writer);
 
+        public HttpRequest HttpRequest => _handler.HttpContext.Request;
         public BlittableJsonReaderObject Combine(Memory<BlittableJsonReaderObject> results) => null;
 
         private class ShardedExportCommand : ShardedStreamCommand

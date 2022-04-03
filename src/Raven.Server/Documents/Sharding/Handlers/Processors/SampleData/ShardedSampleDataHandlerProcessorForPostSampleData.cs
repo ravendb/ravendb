@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
 
         protected override async ValueTask<bool> IsDatabaseEmptyAsync()
         {
-            var op = new ShardedCollectionHandler.ShardedCollectionStatisticsOperation();
+            var op = new ShardedCollectionHandler.ShardedCollectionStatisticsOperation(HttpContext);
             var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
 
             return stats.Collections.Count == 0;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -15,18 +16,22 @@ namespace Raven.Server.Documents.Sharding.Operations;
 
 public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<GetDocumentsResult>
 {
+    private readonly HttpContext _httpContext;
     private readonly TransactionOperationContext _context;
     private readonly SubscriptionTryout _tryout;
     private readonly int _pageSize;
     private readonly int? _timeLimitInSec;
 
-    public ShardedSubscriptionTryoutOperation(TransactionOperationContext context, SubscriptionTryout tryout, int pageSize, int? timeLimitInSec)
+    public ShardedSubscriptionTryoutOperation(HttpContext httpContext, TransactionOperationContext context, SubscriptionTryout tryout, int pageSize, int? timeLimitInSec)
     {
+        _httpContext = httpContext;
         _context = context;
         _tryout = tryout;
         _pageSize = pageSize;
         _timeLimitInSec = timeLimitInSec;
     }
+
+    public HttpRequest HttpRequest => _httpContext.Request;
 
     public GetDocumentsResult Combine(Memory<GetDocumentsResult> results)
     {

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Json;
 using Sparrow.Json;
 
@@ -9,14 +11,18 @@ namespace Raven.Server.Documents.Sharding.Operations;
 
 public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult, LastChangeVectorForCollectionCombinedResult>
 {
+    private readonly ShardedSubscriptionsHandler _shardedSubscriptionsHandler;
     private readonly string _collection;
     private readonly string _database;
 
-    public ShardedLastChangeVectorForCollectionOperation(string collection, string database)
+    public ShardedLastChangeVectorForCollectionOperation(ShardedSubscriptionsHandler shardedSubscriptionsHandler, string collection, string database)
     {
+        _shardedSubscriptionsHandler = shardedSubscriptionsHandler;
         _collection = collection ?? throw new ArgumentNullException(nameof(collection));
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
+
+    public HttpRequest HttpRequest => _shardedSubscriptionsHandler.HttpContext.Request;
 
     public LastChangeVectorForCollectionCombinedResult Combine(Memory<LastChangeVectorForCollectionResult> results)
     {

@@ -28,11 +28,11 @@ namespace Raven.Server.Documents.Sharding.Executors
             {
                 var allNodes = store.GetClusterTopology().AllNodes;
                 var urls = record.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
-                _requestExecutors[i] = RequestExecutor.Create(
+                _requestExecutors[i] = RequestExecutor.CreateForServer(
                     urls,
                     ShardHelper.ToShardName(_databaseContext.DatabaseName, i),
                     store.Server.Certificate.Certificate,
-                    new DocumentConventions());
+                    DocumentConventions.DefaultForServer);
             }
         }
 

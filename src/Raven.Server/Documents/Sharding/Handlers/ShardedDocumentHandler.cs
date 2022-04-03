@@ -244,6 +244,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (isStartsWith)
             {
                 op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(
+                    HttpContext,
                     HttpContext.Request.Query["startsWith"],
                     HttpContext.Request.Query["matches"],
                     HttpContext.Request.Query["exclude"],
@@ -252,7 +253,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
             else // recent docs
             {
-                op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(token);
+                op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(HttpContext, token);
             }
 
             var sw = Stopwatch.StartNew();
@@ -282,9 +283,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private async Task GetDocumentsByIdAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make sure we maintain the order of returned results");
-
             var idsByShard = ShardLocator.GetDocumentIdsByShards(context, DatabaseContext, ids);
-            var op = new FetchDocumentsFromShardsOperation(context, DatabaseContext, idsByShard, ids.Count, etag, includePaths, metadataOnly);
+            var op = new FetchDocumentsFromShardsOperation(context, this, idsByShard, ids.Count, etag, includePaths, metadataOnly);
             var shardedReadResult = await DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op);
 
             // here we know that all of them are good
@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 var ids = result.MissingIncludes;
                 var missingIncludes = result.MissingIncludes.ToList();
                 var idsByShard = ShardLocator.GetDocumentIdsByShards(context, DatabaseContext, ids);
-                var op = new FetchDocumentsFromShardsOperation(context, DatabaseContext, idsByShard, ids.Count, etag: null, includePaths: null, metadataOnly: metadataOnly);
+                var op = new FetchDocumentsFromShardsOperation(context, this, idsByShard, ids.Count, etag: null, includePaths: null, metadataOnly: metadataOnly);
                 var missingResult = await DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op);
                 for (var index = 0; index < missingIncludes.Count; index++)
                 {

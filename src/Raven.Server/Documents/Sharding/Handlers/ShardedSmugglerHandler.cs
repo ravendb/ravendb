@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 writer.WriteEndObject();
             }
 
-            var getStateOperation = new GetShardedOperationStateOperation(operationId);
+            var getStateOperation = new GetShardedOperationStateOperation(HttpContext, operationId);
             return (await ShardExecutor.ExecuteParallelForAllAsync(getStateOperation)).Result;
         }
 

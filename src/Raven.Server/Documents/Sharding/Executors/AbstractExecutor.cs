@@ -39,9 +39,9 @@ public abstract class AbstractExecutor : IDisposable
         => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(GetAllPositions(), operation, token);
 
     protected Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation, CancellationToken token = default)
-        where TExecutionMode : struct, IExecutionMode
+    where TExecutionMode : struct, IExecutionMode
         where TFailureMode : struct, IFailureMode
-        => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation, token);
+    => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation, token);
 
     public Task ExecuteParallelForShardsAsync(Memory<int> shards,
         IShardedOperation operation, CancellationToken token = default)
@@ -149,6 +149,9 @@ public abstract class AbstractExecutor : IDisposable
             int shard = shards.Span[position];
 
             var cmd = operation.CreateCommandForShard(shard);
+            cmd.ModifyRequest = operation.ModifyHeaders;
+            cmd.ModifyUrl = operation.ModifyUrl;
+
             commands[position].Shard = shard;
             commands[position].Command = cmd;
 

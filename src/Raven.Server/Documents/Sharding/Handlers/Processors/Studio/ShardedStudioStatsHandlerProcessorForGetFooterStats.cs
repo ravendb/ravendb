@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Operations;
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
         
         protected override async ValueTask<FooterStatistics> GetFooterStatisticsAsync()
         {
-            var op = new ShardedGetStudioFooterStatsOperation();
+            var op = new ShardedGetStudioFooterStatsOperation(RequestHandler.HttpContext);
             var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
             stats.CountOfIndexes = RequestHandler.DatabaseContext.DatabaseRecord.Indexes.Count;
             return stats;
@@ -26,6 +27,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
         private readonly struct ShardedGetStudioFooterStatsOperation : IShardedOperation<FooterStatistics>
         {
+            private readonly HttpContext _httpContext;
+
+            public ShardedGetStudioFooterStatsOperation(HttpContext httpContext)
+            {
+                _httpContext = httpContext;
+            }
+
+            public HttpRequest HttpRequest => _httpContext.Request;
+
             public FooterStatistics Combine(Memory<FooterStatistics> results)
             {
                 var span = results.Span;

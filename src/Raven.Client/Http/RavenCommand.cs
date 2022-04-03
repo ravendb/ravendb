@@ -68,6 +68,10 @@ namespace Raven.Client.Http
 
         internal string Etag; // for NotModified use
 
+        internal Action<HttpRequestMessage> ModifyRequest;
+
+        internal Func<string, string> ModifyUrl;
+
         protected RavenCommand(RavenCommand<TResult> copy)
         {
             CancellationToken = copy.CancellationToken;

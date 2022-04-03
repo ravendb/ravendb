@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;

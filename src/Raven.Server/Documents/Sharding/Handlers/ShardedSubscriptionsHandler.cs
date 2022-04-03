@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
                         break;
                     case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        result.ChangeVectorsCollection = (await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(sub.Collection, DatabaseContext.DatabaseName))).LastChangeVectors;
+                        result.ChangeVectorsCollection = (await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(this, sub.Collection, DatabaseContext.DatabaseName))).LastChangeVectors;
                         foreach ((string key, string value) in result.ChangeVectorsCollection)
                         {
                             try
@@ -337,7 +337,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             var workerId = GetStringQueryString("workerId", required: false);
             try
             {
-                await ShardExecutor.ExecuteParallelForAllAsync(new ShardedDropSubscriptionConnectionOperation(subscriptionName, workerId));
+                await ShardExecutor.ExecuteParallelForAllAsync(new ShardedDropSubscriptionConnectionOperation(HttpContext, subscriptionName, workerId));
             }
             finally
             {
@@ -399,7 +399,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     throw new ArgumentException($"Cannot gather more than {maxPageSize} results during tryouts, but requested number was {pageSize}.");
 
                 var timeLimit = GetIntValueQueryString("timeLimit", false);
-                var result = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedSubscriptionTryoutOperation(context, tryout, pageSize, timeLimit));
+                var result = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedSubscriptionTryoutOperation(HttpContext, context, tryout, pageSize, timeLimit));
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();

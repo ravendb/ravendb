@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -29,6 +28,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public ShardExecutor ShardExecutor => DatabaseContext.ShardExecutor;
 
         public ShardedContinuationTokensHandler ContinuationTokens;
+
+        public static List<string> HeadersToCopy = new List<string> { Constants.Headers.LastKnownClusterTransactionIndex };
 
         public ShardedDatabaseRequestHandler()
         {
