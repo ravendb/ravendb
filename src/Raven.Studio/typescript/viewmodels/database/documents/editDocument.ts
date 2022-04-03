@@ -122,7 +122,7 @@ class editDocument extends shardViewModelBase {
 
     private changeNotification: changeSubscription;
 
-    private normalActionProvider = new normalCrudActions(this.document, this.db, // todo !!
+    private normalActionProvider = new normalCrudActions(this.document, this.db,
         docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation));
     
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
