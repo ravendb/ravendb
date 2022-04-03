@@ -4,12 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Expiration;
+using Raven.Server.Documents.Handlers.Processors.Expiration;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -18,33 +15,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/expiration/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetExpirationConfig()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                ExpirationConfiguration expirationConfig;
-                using (var recordRaw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
-                {
-                    expirationConfig = recordRaw?.ExpirationConfiguration;
-                }
-
-                if (expirationConfig != null)
-                {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, expirationConfig.ToJson());
-                    }
-                }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
-            }
+            using (var processor = new ExpirationHandlerProcessorForGet(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/expiration/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigExpiration()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config", GetRaftRequestIdFromQuery());
+            using (var processor = new ExpirationHandlerProcessorForPost(this))
+                await processor.ExecuteAsync();
         }
     }
 }
