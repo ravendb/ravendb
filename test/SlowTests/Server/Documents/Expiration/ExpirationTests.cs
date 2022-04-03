@@ -18,10 +18,13 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
+using Raven.Server.Documents.Commands.Expiration;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -279,6 +282,29 @@ namespace SlowTests.Server.Documents.Expiration
                     var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
                     Assert.Contains($"The expiration date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
                 }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPostAndGetDocumentsExpiration(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var exConfig = new ExpirationConfiguration
+                {
+                    DeleteFrequencyInSec = 60,
+                    Disabled = false
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureExpirationOperation(exConfig));
+
+                await store.Maintenance.ForTesting(() => new GetDocumentsExpirationConfigurationOperation()).AssertAllAsync((key, expirationConfiguration) =>
+                {
+                    Assert.NotNull(expirationConfiguration);
+                    Assert.Equal(60, expirationConfiguration.DeleteFrequencyInSec);
+                    Assert.False(expirationConfiguration.Disabled);
+                });
             }
         }
     }

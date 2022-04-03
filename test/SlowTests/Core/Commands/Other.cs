@@ -10,13 +10,10 @@ using Xunit.Abstractions;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents.Commands.Expiration;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Extensions;
 using Xunit;
 
 namespace SlowTests.Core.Commands
@@ -216,29 +213,6 @@ namespace SlowTests.Core.Commands
                 
                 Assert.NotNull(seedIdentity);
                 Assert.Equal(1990, seedIdentity);
-            }
-        }
-
-        [Theory]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task CanPostAndGetDocumentsExpiration(Options options)
-        {
-            using (var store = GetDocumentStore(options))
-            {
-                var exConfig = new ExpirationConfiguration
-                {
-                    DeleteFrequencyInSec = 60,
-                    Disabled = false
-                };
-
-                await store.Maintenance.SendAsync(new ConfigureExpirationOperation(exConfig));
-
-                await store.Maintenance.ForTesting(() => new GetDocumentsExpirationConfigurationOperation()).AssertAllAsync((key, expirationConfiguration) =>
-                {
-                    Assert.NotNull(expirationConfiguration);
-                    Assert.Equal(60, expirationConfiguration.DeleteFrequencyInSec);
-                    Assert.False(expirationConfiguration.Disabled);
-                });
             }
         }
     }
