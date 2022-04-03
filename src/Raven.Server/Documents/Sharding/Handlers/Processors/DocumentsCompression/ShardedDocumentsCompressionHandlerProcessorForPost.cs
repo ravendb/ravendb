@@ -12,9 +12,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.DocumentsCompressi
 
         protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.ServerStore.Cluster.WaitForIndexNotification(index, RequestHandler.ServerStore.Engine.OperationTimeout);
-        }
+        protected override ValueTask WaitForIndexNotificationAsync(long index) => RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index);
     }
 }
