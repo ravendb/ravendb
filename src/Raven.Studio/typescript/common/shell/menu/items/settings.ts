@@ -108,6 +108,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/settings/customSorters',
             moduleId: require('viewmodels/database/settings/customSorters'),
             title: 'Custom Sorters',
+            shardingMode: "allShardsOnly",
             nav: true,
             css: 'icon-custom-sorters',
             dynamicHash: appUrls.customSorters

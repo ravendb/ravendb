@@ -21,11 +21,13 @@ import sorterListItemModel = require("models/database/settings/sorterListItemMod
 import accessManager = require("common/shell/accessManager");
 import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 type testTabName = "results" | "diagnostics";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
-class customSorters extends viewModelBase {
+class customSorters extends shardViewModelBase {
 
     view = require("views/database/settings/customSorters.html");
 
@@ -35,7 +37,7 @@ class customSorters extends viewModelBase {
     sorters = ko.observableArray<sorterListItemModel>([]);
     serverWideSorters = ko.observableArray<sorterListItemModel>([]);
     
-    addUrl = ko.pureComputed(() => appUrl.forEditCustomSorter(this.activeDatabase()));
+    addUrl = ko.pureComputed(() => appUrl.forEditCustomSorter(this.db));
 
     serverWideCustomSortersUrl = appUrl.forServerWideCustomSorters();
     canNavigateToServerWideCustomSorters: KnockoutComputed<boolean>;
@@ -59,22 +61,23 @@ class customSorters extends viewModelBase {
     testResultsVisible = ko.observable<boolean>(false);
 
     clientVersion = viewModelBase.clientVersion;
-    
-    constructor() {
-        super();
+    localNodeTag = clusterTopologyManager.default.localNodeTag();
+
+    constructor(db: database) {
+        super(db);
 
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("confirmRemoveSorter", "enterTestSorterMode", "editSorter", "runTest");
 
         this.canNavigateToServerWideCustomSorters = accessManager.default.isClusterAdminOrClusterNode;
         
-        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes, "Select");
+        this.languageService = new rqlLanguageService(this.db, this.indexes, "Select");
     }
     
     activate(args: any) {
         super.activate(args);
         
-        return $.when<any>(this.loadSorters(), this.loadServerWideSorters(), this.fetchAllIndexes(this.activeDatabase())
+        return $.when<any>(this.loadSorters(), this.loadServerWideSorters(), this.fetchAllIndexes(this.db)
             .done(() => { 
                 const serverWideSorterNames = this.serverWideSorters().map(x => x.name);
                 
@@ -99,7 +102,7 @@ class customSorters extends viewModelBase {
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(db)
+        return new getDatabaseStatsCommand(db, db.getFirstLocation(this.localNodeTag))
             .execute()
             .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
                 this.indexes(results.Indexes);
@@ -107,7 +110,7 @@ class customSorters extends viewModelBase {
     }
     
     private loadSorters() {
-        return new getCustomSortersCommand(this.activeDatabase())
+        return new getCustomSortersCommand(this.db)
             .execute()
             .done(sorters => {
                 this.sorters(sorters.map(x => new sorterListItemModel(x)));
@@ -169,7 +172,7 @@ class customSorters extends viewModelBase {
     }
     
     editSorter(sorter: sorterListItemModel) {
-        const url = appUrl.forEditCustomSorter(this.activeDatabase(), sorter.name);
+        const url = appUrl.forEditCustomSorter(this.db, sorter.name);
         router.navigate(url);
     }
     
@@ -182,7 +185,7 @@ class customSorters extends viewModelBase {
             .done(result => {
                 if (result.can) {
                     this.sorters.remove(sorter);
-                    this.deleteSorter(this.activeDatabase(), sorter.name);
+                    this.deleteSorter(this.db, sorter.name);
                 }
             })
     }
@@ -200,7 +203,7 @@ class customSorters extends viewModelBase {
         
         const queryTask = $.Deferred<pagedResult<documentObject>>();
         
-        new queryCommand(this.activeDatabase(), 0, 128, criteria)
+        new queryCommand(this.db, 0, 128, criteria)
             .execute()
             .done(results => {
                 this.resultsCount(results.items.length);
@@ -226,7 +229,7 @@ class customSorters extends viewModelBase {
     }
     
     private initGrid() {
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), {
+        const documentsProvider = new documentBasedColumnsProvider(this.db, this.gridController(), {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
             enableInlinePreview: true
