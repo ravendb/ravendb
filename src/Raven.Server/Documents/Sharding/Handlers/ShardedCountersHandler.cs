@@ -14,5 +14,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
             }
         }
+
+        [RavenShardedAction("/databases/*/counters", "POST")]
+        public async Task Batch()
+        {
+            using (var processor = new ShardedCountersHandlerProcessorForPostCounters(this))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
     }
 }

@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Counters
             return new CounterBatchCommand(_counterBatch);
         }
 
-        private class CounterBatchCommand : RavenCommand<CountersDetail>
+        internal class CounterBatchCommand : RavenCommand<CountersDetail>
         {
             private readonly CounterBatch _counterBatch;
 

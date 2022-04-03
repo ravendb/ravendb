@@ -47,6 +47,10 @@ public abstract class AbstractExecutor
         IShardedOperation operation, CancellationToken token = default)
         => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, object, object>(shards, operation, token);
 
+    public Task<TResult> ExecuteParallelForShardsAsync<TResult>(Memory<int> shards,
+        IShardedOperation<TResult> operation, CancellationToken token = default)
+        => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TResult>(shards, operation, token);
+
     protected async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token)
         where TExecutionMode : struct, IExecutionMode
