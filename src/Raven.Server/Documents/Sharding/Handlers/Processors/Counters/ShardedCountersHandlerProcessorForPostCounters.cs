@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Counters;
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
             using (var token = RequestHandler.CreateOperationToken())
             {
                 return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
-                    new ShardedCounterBatchOperation(commandsPerShard), token.Token);
+                    new ShardedCounterBatchOperation(RequestHandler.HttpContext, commandsPerShard), token.Token);
             }
         }
 
@@ -62,12 +63,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 
     internal readonly struct ShardedCounterBatchOperation : IShardedOperation<CountersDetail>
     {
+        private readonly HttpContext _httpContext;
         private readonly Dictionary<int, CounterBatchOperation.CounterBatchCommand> _commandsPerShard;
         
-        internal ShardedCounterBatchOperation(Dictionary<int, CounterBatchOperation.CounterBatchCommand> commandsPerShard)
+        internal ShardedCounterBatchOperation(HttpContext httpContext, Dictionary<int, CounterBatchOperation.CounterBatchCommand> commandsPerShard)
         {
+            _httpContext = httpContext;
             _commandsPerShard = commandsPerShard;
         }
+
+        public HttpRequest HttpRequest => _httpContext.Request;
 
         public CountersDetail Combine(Memory<CountersDetail> results)
         {

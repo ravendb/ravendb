@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         protected override async ValueTask GetRevisionByChangeVectorAsync(TransactionOperationContext context, Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly, CancellationToken token)
         {
-            var cmd = new ShardedGetRevisionsByChangeVectorsOperation(changeVectors.ToArray(), metadataOnly, context);
+            var cmd = new ShardedGetRevisionsByChangeVectorsOperation(HttpContext, changeVectors.ToArray(), metadataOnly, context);
 
             var res = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(cmd, token);
 
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
 
             //cmd writes the response to stream as is
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
 
             AddPagingPerformanceHint(PagingOperationType.Revisions, "", "", 0, 0, 0, 0);
         }

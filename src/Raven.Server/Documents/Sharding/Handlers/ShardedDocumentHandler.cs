@@ -9,6 +9,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Operations;
@@ -284,7 +285,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make sure we maintain the order of returned results");
             var idsByShard = ShardLocator.GetDocumentIdsByShards(context, DatabaseContext, ids);
-            var op = new FetchDocumentsFromShardsOperation(context, this, idsByShard, ids.Count, etag, includePaths, metadataOnly);
+            var op = new FetchDocumentsFromShardsOperation(context, this, idsByShard, etag, includePaths, metadataOnly);
             var shardedReadResult = await DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op);
 
             // here we know that all of them are good
@@ -321,17 +322,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (result.MissingIncludes.Count > 0)
             {
                 var ids = result.MissingIncludes;
-                var missingIncludes = result.MissingIncludes.ToList();
                 var idsByShard = ShardLocator.GetDocumentIdsByShards(context, DatabaseContext, ids);
-                var op = new FetchDocumentsFromShardsOperation(context, this, idsByShard, ids.Count, etag: null, includePaths: null, metadataOnly: metadataOnly);
+                var op = new FetchDocumentsFromShardsOperation(context, this, idsByShard, etag: null, includePaths: null, metadataOnly: metadataOnly);
                 var missingResult = await DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op);
-                for (var index = 0; index < missingIncludes.Count; index++)
+                foreach (var missing in missingResult.Result.Results)
                 {
-                    var id = missingIncludes[index];
-                    var missing = missingResult.Result.Results[index];
                     if (missing == null)
                         continue;
 
+                    var id = missing.GetMetadata().GetId();
                     result.Includes.Add(id, missing);
                 }
             }
