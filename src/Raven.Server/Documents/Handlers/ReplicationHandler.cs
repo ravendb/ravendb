@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors.Replication;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Routing;
@@ -46,84 +41,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/replication/conflicts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public Task GetReplicationConflicts()
+        public async Task GetReplicationConflicts()
         {
-            var docId = GetStringQueryString("docId", required: false);
-            var etag = GetLongQueryString("etag", required: false) ?? 0;
-            return string.IsNullOrWhiteSpace(docId) ?
-                GetConflictsByEtag(etag) :
-                GetConflictsForDocument(docId);
-        }
-
-        private async Task GetConflictsByEtag(long etag)
-        {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                var skip = GetStart();
-                var pageSize = GetPageSize();
-
-                var alreadyAdded = new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
-                var array = new DynamicJsonArray();
-                var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
-                foreach (var conflict in conflicts)
-                {
-                    if (alreadyAdded.Add(conflict.Id))
-                    {
-                        if (skip > 0)
-                        {
-                            skip--;
-                            continue;
-                        }
-                        if (pageSize-- <= 0)
-                            break;
-                        array.Add(new DynamicJsonValue
-                        {
-                            [nameof(GetConflictsResult.Id)] = conflict.Id,
-                            [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified
-                        });
-                    }
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["TotalResults"] = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                    [nameof(GetConflictsResult.Results)] = array
-                });
-            }
-        }
-
-        private async Task GetConflictsForDocument(string docId)
-        {
-            long maxEtag = 0;
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                var array = new DynamicJsonArray();
-                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-
-                foreach (var conflict in conflicts)
-                {
-                    if (maxEtag < conflict.Etag)
-                        maxEtag = conflict.Etag;
-
-                    array.Add(new DynamicJsonValue
-                    {
-                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector,
-                        [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc,
-                        [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified
-                    });
-                }
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(GetConflictsResult.Id)] = docId,
-                    [nameof(GetConflictsResult.LargestEtag)] = maxEtag,
-                    [nameof(GetConflictsResult.Results)] = array
-                });
-            }
+            using (var processor = new ReplicationHandlerProcessorForGetConflicts(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/replication/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
