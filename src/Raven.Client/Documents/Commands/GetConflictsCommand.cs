@@ -1,11 +1,28 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
+    public class GetConflictsOperation : IMaintenanceOperation<GetConflictsResult>
+    {
+        private readonly string _documentId;
+
+        public GetConflictsOperation(string documentId = null)
+        {
+            _documentId = documentId;
+        }
+
+        public RavenCommand<GetConflictsResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new GetConflictsCommand(_documentId);
+        }
+    }
+
     public class GetConflictsCommand : RavenCommand<GetConflictsResult>
     {
         private readonly string _id;

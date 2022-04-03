@@ -12,4 +12,11 @@ public class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetConflictSolver(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/conflicts", "GET")]
+    public async Task GetReplicationConflicts()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetConflicts(this))
+            await processor.ExecuteAsync();
+    }
 }

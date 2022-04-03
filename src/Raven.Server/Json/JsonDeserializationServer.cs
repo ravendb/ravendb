@@ -14,6 +14,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -36,7 +37,6 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Studio;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -48,6 +48,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.SqlMigration.Model;
+using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -80,6 +81,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SubscriptionWorkerOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionWorkerOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ConflictSolver> ConflictSolver = GenerateJsonDeserializationRoutine<ConflictSolver>();
+
+        public static readonly Func<BlittableJsonReaderObject, ConflictResolverAdvisor.MergeResult> ConflictSolverMergeResult = GenerateJsonDeserializationRoutine<ConflictResolverAdvisor.MergeResult>();
 
         public static readonly Func<BlittableJsonReaderObject, ScriptResolver> ScriptResolver = GenerateJsonDeserializationRoutine<ScriptResolver>();
 
@@ -226,6 +229,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, GetIndexErrorsCountCommand.IndexErrorsCount> IndexErrorsCount = GenerateJsonDeserializationRoutine<GetIndexErrorsCountCommand.IndexErrorsCount>();
 
         public static readonly Func<BlittableJsonReaderObject, LastChangeVectorForCollectionResult> LastChangeVectorForCollectionResult = GenerateJsonDeserializationRoutine<LastChangeVectorForCollectionResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, BlittableArrayResult> BlittableArrayResult = GenerateJsonDeserializationRoutine<BlittableArrayResult>();
 
         public class Parameters
         {

@@ -1,12 +1,8 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio
 {
@@ -29,21 +25,8 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task SuggestConflictResolution()
         {
-            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-                var advisor = new ConflictResolverAdvisor(conflicts.Select(c => c.Doc), context);
-                var resolved = advisor.Resolve();
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(ConflictResolverAdvisor.MergeResult.Document)] = resolved.Document,
-                    [nameof(ConflictResolverAdvisor.MergeResult.Metadata)] = resolved.Metadata
-                });
-            }
+            using (var processor = new StudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution(this))
+                await processor.ExecuteAsync();
         }
     }
 }

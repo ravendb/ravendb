@@ -22,4 +22,11 @@ public class ShardedStudioDatabaseTasksHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedStudioDatabaseTasksHandlerProcessorForGetIndexDefaults(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET")]
+    public async Task SuggestConflictResolution()
+    {
+        using (var processor = new ShardedStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution(this))
+            await processor.ExecuteAsync();
+    }
 }
