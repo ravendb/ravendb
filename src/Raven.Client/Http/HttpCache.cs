@@ -63,6 +63,11 @@ namespace Raven.Client.Http
                 this.LastServerUpdate = SystemTime.UtcNow;
             }
 
+            public void UpdateLastServerUpdate()
+            {
+                this.LastServerUpdate = SystemTime.UtcNow;
+            }
+
             public bool AddRef()
             {
                 // May return false if the memory has been already released.
