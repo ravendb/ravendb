@@ -92,8 +92,6 @@ namespace SlowTests.Issues
 
                         }
                     }
-                    WaitForUserToContinueTheTest(store);
-
                 }
 
             }

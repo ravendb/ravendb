@@ -118,17 +118,17 @@ namespace Raven.Server.Documents.Revisions
                 // note that calling the Create() method multiple times is a noop
                 RevisionsSchema.Create(tx, tableName, 16);
                 tx.LowLevelTransaction.OnDispose += _ =>
-                 {
-                     if (tx.LowLevelTransaction.Committed == false)
-                         return;
+                {
+                    if (tx.LowLevelTransaction.Committed == false) 
+                        return;
 
-                     // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
-                     // a new instance, just in case
-                     _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
-                     {
+                    // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
+                    // a new instance, just in case
+                    _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
+                    {
                          collection.Name
-                     };
-                 };
+                    };
+                };
             }
 
             var revisionsSchema = _documentsStorage.DocumentPut.DocumentsCompression.CompressRevisions ?

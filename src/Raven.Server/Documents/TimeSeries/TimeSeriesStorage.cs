@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.TimeSeries
             TableType = (byte)TableType.TimeSeries
         };
 
-        private static readonly TableSchema DeleteRangesSchema = new TableSchema();
+        internal static readonly TableSchema DeleteRangesSchema = new TableSchema();
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -73,7 +73,6 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, "CollectionDeletedRangesEtags", ByteStringType.Immutable, out CollectionDeletedRangesEtagsSlice);
                 Slice.From(ctx, "TimeSeriesBucketAndEtag", ByteStringType.Immutable, out TimeSeriesBucketAndEtagSlice);
                 Slice.From(ctx, "DeletedRangesBucketAndEtag", ByteStringType.Immutable, out DeletedRangesBucketAndEtagSlice);
-
             }
 
             TimeSeriesSchema.DefineKey(new TableSchema.IndexDef
