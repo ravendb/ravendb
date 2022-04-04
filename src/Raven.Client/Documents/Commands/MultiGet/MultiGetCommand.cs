@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
         {
             _baseUrl = $"{node.Url}/databases/{node.Database}";
             url = $"{_baseUrl}/multi_get";
-            
+
             if (MaybeReadAllFromCache(ctx, _requestExecutor.AggressiveCaching.Value))
             {
                 AggressivelyCached = true;
@@ -167,41 +167,41 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
+                var state = new JsonParserState();
+                using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
             using (context.GetMemoryBuffer(out var buffer))
-            using (var peepingTomStream = new PeepingTomStream(stream, context))
+                using (var peepingTomStream = new PeepingTomStream(stream, context))
             using (_cached)
-            {
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.StartObject) 
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (property != nameof(BlittableArrayResult.Results))
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                var i = 0;
-                Result = new List<GetResponse>(_commands.Count);
-                foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
                 {
-                    var command = _commands[i];
+                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                        ThrowInvalidJsonResponse(peepingTomStream);
 
-                    MaybeSetCache(getResponse, command);
+                    if (state.CurrentTokenType != JsonParserToken.StartObject)
+                        ThrowInvalidJsonResponse(peepingTomStream);
+
+                    var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (property != nameof(BlittableArrayResult.Results))
+                        ThrowInvalidJsonResponse(peepingTomStream);
+
+                    var i = 0;
+                Result = new List<GetResponse>(_commands.Count);
+                    foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
+                    {
+                        var command = _commands[i];
+
+                        MaybeSetCache(getResponse, command, context);
                     Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified ? new GetResponse { Result = _cached.Values[i].Cached?.Clone(context), StatusCode = HttpStatusCode.NotModified } : getResponse);
 
-                    i++;
+                        i++;
+                    }
+
+                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                        ThrowInvalidJsonResponse(peepingTomStream);
+
+                    if (state.CurrentTokenType != JsonParserToken.EndObject)
+                        ThrowInvalidJsonResponse(peepingTomStream);
                 }
-
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    ThrowInvalidJsonResponse(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    ThrowInvalidJsonResponse(peepingTomStream);
             }
-        }
 
         private static IEnumerable<GetResponse> ReadResponses(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
         {
@@ -239,7 +239,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                 if (state.CurrentTokenType != JsonParserToken.String)
                     ThrowInvalidJsonResponse(peepingTomStream);
-                
+
                 var property = context.AllocateStringValue(null, state.StringBuffer, state.StringSize).ToString();
                 switch (property)
                 {
@@ -297,12 +297,21 @@ namespace Raven.Client.Documents.Commands.MultiGet
             return getResponse;
         }
 
-        private void MaybeSetCache(GetResponse getResponse, GetRequest command)
+        private void MaybeSetCache(GetResponse getResponse, GetRequest command, JsonOperationContext context)
         {
-            if (getResponse.StatusCode == HttpStatusCode.NotModified)
-                return;
-
             var cacheKey = GetCacheKey(command, out string _);
+
+            if (getResponse.StatusCode == HttpStatusCode.NotModified)
+            {
+                // if not modified - update age
+                using var cachedItem = _httpCache.Get(context, cacheKey, out var cv, out var cached);
+                if (cachedItem.Item != null)
+                {
+                    cachedItem.Item.UpdateLastServerUpdate();
+                }
+                return;
+            }
+            
 
             var result = getResponse.Result as BlittableJsonReaderObject;
             if (result == null)
@@ -332,7 +341,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             if (_cached != null)
             {
                 _cached.Dispose();
-                _cached = null;
+            _cached = null;
 
                 // The client sends the commands.
                 // Some of which could be saved in cache with a response 
@@ -343,7 +352,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 foreach (var command in _commands)
                 {
                     command.Headers.Remove(Constants.Headers.IfNoneMatch);
-                }
+        }
             } 
         }
 
@@ -356,7 +365,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             {
                 _size = size;
                 Values = ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Rent(size);
-            }
+    }
 
             public void Dispose()
             {
@@ -365,7 +374,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 for (int i = 0; i < _size; i++)
                 {
                     Values[i].Release.Dispose();
-                }
+}
                 ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(Values);
                 Values = null;
             }
