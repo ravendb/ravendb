@@ -1,7 +1,11 @@
-﻿using System.IO.Compression;
+﻿using System;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -20,10 +24,11 @@ namespace SlowTests.Issues
 
         [Theory]
         [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
-        public void CanImportNorthwind(string file)
+        public async Task CanImportNorthwind(string file)
         {
-            using (var inputStream = GetType().Assembly.GetManifestResourceStream(file))
-            using (var stream = new GZipStream(inputStream, CompressionMode.Decompress))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            await using (var inputStream = GetType().Assembly.GetManifestResourceStream(file))
+            await using (var stream = new GZipStream(inputStream, CompressionMode.Decompress))
             {
                 Assert.NotNull(stream);
 
@@ -38,7 +43,7 @@ namespace SlowTests.Issues
                         TransformScript = "this['Test'] = 'NewValue';"
                     });
 
-                    var result = smuggler.ExecuteAsync().Result;
+                    var result = await smuggler.ExecuteAsync().WithCancellation(cts.Token);
 
                     Assert.Equal(1059, result.Documents.ReadCount);
                     Assert.Equal(0, result.Documents.SkippedCount);
