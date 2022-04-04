@@ -82,6 +82,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/expiration',
             moduleId: require('viewmodels/database/settings/expiration'),
+            shardingMode: "allShardsOnly",
             title: 'Document Expiration',
             nav: true,
             css: 'icon-document-expiration',
