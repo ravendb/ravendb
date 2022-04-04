@@ -30,7 +30,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Expiration
 {
-    public class ExpirationTests : RavenTestBase
+    public class ExpirationTests : ClusterTestBase
     {
         public ExpirationTests(ITestOutputHelper output) : base(output)
         {
@@ -305,6 +305,116 @@ namespace SlowTests.Server.Documents.Expiration
                     Assert.Equal(60, expirationConfiguration.DeleteFrequencyInSec);
                     Assert.False(expirationConfiguration.Disabled);
                 });
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task ShouldDeleteExpiredDocumentsForSharding(Options options)
+        {
+            var utcFormats = new Dictionary<string, DateTimeKind>
+            {
+                {DefaultFormat.DateTimeFormatsToRead[0], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[1], DateTimeKind.Unspecified},
+                {DefaultFormat.DateTimeFormatsToRead[2], DateTimeKind.Local},
+                {DefaultFormat.DateTimeFormatsToRead[3], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[4], DateTimeKind.Unspecified},
+                {DefaultFormat.DateTimeFormatsToRead[5], DateTimeKind.Utc},
+                {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
+            };
+            Assert.Equal(utcFormats.Count, DefaultFormat.DateTimeFormatsToRead.Length);
+
+            var database2 = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
+            await ShardingCluster.CreateShardedDatabaseInCluster(database2, replicationFactor: 2, cluster, shards: 3);
+
+            options.Server = cluster.Leader;
+            options.CreateDatabase = false;
+            options.ModifyDatabaseName = _ => database2;
+
+            var configuration = new ExpirationConfiguration
+            {
+                Disabled = false,
+                DeleteFrequencyInSec = 100
+            };
+
+            using (var store = GetDocumentStore(options))
+            {
+                foreach (var dateTimeFormat in utcFormats)
+                {
+                    await store.Maintenance.SendAsync(new ConfigureExpirationOperation(configuration));
+
+                    var expiry = DateTime.Now; // intentionally local time
+                    if (dateTimeFormat.Value == DateTimeKind.Utc)
+                        expiry = expiry.ToUniversalTime();
+
+                    var numOfDocs = 20;
+
+                    using (var session = store.OpenSession())
+                    {
+                        for (var i = 0; i < numOfDocs; i++)
+                        {
+                            var comp = new Company { Name = $"{i}" };
+                            session.Store(comp, $"company/{i}");
+                            var metadata = session.Advanced.GetMetadataFor(comp);
+                            metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat.Key);
+                        }
+                        session.SaveChanges();
+                    }
+
+                    var servers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(store, cluster.Nodes);
+
+                    while (Sharding.AllShardHaveDocs(servers) == false)
+                    {
+                        using (var session = store.OpenSession())
+                        {
+                            for (var i = numOfDocs; i < numOfDocs + 20; i++)
+                            {
+                                var comp = new Company { Name = $"{i}" };
+                                session.Store(comp, $"company/{i}");
+                                var metadata = session.Advanced.GetMetadataFor(comp);
+                                metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat.Key);
+                            }
+                            session.SaveChanges();
+                        }
+
+                        numOfDocs += 20;
+                    }
+
+                    for (var i = 0; i < numOfDocs; i++)
+                    {
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            var comp = await session.LoadAsync<Company>($"company/{i}");
+                            Assert.NotNull(comp);
+                            var metadata = session.Advanced.GetMetadataFor(comp);
+                            var expirationDate = metadata.GetString(Constants.Documents.Metadata.Expires);
+                            Assert.NotNull(expirationDate);
+                            var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                            Assert.Equal(dateTimeFormat.Value, dateTime.Kind);
+                            Assert.Equal(expiry.ToString(dateTimeFormat.Key), expirationDate);
+                        }
+                    }
+
+                    foreach (var kvp in servers)
+                    {
+                        foreach (var database in kvp.Value)
+                        {
+                            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                            var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
+                            await expiredDocumentsCleaner?.CleanupExpiredDocs()!;
+                        }
+                    }
+
+                    for (var i = 0; i < numOfDocs; i++)
+                    {
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            var company = await session.LoadAsync<Company>($"company/{i}");
+                            Assert.Null(company);
+                        }
+                    }
+                }
             }
         }
     }
