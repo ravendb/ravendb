@@ -16,6 +16,8 @@ using Sparrow.Platform;
 using Sparrow.Utils;
 using Xunit;
 using System.Text;
+using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide.Operations;
 using Xunit.Sdk;
 using ExceptionAggregator = Raven.Server.Utils.ExceptionAggregator;
 
@@ -113,28 +115,47 @@ namespace FastTests
 
         public static void AssertNoIndexErrors(IDocumentStore store, string databaseName = null)
         {
-            var errors = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexErrorsOperation());
-            StringBuilder sb = null;
-            foreach (var indexErrors in errors)
+            databaseName ??= store.Database;
+            var executor = store.Maintenance.ForDatabase(databaseName);
+            var databaseRecord = executor.Server.Send(new GetDatabaseRecordOperation(databaseName));
+
+            if (databaseRecord.IsSharded)
             {
-                if (indexErrors == null || indexErrors.Errors == null || indexErrors.Errors.Length == 0)
-                    continue;
-
-                if (sb == null)
-                    sb = new StringBuilder();
-
-                sb.AppendLine($"Index Errors for '{indexErrors.Name}' ({indexErrors.Errors.Length})");
-                foreach (var indexError in indexErrors.Errors)
+                for (var i = 0; i < databaseRecord.Shards.Length; i++)
                 {
-                    sb.AppendLine($"- {indexError}");
+                    var shardExecutor = executor.ForShard(i);
+                    AssertNoIndexErrorsInternal(shardExecutor);
                 }
-                sb.AppendLine();
+
+                return;
             }
 
-            if (sb == null)
-                return;
+            AssertNoIndexErrorsInternal(executor);
 
-            throw new InvalidOperationException(sb.ToString());
+            static void AssertNoIndexErrorsInternal(MaintenanceOperationExecutor executor)
+            {
+                var errors = executor.Send(new GetIndexErrorsOperation());
+                StringBuilder sb = null;
+                foreach (var indexErrors in errors)
+                {
+                    if (indexErrors?.Errors == null || indexErrors.Errors.Length == 0)
+                        continue;
+
+                    sb ??= new StringBuilder();
+
+                    sb.AppendLine($"Index Errors for '{indexErrors.Name}' ({indexErrors.Errors.Length})");
+                    foreach (var indexError in indexErrors.Errors)
+                    {
+                        sb.AppendLine($"- {indexError}");
+                    }
+                    sb.AppendLine();
+                }
+
+                if (sb == null)
+                    return;
+
+                throw new InvalidOperationException(sb.ToString());
+            }
         }
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
@@ -189,7 +210,7 @@ namespace FastTests
                 throw new XunitException(await massageFactory() + Environment.NewLine + e.Message);
             }
         }
-        
+
         private static string ConvertRespectingNewLines(string toConvert)
         {
             if (string.IsNullOrEmpty(toConvert))

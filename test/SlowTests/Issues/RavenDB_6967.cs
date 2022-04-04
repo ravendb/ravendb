@@ -1,9 +1,12 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,16 +18,22 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanDeleteIndexErrors()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDeleteIndexErrors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                store.Maintenance.Send(new DeleteIndexErrorsOperation());
+                var deleteAllIndexErrors = store.Maintenance.ForTesting(() => new DeleteIndexErrorsOperation());
+                await deleteAllIndexErrors.ExecuteOnAllAsync();
 
-                Assert.Throws<IndexDoesNotExistException>(() => store.Maintenance.Send(new DeleteIndexErrorsOperation(new[] { "DoesNotExist" })));
+                var deleteIndexErrors2 = store.Maintenance.ForTesting(() => new DeleteIndexErrorsOperation(new[] { "DoesNotExist" }));
+                await deleteIndexErrors2.ExecuteOnAllAsync(async task =>
+                {
+                    await Assert.ThrowsAsync<IndexDoesNotExistException>(() => task);
+                });
 
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = "Index1", Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } } }));
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = "Index2", Maps = { "from doc in docs let x = 0 select new { Total = 4/x };" } } }));
@@ -34,52 +43,90 @@ namespace SlowTests.Issues
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                store.Maintenance.Send(new DeleteIndexErrorsOperation());
+                deleteAllIndexErrors = store.Maintenance.ForTesting(() => new DeleteIndexErrorsOperation());
+                await deleteAllIndexErrors.ExecuteOnAllAsync();
 
-                store.Maintenance.Send(new DeleteIndexErrorsOperation(new[] { "Index1", "Index2", "Index3" }));
+                var deleteIndexErrors3 = store.Maintenance.ForTesting(() => new DeleteIndexErrorsOperation(new[] { "Index1", "Index2", "Index3" }));
+                await deleteIndexErrors3.ExecuteOnAllAsync();
 
-                Assert.Throws<IndexDoesNotExistException>(() => store.Maintenance.Send(new DeleteIndexErrorsOperation(new[] { "Index1", "DoesNotExist" })));
+                var deleteIndexErrors4 = store.Maintenance.ForTesting(() => new DeleteIndexErrorsOperation(new[] { "Index1", "DoesNotExist" }));
+                await deleteIndexErrors4.ExecuteOnAllAsync(async task =>
+                {
+                    await Assert.ThrowsAsync<IndexDoesNotExistException>(() => task);
+                });
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Company());
-                    session.Store(new Company());
-                    session.Store(new Company());
+                    for (var i = 0; i < 10; i++)
+                        session.Store(new Company());
 
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexingErrors(store, new [] { "Index1", "Index2", "Index3" });
+                Indexes.WaitForIndexingErrors(store, new[] { "Index1", "Index2", "Index3" });
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                var stopIndexing = store.Maintenance.ForTesting(() => new StopIndexingOperation());
+                await stopIndexing.ExecuteOnAllAsync();
 
-                var indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index1" }));
-                var indexErrors2 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index2" }));
-                var indexErrors3 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index3" }));
+                var indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index1" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.NotEmpty(errors.SelectMany(x => x.Errors));
+                });
 
-                Assert.NotEmpty(indexErrors1.SelectMany(x => x.Errors));
-                Assert.NotEmpty(indexErrors2.SelectMany(x => x.Errors));
-                Assert.NotEmpty(indexErrors3.SelectMany(x => x.Errors));
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index2" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.NotEmpty(errors.SelectMany(x => x.Errors));
+                });
 
-                store.Maintenance.Send(new DeleteIndexErrorsOperation(new[] { "Index2" }));
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index3" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.NotEmpty(errors.SelectMany(x => x.Errors));
+                });
 
-                indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index1" }));
-                indexErrors2 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index2" }));
-                indexErrors3 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index3" }));
+                var deleteIndexErrorsForIndex2 = store.Maintenance.ForTesting(() => new DeleteIndexErrorsOperation(new[] { "Index2" }));
+                await deleteIndexErrorsForIndex2.ExecuteOnAllAsync();
 
-                Assert.NotEmpty(indexErrors1.SelectMany(x => x.Errors));
-                Assert.Empty(indexErrors2.SelectMany(x => x.Errors));
-                Assert.NotEmpty(indexErrors3.SelectMany(x => x.Errors));
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index1" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.NotEmpty(errors.SelectMany(x => x.Errors));
+                });
 
-                store.Maintenance.Send(new DeleteIndexErrorsOperation());
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index2" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.Empty(errors.SelectMany(x => x.Errors));
+                });
 
-                indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index1" }));
-                indexErrors2 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index2" }));
-                indexErrors3 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index3" }));
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index3" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.NotEmpty(errors.SelectMany(x => x.Errors));
+                });
 
-                Assert.Empty(indexErrors1.SelectMany(x => x.Errors));
-                Assert.Empty(indexErrors2.SelectMany(x => x.Errors));
-                Assert.Empty(indexErrors3.SelectMany(x => x.Errors));
+                deleteAllIndexErrors = store.Maintenance.ForTesting(() => new DeleteIndexErrorsOperation());
+                await deleteAllIndexErrors.ExecuteOnAllAsync();
+
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index1" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.Empty(errors.SelectMany(x => x.Errors));
+                });
+
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index2" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.Empty(errors.SelectMany(x => x.Errors));
+                });
+
+                indexErrors = store.Maintenance.ForTesting(() => new GetIndexErrorsOperation(new[] { "Index3" }));
+                await indexErrors.AssertAllAsync((_, errors) =>
+                {
+                    Assert.Empty(errors.SelectMany(x => x.Errors));
+                });
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }

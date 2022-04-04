@@ -30,17 +30,23 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         _factoryWithoutResult = factory ?? throw new ArgumentNullException(nameof(factory));
     }
 
-    public async Task ExecuteOnAllAsync()
+    public async Task ExecuteOnAllAsync(Func<Task, Task> assert = null)
     {
-        await foreach (var _ in ExecuteAsync())
+        await foreach (var (key, executor) in ExecuteAsync())
         {
-            // just executing
+            if (assert == null)
+            {
+                await executor.SendAsync(_factoryWithoutResult());
+                continue;
+            }
+
+            await assert(executor.SendAsync(_factoryWithoutResult()));
         }
     }
 
     public void ExecuteOnAll()
     {
-        AsyncHelpers.RunSync(ExecuteOnAllAsync);
+        AsyncHelpers.RunSync(() => ExecuteOnAllAsync());
     }
 
     public async Task AssertAllAsync(Action<Key, TResult> assert)
@@ -90,7 +96,7 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         }
     }
 
-    private async IAsyncEnumerable<Key> ExecuteAsync()
+    private async IAsyncEnumerable<(Key Key, MaintenanceOperationExecutor Executor)> ExecuteAsync()
     {
         _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
         if (_databaseRecord.IsSharded)
@@ -103,9 +109,8 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
                 {
                     var shardKey = nKey.ForShard(i);
                     var shardExecutor = nExecutor.ForShard(i);
-                    await shardExecutor.SendAsync(_factoryWithoutResult());
 
-                    yield return shardKey;
+                    yield return (shardKey, shardExecutor);
                 }
             }
 
@@ -114,8 +119,7 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
 
         foreach (var (key, executor) in GetExecutors(_databaseRecord.Topology))
         {
-            await executor.SendAsync(_factoryWithoutResult());
-            yield return key;
+            yield return (key, executor);
         }
     }
 
@@ -166,7 +170,7 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
 
 public interface IMaintenanceOperationExecutorActionTester
 {
-    Task ExecuteOnAllAsync();
+    Task ExecuteOnAllAsync(Func<Task, Task> assert = null);
 
     void ExecuteOnAll();
 }
