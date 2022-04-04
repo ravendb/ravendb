@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
@@ -6,8 +5,9 @@ import messagePublisher = require("common/messagePublisher");
 import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
 import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class expiration extends viewModelBase {
+class expiration extends shardViewModelBase {
 
     view = require("views/database/settings/expiration.html");
 
@@ -33,8 +33,8 @@ class expiration extends viewModelBase {
     
     validationGroup: KnockoutValidationGroup;
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         this.specifyDeleteFrequency.subscribe(enabled => {
             if (!enabled) {
@@ -56,9 +56,9 @@ class expiration extends viewModelBase {
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
 
-                this.fetchConfiguration(this.activeDatabase())
+                this.fetchConfiguration(this.db)
                     .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
+                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.db) }));
 
                 return deferred;
             });
@@ -126,7 +126,7 @@ class expiration extends viewModelBase {
             eventsCollector.default.reportEvent("expiration-configuration", "save");
 
             const dto = this.toDto();
-            const db = this.activeDatabase();
+            const db = this.db;
 
             new saveExpirationConfigurationCommand(db, dto)
                 .execute()
