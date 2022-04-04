@@ -13,7 +13,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.Counters;
 using Raven.Server.Routing;
@@ -600,39 +599,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var processor = new CountersHandlerProcessorForPostCounters(this))
             {
-                var countersBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "counters");
-
-                var counterBatch = JsonDeserializationClient.CounterBatch(countersBlittable);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(countersBlittable.ToString(), TrafficWatchChangeType.Counters);
-                var cmd = new ExecuteCounterBatchCommand(Database, counterBatch);
-
-                if (cmd.HasWrites)
-                {
-                    try
-                    {
-                        await Database.TxMerger.Enqueue(cmd);
-                    }
-                    catch (DocumentDoesNotExistException)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        throw;
-                    }
-                }
-                else
-                {
-                    using (context.OpenReadTransaction())
-                    {
-                        cmd.ExecuteDirectly(context);
-                    }
-                }
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, cmd.CountersDetail.ToJson());
-                }
+                await processor.ExecuteAsync();
             }
         }
 
