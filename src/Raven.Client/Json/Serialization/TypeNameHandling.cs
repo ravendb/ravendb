@@ -3,6 +3,7 @@
     public enum TypeNameHandling
     {
         None,
-        Objects
+        Objects,
+        Auto
     }
 }
