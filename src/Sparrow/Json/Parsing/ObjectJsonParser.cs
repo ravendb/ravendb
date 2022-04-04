@@ -516,7 +516,26 @@ namespace Sparrow.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.String;
                     return true;
                 }
+                
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                if (current is TimeOnly timeOnly)
+                {
+                    var s = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite);
 
+                    SetStringBuffer(s);
+                    _state.CurrentTokenType = JsonParserToken.String;
+                    return true;
+                }
+                
+                if (current is DateOnly dateOnly)
+                {
+                    var s = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite);
+
+                    SetStringBuffer(s);
+                    _state.CurrentTokenType = JsonParserToken.String;
+                    return true;
+                }
+#endif
                 if (current is decimal d2)
                 {
                     var d = (decimal)current;

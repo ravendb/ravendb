@@ -192,13 +192,13 @@ namespace Raven.Client.Documents.Smuggler
             {
                 var filePath = Path.Combine(fromDirectory, files[i]);
                 var op = await ImportAsync(options, filePath, cancellationToken).ConfigureAwait(false);
-                await op.WaitForCompletionAsync().ConfigureAwait(false);
+                await op.WaitForCompletionAsync().WithCancellation(cancellationToken).ConfigureAwait(false);
             }
             options.OperateOnTypes = oldOperateOnTypes;
 
             var lastFilePath = Path.Combine(fromDirectory, files.Last());
             var operation = await ImportAsync(options, lastFilePath, cancellationToken).ConfigureAwait(false);
-            await operation.WaitForCompletionAsync().ConfigureAwait(false);
+            await operation.WaitForCompletionAsync().WithCancellation(cancellationToken).ConfigureAwait(false);
         }
 
         internal static DatabaseItemType ConfigureOptionsForIncrementalImport(DatabaseSmugglerOptions options)

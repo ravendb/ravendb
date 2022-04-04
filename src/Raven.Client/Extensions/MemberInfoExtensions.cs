@@ -79,8 +79,7 @@ namespace Raven.Client.Extensions
                 var propertyInfo = (PropertyInfo)memberInfo;
                 if (typeof(T).IsValueType)
                 {
-                    SetStructValue(propertyInfo.Name, propertyInfo.PropertyType, ref entity, value);
-                    return;
+                    throw new NotSupportedException("Properties are not allowed when using Struct. Use Fields instead.");
                 }
                 propertyInfo.SetValue(entity, value);
                 return;

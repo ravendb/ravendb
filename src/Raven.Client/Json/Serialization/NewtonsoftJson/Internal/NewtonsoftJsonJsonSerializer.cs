@@ -15,6 +15,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             return Deserialize<T>((BlittableJsonReader)reader);
         }
 
+        void IJsonSerializer.Serialize(IJsonWriter writer, object value, Type objectType)
+        {
+            Serialize((BlittableJsonWriter)writer, value, objectType);
+        }
+        
         void IJsonSerializer.Serialize(IJsonWriter writer, object value)
         {
             Serialize((BlittableJsonWriter)writer, value);
@@ -32,6 +37,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     break;
                 case TypeNameHandling.Objects:
                     jsonSerializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Objects;
+                    break;
+                case TypeNameHandling.Auto:
+                    jsonSerializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto;
                     break;
             }
         }

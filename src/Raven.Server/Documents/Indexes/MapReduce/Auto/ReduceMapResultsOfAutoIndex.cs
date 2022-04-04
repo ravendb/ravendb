@@ -14,18 +14,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
     public unsafe class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
     {
+        private BlittableJsonReaderObject _currentlyProcessedResult;
         public ReduceMapResultsOfAutoIndex(Index index, AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
             : base(index, indexDefinition, indexStorage, metrics, mapReduceContext)
         {
         }
 
-        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
+        protected override BlittableJsonReaderObject CurrentlyProcessedResult => _currentlyProcessedResult;
+
+        protected override AggregationResult AggregateOnImpl(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
         {
             var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 
             foreach (var obj in aggregationBatch)
             {
                 token.ThrowIfCancellationRequested();
+
+                _currentlyProcessedResult = obj;
 
                 var aggregatedResult = new Dictionary<string, PropertyResult>();
 
