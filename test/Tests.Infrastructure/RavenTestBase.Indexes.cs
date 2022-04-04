@@ -210,7 +210,7 @@ public partial class RavenTestBase
                 List<string> shardNames = ShardHelper.GetShardNames(databaseName, databaseRecord.Shards.Length).ToList();
                 foreach (var name in shardNames)
                 {
-                    shardsDict.TryAdd(name, toWait);
+                    shardsDict.TryAdd(name, toWait.ToHashSet(StringComparer.OrdinalIgnoreCase));
                 }
             }
 
