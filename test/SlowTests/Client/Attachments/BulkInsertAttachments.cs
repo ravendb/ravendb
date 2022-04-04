@@ -25,10 +25,10 @@ namespace SlowTests.Client.Attachments
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
         [RavenData(1, 32 * 1024, DatabaseMode = RavenDatabaseMode.All)]
-        //[RavenData(100, 1 * 1024 * 1024, DatabaseMode = RavenDatabaseMode.All)] TODO arek
-        //[RavenData(100, 256 * 1024, DatabaseMode = RavenDatabaseMode.All)]
-        //[RavenData(200, 128 * 1024, DatabaseMode = RavenDatabaseMode.All)]
-        //[RavenData(1000, 16 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(100, 1 * 1024 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(100, 256 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(200, 128 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(1000, 16 * 1024, DatabaseMode = RavenDatabaseMode.All)]
         public async Task StoreManyAttachments(Options options, int count, int size)
         {
             using (var store = GetDocumentStore(options))

@@ -216,7 +216,7 @@ namespace Raven.Server.Documents
 
             public override long Position
             {
-                get => throw new NotSupportedException();
+                get => _file.Position + _startPosition;
                 set => Seek(value, SeekOrigin.Begin);
             }
         }
