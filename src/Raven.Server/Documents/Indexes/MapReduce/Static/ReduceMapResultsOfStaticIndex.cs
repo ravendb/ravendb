@@ -25,8 +25,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             _reducingFunc = reducingFunc;
             _indexType = index.Type;
         }
-        
-        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
+
+        protected override BlittableJsonReaderObject CurrentlyProcessedResult => _blittableToDynamicWrapper.Current;
+
+        protected override AggregationResult AggregateOnImpl(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
         {
             _blittableToDynamicWrapper.InitializeForEnumeration(aggregationBatch);
             
@@ -67,6 +69,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 return GetEnumerator();
             }
+
+            public BlittableJsonReaderObject Current => _enumerator.Current?.BlittableJson;
 
             private class Enumerator : IEnumerator<DynamicBlittableJson>
             {

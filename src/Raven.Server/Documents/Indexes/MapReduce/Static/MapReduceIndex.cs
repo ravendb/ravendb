@@ -701,6 +701,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                 writer.WriteValue(val);
                                 break;
 
+                            case TimeOnly val:
+                                writer.WriteValue(val);
+                                break;
+                            
+                            case DateOnly val:
+                                writer.WriteValue(val);
+                                break;
+                            
                             case BlittableJsonReaderObject val:
                                 var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 

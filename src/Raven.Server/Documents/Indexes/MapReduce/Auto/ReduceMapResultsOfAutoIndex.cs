@@ -14,23 +14,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
     public unsafe class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
     {
+        private BlittableJsonReaderObject _currentlyProcessedResult;
         public ReduceMapResultsOfAutoIndex(Index index, AutoMapReduceIndexDefinition indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
             : base(index, indexDefinition, indexStorage, metrics, mapReduceContext)
         {
         }
 
-        protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
+        protected override BlittableJsonReaderObject CurrentlyProcessedResult => _currentlyProcessedResult;
+
+        protected override AggregationResult AggregateOnImpl(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
         {
-            return AggregateOn(aggregationBatch, _indexDefinition, indexContext, stats, token);
+            return AggregateOn(aggregationBatch, _indexDefinition, indexContext, stats, ref _currentlyProcessedResult, token);
         }
 
-        public static AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
+        public static AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
         {
             var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 
             foreach (var obj in aggregationBatch)
             {
                 token.ThrowIfCancellationRequested();
+
+                currentlyProcessedResult = obj;
 
                 var aggregatedResult = new Dictionary<string, PropertyResult>();
 

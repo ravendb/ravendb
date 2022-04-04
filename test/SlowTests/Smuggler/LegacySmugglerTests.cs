@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -26,20 +27,21 @@ namespace SlowTests.Smuggler
         [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
         public async Task CanImportNorthwind(string file)
         {
-            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            await using (var stream = GetType().Assembly.GetManifestResourceStream(file))
             using (var store = GetDocumentStore())
             {
                 Assert.NotNull(stream);
 
-                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream, cts.Token);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation(), cts.Token);
 
                 Assert.Equal(1059, stats.CountOfDocuments);
                 Assert.Equal(3, stats.CountOfIndexes); // there are 4 in ravendbdump, but Raven/DocumentsByEntityName is skipped
 
-                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation(), cts.Token);
                 Assert.Equal(1059, collectionStats.CountOfDocuments);
                 Assert.Equal(9, collectionStats.Collections.Count);
                 Assert.Equal(8, collectionStats.Collections["Categories"]);
@@ -52,9 +54,9 @@ namespace SlowTests.Smuggler
                 Assert.Equal(29, collectionStats.Collections["Suppliers"]);
                 Assert.Equal(8, collectionStats.Collections["@hilo"]);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var order = session.Load<Order>("orders/1");
+                    var order = await session.LoadAsync<Order>("orders/1", cts.Token);
                     Assert.NotNull(order);
 
                     var metadata = session.Advanced.GetMetadataFor(order);
