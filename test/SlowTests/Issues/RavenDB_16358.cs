@@ -1,23 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Server;
-using Raven.Server.Documents;
-using Raven.Server.Documents.TimeSeries;
-using Raven.Server.ServerWide.Context;
-using Raven.Tests.Core.Utils.Entities;
-using Raven.Server.Config;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,7 +34,7 @@ namespace SlowTests.Issues
 
             Assert.Equal(requests, requestExecutor.NumberOfServerRequests);
 
-            await Task.Delay(3000); // cache timed out
+            await Task.Delay(500); // cache timed out
 
             await LoadDataAsync(store);
 
@@ -65,7 +50,7 @@ namespace SlowTests.Issues
         private async Task LoadDataAsync(IDocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(2)))
+            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMilliseconds(300)))
             {
                 var docLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
                 var doc = await docLazy.Value;
@@ -92,7 +77,7 @@ namespace SlowTests.Issues
 
             Assert.Equal(requests, requestExecutor.NumberOfServerRequests);
 
-            Thread.Sleep(3000); // cache timed out
+            Thread.Sleep(500); // cache timed out
 
             LoadData(store); 
 
@@ -108,20 +93,16 @@ namespace SlowTests.Issues
         private void LoadData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(2)))
+            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMilliseconds(300)))
             {
                 var docLazy = session.Advanced.Lazily.Load<Doc>("doc-1");
                 var doc = docLazy.Value;
             }
         }
 
-        public class Doc
+        private class Doc
         {
             public string Id { get; set; }
         }
-
-
-
     }
-
 }
