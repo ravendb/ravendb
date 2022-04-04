@@ -12,6 +12,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Handlers.BulkInsert;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Sharding.Operations.BulkInsert;
@@ -24,15 +25,17 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     private readonly ShardedDatabaseContext _databaseContext;
     private readonly TransactionOperationContext _context;
     private readonly CancellationToken _token;
-    private readonly BulkInsertOperation.BulkInsertStreamExposerContent[] _streamExposerPerShard;
+    private readonly BulkInsertOperation.BulkInsertStreamExposerContent[] _streamExposers;
     private readonly MemoryStream[] _currentWriters;
     private readonly MemoryStream[] _backgroundWriters;
     private readonly Task[] _asyncWrites;
     private readonly DisposeOnceAsync<SingleAttempt>[] _disposeOnce;
+    private readonly JsonOperationContext.MemoryBuffer[] _memoryBuffers;
+    private readonly JsonOperationContext.MemoryBuffer[] _backgroundMemoryBuffers;
+    private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer[] _returnMemoryBuffers;
 
-    private Stream[] _requestBodyStreamPerShard;
+    private Stream[] _requestBodyStreams;
     private readonly bool[] _first;
-
 
     public ShardedBulkInsertOperation(long id, bool skipOverwriteIfUnchanged, ShardedDatabaseContext databaseContext, TransactionOperationContext context, CancellationToken token)
     {
@@ -42,15 +45,18 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
         _context = context;
         _token = token;
 
-        _streamExposerPerShard = new BulkInsertOperation.BulkInsertStreamExposerContent[databaseContext.ShardCount];
+        _streamExposers = new BulkInsertOperation.BulkInsertStreamExposerContent[databaseContext.ShardCount];
         _currentWriters = new MemoryStream[databaseContext.ShardCount];
         _backgroundWriters = new MemoryStream[databaseContext.ShardCount];
         _asyncWrites = new Task[databaseContext.ShardCount];
         _first = new bool[databaseContext.ShardCount];
+        _memoryBuffers = new JsonOperationContext.MemoryBuffer[databaseContext.ShardCount];
+        _backgroundMemoryBuffers = new JsonOperationContext.MemoryBuffer[databaseContext.ShardCount];
+        _returnMemoryBuffers = new JsonOperationContext.MemoryBuffer.ReturnBuffer[databaseContext.ShardCount];
 
         for (int i = 0; i < databaseContext.ShardCount; i++)
         {
-            _streamExposerPerShard[i] = new BulkInsertOperation.BulkInsertStreamExposerContent();
+            _streamExposers[i] = new BulkInsertOperation.BulkInsertStreamExposerContent();
             _currentWriters[i] = new MemoryStream();
             _backgroundWriters[i] = new MemoryStream();
             _asyncWrites[i] = Task.CompletedTask;
@@ -67,25 +73,25 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
             {
                 try
                 {
-                    if (_streamExposerPerShard[shardNumber].IsDone)
+                    if (_streamExposers[shardNumber].IsDone)
                         return;
 
-                    if (_requestBodyStreamPerShard?[shardNumber] != null)
+                    if (_requestBodyStreams?[shardNumber] != null)
                     {
                         _currentWriters[shardNumber].WriteByte((byte)']');
                         _currentWriters[shardNumber].Flush();
                         await _asyncWrites[shardNumber];
 
-                        _currentWriters[shardNumber].TryGetBuffer(out var buffer);
-                        await _requestBodyStreamPerShard[shardNumber].WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
-                        await _requestBodyStreamPerShard[shardNumber].FlushAsync(_token);
+                        await WriteToStreamAsync(_currentWriters[shardNumber], _requestBodyStreams[shardNumber], _memoryBuffers[shardNumber]);
+                        await _requestBodyStreams[shardNumber].FlushAsync(_token);
                     }
 
-                    _streamExposerPerShard[shardNumber].Done();
+                    _streamExposers[shardNumber].Done();
                 }
                 finally
                 {
-                    _streamExposerPerShard[shardNumber]?.Dispose();
+                    _streamExposers[shardNumber]?.Dispose();
+                    _returnMemoryBuffers[shardNumber].Dispose();
                 }
             });
         }
@@ -97,10 +103,10 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
     public RavenCommand<HttpResponseMessage> CreateCommandForShard(int shardNumber)
     {
-        return new BulkInsertOperation.BulkInsertCommand(OperationId, _streamExposerPerShard[shardNumber], null, _skipOverwriteIfUnchanged);
+        return new BulkInsertOperation.BulkInsertCommand(OperationId, _streamExposers[shardNumber], null, _skipOverwriteIfUnchanged);
     }
 
-    protected override bool HasStream => _requestBodyStreamPerShard != null;
+    protected override bool HasStream => _requestBodyStreams != null;
 
     protected override Task WaitForId()
     {
@@ -113,31 +119,45 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
         int shardNumber = _databaseContext.GetShardNumber(_context, id);
 
-        if (_first[shardNumber] == false)
-        {
+        if (_first[shardNumber] == false) 
             _currentWriters[shardNumber].WriteByte((byte)',');
-        }
 
         _first[shardNumber] = false;
 
-        command.Stream.Position = 0;
-        await command.Stream.CopyToAsync(_currentWriters[shardNumber], _token);
+        await WriteToStreamAsync(command.Stream, _currentWriters[shardNumber], _memoryBuffers[shardNumber]);
 
         if (command.AttachmentStream.Stream != null)
         {
-            command.AttachmentStream.Stream.Position = 0;
-            await command.AttachmentStream.Stream.CopyToAsync(_currentWriters[shardNumber], _token);
+            await FlushIfNeeded(shardNumber, force: true);
+            await WriteToStreamAsync(command.AttachmentStream.Stream, _requestBodyStreams[shardNumber], _memoryBuffers[shardNumber]);
         }
-
-        await FlushIfNeeded(shardNumber);
+        else
+        {
+            await FlushIfNeeded(shardNumber);
+        }
     }
 
-    private async Task FlushIfNeeded(int shardNumber)
+    private async Task WriteToStreamAsync(Stream src, Stream dst, JsonOperationContext.MemoryBuffer buffer)
+    {
+        src.Seek(0, SeekOrigin.Begin);
+
+        while (true)
+        {
+            int bytesRead = await src.ReadAsync(buffer.Memory.Memory, _token);
+
+            if (bytesRead == 0)
+                break;
+
+            await dst.WriteAsync(buffer.Memory.Memory[..bytesRead], _token);
+        }
+    }
+
+    private async Task FlushIfNeeded(int shardNumber, bool force = false)
     {
         await _currentWriters[shardNumber].FlushAsync(_token);
 
         if (_currentWriters[shardNumber].Position > MaxSizeInBuffer ||
-            _asyncWrites[shardNumber].IsCompleted)
+            _asyncWrites[shardNumber].IsCompleted || force)
         {
             await _asyncWrites[shardNumber].ConfigureAwait(false);
 
@@ -145,8 +165,12 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
             _currentWriters[shardNumber] = _backgroundWriters[shardNumber];
             _backgroundWriters[shardNumber] = tmp;
             _currentWriters[shardNumber].SetLength(0);
-            tmp.TryGetBuffer(out var buffer);
-            _asyncWrites[shardNumber] = _requestBodyStreamPerShard[shardNumber].WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+
+            var tmpBuffer = _memoryBuffers[shardNumber];
+            _memoryBuffers[shardNumber] = _backgroundMemoryBuffers[shardNumber];
+            _backgroundMemoryBuffers[shardNumber] = tmpBuffer;
+
+            _asyncWrites[shardNumber] = WriteToStreamAsync(tmp, _requestBodyStreams[shardNumber], tmpBuffer); 
         }
     }
 
@@ -156,28 +180,34 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
         {
             for (int shardNumber = 0; shardNumber < _databaseContext.ShardCount; shardNumber++)
             {
-                _streamExposerPerShard[shardNumber].Headers.ContentEncoding.Add("gzip");
+                _streamExposers[shardNumber].Headers.ContentEncoding.Add("gzip");
             }
         }
 
         BulkInsertExecuteTask = _databaseContext.ShardExecutor.ExecuteParallelForAllAsync(this);
 
-        await Task.WhenAll(_streamExposerPerShard.Select(x => x.OutputStream));
+        await Task.WhenAll(_streamExposers.Select(x => x.OutputStream));
 
-        _requestBodyStreamPerShard = new Stream[_streamExposerPerShard.Length];
+        _requestBodyStreams = new Stream[_streamExposers.Length];
 
         for (int shardNumber = 0; shardNumber < _databaseContext.ShardCount; shardNumber++)
         {
-            var stream = await _streamExposerPerShard[shardNumber].OutputStream;
+            var stream = await _streamExposers[shardNumber].OutputStream;
 
             if (CompressionLevel != CompressionLevel.NoCompression)
             {
                 stream = new GZipStream(stream, CompressionLevel, leaveOpen: true);
             }
 
-            _requestBodyStreamPerShard[shardNumber] = stream;
+            _requestBodyStreams[shardNumber] = stream;
 
             _currentWriters[shardNumber].WriteByte((byte)'[');
+
+            _returnMemoryBuffers[shardNumber] = _context.GetMemoryBuffer(out var memoryBuffer);
+            _memoryBuffers[shardNumber] = memoryBuffer;
+
+            _context.GetMemoryBuffer(out var backgroundMemoryBuffer);
+            _backgroundMemoryBuffers[shardNumber] = backgroundMemoryBuffer;
         }
     }
 
@@ -217,7 +247,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
         for (int i = 0; i < _databaseContext.ShardCount; i++)
         {
-            disposeRequests.Execute(_requestBodyStreamPerShard?[i]);
+            disposeRequests.Execute(_requestBodyStreams?[i]);
         }
 
         disposeOperations.ThrowIfNeeded();

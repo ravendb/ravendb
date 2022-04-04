@@ -36,21 +36,20 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
 
     protected override async ValueTask ExecuteCommands(Task currentTask, int numberOfCommands, ShardedBatchCommandData[] array, long totalSize)
     {
-        foreach (var readCommand in array)
+        for (int i = 0; i < numberOfCommands; i++)
         {
-            if (readCommand is null)
-                break;
+            var command = array[i];
 
-            using (readCommand)
+            using (command)
             {
-                await _operation.StoreAsync(readCommand, readCommand.Data.Id);
+                await _operation.StoreAsync(command, command.Data.Id);
             }
         }
     }
 
     protected override StreamsTempFile GetTempFile()
     {
-        return RequestHandler.ServerStore.GetTempFile("attachment", "sharded");
+        return RequestHandler.ServerStore.GetTempFile("attachment", "sharded-bulk-insert");
     }
 
     protected override async ValueTask<string> CopyAttachmentStream(Stream stream, Stream attachmentStream)
@@ -68,10 +67,12 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
     {
         base.Dispose();
 
-        await using (_operation)
         using (_returnContext)
         {
+            await using (_operation)
+            {
 
+            }
         }
 
         _cts.Dispose();
