@@ -189,7 +189,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     {
                         var command = _commands[i];
 
-                        MaybeSetCache(getResponse, command, context);
+                        MaybeSetCache(getResponse, command, i);
                     Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified ? new GetResponse { Result = _cached.Values[i].Cached?.Clone(context), StatusCode = HttpStatusCode.NotModified } : getResponse);
 
                         i++;
@@ -297,22 +297,16 @@ namespace Raven.Client.Documents.Commands.MultiGet
             return getResponse;
         }
 
-        private void MaybeSetCache(GetResponse getResponse, GetRequest command, JsonOperationContext context)
+        private void MaybeSetCache(GetResponse getResponse, GetRequest command, int cachedIndex)
         {
-            var cacheKey = GetCacheKey(command, out string _);
-
             if (getResponse.StatusCode == HttpStatusCode.NotModified)
             {
                 // if not modified - update age
-                using var cachedItem = _httpCache.Get(context, cacheKey, out var cv, out var cached);
-                if (cachedItem.Item != null)
-                {
-                    cachedItem.Item.UpdateLastServerUpdate();
-                }
+                _cached?.Values[cachedIndex].Release.NotModified();
                 return;
             }
-            
 
+            var cacheKey = GetCacheKey(command, out string _);
             var result = getResponse.Result as BlittableJsonReaderObject;
             if (result == null)
             {
