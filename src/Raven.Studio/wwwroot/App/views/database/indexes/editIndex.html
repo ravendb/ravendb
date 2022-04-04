@@ -556,7 +556,11 @@
             <div class="col-xs-12 col-sm-12 col-xl-7">
                 <div class="properties-container">
                     <div class="properties-item">
-                        <span class="properties-label">Store</span>
+                        <span class="properties-label">Store
+                            <a class="store-field-info margin-left margin-left-sm" data-toggle="tooltip" data-bind="visible: showStoreInfo">
+                                <i class="icon-info text-warning"></i>
+                            </a>
+                        </span>
                         <div class="btn-group properties-value" data-bind="validationElement: indexOrStore">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                                 <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
