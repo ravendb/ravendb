@@ -48,8 +48,6 @@ namespace SlowTests.Issues
             var firstNode = record.Topology.Members.First();
             var firstServer = nodes.Single(n => n.ServerStore.NodeTag == firstNode);
 
-            WaitForUserToContinueTheTest(store);
-
             await DisposeServerAndWaitForFinishOfDisposalAsync(firstServer);
 
             using (var session = store.OpenAsyncSession())
