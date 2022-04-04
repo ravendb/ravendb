@@ -56,23 +56,29 @@ class domainInfo {
                                                         }
                                                     });
                              };
-        
+
         this.domain.extend({
             required: true,
-            pattern: {
-                params: "^[a-zA-Z0-9-]+$",
-                message: "Domain name can only contain A-Z, a-z, 0-9, '-'"
-            },
-            validation: {
-                message: "Sorry, domain name is taken.",
-                async: true,
-                onlyIf: () => !!this.domain(),
-                validator: generalUtils.debounceAndFunnel(checkDomain)
-            }
+            validation: [
+                {
+                    validator: (val: string) => /^[a-zA-Z0-9-]+$/.test(val),
+                    message: "Domain name can only contain A-Z, a-z, 0-9, '-'"
+                },
+                {
+                    validator: (val: string) => !val.startsWith("-") && !val.endsWith("-"),
+                    message: "Domain name cannot start or end with '-'"
+                },
+                {
+                    message: "Sorry, domain name is taken.",
+                    async: true,
+                    onlyIf: () => !!this.domain(),
+                    validator: generalUtils.debounceAndFunnel(checkDomain)
+                }
+            ]
         });
 
         this.rootDomain.extend({
-            required: true            
+            required: true
         });
         
         this.userEmail.extend({

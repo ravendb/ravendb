@@ -412,7 +412,6 @@ namespace Raven.Server.Documents.Queries.Parser
             // Lines where Name = 'Chang' select Product
 
             isImplicit = false;
-            SynteticWithQuery prev = default;
             alias = default;
             field = null;
             var start = Scanner.Position;
@@ -486,7 +485,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (gq.HasAlias(alias))
                         return true;
 
-                    if (_synteticWithQueries?.TryGetValue(alias, out prev) == true && !prev.IsEdge)
+                    if (_synteticWithQueries?.TryGetValue(alias, out SynteticWithQuery prev) == true && !prev.IsEdge)
                         return true;
 
                     AddWithQuery(collection, null, alias, null, isEdge, start, true);
