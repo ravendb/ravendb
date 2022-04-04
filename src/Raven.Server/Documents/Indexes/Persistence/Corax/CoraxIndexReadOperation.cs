@@ -73,22 +73,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     ? queryTimings.For(nameof(QueryTimingsScope.Names.Highlightings), start: false)
                     : null;
             }
-            
+
             IQueryMatch queryMatch;
-            using(coraxScope?.Start())
-                {
-                    if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take)) is null)
+            Dictionary<string, object> queryData = new();
+            using (coraxScope?.Start())
+            {
+                if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, queryData, take)) is null)
                     yield break;
-                }
+            }
 
             if (query.Metadata.FilterScript != null)
             {
                 throw new NotSupportedException(
                     "Filter isn't supported by Corax. We need to extract the filter feature implementation so it won't be implemented inside the read operations");
             }
-            
-            var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
-            Span<long> ids = longIds;
+
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
             int docsToLoad = pageSize;
             using var queryScope = new CoraxIndexQueryingScope(_index.Type, query, fieldsToFetch, retriever, _indexSearcher, _fieldMappings);
             int queryStart = query.Start;
@@ -102,11 +102,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             while (true)
             {
                 token.ThrowIfCancellationRequested();
-                int i = queryScope.RecordAlreadyPagedItemsInPreviousPage(longIds.AsSpan(), queryMatch, totalResults, out var read, ref queryStart, token);
+                int i = queryScope.RecordAlreadyPagedItemsInPreviousPage(ids.AsSpan(), queryMatch, totalResults, out var read, ref queryStart, token);
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (queryScope.WillProbablyIncludeInResults(_indexSearcher.GetRawIdentityFor(longIds[i])) == false)
+                    if (queryScope.WillProbablyIncludeInResults(_indexSearcher.GetRawIdentityFor(ids[i])) == false)
                     {
                         docsToLoad++;
                         skippedResults.Value++;
@@ -122,10 +122,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                     }
 
-                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var key), key);
+                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key);
                     bool markedAsSkipped = false;
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
-                    
 
 
                     if (fetchedDocument.Document != null)
@@ -153,38 +152,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             yield return qr;
                         }
                     }
-
-                    QueryResult CreateQueryResult(Document d)
-                    {
-                        Dictionary<string, Dictionary<string, string[]>> highlightings = null;
-                        if (hasHighlights)
-                        {
-                            using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
-                            {
-                                highlightings = new ();
-
-                                // If we have highlightings then we need to setup the Corax objects that will attach to the evaluator in order
-                                // to retrieve the fields and perform the transformations required by Highlightings. 
-                                foreach (var current in query.Metadata.Highlightings)
-                                {                                    
-                                    var fieldName = current.Field.Value;
-                                    if (fetchedDocument.Document.Data.TryGetMember(fieldName, out var element))
-                                    {
-                                        throw new NotImplementedException();
-                                    }
-                                }
-                            }
-                        }                        
-
-                        return new QueryResult
-                        {
-                            Result = d,
-                            Highlightings = highlightings,
-                        };
-                    }
                 }
 
-                if ((read = queryMatch.Fill(longIds)) == 0)
+                if ((read = queryMatch.Fill(ids)) == 0)
                     break;
                 totalResults.Value += read;
             }
@@ -209,8 +179,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 if (isDistinctCount == false)
                 {
+                    Dictionary<string, Dictionary<string, string[]>> highlightings = null;
                     if (query.Metadata.HasHighlightings)
                     {
+                        using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
+                        {
+                            highlightings = new();
+
+                            // If we have highlightings then we need to setup the Corax objects that will attach to the evaluator in order
+                            // to retrieve the fields and perform the transformations required by Highlightings. 
+                            foreach (var current in query.Metadata.Highlightings)
+                            {
+                                var fieldName = current.Field.Value;
+                                if (queryData.TryGetValue(fieldName, out var value) == false)
+                                    continue;
+                                
+                                //Highlight
+                            }
+                        }
                         throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Highlightings)} yet.");
                     }
 
@@ -219,15 +205,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
                     }
 
-                    return new QueryResult {Result = document, Highlightings = null, Explanation = null};
+                    return new QueryResult {Result = document, Highlightings = highlightings, Explanation = null};
                 }
 
                 return default;
             }
 
-            ArrayPool<long>.Shared.Return(longIds);
+            ArrayPool<long>.Shared.Return(ids);
         }
-        
+
         private Dictionary<string, (string[] PreTags, string[] PostTags, string Term)> _tagsPerField;
 
         private void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context)
@@ -254,8 +240,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 var fieldName = query.Metadata.IsDynamic
                     ? throw new NotSupportedException("AutoIndex dynamic field is not supported yet.")
                     : highlighting.Field.Value;
-                
-                throw new NotImplementedException();
+
+                var list = new List<string>();
+
+                //   if (highlighting.GetOptions(context, query.QueryParameters.TryGet()))
+
+              //  throw new NotImplementedException();
                 var term = string.Empty;
 
                 _tagsPerField[fieldName] = (options.PreTags, options.PostTags, term);
@@ -397,7 +387,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             try
             {
                 var names = MapIndexIdentifiers();
-                var allDocsInIndex = _coraxQueryEvaluator.Search(query, new FieldsToFetch(query, _index.Definition));
+                var allDocsInIndex = _coraxQueryEvaluator.Search(query, new FieldsToFetch(query, _index.Definition), new());
                 totalResults.Value = Convert.ToInt32(allDocsInIndex is SortingMatch ? 0 : allDocsInIndex.Count);
                 ids = ArrayPool<long>.Shared.Rent(BufferSize);
 
@@ -524,7 +514,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 yield return field.Name;
             }
         }
-        
+
         private static void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
             CoraxIndexQueryingScope queryingScope,
             CancellationToken token)

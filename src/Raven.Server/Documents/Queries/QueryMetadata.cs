@@ -2672,7 +2672,7 @@ function execute(doc, args){
             return sb.ToString();
         }
 
-        private QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
+        internal QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
         {
             if (arguments == null || arguments.Count == 0)
                 throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument but no arguments were passed", QueryText, parameters);
@@ -2683,7 +2683,7 @@ function execute(doc, args){
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, bool withoutAlias, string methodName, BlittableJsonReaderObject parameters, string queryText)
+        internal QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, bool withoutAlias, string methodName, BlittableJsonReaderObject parameters, string queryText)
         {
             if (argument is FieldExpression field)
             {

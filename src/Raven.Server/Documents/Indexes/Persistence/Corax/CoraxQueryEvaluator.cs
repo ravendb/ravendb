@@ -26,6 +26,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IndexQueryServerSide _query;
         private const int TakeAll = -1;
         private const int ScoreId = -1;
+        internal Dictionary<string, object> QueryData;
+
 
         [CanBeNull]
         private FieldsToFetch _fieldsToFetch;
@@ -35,12 +37,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _allocator = new(SharedMultipleUseFlag.None);
             _searcher = searcher;
             _index = index;
+            QueryData = new();
         }
 
-        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, int take = TakeAll)
+        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Dictionary<string, object> queryData, int take = TakeAll)
         {
             _fieldsToFetch = fieldsToFetch;
             _query = query;
+            QueryData = queryData;
 
             var match = _query.Metadata.Query.Where is null
                 ? _searcher.AllEntries()
@@ -68,22 +72,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return EvaluateBetween(betweenExpression, isNegated, take, scoreFunction);
                 case MethodExpression methodExpression:
                     var expressionType = QueryMethod.GetMethodType(methodExpression.Name.Value);
-                    string fieldName = string.Empty;
                     int fieldId;
                     switch (expressionType)
                     {
                         case MethodType.StartsWith:
+                            var (fieldName, fieldValue) = GetQueryData(methodExpression.Arguments[0], methodExpression.Arguments[1] as ValueExpression);
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
-                            var value = GetFieldValue((ValueExpression)methodExpression.Arguments[1]);
-                            if (value is Client.Constants.Documents.Indexing.Fields.NullValue)
+                            
+                            if (fieldValue is Client.Constants.Documents.Indexing.Fields.NullValue)
                                 throw new InvalidQueryException("Method startsWith() expects to get an argument of type String while it got Null");
 
-                            return _searcher.StartWithQuery(fieldName, value.ToString(), scoreFunction, isNegated, fieldId);
+                            return _searcher.StartWithQuery(fieldName, fieldValue.ToString(), scoreFunction, isNegated, fieldId);
                         case MethodType.EndsWith:
-                            fieldName = GetField(methodExpression.Arguments[0]);
+                            (fieldName, fieldValue) = GetQueryData(methodExpression.Arguments[0], methodExpression.Arguments[1] as ValueExpression);
                             fieldId = GetFieldIdInIndex(fieldName);
-                            return _searcher.EndsWithQuery(fieldName, GetFieldValue((ValueExpression)methodExpression.Arguments[1]).ToString(), scoreFunction, isNegated,
+                            return _searcher.EndsWithQuery(fieldName, fieldValue.ToString(), scoreFunction, isNegated,
                                 fieldId);
                         case MethodType.Exact:
                             return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated, take, scoreFunction);
@@ -127,7 +131,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 : GetField(expression.Arguments[0]);
             var fieldId = GetFieldIdInIndex(fieldName);
             Constants.Search.Operator @operator = Constants.Search.Operator.Or;
-            string searchTerm;
 
 
             if (expression.Arguments.Count is < 2 or > 3)
@@ -137,16 +140,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 throw new InvalidQueryException($"You need to pass value in second argument of {nameof(MethodType.Search)}.");
 
             //STRUCTURE: <NAME><SEARCH_VALUE><OPERATOR>
-            if (searchParam.Value is ValueTokenType.Parameter)
-            {
-                if (_query.QueryParameters.TryGet(searchParam.Token.Value, out searchTerm) == false)
-                    throw new InvalidQueryException($"Cannot find {searchParam.Token.Value} in query.");
-            }
-            else
-            {
-                searchTerm = searchParam.Token.Value;
-            }
-
+            string searchTerm = searchParam.GetValue(_query.QueryParameters).ToString();
+            AddTermToQueryData(GetField(expression.Arguments[0]), searchTerm);
+            
+            
             if (expression.Arguments.Count is not 3)
                 return _searcher.SearchQuery(fieldName, searchTerm, @operator, isNegated, fieldId);
 
@@ -173,29 +170,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (isNegated == true)
                 expression.Operator = GetNegated(expression.Operator);
 
-            ValueExpression value;
-            FieldExpression field;
             string fieldName;
+            object fieldValue;
+
             switch (expression.Operator)
             {
                 case OperatorType.Or:
                     return _searcher.Or(Evaluate(expression.Left, isNegated, take, scoreFunction), Evaluate(expression.Right, isNegated, take, scoreFunction));
                 case OperatorType.Equal:
                 {
-                    value = (ValueExpression)expression.Right;
-                    field = (FieldExpression)expression.Left;
-                    fieldName = GetField(field);
-                    var match = _searcher.TermQuery(fieldName, GetFieldValue(value).ToString(), GetFieldIdInIndex(fieldName));
+                    (fieldName, fieldValue) = GetQueryData(expression.Left, (ValueExpression)expression.Right);
+                    var match = _searcher.TermQuery(fieldName, fieldValue.ToString(), GetFieldIdInIndex(fieldName));
                     return scoreFunction is NullScoreFunction
                         ? match
                         : _searcher.Boost(match, scoreFunction);
                 }
                 case OperatorType.NotEqual:
-                    value = (ValueExpression)expression.Right;
-                    fieldName = GetField(expression.Left);
+                    (fieldName, fieldValue) = GetQueryData(expression.Left, (ValueExpression)expression.Right);
                     return isNegated
-                        ? _searcher.TermQuery(fieldName, GetFieldValue(value).ToString(), GetFieldIdInIndex(fieldName))
-                        : _searcher.UnaryQuery(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), GetFieldValue(value).ToString(), UnaryMatchOperation.NotEquals);
+                        ? _searcher.TermQuery(fieldName, fieldValue.ToString(), GetFieldIdInIndex(fieldName))
+                        : _searcher.UnaryQuery(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), fieldValue.ToString(), UnaryMatchOperation.NotEquals);
             }
 
             if (expression.IsRangeOperation)
@@ -228,16 +222,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             where TScoreFunction : IQueryScoreFunction
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
-            var fieldId = GetFieldIdInIndex(GetField((FieldExpression)value.Left));
-            var field = GetValue((ValueExpression)value.Right);
-            var fieldValue = field.FieldValue;
+            var (fieldName, fieldValue) = GetQueryData(value.Left, value.Right as ValueExpression);
+            var fieldId = GetFieldIdInIndex(fieldName);
+            
             var operation = UnaryMatchOperationTranslator(type);
-            var match = field.ValueType switch
+            var match = fieldValue switch
             {
-                ValueTokenType.Double => _searcher.UnaryQuery(previousMatch, fieldId, (double)fieldValue, operation, take),
-                ValueTokenType.String => _searcher.UnaryQuery(previousMatch, fieldId, fieldValue.ToString(), operation, take),
-                ValueTokenType.Long => _searcher.UnaryQuery(previousMatch, fieldId, (long)fieldValue, operation, take),
-                _ => throw new EvaluateException($"Got {type} and the value: {field.ValueType} at UnaryMatch.")
+                double d => _searcher.UnaryQuery(previousMatch, fieldId, d, operation, take),
+                string or LazyStringValue => _searcher.UnaryQuery(previousMatch, fieldId, fieldValue.ToString(), operation, take),
+                long l => _searcher.UnaryQuery(previousMatch, fieldId, l, operation, take),
+                bool boolean => _searcher.UnaryQuery(previousMatch, fieldId, boolean ? "true" : "false", operation, take),
+                _ => throw new EvaluateException($"Got {type} and the value: {fieldValue} at UnaryMatch.")
             };
 
             return scoreFunction is NullScoreFunction
@@ -249,20 +244,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             where TScoreFunction : IQueryScoreFunction
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
-            var exprMin = GetValue(betweenExpression.Min);
-            var exprMax = GetValue(betweenExpression.Max);
-            var fieldId = GetFieldIdInIndex(GetField((FieldExpression)betweenExpression.Source));
+            var exprMin = betweenExpression.Min.GetValue(_query.QueryParameters);
+            var exprMax = betweenExpression.Max.GetValue(_query.QueryParameters);
+            var fieldId = GetFieldIdInIndex(GetField(betweenExpression.Source));
 
-            IQueryMatch match = (exprMin.ValueType, exprMax.ValueType) switch
+            IQueryMatch match = (exprMin, exprMax) switch
             {
-                (ValueTokenType.Long, ValueTokenType.Long) => _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue,
-                    (long)exprMax.FieldValue, negated, take),
-                (ValueTokenType.String, ValueTokenType.String) => _searcher.Between(_searcher.AllEntries(), fieldId, (string)exprMin.FieldValue,
-                    (string)exprMax.FieldValue, negated, take),
-                (ValueTokenType.Double, ValueTokenType.Double) => _searcher.Between(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue,
-                    (double)exprMax.FieldValue, negated, take),
+                (long min, long max) => _searcher.Between(_searcher.AllEntries(), fieldId, min, max, negated, take),
+                (string min, string max) => _searcher.Between(_searcher.AllEntries(), fieldId, min, max, negated, take),
+                (double min, double max) => _searcher.Between(_searcher.AllEntries(), fieldId, min, max, negated, take),
+                (LazyNumberValue min, LazyNumberValue max) => _searcher.Between(_searcher.AllEntries(), fieldId, (double)min, (double)max, negated, take),
                 _ => throw new EvaluateException(
-                    $"Got {(exprMin.ValueType is ValueTokenType.Double or ValueTokenType.Long or ValueTokenType.String ? exprMax.ValueType : exprMin.ValueType)} but expected: {ValueTokenType.String}, {ValueTokenType.Long}, {ValueTokenType.Double}.")
+                    $"Got {(exprMin is long or double or string ? exprMax : exprMin)} but expected: {typeof(long)}, {typeof(double)}, {typeof(string)}.")
             };
 
             return scoreFunction is NullScoreFunction
@@ -277,59 +270,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var values = new List<string>();
             foreach (ValueExpression v in list)
             {
-                var value = GetFieldValue(v);
+                var value = v.GetValue(_query.QueryParameters);
                 if (value is BlittableJsonReaderArray bjra)
-                {
                     BlittableArrayToListOfString(values, bjra);
-                }
                 else
-                {
                     values.Add(value.ToString());
-                }
             }
-
             var field = GetField(f);
             var fieldId = GetFieldIdInIndex(field);
+            QueryData.Add(field, values);
+            
             return scoreFunction is NullScoreFunction
                 ? _searcher.InQuery(field, values, fieldId)
                 : _searcher.InQuery(field, values, scoreFunction, fieldId);
-        }
-
-        private (ValueTokenType ValueType, object FieldValue) GetValue(ValueExpression expr)
-        {
-            RuntimeHelpers.EnsureSufficientExecutionStack();
-            var valueType = expr.Value;
-            object fieldValue = GetFieldValue(expr);
-            if (valueType != ValueTokenType.Parameter)
-                return (valueType, fieldValue);
-
-
-            switch (fieldValue)
-            {
-                case LazyNumberValue fV:
-                    valueType = ValueTokenType.Double;
-                    fieldValue = fV.ToDouble(CultureInfo.InvariantCulture);
-                    break;
-                case long:
-                    valueType = ValueTokenType.Long;
-                    break;
-                case decimal value:
-                    valueType = ValueTokenType.Double;
-                    fieldValue = Convert.ToDouble(value);
-                    break;
-                case double:
-                    valueType = ValueTokenType.Double;
-                    break;
-                case LazyStringValue lsv:
-                    valueType = ValueTokenType.String;
-                    fieldValue = lsv.ToString();
-                    break;
-
-                default:
-                    throw new NotSupportedException($"Unsupported type: {fieldValue}.");
-            }
-
-            return (valueType, fieldValue);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -389,8 +342,41 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             };
         }
 
+        private (string FieldName, object Value) GetQueryData(QueryExpression query, ValueExpression value)
+        {
+            var fieldValue = GetFieldValueRaw(value);
+            var fieldName = GetField(query);
+
+            AddTermToQueryData(fieldName, fieldValue);
+            
+            return (fieldName, fieldValue);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private object GetFieldValue(ValueExpression f) => f.GetValue(_query.QueryParameters) switch
+        private void AddTermToQueryData(string fieldName, object fieldValue)
+        {
+            if (_query.Metadata.HasHighlightings == false)
+                return;
+
+            if (QueryData.TryAdd(fieldName, fieldValue) == false)
+            {
+                if (QueryData[fieldName] is List<object> listFromDict)
+                {
+                    listFromDict.Add(fieldValue);
+                }
+                else
+                {
+                    QueryData[fieldName] = new List<object>()
+                    {
+                        QueryData[fieldName],
+                        fieldValue
+                    };
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private object GetFieldValueRaw(ValueExpression f) => f.GetValue(_query.QueryParameters) switch
         {
             LazyStringValue {Length: 0} or Sparrow.StringSegment {Length: 0} => Client.Constants.Documents.Indexing.Fields.EmptyString,
             null => Client.Constants.Documents.Indexing.Fields.NullValue,
@@ -729,7 +715,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             };
         }
 
-        private void BlittableArrayToListOfString(List<string> values, BlittableJsonReaderArray bjra)
+        internal static void BlittableArrayToListOfString(List<string> values, BlittableJsonReaderArray bjra)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
             using (var itr = new BlittableJsonReaderArray.BlittableJsonArrayEnumerator(bjra))
