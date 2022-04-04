@@ -1412,6 +1412,9 @@ namespace Voron.Data.Tables
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
+            if (tree == null)
+                yield break;
+
             using (var it = tree.Iterate(true))
             {
                 if (it.Seek(value) == false)
