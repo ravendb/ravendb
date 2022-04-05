@@ -36,6 +36,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Paging;
 using static System.String;
+using static Raven.Server.Documents.Schemas.Counters;
 using static Voron.Data.BTrees.Tree;
 using Constants = Voron.Global.Constants;
 
@@ -1448,7 +1449,7 @@ namespace Voron.Recovery
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        using (var key = DocumentsStorage.TableValueToString(context, (int)CountersStorage.CountersTable.CounterKey, ref tvr))
+                        using (var key = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
                         {
                             _logger.Info(
                                 $"Found counter-group item (key = '{key}') with counter-data document that is missing '{CountersStorage.Values}' property.");

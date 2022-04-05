@@ -20,6 +20,7 @@ using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using static Raven.Server.Documents.Schemas.Documents;
 
 namespace Raven.Server.Documents
 {

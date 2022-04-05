@@ -21,6 +21,8 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
+using static Raven.Server.Documents.Schemas.Counters;
+using static Raven.Server.Documents.Schemas.CounterTombstones;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
@@ -28,60 +30,25 @@ namespace Raven.Server.Documents
     public unsafe class CountersStorage
     {
         public const int DbIdAsBase64Size = 22;
-
         public const int MaxCounterDocumentSize = 2048;
-
-        private readonly DocumentDatabase _documentDatabase;
-        private readonly DocumentsStorage _documentsStorage;
-
-        public static readonly Slice AllCountersEtagSlice;
-        internal static readonly Slice CollectionCountersEtagsSlice;
-        internal static readonly Slice CounterKeysSlice;
-        private static readonly Slice CounterTombstoneKey;
-        private static readonly Slice AllCounterTombstonesEtagSlice;
-        private static readonly Slice CollectionCounterTombstonesEtagsSlice;
-        private static readonly Slice CountersBucketAndEtagSlice;
-
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";
         public const string CounterNames = "@names";
+        public static int SizeOfCounterValues = sizeof(CounterValues);
+        public readonly IndexingMethods Indexing;
 
         internal readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
+        internal static readonly TableSchema CountersSchema = Schemas.Counters.Current;
+
+        private readonly DocumentDatabase _documentDatabase;
+        private readonly DocumentsStorage _documentsStorage;
+
         private readonly ObjectPool<Dictionary<LazyStringValue, PutCountersData>> _dictionariesPool
             = new ObjectPool<Dictionary<LazyStringValue, PutCountersData>>(() => new Dictionary<LazyStringValue, PutCountersData>(LazyStringValueComparer.Instance));
 
-        public static int SizeOfCounterValues = sizeof(CounterValues);
-
-        internal static readonly TableSchema CountersSchema = new TableSchema
-        {
-            TableType = (byte)TableType.Counters
-        };
-
-        private static readonly TableSchema CounterTombstonesSchema = new TableSchema();
-
-        internal enum CountersTable
-        {
-            // Format of this is:
-            // lower document id, record separator, prefix
-            CounterKey = 0,
-
-            Etag = 1,
-            ChangeVector = 2,
-            Data = 3,
-            Collection = 4,
-            TransactionMarker = 5
-        }
-
-        private enum CounterTombstonesTable
-        {
-            // lower document id, record separator, lower counter name
-            CounterTombstoneKey = 0,
-
-            Etag = 1,
-            ChangeVector = 2
-        }
+        private static readonly TableSchema CounterTombstonesSchema = Schemas.CounterTombstones.Current;
 
         [StructLayout(LayoutKind.Explicit)]
         internal struct CounterValues
@@ -124,71 +91,6 @@ namespace Raven.Server.Documents
                 return dbIdIndex;
             }
         }
-
-        static CountersStorage()
-        {
-            using (StorageEnvironment.GetStaticContext(out var ctx))
-            {
-                Slice.From(ctx, "AllCounterGroupsEtags", ByteStringType.Immutable, out AllCountersEtagSlice);
-                Slice.From(ctx, "CollectionCounterGroupsEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
-                Slice.From(ctx, "CounterGroupKeys", ByteStringType.Immutable, out CounterKeysSlice);
-                Slice.From(ctx, "CounterTombstoneKey", ByteStringType.Immutable, out CounterTombstoneKey);
-                Slice.From(ctx, "AllCounterTombstonesEtagSlice", ByteStringType.Immutable, out AllCounterTombstonesEtagSlice);
-                Slice.From(ctx, "CollectionCounterTombstonesEtagsSlice", ByteStringType.Immutable, out CollectionCounterTombstonesEtagsSlice);
-                Slice.From(ctx, "CountersBucketAndEtag", ByteStringType.Immutable, out CountersBucketAndEtagSlice);
-
-            }
-            CountersSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)CountersTable.CounterKey,
-                Count = 1,
-                Name = CounterKeysSlice,
-                IsGlobal = true,
-            });
-
-            CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)CountersTable.Etag,
-                Name = AllCountersEtagSlice,
-                IsGlobal = true
-            });
-
-            CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)CountersTable.Etag,
-                Name = CollectionCountersEtagsSlice
-            });
-
-            CountersSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-            {
-                GenerateKey = GenerateBucketAndEtagIndexKeyForCounters,
-                IsGlobal = true,
-                Name = CountersBucketAndEtagSlice
-            });
-
-            CounterTombstonesSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)CounterTombstonesTable.CounterTombstoneKey,
-                Count = 1,
-                Name = CounterTombstoneKey,
-                IsGlobal = true
-            });
-
-            CounterTombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)CounterTombstonesTable.Etag,
-                Name = AllCounterTombstonesEtagSlice,
-                IsGlobal = true
-            });
-
-            CounterTombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)CounterTombstonesTable.Etag,
-                Name = CollectionCounterTombstonesEtagsSlice
-            });
-        }
-
-        public readonly IndexingMethods Indexing;
 
         public CountersStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
@@ -1584,11 +1486,11 @@ namespace Raven.Server.Documents
                 yield return c;
         }
 
-        private static IEnumerable<string> GetCountersForDocumentInternal(DocumentsOperationContext context, string docId, Table table)
+        internal static IEnumerable<string> GetCountersForDocumentInternal(DocumentsOperationContext context, string docId, Table table)
         {
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
-                var names = GetCountersOriginalCasing(context, docId, table, key);
+                var names = GetCountersOriginalCasing(context, table, key);
                 if (names == null)
                     yield break;
 
@@ -1600,7 +1502,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static List<LazyStringValue> GetCountersOriginalCasing(DocumentsOperationContext context, string docId, Table table, Slice key)
+        private static List<LazyStringValue> GetCountersOriginalCasing(DocumentsOperationContext context, Table table, Slice key)
         {
             List<LazyStringValue> all = null;
 
@@ -1914,7 +1816,7 @@ namespace Raven.Server.Documents
             return GetOrCreateTable(tx, CounterTombstonesSchema, collection, CollectionTableType.CounterTombstones);
         }
 
-        private Table GetOrCreateTable(Transaction tx, TableSchema tableSchema, CollectionName collection, CollectionTableType type)
+        internal Table GetOrCreateTable(Transaction tx, TableSchema tableSchema, CollectionName collection, CollectionTableType type)
         {
             string tableName = collection.GetTableName(type);
 
@@ -2523,7 +2425,7 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             return ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)CountersTable.CounterKey, (int)CountersTable.Etag, ref tvr, out slice);
         }

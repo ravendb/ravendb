@@ -21,74 +21,19 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
+using static Raven.Server.Documents.Schemas.Attachments;
+using static Raven.Server.Documents.Schemas.Documents;
+using static Raven.Server.Documents.Schemas.Tombstones;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {
     public unsafe class AttachmentsStorage
     {
+        internal static readonly TableSchema AttachmentsSchema = Schemas.Attachments.Current;
+
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
-
-        internal static readonly Slice AttachmentsSlice;
-        internal static readonly Slice AttachmentsMetadataSlice;
-        public static readonly Slice AttachmentsEtagSlice;
-        private static readonly Slice AttachmentsHashSlice;
-        private static readonly Slice AttachmentsTombstonesSlice;
-        private static readonly Slice AttachmentsBucketAndEtagSlice;
-
-        internal static readonly TableSchema AttachmentsSchema = new TableSchema();
-        public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
-
-        private enum AttachmentsTable
-        {
-            /* AND is a record separator.
-             * We are you using the record separator in order to avoid loading another files that has the same key prefix,
-                e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it. */
-            LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType = 0,
-            Etag = 1,
-            Name = 2, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
-            ContentType = 3, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
-            Hash = 4, // base64 hash
-            TransactionMarker = 5,
-            ChangeVector = 6
-        }
-
-        static AttachmentsStorage()
-        {
-            using (StorageEnvironment.GetStaticContext(out var ctx))
-            {
-                Slice.From(ctx, "Attachments", ByteStringType.Immutable, out AttachmentsSlice);
-                Slice.From(ctx, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
-                Slice.From(ctx, "AttachmentsEtag", ByteStringType.Immutable, out AttachmentsEtagSlice);
-                Slice.From(ctx, "AttachmentsHash", ByteStringType.Immutable, out AttachmentsHashSlice);
-                Slice.From(ctx, "AttachmentsBucketAndEtag", ByteStringType.Immutable, out AttachmentsBucketAndEtagSlice);
-                Slice.From(ctx, AttachmentsTombstones, ByteStringType.Immutable, out AttachmentsTombstonesSlice);
-            }
-
-            AttachmentsSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
-                Count = 1
-            });
-            AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)AttachmentsTable.Etag,
-                Name = AttachmentsEtagSlice
-            });
-            AttachmentsSchema.DefineIndex(new TableSchema.IndexDef
-            {
-                StartIndex = (int)AttachmentsTable.Hash,
-                Count = 1,
-                Name = AttachmentsHashSlice
-            });
-            AttachmentsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-            {
-                GenerateKey = GenerateBucketAndEtagIndexKeyForAttachments,
-                IsGlobal = true,
-                Name = AttachmentsBucketAndEtagSlice
-            });
-        }
 
         public AttachmentsStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
@@ -1387,7 +1332,7 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             return ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
                 (int)AttachmentsTable.Etag, ref tvr, out slice);

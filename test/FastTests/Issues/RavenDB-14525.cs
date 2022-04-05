@@ -45,7 +45,7 @@ namespace FastTests.Issues
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var collections = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.CollectionsSchema, DocumentsStorage.CollectionsSlice);
+                    var collections = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.CollectionsSchema, Raven.Server.Documents.Schemas.Collections.CollectionsSlice);
                     Assert.Equal(1, collections.NumberOfEntries);
                 }
             }

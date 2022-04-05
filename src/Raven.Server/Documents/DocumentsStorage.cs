@@ -31,178 +31,37 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
+using static Raven.Server.Documents.Schemas.Documents;
+using static Raven.Server.Documents.Schemas.Tombstones;
+using static Raven.Server.Documents.Schemas.Collections;
 
 namespace Raven.Server.Documents
 {
     public unsafe class DocumentsStorage : IDisposable
     {
-        private static readonly Slice DocsSlice;
-        public static readonly Slice CollectionEtagsSlice;
-        internal static readonly Slice AllDocsEtagsSlice;
-        private static readonly Slice TombstonesSlice;
-        public static readonly Slice CollectionsSlice;
+        public static readonly TableSchema DocsSchema = Schemas.Documents.Current;
+        public static readonly TableSchema CompressedDocsSchema = Schemas.Documents.CurrentCompressed;
+        public static readonly TableSchema TombstonesSchema = Schemas.Tombstones.Current;
+        public static readonly TableSchema CollectionsSchema = Schemas.Collections.Current;
+        public readonly DocumentDatabase DocumentDatabase;
+        public DocumentsContextPool ContextPool;
+        public RevisionsStorage RevisionsStorage;
+        public ExpirationStorage ExpirationStorage;
+        public ConflictsStorage ConflictsStorage;
+        public AttachmentsStorage AttachmentsStorage;
+        public CountersStorage CountersStorage;
+        public TimeSeriesStorage TimeSeriesStorage;
+        public DocumentPutAction DocumentPut;
+        public StorageEnvironment Environment { get; private set; }
+
+        private readonly Action<string> _addToInitLog;
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
-
-        private static readonly Slice AllTombstonesEtagsSlice;
-        private static readonly Slice TombstonesPrefix;
-        private static readonly Slice DeletedEtagsSlice;
-
-        private static readonly Slice DocsBucketAndEtagSlice;
-        private static readonly Slice TombstonesBucketAndEtagSlice;
-
-        public static readonly TableSchema DocsSchema = new TableSchema
-        {
-            TableType = (byte)TableType.Documents
-        };
-
-        public static readonly TableSchema CompressedDocsSchema = new TableSchema
-        {
-            TableType = (byte)TableType.Documents
-        };
-
-        public static readonly TableSchema TombstonesSchema = new TableSchema();
-        public static readonly TableSchema CollectionsSchema = new TableSchema();
-
-        public readonly DocumentDatabase DocumentDatabase;
-
         private Dictionary<string, CollectionName> _collectionsCache;
-
-        internal enum TombstoneTable
-        {
-            LowerId = 0,
-            Etag = 1,
-            DeletedEtag = 2,
-            TransactionMarker = 3,
-            Type = 4,
-            Collection = 5,
-            Flags = 6,
-            ChangeVector = 7,
-            LastModified = 8
-        }
-
-        public enum DocumentsTable
-        {
-            LowerId = 0,
-            Etag = 1,
-            Id = 2, // format of lazy string id is detailed in GetLowerIdSliceAndStorageKey
-            Data = 3,
-            ChangeVector = 4,
-            LastModified = 5,
-            Flags = 6,
-            TransactionMarker = 7
-        }
-
-        public enum CollectionsTable
-        {
-            Name = 0,
-        }
-
-
-        static DocumentsStorage()
-        {
-            using (StorageEnvironment.GetStaticContext(out var ctx))
-            {
-                Slice.From(ctx, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
-                Slice.From(ctx, "Etags", ByteStringType.Immutable, out EtagsSlice);
-                Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
-                Slice.From(ctx, "Docs", ByteStringType.Immutable, out DocsSlice);
-                Slice.From(ctx, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
-                Slice.From(ctx, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
-                Slice.From(ctx, "DocsBucketAndEtag", ByteStringType.Immutable, out DocsBucketAndEtagSlice);
-                Slice.From(ctx, "TombstonesBucketAndEtag", ByteStringType.Immutable, out TombstonesBucketAndEtagSlice);
-                Slice.From(ctx, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
-                Slice.From(ctx, "Collections", ByteStringType.Immutable, out CollectionsSlice);
-                Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
-                Slice.From(ctx, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
-                Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
-                Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
-                Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
-                Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
-            }
-            /*
-            Collection schema is:
-            full name
-            collections are never deleted from the collections table
-            */
-            CollectionsSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)CollectionsTable.Name,
-                Count = 1,
-                IsGlobal = false
-            });
-
-            DefineIndexesForDocsSchema(DocsSchema);
-            DefineIndexesForDocsSchema(CompressedDocsSchema);
-            DocsSchema.CompressValues(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
-            CompressedDocsSchema.CompressValues(CompressedDocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
-
-            TombstonesSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)TombstoneTable.LowerId,
-                Count = 1,
-                IsGlobal = true,
-                Name = TombstonesSlice
-            });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)TombstoneTable.Etag,
-                IsGlobal = false,
-                Name = CollectionEtagsSlice
-            });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)TombstoneTable.Etag,
-                IsGlobal = true,
-                Name = AllTombstonesEtagsSlice
-            });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)TombstoneTable.DeletedEtag,
-                IsGlobal = false,
-                Name = DeletedEtagsSlice
-            });
-            TombstonesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-            {
-                GenerateKey = GenerateBucketAndEtagIndexKeyForTombstones,
-                IsGlobal = true,
-                Name = TombstonesBucketAndEtagSlice
-            });
-
-            void DefineIndexesForDocsSchema(TableSchema docsSchema)
-            {
-                docsSchema.DefineKey(new TableSchema.IndexDef
-                {
-                    StartIndex = (int)DocumentsTable.LowerId, 
-                    Count = 1, 
-                    IsGlobal = true, 
-                    Name = DocsSlice
-                });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DocumentsTable.Etag, 
-                    IsGlobal = false, 
-                    Name = CollectionEtagsSlice
-                });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DocumentsTable.Etag, 
-                    IsGlobal = true, 
-                    Name = AllDocsEtagsSlice
-                });
-                docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = GenerateBucketAndEtagIndexKeyForDocuments,
-                    IsGlobal = true,
-                    Name = DocsBucketAndEtagSlice
-                });
-            }
-        }
-
         private readonly Logger _logger;
         private readonly string _name;
 
@@ -210,7 +69,23 @@ namespace Raven.Server.Documents
         // no need to use thread safe ops
         private long _lastEtag;
 
-        public DocumentsContextPool ContextPool;
+        // this is used to remember the metadata about collections / documents for
+        // common operations. It always points to the latest valid transaction and is updated by
+        // the write tx on commit, thread safety is inherited from the voron transaction
+        private DocumentTransactionCache _documentsMetadataCache = new DocumentTransactionCache();
+
+        static DocumentsStorage()
+        {
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, "Etags", ByteStringType.Immutable, out EtagsSlice);
+                Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
+                Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
+                Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
+                Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
+                Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
+            }
+        }
 
         public DocumentsStorage(DocumentDatabase documentDatabase, Action<string> addToInitLog)
         {
@@ -219,21 +94,6 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
             _addToInitLog = addToInitLog;
         }
-        public StorageEnvironment Environment { get; private set; }
-
-        public RevisionsStorage RevisionsStorage;
-        public ExpirationStorage ExpirationStorage;
-        public ConflictsStorage ConflictsStorage;
-        public AttachmentsStorage AttachmentsStorage;
-        public CountersStorage CountersStorage;
-        public TimeSeriesStorage TimeSeriesStorage;
-        public DocumentPutAction DocumentPut;
-        private readonly Action<string> _addToInitLog;
-
-        // this is used to remember the metadata about collections / documents for
-        // common operations. It always points to the latest valid transaction and is updated by
-        // the write tx on commit, thread safety is inherited from the voron transaction
-        private DocumentTransactionCache _documentsMetadataCache = new DocumentTransactionCache();
 
         public void Dispose()
         {
@@ -644,7 +504,7 @@ namespace Raven.Server.Documents
                     return cache.LastConflictEtag;
                 }
             }
-            return ReadLastEtagFrom(tx, ConflictsStorage.AllConflictedDocsEtagsSlice);
+            return ReadLastEtagFrom(tx, Schemas.Conflicts.AllConflictedDocsEtagsSlice);
         }
 
         public static long ReadLastRevisionsEtag(Transaction tx)
@@ -656,7 +516,7 @@ namespace Raven.Server.Documents
                     return cache.LastRevisionsEtag;
                 }
             }
-            return ReadLastEtagFrom(tx, RevisionsStorage.AllRevisionsEtagsSlice);
+            return ReadLastEtagFrom(tx, Schemas.Revisions.AllRevisionsEtagsSlice);
         }
 
         public static long ReadLastAttachmentsEtag(Transaction tx)
@@ -680,7 +540,7 @@ namespace Raven.Server.Documents
                     return cache.LastCounterEtag;
                 }
             }
-            return ReadLastEtagFrom(tx, CountersStorage.AllCountersEtagSlice);
+            return ReadLastEtagFrom(tx, Schemas.Counters.AllCountersEtagSlice);
         }
 
         public static long ReadLastTimeSeriesEtag(Transaction tx)
@@ -692,7 +552,7 @@ namespace Raven.Server.Documents
                     return cache.LastTimeSeriesEtag;
                 }
             }
-            return ReadLastEtagFrom(tx, TimeSeriesStorage.AllTimeSeriesEtagSlice);
+            return ReadLastEtagFrom(tx, Schemas.TimeSeries.AllTimeSeriesEtagSlice);
         }
 
         private static long ReadLastEtagFrom(Transaction tx, Slice name)
@@ -1327,7 +1187,7 @@ namespace Raven.Server.Documents
             long start,
             long take)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsStorage.AttachmentsTombstones);
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, Schemas.Attachments.AttachmentsTombstones);
 
             if (table == null)
                 yield break;
@@ -1351,8 +1211,8 @@ namespace Raven.Server.Documents
         {
             string tableName;
 
-            if (collection == AttachmentsStorage.AttachmentsTombstones ||
-                collection == RevisionsStorage.RevisionsTombstones)
+            if (collection == Schemas.Attachments.AttachmentsTombstones ||
+                collection == Schemas.Revisions.RevisionsTombstones)
             {
                 tableName = collection;
             }
@@ -2348,8 +2208,8 @@ namespace Raven.Server.Documents
         {
             string tableName;
 
-            if (collection == AttachmentsStorage.AttachmentsTombstones ||
-                collection == RevisionsStorage.RevisionsTombstones)
+            if (collection == Schemas.Attachments.AttachmentsTombstones ||
+                collection == Schemas.Revisions.RevisionsTombstones)
             {
                 tableName = collection;
             }
@@ -2377,8 +2237,8 @@ namespace Raven.Server.Documents
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
         {
-            yield return AttachmentsStorage.AttachmentsTombstones;
-            yield return RevisionsStorage.RevisionsTombstones;
+            yield return Schemas.Attachments.AttachmentsTombstones;
+            yield return Schemas.Revisions.RevisionsTombstones;
 
             using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {
@@ -2697,13 +2557,13 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             return GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             return GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
         }

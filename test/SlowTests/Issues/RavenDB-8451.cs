@@ -16,6 +16,7 @@ using Voron;
 using Voron.Recovery;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.Documents.Schemas.Attachments;
 
 namespace SlowTests.Issues
 {
@@ -141,9 +142,9 @@ namespace SlowTests.Issues
                         using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsStorage.AttachmentsSchema, AttachmentsStorage.AttachmentsMetadataSlice);
+                            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsStorage.AttachmentsSchema, AttachmentsMetadataSlice);
                             var count = table.NumberOfEntries;
-                            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsStorage.AttachmentsSlice);
+                            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
                             var streamsCount = tree.State.NumberOfEntries;
                             msg.AppendLine($"count={count}, streamsCount={streamsCount}");
 
