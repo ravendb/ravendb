@@ -950,9 +950,9 @@ class editIndex extends viewModelBase {
                                  <strong>Storing the field is Not necessary</strong> in order to filter by the field when querying the index.<br>
                                  Full-text search is also available without storing the field.</small>
                              </li>
-                             <li><small>
-                                 <strong>Only Store the field when</strong>:<br>
-                                 You want to compute a value during indexing and use it in your projection at query time.<br>
+                             <li class="margin-bottom"><small>
+                                 <div class="margin-bottom"><strong>Only Store the field when</strong> you want to compute a value during indexing<br>
+                                 and use it in your projection at query time.</div>
                                  Disadvantage:
                                  <ul>
                                      <li>Index size on disk will increase (the field value is stored in the index).</li>
@@ -960,10 +960,14 @@ class editIndex extends viewModelBase {
                                  Advantage:
                                  <ul>
                                      <li>The value is fetched directly from the index (instead of from the document store).</li>
-                                 </ul>
-                                 </small>
+                                 </ul></small>
                              </li>
                          </ul>
+                         <small class="margin-left">
+                             <a target="_blank" href="https://ravendb.net/l/GHX7NJ/${viewModelBase.clientVersion()}">
+                                 <i class="icon-link"></i><span>Store tutorial</span>
+                             </a>
+                         </small>
                          `,
                 html: true
             });
