@@ -1016,7 +1016,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (currentDatabaseRecord?.DocumentsCompression?.Collections?.Length > 0 || currentDatabaseRecord?.DocumentsCompression?.CompressAllCollections == true)
                     {
-                        var collectionsToAdd = new List<string>();
+                        var collectionsToAdd = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                         foreach (var collection in currentDatabaseRecord.DocumentsCompression.Collections)
                         {
