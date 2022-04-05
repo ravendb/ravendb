@@ -18,7 +18,7 @@ internal class PostgreSqlIntegrationHandlerProcessorForGetServerStatus<TOperatio
 
     public override async ValueTask ExecuteAsync()
     {
-        AssertCanUsePostgreSqlIntegration();
+        AssertCanUsePostgreSqlIntegration(RequestHandler);
 
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

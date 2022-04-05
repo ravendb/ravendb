@@ -22,4 +22,11 @@ public class ShardedPostgreSqlIntegrationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForGetUsernamesList(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/admin/integrations/postgresql/user", "PUT")]
+    public async Task AddUser()
+    {
+        using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForAddUser(this))
+            await processor.ExecuteAsync();
+    }
 }

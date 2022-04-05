@@ -17,14 +17,14 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHa
     {
     }
 
-    protected void AssertCanUsePostgreSqlIntegration()
+    public static void AssertCanUsePostgreSqlIntegration(RequestHandler requestHandler)
     {
-        if (RequestHandler.ServerStore.LicenseManager.CanUsePowerBi(false, out _))
+        if (requestHandler.ServerStore.LicenseManager.CanUsePowerBi(false, out _))
             return;
 
-        if (RequestHandler.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true))
+        if (requestHandler.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true))
         {
-            RequestHandler.ServerStore.FeatureGuardian.Assert(Feature.PostgreSql, () => $"You have enabled the PostgreSQL integration via '{RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)}' configuration but " +
+            requestHandler.ServerStore.FeatureGuardian.Assert(Feature.PostgreSql, () => $"You have enabled the PostgreSQL integration via '{RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)}' configuration but " +
                                                                                         "this is an experimental feature and the server does not support experimental features. " +
                                                                                         $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
         }
