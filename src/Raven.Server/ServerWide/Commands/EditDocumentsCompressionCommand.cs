@@ -26,9 +26,9 @@ namespace Raven.Server.ServerWide.Commands
         
         public EditDocumentsCompressionCommand(DocumentsCompressionConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
-            if (configuration?.Collections != null)
+            if (configuration?.Collections.Length > 0)
             {
-                configuration.Collections = configuration.Collections?.ToHashSet(StringComparer.OrdinalIgnoreCase).ToArray();
+                configuration.Collections = configuration.Collections.ToHashSet(StringComparer.OrdinalIgnoreCase).ToArray();
             }
 
             Configuration = configuration;
