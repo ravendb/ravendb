@@ -28,12 +28,12 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
     protected virtual HttpStatusCode GetResponseStatusCode() => HttpStatusCode.OK;
 
-    protected virtual bool TryGetConfiguration(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer, BlittableJsonReaderObject json, out T configuration)
+    protected virtual async ValueTask<T> GetConfigurationAsync(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer)
     {
         if (_isBlittable)
         {
-            configuration = json as T;
-            return true;
+            var configurationJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), GetType().Name);
+            return configurationJson as T;
         }
 
         throw new InvalidOperationException($"In order to convert to '{typeof(T).Name}' please override this method.");
@@ -66,11 +66,10 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
             await AssertCanExecuteAsync(databaseName);
 
-            var configurationJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), GetType().Name);
-
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                if (TryGetConfiguration(context, databaseName, writer, configurationJson, out var configuration) == false)
+                var configuration = await GetConfigurationAsync(context, databaseName, writer);
+                if (configuration == null)
                     return; // all validation should be handled internally
 
                 if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)

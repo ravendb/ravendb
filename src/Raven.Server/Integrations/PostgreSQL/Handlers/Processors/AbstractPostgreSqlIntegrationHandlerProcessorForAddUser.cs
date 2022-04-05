@@ -34,24 +34,23 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForAddUser<
         return base.AssertCanExecuteAsync(databaseName);
     }
 
-    protected override bool TryGetConfiguration(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer, BlittableJsonReaderObject json, out PostgreSqlConfiguration configuration)
+    protected override async ValueTask<PostgreSqlConfiguration> GetConfigurationAsync(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer)
     {
+        var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), GetType().Name);
         var dto = JsonDeserializationServer.PostgreSqlUser(json);
-
-        configuration = null;
 
         if (string.IsNullOrEmpty(dto.Username))
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             context.Write(writer, new DynamicJsonValue { ["Error"] = "Username is null or empty." });
-            return false;
+            return null; // handled
         }
 
         if (string.IsNullOrEmpty(dto.Password))
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             context.Write(writer, new DynamicJsonValue { ["Error"] = "Password is null or empty." });
-            return false;
+            return null; // handled
         }
 
         DatabaseRecord databaseRecord;
@@ -84,12 +83,11 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForAddUser<
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             context.Write(writer, new DynamicJsonValue { ["Error"] = $"{dto.Username} username already exists." });
-            return false;
+            return null;
         }
 
         users.Add(newUser);
 
-        configuration = config;
-        return true;
+        return config;
     }
 }

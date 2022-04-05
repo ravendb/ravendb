@@ -29,4 +29,11 @@ public class ShardedPostgreSqlIntegrationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForAddUser(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenAction("/databases/*/admin/integrations/postgresql/user", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+    public async Task DeleteUser()
+    {
+        using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForDeleteUser(this))
+            await processor.ExecuteAsync();
+    }
 }
