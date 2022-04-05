@@ -74,8 +74,9 @@ partial class PersistentDictionary
     }
 }
 
-public readonly struct StringArrayIterator : IReadOnlySpanEnumerator
+public struct StringArrayIterator : IReadOnlySpanIndexer, IReadOnlySpanEnumerator
 {
+    private int _currentIdx = 0;
     private readonly string[] _values;
 
     public StringArrayIterator(string[] values)
@@ -86,6 +87,23 @@ public readonly struct StringArrayIterator : IReadOnlySpanEnumerator
     public int Length => _values.Length;
 
     public ReadOnlySpan<byte> this[int i] => Encoding.UTF8.GetBytes(_values[i]);
+
+    public void Reset()
+    {
+        _currentIdx = 0;
+    }
+
+    public bool MoveNext(out ReadOnlySpan<byte> result)
+    {
+        if (_currentIdx >= _values.Length)
+        {
+            result = default;
+            return false;
+        }
+        
+        result = Encoding.UTF8.GetBytes(_values[_currentIdx++]);
+        return true;
+    }
 }
 
 

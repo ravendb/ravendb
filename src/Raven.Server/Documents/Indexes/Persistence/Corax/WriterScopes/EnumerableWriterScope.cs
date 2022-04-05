@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _blittableJsonReaderObjects.Clear();
         }
 
-        private struct StringArrayIterator : IReadOnlySpanEnumerator
+        private struct StringArrayIterator : IReadOnlySpanIndexer
         {
             private readonly List<Memory<byte>> _values;
 
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             public ReadOnlySpan<byte> this[int i] => _values[i].Span;
         }
 
-        private struct BlittableIterator : IReadOnlySpanEnumerator, IDisposable
+        private struct BlittableIterator : IReadOnlySpanIndexer, IDisposable
         {
             private readonly List<BlittableJsonReaderObject> _values;
             private readonly List<IDisposable> _toDispose;
