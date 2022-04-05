@@ -1,18 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
-using Raven.Client.Util;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
@@ -47,11 +37,10 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         }
 
         [RavenAction("/databases/*/admin/integrations/postgresql/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ConfigPostgreSql()
+        public async Task PostPostgreSqlConfiguration()
         {
-            AssertCanUsePostgreSqlIntegration();
-
-            await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, "read-postgresql-config", GetRaftRequestIdFromQuery());
+            using (var processor = new PostgreSqlIntegrationHandlerProcessorForPostPostgreSqlConfiguration(this))
+                await processor.ExecuteAsync();
         }
     }
 }
