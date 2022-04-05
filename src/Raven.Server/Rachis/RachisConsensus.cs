@@ -1389,7 +1389,8 @@ namespace Raven.Server.Rachis
         {
             var type = RachisLogHistory.GetTypeFromCommand(cmd);
             throw new ArgumentOutOfRangeException(
-                $"The command '{type}' size of {new Size(cmd.Size, SizeUnit.Bytes)} exceed the max allowed size ({new Size(MaxSizeOfSingleRaftCommandInBytes.Value, SizeUnit.Bytes)}).");
+                $"The command '{type}' size of {new Size(cmd.Size, SizeUnit.Bytes)} exceed the max allowed size ({new Size(MaxSizeOfSingleRaftCommandInBytes.Value, SizeUnit.Bytes)})." +
+                $" If it is expected you can modify the setting '{RavenConfiguration.GetKey(x => x.Cluster.MaxSizeOfSingleRaftCommand)}'");
         }
 
         public unsafe void ClearLogEntriesAndSetLastTruncate(ClusterOperationContext context, long index, long term)
