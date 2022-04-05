@@ -243,7 +243,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Assert.Equal(1, results.Count);
                     Assert.Equal(1, results[0].Names.Count);
                     Assert.NotNull(results[0].Names["Name"]);
-
+    
 
                     results = session.Query<MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax.Result, MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax>()
                         .Customize(x => x.WaitForNonStaleResults())
