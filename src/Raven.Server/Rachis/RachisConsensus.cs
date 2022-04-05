@@ -22,6 +22,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -386,6 +387,7 @@ namespace Raven.Server.Rachis
         }
 
         public int? MaximalVersion { get; set; }
+        public long? MaxSizeOfSingleRaftCommandInBytes { get; set; }
 
         private Leader _currentLeader;
         public Leader CurrentLeader => _currentLeader;
@@ -426,6 +428,7 @@ namespace Raven.Server.Rachis
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
                 TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
                 MaximalVersion = configuration.Cluster.MaximalAllowedClusterVersion;
+                MaxSizeOfSingleRaftCommandInBytes = configuration.Cluster.MaxSizeOfSingleRaftCommand?.GetValue(SizeUnit.Bytes);
 
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
@@ -1344,6 +1347,12 @@ namespace Raven.Server.Rachis
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
         {
+            if (MaxSizeOfSingleRaftCommandInBytes.HasValue)
+            {
+                if (cmd.Size > MaxSizeOfSingleRaftCommandInBytes.Value)
+                    ThrowTooLargeRaftCommand(cmd);
+            }
+
             Debug.Assert(context.Transaction != null);
 
             ValidateTerm(term);
@@ -1374,6 +1383,13 @@ namespace Raven.Server.Rachis
             LogHistory.InsertHistoryLog(context, lastIndex, term, cmd);
 
             return lastIndex;
+        }
+
+        private void ThrowTooLargeRaftCommand(BlittableJsonReaderObject cmd)
+        {
+            var type = RachisLogHistory.GetTypeFromCommand(cmd);
+            throw new ArgumentOutOfRangeException(
+                $"The command '{type}' size of {new Size(cmd.Size, SizeUnit.Bytes)} exceed the max allowed size.");
         }
 
         public unsafe void ClearLogEntriesAndSetLastTruncate(ClusterOperationContext context, long index, long term)
