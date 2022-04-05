@@ -28,10 +28,13 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
     protected virtual HttpStatusCode GetResponseStatusCode() => HttpStatusCode.OK;
 
-    protected virtual T GetConfiguration(BlittableJsonReaderObject configuration)
+    protected virtual bool TryGetConfiguration(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer, BlittableJsonReaderObject json, out T configuration)
     {
         if (_isBlittable)
-            return configuration as T;
+        {
+            configuration = json as T;
+            return true;
+        }
 
         throw new InvalidOperationException($"In order to convert to '{typeof(T).Name}' please override this method.");
     }
@@ -48,33 +51,41 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
+    protected virtual async ValueTask AssertCanExecuteAsync(string databaseName)
+    {
+        var canAccessDatabase = await RequestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true);
+        if (canAccessDatabase == false)
+            throw new AuthorizationException($"Cannot modify configuration of '{databaseName}' database due to insufficient privileges.");
+    }
+
     public override async ValueTask ExecuteAsync()
     {
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var databaseName = GetDatabaseName();
-            var canAccessDatabase = await RequestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true);
-            if (canAccessDatabase == false)
-                throw new AuthorizationException($"Cannot modify configuration of '{databaseName}' database due to insufficient privileges.");
+
+            await AssertCanExecuteAsync(databaseName);
 
             var configurationJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), GetType().Name);
-            var configuration = GetConfiguration(configurationJson);
-
-            if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            await RequestHandler.ServerStore.EnsureNotPassiveAsync();
-
-            OnBeforeUpdateConfiguration(ref configuration, context);
-
-            var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, RequestHandler.GetRaftRequestIdFromQuery());
-
-            await WaitForIndexNotificationAsync(index);
-
-            RequestHandler.HttpContext.Response.StatusCode = (int)GetResponseStatusCode();
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
+                if (TryGetConfiguration(context, databaseName, writer, configurationJson, out var configuration) == false)
+                    return; // all validation should be handled internally
+
+                if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                    throw new BadRequestException(errorMessage);
+
+                await RequestHandler.ServerStore.EnsureNotPassiveAsync();
+
+                OnBeforeUpdateConfiguration(ref configuration, context);
+
+                var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, RequestHandler.GetRaftRequestIdFromQuery());
+
+                await WaitForIndexNotificationAsync(index);
+
+                RequestHandler.HttpContext.Response.StatusCode = (int)GetResponseStatusCode();
+
                 var json = new DynamicJsonValue
                 {
                     ["RaftCommandIndex"] = index

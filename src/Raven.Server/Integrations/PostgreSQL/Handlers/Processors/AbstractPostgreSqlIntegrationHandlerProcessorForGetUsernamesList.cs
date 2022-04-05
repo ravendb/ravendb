@@ -23,7 +23,7 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForGetUsern
 
     public override async ValueTask ExecuteAsync()
     {
-        AssertCanUsePostgreSqlIntegration();
+        AssertCanUsePostgreSqlIntegration(RequestHandler);
 
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
