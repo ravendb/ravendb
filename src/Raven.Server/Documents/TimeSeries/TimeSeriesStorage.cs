@@ -27,111 +27,23 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
+using static Raven.Server.Documents.Schemas.DeletedRanges;
+using static Raven.Server.Documents.Schemas.TimeSeries;
 
 namespace Raven.Server.Documents.TimeSeries
 {
     public unsafe class TimeSeriesStorage
     {
         public const int MaxSegmentSize = 2048;
-
-        public static readonly Slice AllTimeSeriesEtagSlice;
-
-        private static readonly Slice CollectionTimeSeriesEtagsSlice;
-
-        private static readonly Slice TimeSeriesKeysSlice;
-        private static readonly Slice PendingDeletionSegments;
-        private static readonly Slice DeletedRangesKey;
-        private static readonly Slice AllDeletedRangesEtagSlice;
-        private static readonly Slice CollectionDeletedRangesEtagsSlice;
-        private static readonly Slice TimeSeriesBucketAndEtagSlice;
-        private static readonly Slice DeletedRangesBucketAndEtagSlice;
-
-        internal static readonly TableSchema TimeSeriesSchema = new TableSchema
-        {
-            TableType = (byte)TableType.TimeSeries
-        };
-
-        internal static readonly TableSchema DeleteRangesSchema = new TableSchema();
-
-        private readonly DocumentDatabase _documentDatabase;
-        private readonly DocumentsStorage _documentsStorage;
-
-        private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public readonly TimeSeriesStats Stats;
         public readonly TimeSeriesRollups Rollups;
 
-        static TimeSeriesStorage()
-        {
-            using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))
-            {
-                Slice.From(ctx, "AllTimeSeriesEtag", ByteStringType.Immutable, out AllTimeSeriesEtagSlice);
-                Slice.From(ctx, "CollectionTimeSeriesEtags", ByteStringType.Immutable, out CollectionTimeSeriesEtagsSlice);
-                Slice.From(ctx, "TimeSeriesKeys", ByteStringType.Immutable, out TimeSeriesKeysSlice);
-                Slice.From(ctx, "PendingDeletionSegments", ByteStringType.Immutable, out PendingDeletionSegments);
-                Slice.From(ctx, "DeletedRangesKey", ByteStringType.Immutable, out DeletedRangesKey);
-                Slice.From(ctx, "AllDeletedRangesEtag", ByteStringType.Immutable, out AllDeletedRangesEtagSlice);
-                Slice.From(ctx, "CollectionDeletedRangesEtags", ByteStringType.Immutable, out CollectionDeletedRangesEtagsSlice);
-                Slice.From(ctx, "TimeSeriesBucketAndEtag", ByteStringType.Immutable, out TimeSeriesBucketAndEtagSlice);
-                Slice.From(ctx, "DeletedRangesBucketAndEtag", ByteStringType.Immutable, out DeletedRangesBucketAndEtagSlice);
-            }
+        internal static readonly TableSchema TimeSeriesSchema = Schemas.TimeSeries.Current;
+        internal static readonly TableSchema DeleteRangesSchema = Schemas.DeletedRanges.Current;
 
-            TimeSeriesSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)TimeSeriesTable.TimeSeriesKey,
-                Count = 1,
-                Name = TimeSeriesKeysSlice,
-                IsGlobal = true
-            });
-
-            TimeSeriesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)TimeSeriesTable.Etag,
-                Name = AllTimeSeriesEtagSlice,
-                IsGlobal = true
-            });
-
-            TimeSeriesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)TimeSeriesTable.Etag,
-                Name = CollectionTimeSeriesEtagsSlice
-            });
-
-            TimeSeriesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-            {
-                GenerateKey = GenerateBucketAndEtagIndexKeyForTimeSeries, 
-                IsGlobal = true, 
-                Name = TimeSeriesBucketAndEtagSlice
-            });
-
-            DeleteRangesSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)DeletedRangeTable.RangeKey,
-                Count = 1,
-                Name = DeletedRangesKey,
-                IsGlobal = true
-            });
-
-            DeleteRangesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)DeletedRangeTable.Etag,
-                Name = AllDeletedRangesEtagSlice,
-                IsGlobal = true
-            });
-
-            DeleteRangesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)DeletedRangeTable.Etag,
-                Name = CollectionDeletedRangesEtagsSlice
-            });
-
-            DeleteRangesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-            {
-                GenerateKey = GenerateBucketAndEtagIndexKeyForDeletedRanges,
-                IsGlobal = true,
-                Name = DeletedRangesBucketAndEtagSlice
-            });
-        }
-
+        private readonly DocumentDatabase _documentDatabase;
+        private readonly DocumentsStorage _documentsStorage;
+        private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
         public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
@@ -2837,43 +2749,17 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             return DocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)TimeSeriesTable.TimeSeriesKey,
                 etagIndex: (int)TimeSeriesTable.Etag, ref tvr, out slice);
         }
 
         [StorageIndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDeletedRanges(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDeletedRanges(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             return DocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)DeletedRangeTable.RangeKey,
                 etagIndex: (int)DeletedRangeTable.Etag, ref tvr, out slice);
-        }
-
-        internal enum TimeSeriesTable
-        {
-            // Format of this is:
-            // lower document id, record separator, lower time series name, record separator, segment start
-            TimeSeriesKey = 0,
-
-            Etag = 1,
-            ChangeVector = 2,
-            Segment = 3,
-            Collection = 4,
-            TransactionMarker = 5
-        }
-
-        private enum DeletedRangeTable
-        {
-            // lower document id, record separator, lower time series name, record separator, change vector hash
-            RangeKey = 0,
-
-            Etag = 1,
-            ChangeVector = 2,
-            Collection = 3,
-            TransactionMarker = 4,
-            From = 5,
-            To = 6,
         }
     }
 

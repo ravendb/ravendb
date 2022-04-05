@@ -13,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
+using static Raven.Server.Documents.Schemas.TimeSeries;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -572,7 +573,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal bool NextSegment(out long baselineMilliseconds)
         {
-            byte* key = _tvr.Read((int)TimeSeriesStorage.TimeSeriesTable.TimeSeriesKey, out int keySize);
+            byte* key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             using (Slice.From(_context.Allocator, key, keySize - sizeof(long), out var prefix))
             using (Slice.From(_context.Allocator, key, keySize, out var current))
             {
@@ -595,13 +596,13 @@ namespace Raven.Server.Documents.TimeSeries
         private void InitializeSegment(out long baselineMilliseconds, out TimeSeriesValuesSegment readOnlySegment)
         {
             baselineMilliseconds = ReadBaseline();
-            var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesStorage.TimeSeriesTable.Segment, out int size);
+            var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesTable.Segment, out int size);
             readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
         }
 
         private long ReadBaseline()
         {
-            var key = _tvr.Read((int)TimeSeriesStorage.TimeSeriesTable.TimeSeriesKey, out int keySize);
+            var key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             return Bits.SwapBytes(*(long*)(key + keySize - sizeof(long)));
         }
 
@@ -612,13 +613,13 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal string GetCurrentSegmentChangeVector()
         {
-            return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesStorage.TimeSeriesTable.ChangeVector, ref _tvr);
+            return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
         }
 
         internal (long Etag, string ChangeVector, DateTime Baseline) GetSegmentInfo()
         {
             var changeVector = GetCurrentSegmentChangeVector();
-            var etag = DocumentsStorage.TableValueToEtag((int)TimeSeriesStorage.TimeSeriesTable.Etag, ref _tvr);
+            var etag = DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref _tvr);
             var baseline = new DateTime(ReadBaseline() * 10_000);
 
             return (etag, changeVector, baseline);

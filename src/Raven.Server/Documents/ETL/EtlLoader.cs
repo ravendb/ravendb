@@ -763,7 +763,7 @@ namespace Raven.Server.Documents.ETL
                 if (typeof(T) == typeof(RavenConnectionString))
                 {
                     if (RavenEtl.ShouldTrackAttachmentTombstones(transform))
-                        AddOrUpdate(lastProcessedTombstones, AttachmentsStorage.AttachmentsTombstones, etag);
+                        AddOrUpdate(lastProcessedTombstones, Schemas.Attachments.AttachmentsTombstones, etag);
                 }
             }
         }
