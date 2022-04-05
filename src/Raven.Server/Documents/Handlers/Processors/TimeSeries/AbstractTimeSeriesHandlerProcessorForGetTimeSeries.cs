@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Web;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
@@ -14,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected abstract ValueTask GetTimeSeriesAndWriteToStreamAsync(TOperationContext context, string docId, string name, DateTime from, DateTime to, int start,
+        protected abstract ValueTask<(TimeSeriesRangeResult, long?)> GetTimeSeriesAsync(TOperationContext context, string docId, string name, DateTime from, DateTime to, int start,
             int pageSize, bool includeDoc, bool includeTags, bool fullResults);
 
         public override async ValueTask ExecuteAsync()
@@ -41,7 +43,19 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
-                await GetTimeSeriesAndWriteToStreamAsync(context, documentId, name, from, to, start, pageSize, includeDoc, includeTags, fullResults);
+                var (rangeResult, totalCount) = await GetTimeSeriesAsync(context, documentId, name, from, to, start, pageSize, includeDoc, includeTags, fullResults);
+
+                if (rangeResult == null)
+                {
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
+                        "Pass NotModified/NotFound status code and Etag headers. RavenDB-18416.");
+                    return;
+                }
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    WriteRange(writer, rangeResult, totalCount);
+                }
             }
         }
     }
