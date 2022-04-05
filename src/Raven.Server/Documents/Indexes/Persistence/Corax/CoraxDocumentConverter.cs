@@ -38,8 +38,6 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                 InsertRegularField(indexField, value, indexContext, ref entryWriter, scope);
             }
         }
-        if (entryWriter.IsEmpty())
-            return Span<byte>.Empty;
         
         scope.Write(0, id.AsSpan(), ref entryWriter);
         
