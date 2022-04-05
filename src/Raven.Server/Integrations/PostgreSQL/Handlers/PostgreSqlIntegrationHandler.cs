@@ -11,7 +11,6 @@ using Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -22,16 +21,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         [RavenAction("/databases/*/admin/integrations/postgresql/server/status", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetServerStatus()
         {
-            AssertCanUsePostgreSqlIntegration();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var dto = new PostgreSqlServerStatus { Active = Server.PostgresServer.Active };
-
-                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(dto);
-                writer.WriteObject(context.ReadObject(djv, "PostgreSqlServerStatus"));
-            }
+            using (var processor = new PostgreSqlIntegrationHandlerProcessorForGetServerStatus<DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.DatabaseAdmin)]
