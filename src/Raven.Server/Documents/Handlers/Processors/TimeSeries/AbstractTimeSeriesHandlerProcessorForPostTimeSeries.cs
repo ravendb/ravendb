@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Net;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -12,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
-        public AbstractTimeSeriesHandlerProcessorForPostTimeSeries([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractTimeSeriesHandlerProcessorForPostTimeSeries([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
         {
         }
 

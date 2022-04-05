@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override async ValueTask<(TimeSeriesRangeResult, long?)> GetTimeSeriesAsync(TransactionOperationContext context, string docId, string name, DateTime @from, DateTime to, int start, int pageSize, bool includeDoc,
+        protected override async ValueTask<(TimeSeriesRangeResult Result, long? TotalResults, HttpStatusCode StatusCode)> GetTimeSeriesAsync(TransactionOperationContext context, string docId, string name, DateTime @from, DateTime to, int start, int pageSize, bool includeDoc,
             bool includeTags, bool fullResults)
         {
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
             var cmd = new GetTimeSeriesOperation.GetTimeSeriesCommand(docId, name, from, to, start, pageSize, builder, fullResults);
             var result = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber);
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle status codes. RavenDB-18416");
-            return (result, result?.TotalResults);
+            return (result, result?.TotalResults, cmd.StatusCode);
         }
     }
 }

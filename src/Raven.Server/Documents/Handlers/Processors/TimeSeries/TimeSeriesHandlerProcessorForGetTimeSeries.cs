@@ -4,10 +4,8 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
@@ -18,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override ValueTask<(TimeSeriesRangeResult, long?)> GetTimeSeriesAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
+        protected override ValueTask<(TimeSeriesRangeResult Result, long? TotalResults, HttpStatusCode StatusCode)> GetTimeSeriesAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
             int start, int pageSize, bool includeDoc,
             bool includeTags, bool fullResults)
         {
@@ -27,9 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, docId, name);
                 if (stats == default)
                 {
-                    // non existing time series
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return ValueTask.FromResult<(TimeSeriesRangeResult, long?)>((null, null));
+                    return ValueTask.FromResult<(TimeSeriesRangeResult Result, long? TotalResults, HttpStatusCode StatusCode)>((null, null, HttpStatusCode.NotFound));
                 }
 
                 var includesCommand = includeDoc || includeTags
@@ -47,8 +43,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 var etag = RequestHandler.GetStringFromHeaders("If-None-Match");
                 if (etag == hash)
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return ValueTask.FromResult<(TimeSeriesRangeResult, long?)>((null, null));
+                    return ValueTask.FromResult<(TimeSeriesRangeResult Result, long? TotalResults, HttpStatusCode StatusCode)>((null, null, HttpStatusCode.NotModified));
                 }
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + hash + "\"";
@@ -62,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     totalCount = stats.Count;
                 }
 
-                return ValueTask.FromResult((rangeResult, totalCount));
+                return ValueTask.FromResult((rangeResult, totalCount, HttpStatusCode.OK));
             }
         }
     }
