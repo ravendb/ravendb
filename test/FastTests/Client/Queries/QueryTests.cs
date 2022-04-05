@@ -235,7 +235,7 @@ namespace FastTests.Client.Queries
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(Options options)
         {
             using var store = GetDocumentStore(options);
@@ -260,8 +260,39 @@ namespace FastTests.Client.Queries
                 _ = await session.Query<A>().Where(x => x.B == new B { Byte = 1 }).ToArrayAsync();
                 _ = await session.Query<A>().Where(x => x.B == new B { Sbyte = 1 }).ToArrayAsync();
             }
+            WaitForUserToContinueTheTest(store);
         }
 
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public async Task Query_DifferentTypesComparison(Options options)
+        {
+            using var store = GetDocumentStore(options);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await StoreAsync(session, 2);
+                await StoreAsync(session, 1);
+                await StoreAsync(session, 1);
+                await StoreAsync(session, 0);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await session.Query<A>().Where(x => x.B.Uint == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Long == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Ulong == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Short == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Ushort == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Char == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Byte == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Sbyte == 1 ).ToArrayAsync();
+            }
+            WaitForUserToContinueTheTest(store);
+        }
+
+        
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(Options options)

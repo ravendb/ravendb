@@ -117,6 +117,9 @@ namespace Corax
 
             foreach (var binding in knownFields)
             {
+                if (binding.FieldIndexing is Constants.IndexWriter.FieldIndexing.No)
+                    continue;
+                
                 var key = binding.FieldName;
                 if (_buffer.TryGetValue(key, out var field) == false)
                 {

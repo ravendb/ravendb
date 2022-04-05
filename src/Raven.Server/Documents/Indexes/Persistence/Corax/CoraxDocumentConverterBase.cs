@@ -5,10 +5,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -16,15 +18,16 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
-using Constants = Raven.Client.Constants;
+using RavenConstants = Raven.Client.Constants;
+using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public abstract class CoraxDocumentConverterBase : ConverterBase
 {
-    public static readonly Memory<byte> NullValue = Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.NullValue);
-    public static readonly Memory<byte> EmptyString = Encoding.UTF8.GetBytes(Constants.Documents.Indexing.Fields.EmptyString);
+    public static readonly Memory<byte> NullValue = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.NullValue);
+    public static readonly Memory<byte> EmptyString = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.EmptyString);
     
     //todo maciej
     private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
@@ -64,19 +67,21 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         var knownFields = new IndexFieldsMapping(allocator);
         //todo maciej: perf
         Slice.From(allocator, index.Type.IsMapReduce()
-            ? Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-            : Constants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
+            ? RavenConstants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+            : RavenConstants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
 
         knownFields = knownFields.AddBinding(0, value, null);
         foreach (var field in index.Definition.IndexFields.Values)
         {
             Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
-            knownFields = knownFields.AddBinding(field.Id, value, null, hasSuggestion: field.HasSuggestions);
+            knownFields = knownFields.AddBinding(field.Id, value, null, 
+                hasSuggestion: field.HasSuggestions, 
+                fieldIndexing: TranslateRavenFieldIndexingIntoCoraxFieldIndexing(field.Indexing));
         }
 
         if (index.Type.IsMapReduce())
         {
-            Slice.From(allocator, Constants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey);
+            Slice.From(allocator, RavenConstants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey);
             knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, true);
         }
 
@@ -291,16 +296,32 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
-        if (val.TryGetMember(Constants.Json.Fields.Values, out var values) &&
+        if (val.TryGetMember(RavenConstants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
         {
             HandleArray((IEnumerable)values, field, indexContext, ref entryWriter, scope, true);
         }
 
         _knownFields.GetByFieldId(field.Id).Analyzer = Analyzer.DefaultAnalyzer;
+        
+        if (field.Indexing is not FieldIndexing.No)
+        {
+            throw new NotSupportedException("Your field contains JSON items. Corax doesn't support indexing of this type. If you want to save it in Index, you must set the \"Indexing\" option to \"No\". If you need to search by this, you have to call ToString() on the field in the index definition.");
+        }
+        
         scope.Write(field.Id, val, ref entryWriter);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static CoraxConstants.IndexWriter.FieldIndexing TranslateRavenFieldIndexingIntoCoraxFieldIndexing(FieldIndexing indexing) => indexing switch
+    {
+        FieldIndexing.No => CoraxConstants.IndexWriter.FieldIndexing.No,
+        FieldIndexing.Search => CoraxConstants.IndexWriter.FieldIndexing.Search,
+        FieldIndexing.Exact => CoraxConstants.IndexWriter.FieldIndexing.Exact,
+        FieldIndexing.Default => CoraxConstants.IndexWriter.FieldIndexing.Default,
+        _ => throw new ArgumentOutOfRangeException(nameof(indexing), indexing, null)
+    };
+    
     public override void Dispose()
     {
         Scope?.Dispose();
