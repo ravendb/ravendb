@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override async ValueTask GetTimeSeriesAndWriteToStreamAsync(TransactionOperationContext context, string docId, string name, DateTime @from, DateTime to, int start, int pageSize, bool includeDoc,
+        protected override async ValueTask<(TimeSeriesRangeResult, long?)> GetTimeSeriesAsync(TransactionOperationContext context, string docId, string name, DateTime @from, DateTime to, int start, int pageSize, bool includeDoc,
             bool includeTags, bool fullResults)
         {
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
@@ -26,9 +27,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 throw new NotSupportedInShardingException("Include tags of time series is not supported in sharding");
             }
 
-            var cmd = new GetRawTimeSeriesCommand(RequestHandler, docId, name, from, to, start, pageSize, includeDoc, includeTags, fullResults);
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber);
+            Action<ITimeSeriesIncludeBuilder> builder = null;
+            if (includeDoc)
+                builder = bldr => bldr.IncludeDocument();
+
+            var cmd = new GetTimeSeriesOperation.GetTimeSeriesCommand(docId, name, from, to, start, pageSize, builder, fullResults);
+            var result = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber);
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle status codes. RavenDB-18416");
+            return (result, result?.TotalResults);
         }
     }
 }

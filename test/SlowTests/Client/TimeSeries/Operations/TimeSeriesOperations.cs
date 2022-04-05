@@ -30,6 +30,10 @@ namespace SlowTests.Client.TimeSeries.Operations
 
             using (var store = GetDocumentStore(options))
             {
+                var timeSeriesRangeResult = store.Operations.Send(
+                    new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
+                Assert.Null(timeSeriesRangeResult);
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), documentId);
@@ -47,7 +51,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 store.Operations.Send(timeSeriesBatch);
 
-                var timeSeriesRangeResult = store.Operations.Send(
+                timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation(documentId, "Heartrate", DateTime.MinValue, DateTime.MaxValue));
 
                 Assert.Equal(1, timeSeriesRangeResult.Entries.Length);

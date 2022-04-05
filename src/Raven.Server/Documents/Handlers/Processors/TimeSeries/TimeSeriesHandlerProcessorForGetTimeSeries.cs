@@ -3,6 +3,8 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -16,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override async ValueTask GetTimeSeriesAndWriteToStreamAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
+        protected override ValueTask<(TimeSeriesRangeResult, long?)> GetTimeSeriesAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
             int start, int pageSize, bool includeDoc,
             bool includeTags, bool fullResults)
         {
@@ -27,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 {
                     // non existing time series
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
+                    return ValueTask.FromResult<(TimeSeriesRangeResult, long?)>((null, null));
                 }
 
                 var includesCommand = includeDoc || includeTags
@@ -46,7 +48,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 if (etag == hash)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
+                    return ValueTask.FromResult<(TimeSeriesRangeResult, long?)>((null, null));
                 }
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + hash + "\"";
@@ -60,11 +62,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     totalCount = stats.Count;
                 }
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                {
-                    if (rangeResult != null)
-                        WriteRange(writer, rangeResult, totalCount);
-                }
+                return ValueTask.FromResult((rangeResult, totalCount));
             }
         }
     }
