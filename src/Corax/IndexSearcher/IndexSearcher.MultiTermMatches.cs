@@ -157,6 +157,25 @@ public partial class IndexSearcher
                 this, new InTermProvider(this, field, inTerms, fieldId), scoreFunction));
     }
 
+    
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public AndNotMatch NotInQuery<TInner>(string field, TInner inner, List<string> notInTerms, int fieldId)
+        where TInner : IQueryMatch
+    {
+        return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, notInTerms, fieldId))));
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public AndNotMatch NotInQuery<TScoreFunction, TInner>(string field, TInner inner, List<string> notInTerms, int fieldId, TScoreFunction scoreFunction)
+        where TScoreFunction : IQueryScoreFunction
+        where TInner : IQueryMatch
+    {
+        return AndNot(inner, MultiTermMatch.Create(
+            MultiTermBoostingMatch<InTermProvider>.Create(
+                this, new InTermProvider(this, field, notInTerms, fieldId), scoreFunction)));
+    }
+
     private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction, bool isNegated, int fieldId)
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider

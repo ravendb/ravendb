@@ -204,7 +204,8 @@ namespace Corax.Queries
         public int AndWith(Span<long> buffer, int matches)
         {
             // This is not an AndWith memoized buffer, therefore we need to acquire a buffer to store the results
-            // before continuing.             
+            // before continuing.   
+
             if (!_isAndWithBuffer)
             {
                 int bufferSizeInItems = 4 * Math.Min(Math.Max(Size.Kilobyte, (int)_inner.Count), 16 * Size.Kilobyte);

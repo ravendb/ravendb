@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 case InExpression inExpression:
                     return (inExpression.Source, inExpression.Values) switch
                     {
-                        (FieldExpression f, List<QueryExpression> list) => EvaluateInExpression(f, list, scoreFunction),
+                        (QueryExpression f, List<QueryExpression> list) => EvaluateInExpression(f, list, isNegated, scoreFunction),
                         _ => throw new NotSupportedException("InExpression.")
                     };
 
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             RuntimeHelpers.EnsureSufficientExecutionStack();
             var exprMin = GetValue(betweenExpression.Min);
             var exprMax = GetValue(betweenExpression.Max);
-            var fieldId = GetFieldIdInIndex(GetField((FieldExpression)betweenExpression.Source));
+            var fieldId = GetFieldIdInIndex(GetField(betweenExpression.Source));
 
             IQueryMatch match = (exprMin.ValueType, exprMax.ValueType) switch
             {
@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 : _searcher.Boost(match, scoreFunction);
         }
 
-        private IQueryMatch EvaluateInExpression<TScoreFunction>(FieldExpression f, List<QueryExpression> list, TScoreFunction scoreFunction)
+        private IQueryMatch EvaluateInExpression<TScoreFunction>(QueryExpression f, List<QueryExpression> list, bool isNegated, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -290,9 +290,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var field = GetField(f);
             var fieldId = GetFieldIdInIndex(field);
-            return scoreFunction is NullScoreFunction
-                ? _searcher.InQuery(field, values, fieldId)
-                : _searcher.InQuery(field, values, scoreFunction, fieldId);
+            return (scoreFunction, isNegated) switch
+            {
+                (NullScoreFunction, false) => _searcher.InQuery(field, values, fieldId),
+                (_, false) => _searcher.InQuery(field, values, fieldId),
+                (NullScoreFunction, true) => _searcher.NotInQuery(field,  _searcher.AllEntries(), values, fieldId),
+                (_, true) => _searcher.NotInQuery(field, _searcher.AllEntries(), values, fieldId),
+            };
         }
 
         private (ValueTokenType ValueType, object FieldValue) GetValue(ValueExpression expr)
@@ -300,10 +304,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             RuntimeHelpers.EnsureSufficientExecutionStack();
             var valueType = expr.Value;
             object fieldValue = GetFieldValue(expr);
-            if (valueType != ValueTokenType.Parameter)
-                return (valueType, fieldValue);
-
-
+         
             switch (fieldValue)
             {
                 case LazyNumberValue fV:
@@ -320,6 +321,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 case double:
                     valueType = ValueTokenType.Double;
                     break;
+                case Sparrow.StringSegment stringSegment:
+                    valueType = ValueTokenType.String;
+                    fieldValue = stringSegment.ToString();
+                break;
                 case LazyStringValue lsv:
                     valueType = ValueTokenType.String;
                     fieldValue = lsv.ToString();
