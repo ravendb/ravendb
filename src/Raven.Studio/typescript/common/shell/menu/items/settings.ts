@@ -151,6 +151,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/integrations',
             moduleId: require('viewmodels/database/settings/integrations'),
+            shardingMode: "allShardsOnly",
             title: 'Integrations',
             nav: true,
             css: 'icon-integrations',

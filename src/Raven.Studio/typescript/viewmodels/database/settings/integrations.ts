@@ -6,8 +6,10 @@ import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/
 import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
 import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
 import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database = require("models/resources/database");
 
-class integrations extends viewModelBase {
+class integrations extends shardViewModelBase {
 
     view = require("views/database/settings/integrations.html");
     
@@ -26,8 +28,9 @@ class integrations extends viewModelBase {
         test: ko.observable<boolean>(false)
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
+        
         this.bindToCurrentInstance("onConfirmDelete");
         this.initObservables();
     }
@@ -48,13 +51,13 @@ class integrations extends viewModelBase {
     }
     
     private getPostgreSqlSupportStatus(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlServerStatus> {
-        return new getIntegrationsPostgreSqlSupportCommand(this.activeDatabase())
+        return new getIntegrationsPostgreSqlSupportCommand(this.db)
             .execute()
             .done(result => this.isPostgreSqlSupportEnabled(result.Active))
     }
     
     private getAllIntegrationsCredentials(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames> {
-        return new getIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase())
+        return new getIntegrationsPostgreSqlCredentialsCommand(this.db)
             .execute()
             .done((result: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames) => {
                 const users = result.Users.map(x => x.Username);
@@ -76,7 +79,7 @@ class integrations extends viewModelBase {
     }
 
     private deleteIntegrationCredentials(username: string): void {
-        new deleteIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase(), username)
+        new deleteIntegrationsPostgreSqlCredentialsCommand(this.db, username)
             .execute()
             .done(() => {
                 this.getAllIntegrationsCredentials();
@@ -98,7 +101,7 @@ class integrations extends viewModelBase {
                 return;
             }
             
-            new saveIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase(), modelToSave.username(), modelToSave.password())
+            new saveIntegrationsPostgreSqlCredentialsCommand(this.db, modelToSave.username(), modelToSave.password())
                 .execute()
                 .done(() => {
                     this.getAllIntegrationsCredentials();
@@ -117,7 +120,7 @@ class integrations extends viewModelBase {
 
                 // TODO
                 // this.spinners.test(true);
-                // postgreSqlCredentials.testConnection(this.activeDatabase())
+                // postgreSqlCredentials.testConnection(this.db)
                 //     .done((testResult) => this.testConnectionResult(testResult))
                 //     .always(() => {
                 //         this.spinners.test(false);
