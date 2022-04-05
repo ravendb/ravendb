@@ -114,11 +114,12 @@ class ongoingTasks extends viewModelBase {
         this.addNotification(this.changesContext.serverNotifications()
             .watchClusterTopologyChanges(() => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications()
-            .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
+            .watchDatabaseChange(this.activeDatabase()?.name, () => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
         
         const db = this.activeDatabase();
-        this.updateUrl(appUrl.forOngoingTasks(db));
+        
+        //this.updateUrl(appUrl.forOngoingTasks(db));
 
         this.selectedTaskType("All tasks"); 
         this.selectedNode("All nodes"); 
@@ -242,6 +243,9 @@ class ongoingTasks extends viewModelBase {
     }
     
     private refresh() {
+        if (!this.activeDatabase()) {
+            return;
+        }
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
     
