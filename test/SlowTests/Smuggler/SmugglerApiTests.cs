@@ -17,6 +17,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
@@ -75,6 +76,38 @@ namespace SlowTests.Smuggler
                     var docs = await commands.GetAsync(0, 10);
                     Assert.Equal(3, docs.Count());
                 }
+            }
+        }
+        [Fact]
+        public async Task CanExportAndImportDocumentCompressionConfiguration()
+        {
+            var file = GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    await store1.Maintenance.SendAsync(
+                        new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true, collections: new string[]{"Foo","foo", "bar"})));
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
+                    Assert.Equal(2, record.DocumentsCompression.Collections.Length);
+                    Assert.Contains("foo", record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
+                    Assert.Contains("bar", record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
             }
         }
 
