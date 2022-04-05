@@ -27,11 +27,11 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
         _fieldsList = new List<IndexFieldBinding>();
     }
 
-    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool notApplyAnalyzer = false, bool hasSuggestion = false)
+    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, Constants.IndexWriter.FieldIndexing fieldIndexing = Constants.IndexWriter.FieldIndexing.Default)
     {
         if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
         {
-            var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, notApplyAnalyzer, hasSuggestion);
+            var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, hasSuggestion, fieldIndexing);
             _fields[fieldName] = binding;
             _fieldsById[fieldId] = binding;
             _fieldsList.Add(binding);
@@ -56,7 +56,7 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
 
         foreach (var ifb in CollectionsMarshal.AsSpan(_fieldsList))
         {
-            if (ifb.NotApplyAnalyzer)
+            if (ifb.FieldIndexing == Constants.IndexWriter.FieldIndexing.Exact)
                 continue;
 
             ifb.Analyzer ??= analyzers.DefaultAnalyzer;
@@ -113,15 +113,15 @@ public class IndexFieldBinding
     public readonly int FieldId;
     public readonly Slice FieldName;
     public Corax.Analyzer Analyzer;
-    public readonly bool NotApplyAnalyzer;
     public readonly bool HasSuggestions;
+    public readonly Constants.IndexWriter.FieldIndexing FieldIndexing; 
 
-    public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool notApplyAnalyzer = false, bool hasSuggestions = false)
+    public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, Constants.IndexWriter.FieldIndexing fieldIndexing = Constants.IndexWriter.FieldIndexing.Default)
     {
         FieldId = fieldId;
         FieldName = fieldName;
         Analyzer = analyzer;
-        NotApplyAnalyzer = notApplyAnalyzer;
         HasSuggestions = hasSuggestions;
+        FieldIndexing = fieldIndexing;
     }
 }

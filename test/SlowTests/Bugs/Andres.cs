@@ -92,6 +92,7 @@ namespace SlowTests.Bugs
                 };
 
                 StoreAllFields(FieldStorage.Yes);
+             //   Indexing(FieldIndexing.Default)
             }
         }
 
