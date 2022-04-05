@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
@@ -92,9 +93,9 @@ namespace Raven.Server.Documents.Includes
                 switch (range)
                 {
                     case TimeSeriesRange r:
-                        result = TimeSeriesHandler.CheckIfIncrementalTs(r.Name) ? 
-                            TimeSeriesHandler.GetIncrementalTimeSeriesRange(_context, docId, r.Name, r.From ?? DateTime.MinValue, r.To ?? DateTime.MaxValue, ref start, ref pageSize) :
-                            TimeSeriesHandler.GetTimeSeriesRange(_context, docId, r.Name, r.From ?? DateTime.MinValue, r.To ?? DateTime.MaxValue, ref start, ref pageSize);
+                        result = TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(r.Name) ?
+                            TimeSeriesHandlerProcessorForGetTimeSeries.GetIncrementalTimeSeriesRange(_context, docId, r.Name, r.From ?? DateTime.MinValue, r.To ?? DateTime.MaxValue, ref start, ref pageSize) :
+                            TimeSeriesHandlerProcessorForGetTimeSeries.GetTimeSeriesRange(_context, docId, r.Name, r.From ?? DateTime.MinValue, r.To ?? DateTime.MaxValue, ref start, ref pageSize);
                         if (result == null)
                         {
                             Debug.Assert(pageSize <= 0, "Page size must be zero or less here");
@@ -118,9 +119,9 @@ namespace Raven.Server.Documents.Includes
                                     throw new NotSupportedException($"Not supported time series range type '{tr.Type}'.");
                             }
 
-                            result = TimeSeriesHandler.CheckIfIncrementalTs(tr.Name) ? 
-                                TimeSeriesHandler.GetIncrementalTimeSeriesRange(_context, docId, tr.Name, from, to, ref start, ref pageSize) :
-                                TimeSeriesHandler.GetTimeSeriesRange(_context, docId, tr.Name, from, to, ref start, ref pageSize);
+                            result = TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(tr.Name) ?
+                                TimeSeriesHandlerProcessorForGetTimeSeries.GetIncrementalTimeSeriesRange(_context, docId, tr.Name, from, to, ref start, ref pageSize) :
+                                TimeSeriesHandlerProcessorForGetTimeSeries.GetTimeSeriesRange(_context, docId, tr.Name, from, to, ref start, ref pageSize);
                         }
                         break;
                     case TimeSeriesCountRange cr:
@@ -135,9 +136,9 @@ namespace Raven.Server.Documents.Includes
                                     //TODO: what if start point is bigger than int max value
                                     var s = stats.Count <= cr.Count ? 0 : (int)(stats.Count - cr.Count);
                                     Debug.Assert(s < int.MaxValue, "s < int.MaxValue");
-                                    result = TimeSeriesHandler.CheckIfIncrementalTs(cr.Name) ? 
-                                        TimeSeriesHandler.GetIncrementalTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize) :
-                                        TimeSeriesHandler.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize);
+                                    result = TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(cr.Name) ?
+                                        TimeSeriesHandlerProcessorForGetTimeSeries.GetIncrementalTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize) :
+                                        TimeSeriesHandlerProcessorForGetTimeSeries.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize);
                                     break;
                                 default:
                                     throw new NotSupportedException($"Not supported time series range type '{cr.Type}'.");

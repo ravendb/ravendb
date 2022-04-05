@@ -17,7 +17,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
-using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -1134,7 +1134,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out _, out var baseline);
                                 if (_replicationInfo.SupportedFeatures.Replication.IncrementalTimeSeries == false &&
-                                    TimeSeriesHandler.CheckIfIncrementalTs(segment.Name))
+                                    TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(segment.Name))
                                 {
                                     var msg = $"Detected an item of type Incremental-TimeSeries : '{segment.Name}' on document '{docId}', " +
                                               $"while replication protocol version '{_replicationInfo.SupportedFeatures.ProtocolVersion}' does not support Incremental-TimeSeries feature.";

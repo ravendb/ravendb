@@ -11,7 +11,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
@@ -22,8 +21,8 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Revisions;
@@ -365,10 +364,10 @@ namespace Raven.Server.Documents.Handlers
                     Name = timeSeriesNames[i],
                     From = string.IsNullOrEmpty(fromList[i])
                         ? DateTime.MinValue
-                        : TimeSeriesHandler.ParseDate(fromList[i], "from"),
+                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(fromList[i], "from"),
                     To = string.IsNullOrEmpty(toList[i])
                         ? DateTime.MaxValue
-                        : TimeSeriesHandler.ParseDate(toList[i], "to")
+                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(toList[i], "to")
                 });
             }
 

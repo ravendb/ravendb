@@ -11,7 +11,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     if (command is TimeSeriesBatchCommandData tsbc)
                     {
-                        if (TimeSeriesHandler.CheckIfIncrementalTs(tsbc.Name))
+                        if (TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(tsbc.Name))
                             throw new NotSupportedException($"Load isn't support for incremental time series '{tsbc.Name}' at document '{tsbc.Id}'");
                     }
                 }

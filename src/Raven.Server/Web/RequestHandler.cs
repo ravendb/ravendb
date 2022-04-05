@@ -527,7 +527,7 @@ namespace Raven.Server.Web
             return null; //unreachable
         }
 
-        protected static void ThrowInvalidDateTime(string name, string dataAsString)
+        public static void ThrowInvalidDateTime(string name, string dataAsString)
         {
             throw new ArgumentException($"Could not parse query string '{name}' as date, val '{dataAsString}'");
         }

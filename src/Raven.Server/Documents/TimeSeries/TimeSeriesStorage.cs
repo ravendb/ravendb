@@ -10,7 +10,7 @@ using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -1306,7 +1306,7 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<TimeSeriesOperation.AppendOperation> toAppend,
             string changeVectorFromReplication = null)
         {
-            if (TimeSeriesHandler.CheckIfIncrementalTs(name))
+            if (TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(name))
                 throw new InvalidOperationException("Cannot perform append operations on Incremental Time Series");
 
             var holder = new SingleResult();
@@ -1346,7 +1346,7 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement,
             AppendOptions options = null)
         {
-            if (TimeSeriesHandler.CheckIfIncrementalTs(name) == false)
+            if (TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(name) == false)
                 throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
 
             _incrementalPrefixByDbId ??= new Dictionary<string, string[]>();
@@ -1705,7 +1705,7 @@ namespace Raven.Server.Documents.TimeSeries
                 VerifyLegalName(name);
             }
 
-            var appendEnumerator = TimeSeriesHandler.CheckIfIncrementalTs(name)
+            var appendEnumerator = TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(name)
                 ? new IncrementalEnumerator(documentId, name, toAppend, options.ChangeVectorFromReplication != null)
                 : new AppendEnumerator(documentId, name, toAppend, options.ChangeVectorFromReplication != null);
 

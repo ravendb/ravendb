@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,12 +22,13 @@ namespace SlowTests.Client.TimeSeries.Operations
         {
         }
 
-        [Fact]
-        public void CanCreateAndGetSimpleTimeSeriesUsingStoreOperations()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanCreateAndGetSimpleTimeSeriesUsingStoreOperations(Options options)
         {
             const string documentId = "users/ayende";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -58,10 +60,11 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
-        public void CanGetNonExistedRange()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetNonExistedRange(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -94,12 +97,13 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
-        public void CanStoreAndReadMultipleTimestampsUsingStoreOperations()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanStoreAndReadMultipleTimestampsUsingStoreOperations(Options options)
         {
             const string documentId = "users/ayende";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

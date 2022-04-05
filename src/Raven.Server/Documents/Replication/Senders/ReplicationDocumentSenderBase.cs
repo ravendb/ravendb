@@ -8,7 +8,7 @@ using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -425,7 +425,7 @@ namespace Raven.Server.Documents.Replication.Senders
                             return;
                     }
 
-                    if (TimeSeriesHandler.CheckIfIncrementalTs(name) == false)
+                    if (TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(name) == false)
                         return;
                 }
 
