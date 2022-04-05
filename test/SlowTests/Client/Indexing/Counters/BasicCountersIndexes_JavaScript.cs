@@ -216,7 +216,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -582,7 +582,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void BasicMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1055,7 +1055,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanMapAllCounters(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1215,7 +1215,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CounterNamesFor(Options options)
         {
             using (var store = GetDocumentStore(options))

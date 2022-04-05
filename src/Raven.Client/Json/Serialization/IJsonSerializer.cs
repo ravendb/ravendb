@@ -6,6 +6,8 @@ namespace Raven.Client.Json.Serialization
     {
         void Serialize(IJsonWriter writer, object value);
 
+        void Serialize(IJsonWriter writer, object value, Type objectType);
+
         object Deserialize(IJsonReader reader, Type type);
 
         T Deserialize<T>(IJsonReader reader);

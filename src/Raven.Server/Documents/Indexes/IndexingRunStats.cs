@@ -62,9 +62,9 @@ namespace Raven.Server.Documents.Indexes
             AddError(key, message, "MapReference");
         }
 
-        public void AddReduceError(string message)
+        public void AddReduceError(string message, string reduceKey)
         {
-            AddError(null, message, "Reduce");
+            AddError(reduceKey, message, "Reduce");
 
             NumberOfKeptReduceErrors++;
         }

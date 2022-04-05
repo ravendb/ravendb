@@ -250,7 +250,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 ticks = dateTimeOffset.Ticks;
             if (value is TimeSpan timeSpan)
                 ticks = timeSpan.Ticks;
-
+            if (value is DateOnly @do)
+                ticks = @do.DayNumber * TimeSpan.TicksPerDay;
+            if (value is TimeOnly to)
+                ticks = to.Ticks;
+                    
             if (ticks.HasValue)
             {
                 var t = ticks.Value;
