@@ -33,9 +33,12 @@
                     </div>
                 </div>
                 <div class="panel padding">
-                    <div class="padding padding-xs text-center text-warning bg-warning margin-top margin-top-lg margin-bottom margin-left margin-left-lg margin-right margin-right-lg" 
-                         data-bind="visible: !isThreadAlive()">
+                    <div class="padding padding-xs text-center text-warning bg-warning margin-top margin-top-lg margin-bottom margin-left margin-left-lg margin-right margin-right-lg"
+                         data-bind="visible: !isThreadAlive() && !spinners.loading()">
                         <i class="icon-warning"></i><span>Thread is no longer alive</span>
+                    </div>
+                    <div class="text-center padding" data-bind="visible: spinners.loading(), css: { 'btn-spinner': spinners.loading }">
+                        <span>Loading</span>
                     </div>
                     <div class="padding" data-bind="css: { panel: stackTrace().length }, visible: isThreadAlive">
                         <div class="text-nowrap stack-trace">

@@ -98,7 +98,6 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                 return [
                     new actionColumn<Raven.Server.Dashboard.ThreadInfo>(grid, (x) => this.showStackTrace(x), "Stack",
                                 () => `<i title="Click to view Stack Trace" class="icon-thread-stack-trace"></i>`, "55px"),
-                                // TODO replace above icon with RavenDB-174430
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "20%", {
                         sortable: "string"
                     }),
@@ -162,9 +161,10 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             .done(() => this.gridController().reset(true))
             .always(() => this.spinners.refresh(false));
     }
+
     private showStackTrace(thread: Raven.Server.Dashboard.ThreadInfo) {
         app.showBootstrapDialog(new threadStackTrace(thread.Id, thread.Name));
-}
+    }
 }
 
 export = debugAdvancedThreadsRuntime;
