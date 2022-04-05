@@ -1334,6 +1334,9 @@ namespace Raven.Client.Http
             if (request == null)
                 return null;
 
+            command.ModifyRequest?.Invoke(request);
+            url = command.ModifyUrl?.Invoke(url) ?? url;
+
             var builder = new UriBuilder(url);
 
             if (command is IRaftCommand raftCommand)
