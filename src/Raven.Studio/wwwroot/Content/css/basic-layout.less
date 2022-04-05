@@ -404,7 +404,9 @@ body {
         display: flex;
         font-size: 12px;
         text-align: left;
-        margin-top: @gutter-xxs/2;
+        padding: @gutter-xxs 0;
+        line-height: 1em !important;
+        white-space: initial;
 
         .value {
             display: block;
@@ -414,15 +416,14 @@ body {
             color: @text-emphasis;
             margin-left: @gutter-sm;
             white-space: normal;
-            min-width: 100px;
+            min-width: 80px;
             max-width: 300px;
             max-height: 390px;
             overflow: hidden;
         }
 
         & + .tooltip-li {
-            border-top: 1px solid fadeout(@text-color, 70%);
-            padding-top: @gutter-xxs/2;
+            border-top: 1px solid fadeout(@text-color, 70%);            
         }
     }
 }

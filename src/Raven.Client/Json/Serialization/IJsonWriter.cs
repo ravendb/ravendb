@@ -65,7 +65,16 @@ namespace Raven.Client.Json.Serialization
         void WriteValue(DateTimeOffset dto);
 
         void WriteValue(DateTimeOffset? value);
+        
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+        void WriteValue(TimeOnly to);
 
+        void WriteValue(TimeOnly? to);
+        
+        void WriteValue(DateOnly @do);
+
+        void WriteValue(DateOnly? @do);
+#endif
         void WriteValue(decimal value);
 
         void WriteValue(decimal? value);

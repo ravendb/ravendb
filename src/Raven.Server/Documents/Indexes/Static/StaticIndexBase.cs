@@ -468,7 +468,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 return dtO;
             }
-
+            
             if (field is null)
             {
                 return DynamicNullObject.ExplicitNull;

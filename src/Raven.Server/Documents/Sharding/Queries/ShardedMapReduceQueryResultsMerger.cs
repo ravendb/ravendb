@@ -43,7 +43,8 @@ public class ShardedMapReduceQueryResultsMerger
         if (index.Type.IsAutoMapReduce())
         {
             var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.Definition;
-            var aggregateOn = ReduceMapResultsOfAutoIndex.AggregateOn(_currentResults, autoMapReduceIndexDefinition, _context, null, CancellationToken.None);
+            BlittableJsonReaderObject currentlyProcessedResult = null;
+            var aggregateOn = ReduceMapResultsOfAutoIndex.AggregateOn(_currentResults, autoMapReduceIndexDefinition, _context, null, ref currentlyProcessedResult, CancellationToken.None);
             return aggregateOn.GetOutputsToStore().ToList();
         }
 
