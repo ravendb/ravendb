@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
-using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.TimeSeries
@@ -25,8 +25,8 @@ namespace Raven.Server.Documents.Queries.TimeSeries
             hashSet.Add(new TimeSeriesRange
             {
                 Name = timeseries,
-                From = string.IsNullOrEmpty(fromStr) ? DateTime.MinValue : TimeSeriesHandler.ParseDate(fromStr, timeseries),
-                To = string.IsNullOrEmpty(toStr) ? DateTime.MaxValue : TimeSeriesHandler.ParseDate(toStr, timeseries)
+                From = string.IsNullOrEmpty(fromStr) ? DateTime.MinValue : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(fromStr, timeseries),
+                To = string.IsNullOrEmpty(toStr) ? DateTime.MaxValue : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(toStr, timeseries)
             });
         }
 

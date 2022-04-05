@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return new TimeSeriesBatchCommand(_documentId, _operation);
         }
 
-        private class TimeSeriesBatchCommand : RavenCommand
+        internal class TimeSeriesBatchCommand : RavenCommand
         {
             private readonly string _documentId;
             private readonly TimeSeriesOperation _operation;

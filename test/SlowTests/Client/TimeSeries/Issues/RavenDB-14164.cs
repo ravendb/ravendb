@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Exceptions;
+using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +16,11 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public void CanGetTimeSeriesWithIncludeTagDocuments()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetTimeSeriesWithIncludeTagDocuments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var tags = new[] {"watches/fitbit", "watches/apple", "watches/sony"};
                 var baseline = RavenTestHelper.UtcToday;
@@ -59,8 +63,17 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var getResults = session.TimeSeriesFor(documentId, "HeartRate").Get(baseline, baseline.AddHours(2), 
+                    var getResultsFunc = () => session.TimeSeriesFor(documentId, "HeartRate").Get(baseline, baseline.AddHours(2), 
                             includes: builder => builder.IncludeTags());
+
+                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                    {
+                        var ex = Assert.Throws<RavenException>(getResultsFunc);
+                        Assert.Contains("Include tags of time series is not supported in sharding", ex.Message);
+                        return;
+                    }
+
+                    var getResults = getResultsFunc.Invoke();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
@@ -94,9 +107,9 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
-        public async Task CanGetTimeSeriesWithIncludeTagDocuments_Async()
+        public async Task CanGetTimeSeriesWithIncludeTagDocuments_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
                 var baseline = RavenTestHelper.UtcToday;

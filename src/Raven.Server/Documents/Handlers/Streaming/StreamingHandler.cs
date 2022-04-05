@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.TimeSeries;
@@ -88,11 +89,11 @@ namespace Raven.Server.Documents.Handlers.Streaming
 
             var from = string.IsNullOrEmpty(fromStr)
                 ? DateTime.MinValue
-                : TimeSeriesHandler.ParseDate(fromStr, name);
+                : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(fromStr, name);
 
             var to = string.IsNullOrEmpty(toStr)
                 ? DateTime.MaxValue
-                : TimeSeriesHandler.ParseDate(toStr, name);
+                : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(toStr, name);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
