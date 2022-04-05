@@ -33,8 +33,9 @@ namespace Voron.Data.CompactTrees
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
-        private readonly struct TreePageList : IReadOnlySpanEnumerator
+        private struct TreePageList : IReadOnlySpanEnumerator
         {
+            private int _currentIdx = 0;
             private readonly CompactTree _tree;
             private readonly CursorState _state;
             private readonly PersistentDictionary _dictionary;
@@ -48,7 +49,7 @@ namespace Voron.Data.CompactTrees
 
             public int Length => _state.Header->NumberOfEntries;
 
-            public unsafe ReadOnlySpan<byte> this[int i]
+            private unsafe ReadOnlySpan<byte> this[int i]
             {
                 get
                 {
@@ -59,7 +60,24 @@ namespace Voron.Data.CompactTrees
                     _dictionary.Decode(encodedKey, ref key);
                     return key;
                 }
-            } 
+            }
+
+            public void Reset()
+            {
+                _currentIdx = 0;
+            }
+
+            public bool MoveNext(out ReadOnlySpan<byte> result)
+            {
+                if (_currentIdx >= _state.Header->NumberOfEntries)
+                {
+                    result = default;
+                    return false;
+                }
+
+                result = this[_currentIdx++];
+                return true;
+            }
         }
 
         private readonly ref struct EncodedKey
@@ -253,9 +271,6 @@ namespace Voron.Data.CompactTrees
         {
             return Create(llt, parent, name);
         }
-
-        private const long InvalidDictionaryId = -1;
-        private long _currentDictionaryId = InvalidDictionaryId;        
 
         public static CompactTree Create(LowLevelTransaction llt, Tree parent, Slice name)
         {

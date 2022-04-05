@@ -27,15 +27,16 @@ namespace FastTests.Sparrow
             public Span<byte> DecodingTable => new Span<byte>(_value).Slice(_value.Length / 2);
         }
 
-        private struct StringKeys : IReadOnlySpanEnumerator, ISpanEnumerator
-        {
+        private struct StringKeys : IReadOnlySpanIndexer, ISpanIndexer, IReadOnlySpanEnumerator
+        {            
             private readonly byte[][] _values;
+            private int _currentIdx = 0;
 
             public int Length => _values.Length;
 
             public ReadOnlySpan<byte> this[int i] => new(_values[i]);
 
-            Span<byte> ISpanEnumerator.this[int i] => new(_values[i]);
+            Span<byte> ISpanIndexer.this[int i] => new(_values[i]);
 
 
             public StringKeys(string[] keys)
@@ -57,14 +58,40 @@ namespace FastTests.Sparrow
             {
                 _values = keys;
             }
+
+            public void Reset()
+            {
+                _currentIdx = 0;
+            }
+
+            public bool MoveNext(out ReadOnlySpan<byte> result)
+            {
+                if (_currentIdx >= _values.Length)
+                {
+                    result = default;
+                    return false;
+                }
+
+                result = new(_values[_currentIdx++]);
+                return true;
+            }
         }
 
 
-        private struct EmptyKeys : IReadOnlySpanEnumerator
+        private struct EmptyKeys : IReadOnlySpanIndexer, IReadOnlySpanEnumerator
         {
             public int Length => 0;
 
             public ReadOnlySpan<byte> this[int i] => throw new NotImplementedException();
+
+            public void Reset()
+            {}
+
+            public bool MoveNext(out ReadOnlySpan<byte> result)
+            {
+                result = default;
+                return false;
+            }
         }
 
         [Fact]

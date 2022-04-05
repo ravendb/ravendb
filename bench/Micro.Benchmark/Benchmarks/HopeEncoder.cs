@@ -107,15 +107,16 @@ namespace Micro.Benchmark.Benchmarks
             public Span<byte> DecodingTable => new Span<byte>(_value).Slice(_value.Length / 2);
         }
 
-        private struct StringKeys : IReadOnlySpanEnumerator, ISpanEnumerator
+        private struct StringKeys : IReadOnlySpanIndexer, ISpanIndexer, IReadOnlySpanEnumerator
         {
             private readonly byte[][] _values;
+            private int _currentIdx = 0;
 
             public int Length => _values.Length;
 
             public ReadOnlySpan<byte> this[int i] => new(_values[i]);
 
-            Span<byte> ISpanEnumerator.this[int i] => new(_values[i]);
+            Span<byte> ISpanIndexer.this[int i] => new(_values[i]);
 
 
             public StringKeys(string[] keys)
@@ -136,6 +137,23 @@ namespace Micro.Benchmark.Benchmarks
             public StringKeys(byte[][] keys)
             {
                 _values = keys;
+            }
+
+            public void Reset()
+            {
+                _currentIdx = 0;
+            }
+
+            public bool MoveNext(out ReadOnlySpan<byte> result)
+            {
+                if (_currentIdx >= _values.Length)
+                {
+                    result = default;
+                    return false;
+                }
+
+                result = new(_values[_currentIdx++]);
+                return true;
             }
         }
 

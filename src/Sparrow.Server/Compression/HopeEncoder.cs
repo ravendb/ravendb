@@ -40,8 +40,8 @@ namespace Sparrow.Server.Compression
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Encode<TSource, TDestination>(in TSource inputBuffers, in TDestination outputBuffers, Span<int> outputSizes)
-            where TSource : struct, IReadOnlySpanEnumerator
-            where TDestination : struct, ISpanEnumerator
+            where TSource : struct, IReadOnlySpanIndexer
+            where TDestination : struct, ISpanIndexer
         {
             if (outputBuffers.Length != outputSizes.Length)
                 throw new ArgumentException($"'{nameof(outputBuffers)}' and '{nameof(outputSizes)}' must be of the same size.");
@@ -54,8 +54,8 @@ namespace Sparrow.Server.Compression
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Decode<TSource, TDestination>(in TSource inputBuffers, in TDestination outputBuffers, Span<int> outputSizes)
-            where TSource : struct, IReadOnlySpanEnumerator
-            where TDestination : struct, ISpanEnumerator
+            where TSource : struct, IReadOnlySpanIndexer
+            where TDestination : struct, ISpanIndexer
         {
             if (outputBuffers.Length != outputSizes.Length)
                 throw new ArgumentException($"'{nameof(outputBuffers)}' and '{nameof(outputSizes)}' must be of the same size.");

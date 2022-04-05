@@ -223,7 +223,7 @@ namespace Corax
             _dataIndex = dataLocation;
         }
         
-        public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) where TEnumerator : IReadOnlySpanEnumerator
+        public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) where TEnumerator : IReadOnlySpanIndexer
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
@@ -263,7 +263,7 @@ namespace Corax
             _dataIndex = dataLocation;
         }
 
-        public void Write(int field, IReadOnlySpanEnumerator values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
+        public void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);

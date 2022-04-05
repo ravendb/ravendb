@@ -36,7 +36,7 @@ namespace Sparrow.Server.Compression
         private readonly FastList<Symbol> _intervalBoundaries = new(32);
         private readonly FastList<SymbolFrequency> _mostFrequentSymbols = new (32);
 
-        public FastList<SymbolFrequency> SelectSymbols(in TSampleEnumerator keys, int dictionarySize, FastList<SymbolFrequency> symbolFrequenciesList = null)
+        public FastList<SymbolFrequency> SelectSymbols(TSampleEnumerator keys, int dictionarySize, FastList<SymbolFrequency> symbolFrequenciesList = null)
         {
             CountSymbolFrequency(keys);
 
@@ -72,16 +72,16 @@ namespace Sparrow.Server.Compression
         private const int GramSize = 3;
         private readonly Dictionary<int, int> _frequencyMap = new (16);
 
-        private void CountIntervalFreq(in TSampleEnumerator keys, FastList<int> intervalFrequencies, FastList<Symbol> intervalPrefixes, FastList<Symbol> intervalBoundaries)
+        private void CountIntervalFreq(TSampleEnumerator keys, FastList<int> intervalFrequencies, FastList<Symbol> intervalPrefixes, FastList<Symbol> intervalBoundaries)
         {
             intervalFrequencies.Clear();
             for (int i = 0; i < intervalPrefixes.Count; i++)
                 intervalFrequencies.Add(1);
 
-            for (int i = 0; i < keys.Length; i++)
+            keys.Reset();
+            while ( keys.MoveNext(out var key) )
             {
                 int pos = 0;
-                var key = keys[i];
                 while (pos < key.Length)
                 {
                     int idx = BinarySearch(key.Slice(pos, Math.Min(4, key.Length - pos)), intervalBoundaries);
@@ -271,7 +271,7 @@ namespace Sparrow.Server.Compression
             mostFrequentSymbols.Sort(ref sortLexicographical);
         }
 
-        private void CountSymbolFrequency(in TSampleEnumerator keys)
+        private void CountSymbolFrequency(TSampleEnumerator keys)
         {
             Debug.Assert(GramSize <= 3);
 
@@ -280,9 +280,9 @@ namespace Sparrow.Server.Compression
 
             frequencyMap.Clear();
 
-            for (int i = 0; i < keys.Length; i++)
+            keys.Reset();
+            while (keys.MoveNext(out var key))
             {
-                var key = keys[i];
                 for (int j = 0; j < key.Length - GramSize + 1; j++)
                 {
                     var slice = key.Slice(j, GramSize);
@@ -293,7 +293,7 @@ namespace Sparrow.Server.Compression
 
                     frequencyMap[sliceDescriptor] = frequency + 1;
                 }
-            }
+            }          
         }
     }
 }

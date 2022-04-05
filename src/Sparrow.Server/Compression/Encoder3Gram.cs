@@ -85,8 +85,8 @@ namespace Sparrow.Server.Compression
         }
 
         public void EncodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSizes, in TOutputEnumerator outputBuffers)
-            where TSampleEnumerator : struct, IReadOnlySpanEnumerator
-            where TOutputEnumerator : struct, ISpanEnumerator
+            where TSampleEnumerator : struct, IReadOnlySpanIndexer
+            where TOutputEnumerator : struct, ISpanIndexer
         {
             var table = EncodingTable;
             var numberOfEntries = _entries;
@@ -134,8 +134,8 @@ namespace Sparrow.Server.Compression
         }
 
         public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
-            where TSampleEnumerator : struct, IReadOnlySpanEnumerator
-            where TOutputEnumerator : struct, ISpanEnumerator
+            where TSampleEnumerator : struct, IReadOnlySpanIndexer
+            where TOutputEnumerator : struct, ISpanIndexer
         {
             var table = EncodingTable;
             var tree = BinaryTree<short>.Open(_state.DecodingTable);
@@ -168,8 +168,8 @@ namespace Sparrow.Server.Compression
         }
 
         public void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(ReadOnlySpan<int> dataBits, in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffers)
-            where TSampleEnumerator : struct, IReadOnlySpanEnumerator
-            where TOutputEnumerator : struct, ISpanEnumerator
+            where TSampleEnumerator : struct, IReadOnlySpanIndexer
+            where TOutputEnumerator : struct, ISpanIndexer
         {
             var table = EncodingTable;
             var tree = BinaryTree<short>.Open(_state.DecodingTable);
