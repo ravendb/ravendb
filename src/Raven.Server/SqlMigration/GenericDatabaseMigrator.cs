@@ -56,9 +56,10 @@ namespace Raven.Server.SqlMigration
                         foreach (var doc in EnumerateTable(queryToUse, collectionToImport.ColumnsMapping, specialColumns,
                             collectionToImport.AttachmentNameMapping, enumerationConnection, rowsLimit: 1, queryParameters: queryParameters))
                         {
-                            doc.SetCollection(collectionToImport.Name);
                             
-                            var id = GenerateDocumentId(doc.Collection, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
+                            var id = GenerateDocumentId(collectionToImport.Name, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
+
+                            doc.SetCollectionAndId(collectionToImport.Name, id);
 
                             FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
 
@@ -134,9 +135,9 @@ namespace Raven.Server.SqlMigration
                                         onProgress.Invoke(result.Progress);
                                     }
                                     
-                                    doc.SetCollection(collectionToImport.Name);
+                                    var id = GenerateDocumentId(collectionToImport.Name, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
 
-                                    var id = GenerateDocumentId(doc.Collection, GetColumns(doc.SpecialColumnsValues, tableSchema.PrimaryKeyColumns));
+                                    doc.SetCollectionAndId(collectionToImport.Name, id);
 
                                     FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
 
