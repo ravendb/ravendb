@@ -107,9 +107,9 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
-        public async Task CanGetTimeSeriesWithIncludeTagDocuments_Async(Options options)
+        public async Task CanGetTimeSeriesWithIncludeTagDocuments_Async()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 var tags = new[] { "watches/fitbit", "watches/apple", "watches/sony" };
                 var baseline = RavenTestHelper.UtcToday;
