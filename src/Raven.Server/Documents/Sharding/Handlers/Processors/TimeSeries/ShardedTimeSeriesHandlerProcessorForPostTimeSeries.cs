@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                         HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Execution of command should rethrow the exception using injected behavior");
                         throw new DocumentDoesNotExistException(docId);
-                    case HttpStatusCode.OK:
+                    case HttpStatusCode.NoContent:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(cmd.StatusCode), $"Not supported status code: {cmd.StatusCode}");
