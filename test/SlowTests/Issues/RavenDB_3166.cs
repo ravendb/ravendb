@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,12 +27,13 @@ namespace SlowTests.Issues
             public DateTime CreationTime { get; set; }
         }
 
-        [Fact]
-        public void QueryOnDictionaryWithDateTimeAsKeyShouldWork()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryOnDictionaryWithDateTimeAsKeyShouldWork(Options options)
         {
             var dt = new DateTime(1982, 11, 28);
             var dates = new List<object>() { dt, "Shalom"};
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -59,13 +61,14 @@ namespace SlowTests.Issues
                 }
             }
         }
-
-        [Fact]
-        public void QueryOnDictionaryWithDateTimeAsValueShouldWork()
+        
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryOnDictionaryWithDateTimeAsValueShouldWork(Options options)
         {
             var dt = new DateTime(1982, 11, 28);
             var dates = new List<object>() {  dt, new DateTime(2015,1,1), new DateTime(1992,1,2)};
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,11 +13,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldWork(Options options)
         {
             const int ceiling = 1025;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())

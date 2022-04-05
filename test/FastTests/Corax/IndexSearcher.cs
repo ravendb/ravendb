@@ -309,6 +309,26 @@ namespace FastTests.Corax
                 Assert.Equal(0, andMatch.Fill(ids));
             }
         }
+        
+        [Fact]
+        public void AllAndWithEmpty()
+        {
+            var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry { Id = $"entry/{i}", Content = new string[] { "road", "lake", "mountain" }}).ToArray();
+            
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries , CreateKnownFields(bsc));
+
+            {
+                using var searcher = new IndexSearcher(Env);
+                var match1 = searcher.AllEntries();
+                var match2 = searcher.TermQuery("Id", "Maciej");
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, andMatch.Fill(ids));
+            }
+        }
 
         [Fact]
         public void AllAndMemoized()
@@ -1471,15 +1491,40 @@ namespace FastTests.Corax
         }
 
         [RavenFact(RavenTestCategory.Corax)]
+        public void NotInTest()
+        {
+            var listToIndex = Enumerable.Range(000000, 1000).Select(i => new IndexSingleEntry {Id = $"entry/{i}", Content = i.ToString("000000")}).ToList();
+            var listForNotIn = listToIndex.Where(p => p.Content.EndsWith("1")).ToList();
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, listToIndex, CreateKnownFields(bsc));
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                Span<long> ids = stackalloc long[1024];
+                var match = searcher.AndNot(searcher.AllEntries(), searcher.InQuery("Content", listForNotIn.Select(l => l.Content).ToList(), ContentIndex));
+                Assert.Equal(1000 - listForNotIn.Count(), match.Fill(ids));
+            }
+            
+            
+            
+        }
+        
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleAndNot()
         {
             var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "Testing" };
             var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "Running" };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "Runner" };
+            var list = new[] {entry1, entry2, entry3};
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
-
+            IndexEntries(bsc, list, CreateKnownFields(bsc));
+            
+            
+            
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
@@ -1491,6 +1536,10 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[256];
                 Assert.Equal(1, andNotMatch.Fill(ids));
+                var item = searcher.GetReaderFor(ids[0]);
+                item.Read(IdIndex, out Span<byte> value);
+                Assert.Equal("entry/1", Encodings.Utf8.GetString(value));
+
             }
 
             {
@@ -1505,6 +1554,15 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[256];
                 Assert.Equal(3, andNotMatch.Fill(ids));
+                var uniqueList = new List<long>();
+                for (int i = 0; i < 3; ++i)
+                {
+                    var item = searcher.GetReaderFor(ids[i]);
+                    Assert.False(uniqueList.Contains(ids[i]));
+                    uniqueList.Add(ids[i]);
+                }
+                
+                
             }
         }
 
@@ -1648,7 +1706,7 @@ namespace FastTests.Corax
         [RavenFact(RavenTestCategory.Corax)]
         public void BigAndNot()
         {
-            int total = 100000;
+            int total = 100_000;
 
             int startWith = 0;
             var entries = new List<IndexSingleEntry>();

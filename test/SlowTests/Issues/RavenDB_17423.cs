@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
         
-        [Fact]
-        public async Task FilteredEntryIsReturnedInQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task FilteredEntryIsReturnedInQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await store.ExecuteIndexAsync(new SearchIndex());
             var identifiers = new List<string>();
             for (int i = 1; i < 200; i++)
@@ -36,15 +38,19 @@ namespace SlowTests.Issues
                     .Where(x => x.Identifier.In(identifiers) == false);
                 var list = await ravenQueryable.ToListAsync();
                 var location = list.FirstOrDefault();
-                
+                if (location is not null)
+                {
+                    WaitForUserToContinueTheTest(store);
+                }
                 Assert.True(location == null, $"i = {i}");
             }
         }
 
-        [Fact]
-        public void CanExcludeOver128ItemsFromMapReduce()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanExcludeOver128ItemsFromMapReduce(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var index = new SearchIndex();
             store.ExecuteIndex(index);
             var identifiers = new List<string>();
@@ -79,10 +85,11 @@ namespace SlowTests.Issues
                 
         }
 
-        [Fact]
-        public void QueryInAndNotInUsingDynamicQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryInAndNotInUsingDynamicQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var identifiers = new List<string>();
             for (int i = 1; i <= 1000; ++i)
                 identifiers.Add( $"locations/{i}");

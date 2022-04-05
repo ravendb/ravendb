@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void BetweenQueryOnIds()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BetweenQueryOnIds(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -41,10 +43,11 @@ namespace SlowTests.Issues
             }
         }
         
-        [Fact]
-        public void CanQueryIdWithNegate()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryIdWithNegate(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -60,15 +63,16 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void InQueryOnIdsShouldRunOnCollection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void InQueryOnIdsShouldRunOnCollection(Options options)
         {
             var bunnies = new List<string>
             {
                 "bunny/1",
                 "bunny/2"
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -85,15 +89,16 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NotInQueryOnIdsShouldntRunOnCollection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NotInQueryOnIdsShouldntRunOnCollection(Options options)
         {
             var bunnies = new List<string>
             {
                 "bunny/1",
                 "bunny/2"
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -101,6 +106,11 @@ namespace SlowTests.Issues
                     session.Store(new Bunny { Name = "is" }, "bunny/2");
                     session.Store(new Bunny { Name = "your" }, "bunny/3");
                     session.SaveChanges();
+                }
+
+                {
+                 //   WaitForUserToContinueTheTest(store);
+                    using var session = store.OpenSession();
                     var query = session.Query<Bunny>().Where(u => !u.Id.In(bunnies)).Customize(x=>x.WaitForNonStaleResults()).ToList();
                     WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, query.Count);
