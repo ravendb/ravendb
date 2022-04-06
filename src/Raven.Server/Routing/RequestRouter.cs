@@ -19,6 +19,7 @@ using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -405,7 +406,7 @@ namespace Raven.Server.Routing
                 feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client. Did you forget to install the certificate?";
-                message += BrowserCertificateMessage;
+                message += context.Request.IsFromStudio() ? BrowserCertificateMessage : string.Empty;
             }
             else
             {
@@ -420,7 +421,7 @@ namespace Raven.Server.Routing
                 if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
                 {
                     message = $"The supplied client certificate '{name}' is unknown to the server. In order to register your certificate please contact your system administrator.";
-                    message += BrowserCertificateMessage;
+                    message += context.Request.IsFromStudio() ? BrowserCertificateMessage : string.Empty;
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarIssuer)
                 {
