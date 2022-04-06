@@ -38,8 +38,13 @@ namespace Raven.Server.Documents.Sharding.Executors
 
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {
-            if (typeof(TResult) == typeof(BlittableJsonReaderObject))
+
+#if DEBUG
+            if (command.Result.ContainsBlittableObject())
+            {
                 throw new InvalidOperationException("The return type is unmanaged, please use the overload with the context");
+            }
+#endif
 
             var executor = GetRequestExecutorAt(shardNumber);
             using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
@@ -49,7 +54,7 @@ namespace Raven.Server.Documents.Sharding.Executors
             }
         }
 
-        public async Task<BlittableJsonReaderObject> ExecuteSingleShardAsync(JsonOperationContext context, RavenCommand<BlittableJsonReaderObject> command, int shardNumber, CancellationToken token = default)
+        public async Task<TResult> ExecuteSingleShardAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {
             var executor = GetRequestExecutorAt(shardNumber);
             await executor.ExecuteAsync(command, context, token: token);
