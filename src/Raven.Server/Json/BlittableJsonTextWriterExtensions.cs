@@ -2026,7 +2026,7 @@ namespace Raven.Server.Json
                 writer.WriteComma();
 
                 writer.WritePropertyName(Constants.Documents.Metadata.OrderByFields);
-                writer.WriteStartObject();
+                writer.WriteStartArray();
 
                 var firstOrderByField = true;
                 foreach (var orderByField in documentForQuery.OrderByFields)
@@ -2035,22 +2035,21 @@ namespace Raven.Server.Json
                         writer.WriteComma();
 
                     firstOrderByField = false;
-                    writer.WritePropertyName(orderByField.Field);
                     switch (orderByField.OrderType)
                     {
                         case OrderByFieldType.Long:
-                            writer.WriteInteger((long)orderByField.Value);
+                            writer.WriteInteger(orderByField.LongValue);
                             break;
                         case OrderByFieldType.Double:
-                            writer.WriteDouble((double)orderByField.Value);
+                            writer.WriteDouble(orderByField.DoubleValue);
                             break;
                         default:
-                            writer.WriteString((string)orderByField.Value);
+                            writer.WriteString(orderByField.StringValue);
                             break;
                     }
                 }
 
-                writer.WriteEndObject();
+                writer.WriteEndArray();
             }
 
             writer.WriteEndObject();
