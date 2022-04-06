@@ -2,14 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Handlers
@@ -34,6 +37,26 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             ContinuationTokens = new ShardedContinuationTokensHandler(this);
         }
+
+        public void ModifyHeaders(HttpRequestMessage request)
+        {
+            foreach (var header in HeadersToCopy)
+            {
+                if (HttpContext.Request.Headers.TryGetValue(header, out var value))
+                {
+                    request.Headers.TryAddWithoutValidation(header, (IEnumerable<string>)value);
+                }
+            }
+        }
+
+        public async Task<TResult> ExecuteSingleShardAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
+        {
+            command.ModifyRequest = ModifyHeaders;
+            var executor = ShardExecutor.GetRequestExecutorAt(shardNumber);
+            await executor.ExecuteAsync(command, context, token: token);
+            return command.Result;
+        }
+
 
         public override void Init(RequestHandlerContext context)
         {
