@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.ServerWide
 {
@@ -45,6 +46,7 @@ namespace Raven.Server.ServerWide
 
         public static string GetStorageKey(string database, string key)
         {
+            database = ShardHelper.ToDatabaseName(database);
             return $"{database}{_separator}{key}".ToLowerInvariant();
         }
 
