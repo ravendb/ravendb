@@ -423,7 +423,7 @@ namespace Raven.Client.Documents.BulkInsert
         private StreamWriter _backgroundWriter;
         private Task _asyncWrite = Task.CompletedTask;
 
-        protected override async Task EnsureStream()
+        protected override async Task EnsureStreamAsync()
         {
             if (CompressionLevel != CompressionLevel.NoCompression)
                 _streamExposerContent.Headers.ContentEncoding.Add("gzip");

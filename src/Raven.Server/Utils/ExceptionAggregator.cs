@@ -58,6 +58,18 @@ namespace Raven.Server.Utils
             }
         }
 
+        public async Task ExecuteAsync(ValueTask task)
+        {
+            try
+            {
+                await task;
+            }
+            catch (Exception e)
+            {
+                _list.Add(e);
+            }
+        }
+
         public AggregateException GetAggregateException()
         {
             if (_list.Count == 0)

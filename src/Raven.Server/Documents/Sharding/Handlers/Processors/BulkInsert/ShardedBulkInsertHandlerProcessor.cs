@@ -16,7 +16,6 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
 {
     private const string SampleChangeVector = "A:2568-F9I6Egqwm0Kz+K0oFVIR9Q";
 
-    private readonly IDisposable _returnContext;
     private readonly ShardedBulkInsertOperation _operation;
     private readonly CancellationTokenSource _cts;
 
@@ -25,8 +24,7 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
         base(requestHandler, contextPool, null, skipOverwriteIfUnchanged, token)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(token, requestHandler.AbortRequestToken);
-        _returnContext = contextPool.AllocateOperationContext(out TransactionOperationContext context);
-        _operation = new ShardedBulkInsertOperation(operationId, skipOverwriteIfUnchanged, databaseContext, context, _cts.Token);
+        _operation = new ShardedBulkInsertOperation(operationId, skipOverwriteIfUnchanged, databaseContext, contextPool, _cts.Token);
     }
 
     protected override AbstractBulkInsertBatchCommandsReader<ShardedBatchCommandData> GetCommandsReader(JsonOperationContext context, Stream requestBodyStream, JsonOperationContext.MemoryBuffer buffer, CancellationToken token)
@@ -67,13 +65,7 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
     {
         base.Dispose();
 
-        using (_returnContext)
-        {
-            await using (_operation)
-            {
-
-            }
-        }
+        await _operation.DisposeAsync();
 
         _cts.Dispose();
     }

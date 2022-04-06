@@ -8,6 +8,7 @@ namespace Raven.Client.Documents.BulkInsert;
 public abstract class BulkInsertOperationBase<T>
 {
     protected Task BulkInsertExecuteTask;
+
     protected long OperationId = -1;
 
     protected int MaxSizeInBuffer = 1024 * 1024;
@@ -21,7 +22,7 @@ public abstract class BulkInsertOperationBase<T>
         if (HasStream == false)
         {
             await WaitForId().ConfigureAwait(false);
-            await EnsureStream().ConfigureAwait(false);
+            await EnsureStreamAsync().ConfigureAwait(false);
         }
 
         if (BulkInsertExecuteTask.IsFaulted)
@@ -63,7 +64,7 @@ public abstract class BulkInsertOperationBase<T>
 
     protected abstract Task WaitForId();
 
-    protected abstract Task EnsureStream();
+    protected abstract Task EnsureStreamAsync();
 
     protected abstract Task<BulkInsertAbortedException> GetExceptionFromOperation();
 }
