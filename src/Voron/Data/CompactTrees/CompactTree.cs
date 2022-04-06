@@ -489,9 +489,9 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private void MaybeMergeEntries(ref CursorState state)
+        private void MaybeMergeEntries(ref CursorState destinationState)
         {
-            CursorState siblingState;
+            CursorState sourceState;
             ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
 
             // optimization: not merging right most / left most pages
@@ -500,49 +500,54 @@ namespace Voron.Data.CompactTrees
             if (parent.LastSearchPosition == 0 ||
                 parent.LastSearchPosition == parent.Header->NumberOfEntries - 1)
             {
-                if (state.Header->NumberOfEntries == 0) // just remove the whole thing
+                if (destinationState.Header->NumberOfEntries == 0) // just remove the whole thing
                 {
                     var sibling = GetValue(ref parent, parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1);
-                    siblingState = new CursorState
+                    sourceState = new CursorState
                     {
                         Page = _llt.GetPage(sibling)
                     };
-                    FreePageFor(ref siblingState, ref state);
+                    FreePageFor(ref sourceState, ref destinationState);
                 }
                 return;
             }
+
             var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
-            siblingState = new CursorState
+            sourceState = new CursorState
             {
                 Page = _llt.ModifyPage(siblingPage)
             };
 
-            if (siblingState.Header->PageFlags != state.Header->PageFlags)
+            if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
                 return; // cannot merge leaf & branch pages
 
             using var __ = _llt.Allocator.Allocate(4096, out var buffer);
             var decodeBuffer = new Span<byte>(buffer.Ptr, 2048);
             var encodeBuffer = new Span<byte>(buffer.Ptr + 2048, 2048);
 
-            var statePage = state.Page;
-            var stateHeader = state.Header;
-            var siblingStatePage = siblingState.Page;
-            var siblingStateHeader = siblingState.Header;
+            var destinationPage = destinationState.Page;
+            var destinationHeader = destinationState.Header;
+            var sourcePage = sourceState.Page;
+            var sourceHeader = sourceState.Header;
 
-            // the new entries size is composed of entries from _both_ pages
-            
-            var entries = new Span<ushort>(statePage.Pointer + PageHeader.SizeOf, stateHeader->NumberOfEntries + siblingStateHeader->NumberOfEntries)
-                .Slice(stateHeader->NumberOfEntries);
+            // the new entries size is composed of entries from _both_ pages            
+            var entries = new Span<ushort>(destinationPage.Pointer + PageHeader.SizeOf, destinationHeader->NumberOfEntries + sourceHeader->NumberOfEntries)
+                .Slice(destinationHeader->NumberOfEntries);
 
-            var srcDictionary = GetEncodingDictionary(siblingStateHeader->DictionaryId);
-            var destDictionary = GetEncodingDictionary(stateHeader->DictionaryId);
-            bool reencode = siblingStateHeader->DictionaryId != stateHeader->DictionaryId;
+            var srcDictionary = GetEncodingDictionary(sourceHeader->DictionaryId);
+            var destDictionary = GetEncodingDictionary(destinationHeader->DictionaryId);
+            bool reencode = sourceHeader->DictionaryId != destinationHeader->DictionaryId;
 
-            int entriesCopied = 0;
-            for (; entriesCopied < siblingStateHeader->NumberOfEntries; entriesCopied++)
+            int sourceEncodedKeysLenght = 0;
+            int sourceKeysCopied = 0;
+            for (; sourceKeysCopied < sourceHeader->NumberOfEntries; sourceKeysCopied++)
             {
-                GetEncodedEntry(siblingStatePage, siblingState.EntriesOffsets[entriesCopied], out var encodedKey, out var val);
+                // We get the encoded key and value from the sibling page
+                GetEncodedEntry(sourcePage, sourceState.EntriesOffsets[sourceKeysCopied], out var encodedKey, out var val);
 
+                sourceEncodedKeysLenght += encodedKey.Length;
+                
+                // If they have a different dictionary, we need to re-encode the entry with the new dictionary.
                 if (reencode && encodedKey.Length != 0)
                 {
                     var decodedKey = decodeBuffer;
@@ -552,57 +557,65 @@ namespace Voron.Data.CompactTrees
                     destDictionary.Encode(decodedKey, ref encodedKey);
                 }
 
+                // We encode the length of the key and the value with variable length in order to store them later. 
                 var valueEncoder = new Encoder();
                 valueEncoder.ZigZagEncode(val);
 
                 var keySizeEncoder = new Encoder();
                 keySizeEncoder.Encode7Bits((ulong)encodedKey.Length);
 
+                // If we dont have enough free space in the receiving page, we move on. 
                 var requiredSize = encodedKey.Length + keySizeEncoder.Length + valueEncoder.Length;
-                if (requiredSize + sizeof(ushort) > stateHeader->FreeSpace)
+                if (requiredSize + sizeof(ushort) > destinationHeader->FreeSpace)
                     break; // done moving entries
 
-                if (requiredSize + sizeof(ushort) > state.Header->Upper - state.Header->Lower)
+                // However, there can be enough space in the receiving page but would need a defrag to be able to do so. 
+                if (requiredSize + sizeof(ushort) > destinationState.Header->Upper - destinationState.Header->Lower)
                 {
                     // DebugStuff.RenderAndShow(this);
                     DefragPage();
                 }
 
-                stateHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
-                stateHeader->Upper -= (ushort)requiredSize;
-                entries[entriesCopied] = stateHeader->Upper;
-                var entryPos = statePage.Pointer + stateHeader->Upper;
+                // We will update the entries offsets in the receiving page.
+                destinationHeader->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
+                destinationHeader->Upper -= (ushort)requiredSize;
+                destinationHeader->Lower += sizeof(ushort);
+                entries[sourceKeysCopied] = destinationHeader->Upper;
+                
+                // We copy the actual entry <key_size, key, value> to the receiving page.
+                var entryPos = destinationPage.Pointer + destinationHeader->Upper;                
                 Memory.Copy(entryPos, keySizeEncoder.Buffer, keySizeEncoder.Length);
                 entryPos += keySizeEncoder.Length;
-                encodedKey.CopyTo(new Span<byte>(entryPos, (int)(statePage.Pointer + Constants.Storage.PageSize - entryPos)));
+                encodedKey.CopyTo(new Span<byte>(entryPos, (int)(destinationPage.Pointer + Constants.Storage.PageSize - entryPos)));
                 entryPos += encodedKey.Length;
-                Memory.Copy(entryPos, valueEncoder.Buffer, valueEncoder.Length);
-                
-                stateHeader->Lower += sizeof(ushort);
+                Memory.Copy(entryPos, valueEncoder.Buffer, valueEncoder.Length);                                                                
 
-                Debug.Assert(stateHeader->Upper >= stateHeader->Lower);
+                Debug.Assert(destinationHeader->Upper >= destinationHeader->Lower);
             }
 
-            Memory.Move(siblingStatePage.Pointer + PageHeader.SizeOf ,
-                siblingStatePage.Pointer + PageHeader.SizeOf + (entriesCopied * sizeof(ushort)),
-                (siblingStateHeader->NumberOfEntries - entriesCopied) * sizeof(ushort));
-
-            var oldLower = siblingStateHeader->Lower;
-            siblingStateHeader->Lower -= (ushort)(entriesCopied * sizeof(ushort));
-            if (siblingStateHeader->NumberOfEntries == 0) // emptied the sibling entries
+            Memory.Move(sourcePage.Pointer + PageHeader.SizeOf,
+                        sourcePage.Pointer + PageHeader.SizeOf + (sourceKeysCopied * sizeof(ushort)),
+                        (sourceHeader->NumberOfEntries - sourceKeysCopied) * sizeof(ushort));
+            
+            // We update the entries offsets on the source page, now that we have moved the entries.
+            var oldLower = sourceHeader->Lower;
+            sourceHeader->Lower -= (ushort)(sourceKeysCopied * sizeof(ushort));
+            sourceHeader->FreeSpace += (ushort)(sourceEncodedKeysLenght + (sourceKeysCopied * sizeof(ushort)));
+            if (sourceHeader->NumberOfEntries == 0) // emptied the sibling entries
             {
                 parent.LastSearchPosition++;
-                FreePageFor(ref state, ref siblingState);
+                FreePageFor(ref destinationState, ref sourceState);
                 return;
             }
             
-            Memory.Set(siblingStatePage.Pointer + siblingStateHeader->Lower, 0, (oldLower - siblingStateHeader->Lower));
+            Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
 
             // now re-wire the new splitted page key
-            var newEncodedKey = GetEncodedKey(siblingStatePage, siblingState.EntriesOffsets[0]);
-            var newKey = EncodedKey.From(newEncodedKey, this, siblingStateHeader->DictionaryId);
+            var newEncodedKey = GetEncodedKey(sourcePage, sourceState.EntriesOffsets[0]);
+            var newKey = EncodedKey.From(newEncodedKey, this, sourceHeader->DictionaryId);
 
             PopPage(ref _internalCursor);
+            
             // we aren't _really_ removing, so preventing merging of parents
             RemoveFromPage(allowRecurse: false, parent.LastSearchPosition + 1);
 
@@ -992,7 +1005,10 @@ namespace Voron.Data.CompactTrees
         }
 
         private void DefragPage()
-        {
+        {                     
+            // TODO: The process of defrag could be the perfect place to upgrade a dictionary, as we are certainly going to be writing this new
+            //       page anyways; if that is the case, why not do it with the new dictionary.
+
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
             using (_llt.Environment.GetTemporaryPage(_llt, out var tmp))
