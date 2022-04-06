@@ -271,7 +271,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         CreateIndex<DateAndTimeOnlyIndex>(store);
 
         {
-            using var session = store.OpenAsyncSession();
+            using var session = store.OpenSession();
             var after = new TimeOnly(15, 00);
             var before = new TimeOnly(17, 00);
             var result = session.Query<DateAndTimeOnly, DateAndTimeOnlyIndex>()
