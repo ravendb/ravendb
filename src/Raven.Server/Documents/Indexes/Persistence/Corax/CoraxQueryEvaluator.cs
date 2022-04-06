@@ -6,10 +6,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
-using Google.Protobuf.WellKnownTypes;
 using JetBrains.Annotations;
-using Microsoft.Extensions.Primitives;
-using Nest;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries;
@@ -58,6 +55,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IQueryMatch Evaluate<TScoreFunction>(QueryExpression condition, bool isNegated, int take, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             switch (condition)
             {
                 case NegatedExpression negatedExpression:
@@ -80,12 +78,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             var value = GetFieldValue((ValueExpression)methodExpression.Arguments[1]);
                             if (value is Client.Constants.Documents.Indexing.Fields.NullValue)
                                 throw new InvalidQueryException("Method startsWith() expects to get an argument of type String while it got Null");
-                            
+
                             return _searcher.StartWithQuery(fieldName, value.ToString(), scoreFunction, isNegated, fieldId);
                         case MethodType.EndsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
-                            return _searcher.EndsWithQuery(fieldName, GetFieldValue((ValueExpression)methodExpression.Arguments[1]).ToString(), scoreFunction, isNegated, fieldId);
+                            return _searcher.EndsWithQuery(fieldName, GetFieldValue((ValueExpression)methodExpression.Arguments[1]).ToString(), scoreFunction, isNegated,
+                                fieldId);
                         case MethodType.Exact:
                             return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated, take, scoreFunction);
                         case MethodType.Boost:
@@ -122,7 +121,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IQueryMatch SearchMethod<TScoreFunction>(MethodExpression expression, bool isNegated, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
-            var fieldName = _index.Type is IndexType.AutoMap or IndexType.AutoMapReduce ? $"search({GetField(expression.Arguments[0])})" : GetField(expression.Arguments[0]);
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            var fieldName = _index.Type is IndexType.AutoMap or IndexType.AutoMapReduce
+                ? $"search({GetField(expression.Arguments[0])})"
+                : GetField(expression.Arguments[0]);
             var fieldId = GetFieldIdInIndex(fieldName);
             Constants.Search.Operator @operator = Constants.Search.Operator.Or;
             string searchTerm;
@@ -167,6 +169,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IQueryMatch BinaryEvaluator<TScoreFunction>(BinaryExpression expression, bool isNegated, int take, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (isNegated == true)
                 expression.Operator = GetNegated(expression.Operator);
 
@@ -224,6 +227,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var fieldId = GetFieldIdInIndex(GetField((FieldExpression)value.Left));
             var field = GetValue((ValueExpression)value.Right);
             var fieldValue = field.FieldValue;
@@ -244,6 +248,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IQueryMatch EvaluateBetween<TScoreFunction>(BetweenExpression betweenExpression, bool negated, int take, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var exprMin = GetValue(betweenExpression.Min);
             var exprMax = GetValue(betweenExpression.Max);
             var fieldId = GetFieldIdInIndex(GetField((FieldExpression)betweenExpression.Source));
@@ -268,6 +273,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IQueryMatch EvaluateInExpression<TScoreFunction>(FieldExpression f, List<QueryExpression> list, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var values = new List<string>();
             foreach (ValueExpression v in list)
             {
@@ -291,6 +297,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private (ValueTokenType ValueType, object FieldValue) GetValue(ValueExpression expr)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var valueType = expr.Value;
             object fieldValue = GetFieldValue(expr);
             if (valueType != ValueTokenType.Parameter)
@@ -317,7 +324,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     valueType = ValueTokenType.String;
                     fieldValue = lsv.ToString();
                     break;
-                    
+
                 default:
                     throw new NotSupportedException($"Unsupported type: {fieldValue}.");
             }
@@ -335,7 +342,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             OperatorType.GreaterThanEqual => UnaryMatchOperation.GreaterThanOrEqual,
             _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
         };
-        
+
         private static OperatorType GetNegated(OperatorType current) =>
             current switch
             {
@@ -362,6 +369,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetFieldIdInIndex(string fieldName, bool isFieldType = true)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (_fieldsToFetch is null)
                 throw new InvalidQueryException("Field doesn't found in Index.");
 
@@ -418,6 +426,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private IQueryMatch OrderBy(IQueryMatch match, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orders, int take)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             switch (orders.Count)
             {
                 //Note: we want to use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
@@ -500,7 +509,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             default(BoostingComparer),
                             default(BoostingComparer)),
                         var (type1, type2) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2})")
-
                     };
                 }
                 case 3:
@@ -719,6 +727,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private void BlittableArrayToListOfString(List<string> values, BlittableJsonReaderArray bjra)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             using (var itr = new BlittableJsonReaderArray.BlittableJsonArrayEnumerator(bjra))
             {
                 while (itr.MoveNext())
@@ -753,8 +762,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
             }
         }
-        
-        
+
+
         public void Dispose()
         {
             _allocator?.Dispose();

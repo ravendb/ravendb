@@ -73,7 +73,7 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanProcessLongQueryString(Options options)
         {
             using (var store = GetDocumentStore(options))
