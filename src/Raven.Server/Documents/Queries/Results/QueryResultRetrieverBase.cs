@@ -172,13 +172,19 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var fieldToFetch in fields.Values)
                 {
-                    if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
+                    if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here 
+                        TryExtractValueFromIndex(fieldToFetch, input, result, state))
                         continue;
 
                     if (FieldsToFetch.Projection.MustExtractFromIndex)
                     {
                         if (FieldsToFetch.Projection.MustExtractOrThrow)
+                        {
+                            if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
+                                continue; // here we try again, for `id()` fields
+
                             FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(fieldToFetch.Name.Value);
+                        }
 
                         continue;
                     }
@@ -443,9 +449,6 @@ namespace Raven.Server.Documents.Queries.Results
 
         private bool TryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
         {
-            if (fieldToFetch.CanExtractFromIndex == false)
-                return false;
-
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
             DynamicJsonArray array = null;
