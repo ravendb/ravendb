@@ -21,9 +21,8 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     private readonly bool _skipOverwriteIfUnchanged;
     private readonly ShardedDatabaseContext _databaseContext;
     private readonly TransactionOperationContext _context;
-    private readonly BulkInsertWriter[] _writers;
+    private readonly ShardedBulkInsertWriter[] _writers;
     private readonly List<IDisposable> _returnContexts = new();
-    private bool _writeStreamsEnsured;
 
     public ShardedBulkInsertOperation(long id, bool skipOverwriteIfUnchanged, ShardedDatabaseContext databaseContext, JsonContextPoolBase<TransactionOperationContext> contextPool, CancellationToken token)
     {
@@ -33,7 +32,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
         _returnContexts.Add(contextPool.AllocateOperationContext(out _context));
 
-        _writers = new BulkInsertWriter[databaseContext.ShardCount];
+        _writers = new ShardedBulkInsertWriter[databaseContext.ShardCount];
 
         for (int shardNumber = 0; shardNumber < databaseContext.ShardCount; shardNumber++)
         {
@@ -41,7 +40,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
             _returnContexts.Add(returnContext);
 
-            _writers[shardNumber] = new BulkInsertWriter(context, token);
+            _writers[shardNumber] = new ShardedBulkInsertWriter(context, token);
         }
     }
 
@@ -54,8 +53,6 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
         return new BulkInsertOperation.BulkInsertCommand(OperationId, _writers[shardNumber].StreamExposer, null, _skipOverwriteIfUnchanged);
     }
 
-    protected override bool HasStream => _writeStreamsEnsured;
-
     protected override Task WaitForId()
     {
         return Task.CompletedTask;
@@ -67,12 +64,12 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
         int shardNumber = _databaseContext.GetShardNumber(_context, id);
 
-        await _writers[shardNumber].WriteAsync(command.Stream);
+        await _writers[shardNumber].WriteStreamAsync(command.Stream);
 
         if (command.AttachmentStream.Stream != null)
         {
             await _writers[shardNumber].FlushIfNeeded(force: true);
-            await _writers[shardNumber].WriteDirectlyToRequestStreamAsync(command.AttachmentStream.Stream);
+            await _writers[shardNumber].WriteStreamDirectlyToRequestAsync(command.AttachmentStream.Stream);
         }
         else
         {
@@ -99,8 +96,6 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
         {
             await _writers[shardNumber].EnsureStreamAsync(CompressionLevel);
         }
-
-        _writeStreamsEnsured = true;
     }
 
     protected override async Task<BulkInsertAbortedException> GetExceptionFromOperation()
