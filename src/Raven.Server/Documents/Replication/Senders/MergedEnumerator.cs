@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Replication.Senders
             var current = _workEnumerators[0];
             for (var index = 1; index < _workEnumerators.Count; index++)
             {
-                if (_comparer.Compare(_workEnumerators[index].Current, current.Current) > 0)
+                if (_comparer.Compare(_workEnumerators[index].Current, current.Current) < 0)
                 {
                     current = _workEnumerators[index];
                 }

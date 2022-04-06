@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Sharding;
@@ -12,7 +11,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
-using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Queries;
 /// A struct that we use to hold state and break the process
 /// of handling a sharded query into distinct steps
 /// </summary>
-public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisposable
+public class ShardedQueryProcessor : IDisposable
 {
     private readonly TransactionOperationContext _context;
     private readonly ShardedQueriesHandler _parent;
@@ -314,14 +313,6 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         }
     }
 
-    public void ApplyOrdering()
-    {
-        if (_query.Metadata.OrderBy?.Length > 0)
-        {
-            _result.Results.Sort(this);
-        }
-    }
-
     public void ApplyPaging()
     {
         if (_query.Offset > 0)
@@ -339,6 +330,12 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use IShardedOperation");
 
         _result.Results = new List<BlittableJsonReaderObject>();
+
+        // sorting only if:
+        // 1. we have fields to sort
+        // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
+        var sortResults = _query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery) == false;
+
         foreach (var (_, cmd) in _commands)
         {
             _result.TotalResults += cmd.Result.TotalResults;
@@ -356,95 +353,39 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
                 _result.LastQueryTime = cmd.Result.LastQueryTime;
             }
 
-            foreach (BlittableJsonReaderObject item in cmd.Result.Results)
+            if (sortResults == false)
             {
-                _result.Results.Add(item);
+                foreach (BlittableJsonReaderObject item in cmd.Result.Results)
+                {
+                    _result.Results.Add(item);
+                }
             }
         }
-    }
 
-    public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
-    {
-        foreach (var order in _query.Metadata.OrderBy)
+        if (sortResults == false)
+            return;
+
+        // all the results from each command are already ordered
+        var documentsComparer = new ShardedDocumentsComparer(_query.Metadata, _isMapReduceIndex || _isAutoMapReduceQuery);
+        using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(documentsComparer))
         {
-            var cmp = CompareField(order, GetOrderByFields(x), GetOrderByFields(y));
-            if (cmp != 0)
-                return order.Ascending ? cmp : -cmp;
-        }
+            foreach (var command in _commands)
+            {
+                mergedEnumerator.AddEnumerator(GetEnumerator(command.Value.Result.Results));
+            }
 
-        BlittableJsonReaderObject GetOrderByFields(BlittableJsonReaderObject original)
-        {
-            if (_isMapReduceIndex || _isAutoMapReduceQuery)
-                return original;
-
-            if (original.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                throw new InvalidOperationException($"Missing metadata in document. Unable to find {Constants.Documents.Metadata.Key} in {original}");
-
-            if (metadata.TryGet(Constants.Documents.Metadata.OrderByFields, out BlittableJsonReaderObject orderByFields) == false)
-                throw new InvalidOperationException($"Unable to find {Constants.Documents.Metadata.OrderByFields} in metadata: {metadata}");
-
-            return orderByFields;
-        }
-
-        return 0;
-    }
-
-    private static int CompareField(OrderByField order, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
-    {
-        switch (order.OrderingType)
-        {
-            case OrderByFieldType.Implicit:
-            case OrderByFieldType.String:
+            static IEnumerator<BlittableJsonReaderObject> GetEnumerator(BlittableJsonReaderArray array)
+            {
+                foreach (BlittableJsonReaderObject item in array)
                 {
-                    x.TryGet(order.Name, out string xVal);
-                    y.TryGet(order.Name, out string yVal);
-                    return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
+                    yield return item;
                 }
-            case OrderByFieldType.Long:
-                {
-                    var hasX = x.TryGetWithoutThrowingOnError(order.Name, out long xLng);
-                    var hasY = y.TryGetWithoutThrowingOnError(order.Name, out long yLng);
-                    if (hasX == false && hasY == false)
-                        return 0;
-                    if (hasX == false)
-                        return 1;
-                    if (hasY == false)
-                        return -1;
-                    return xLng.CompareTo(yLng);
-                }
-            case OrderByFieldType.Double:
-                {
-                    var hasX = x.TryGetWithoutThrowingOnError(order.Name, out double xDbl);
-                    var hasY = y.TryGetWithoutThrowingOnError(order.Name, out double yDbl);
-                    if (hasX == false && hasY == false)
-                        return 0;
-                    if (hasX == false)
-                        return 1;
-                    if (hasY == false)
-                        return -1;
-                    return xDbl.CompareTo(yDbl);
-                }
-            case OrderByFieldType.AlphaNumeric:
-                {
-                    x.TryGet(order.Name, out string xVal);
-                    y.TryGet(order.Name, out string yVal);
-                    if (xVal == null && yVal == null)
-                        return 0;
-                    if (xVal == null)
-                        return 1;
-                    if (yVal == null)
-                        return -1;
-                    return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
-                }
-            case OrderByFieldType.Random:
-                return Random.Shared.Next(0, int.MaxValue);
+            }
 
-            case OrderByFieldType.Custom:
-                throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
-            case OrderByFieldType.Score:
-            case OrderByFieldType.Distance:
-            default:
-                throw new ArgumentException("Unknown OrderingType: " + order.OrderingType);
+            while (mergedEnumerator.MoveNext())
+            {
+                _result.Results.Add(mergedEnumerator.Current);
+            }
         }
     }
 
@@ -454,6 +395,12 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         {
             var merger = new ShardedMapReduceQueryResultsMerger(_result.Results, _parent.DatabaseContext.Indexes, _result.IndexName, _isAutoMapReduceQuery, _context);
             _result.Results = merger.Merge();
+
+            if (_query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery))
+            {
+                // apply ordering after the re-reduce of a map-reduce index
+                _result.Results.Sort(new ShardedDocumentsComparer(_query.Metadata, isMapReduce: true));
+            }
         }
     }
 

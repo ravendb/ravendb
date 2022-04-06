@@ -301,7 +301,7 @@ select {{
                 {
                     session.Store(new Order
                     {
-                        Freight = 20m,
+                        Freight = 20.8m,
                         Lines = new List<OrderLine>
                         {
                             new()
@@ -316,7 +316,7 @@ select {{
                     });
                     session.Store(new Order
                     {
-                        Freight = 10m,
+                        Freight = 10.7m,
                         Lines = new List<OrderLine>
                         {
                             new()
@@ -470,13 +470,6 @@ order by o.Freight as {sortType}
                     Assert.Equal(0.4m, queryResult[3].Discount);
                 }
             }
-        }
-
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Foo(Options options)
-        {
-            
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]

@@ -92,9 +92,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             // * For map/reduce - we need to re-run the reduce portion of the index again on the results
                             queryProcessor.ReduceResults();
 
-                            // * For order by, we need to merge the results and compute the order again 
-                            queryProcessor.ApplyOrdering();
-
                             queryProcessor.ApplyPaging();
 
                             // * For map-reduce indexes we project the results after the reduce part 

@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
@@ -15,6 +16,12 @@ namespace Raven.Server.Documents.Queries
             Ascending = ascending;
             Arguments = arguments;
             AggregationOperation = AggregationOperation.None;
+            LuceneOrderByName = orderingType switch
+            {
+                OrderByFieldType.Long => $"{name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixLong}",
+                OrderByFieldType.Double => $"{name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble}",
+                _ => name
+            };
         }
 
         public readonly QueryFieldName Name;
@@ -26,6 +33,8 @@ namespace Raven.Server.Documents.Queries
         public readonly Argument[] Arguments;
 
         public readonly MethodType? Method;
+
+        public readonly string LuceneOrderByName;
 
         public struct Argument
         {

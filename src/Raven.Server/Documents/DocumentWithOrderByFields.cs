@@ -5,16 +5,37 @@ namespace Raven.Server.Documents;
 
 public class DocumentWithOrderByFields : Document
 {
-    public List<(string Field, OrderByFieldType OrderType, object Value)> OrderByFields;
+    public List<OrderByField> OrderByFields = new();
 
     private DocumentWithOrderByFields()
     {
     }
 
-    public void AddOrderByField(string fieldName, OrderByFieldType orderType, object value)
+    public void AddStringOrderByField(string value)
     {
-        OrderByFields ??= new List<(string Field, OrderByFieldType OrderType, object Value)>();
-        OrderByFields.Add((fieldName, orderType, value));
+        OrderByFields.Add(new OrderByField
+        {
+            OrderType = OrderByFieldType.String,
+            StringValue = value
+        });
+    }
+
+    public void AddLongOrderByField(long value)
+    {
+        OrderByFields.Add(new OrderByField
+        {
+            OrderType = OrderByFieldType.Long,
+            LongValue = value
+        });
+    }
+
+    public void AddDoubleOrderByField(double value)
+    {
+        OrderByFields.Add(new OrderByField
+        {
+            OrderType = OrderByFieldType.Double,
+            DoubleValue = value
+        });
     }
 
     public static DocumentWithOrderByFields From(Document doc)
@@ -34,5 +55,13 @@ public class DocumentWithOrderByFields : Document
             LowerId = doc.LowerId,
             Data = doc.Data
         };
+    }
+
+    public struct OrderByField
+    {
+        public OrderByFieldType OrderType;
+        public string StringValue;
+        public long LongValue;
+        public double DoubleValue;
     }
 }
