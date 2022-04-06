@@ -284,7 +284,8 @@ namespace SlowTests.Cluster
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "This is flaky test, fix me")]
         public async Task CanImportExportAndBackupWithClusterTransactions(Options options)
         {
             var file = GetTempFileName();
@@ -420,10 +421,9 @@ namespace SlowTests.Cluster
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Handle this after RavenDB-18336")]
         public async Task ResolveInFavorOfClusterTransaction(Options options)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,"Handle this after RavenDB-18336");
-
             var user1 = new User()
             {
                 Name = "Karmel"
@@ -1234,10 +1234,9 @@ namespace SlowTests.Cluster
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Handle this after RavenDB-18336")]
         public async Task ClusterTransactionConflict(Options options)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,"Handle this after RavenDB-18336");
-
             using (var store1 = GetDocumentStore(options))
             using (var store2 = GetDocumentStore(options))
             {
