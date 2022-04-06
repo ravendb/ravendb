@@ -119,7 +119,7 @@ namespace Corax
             {
                 if (binding.FieldIndexing is Constants.IndexWriter.FieldIndexing.No)
                     continue;
-                
+
                 var key = binding.FieldName;
                 if (_buffer.TryGetValue(key, out var field) == false)
                 {
@@ -127,10 +127,18 @@ namespace Corax
                     _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
                 }
 
-                if (binding.Analyzer is not null)
+                if (binding is
+                    {
+                        Analyzer: not null, 
+                        FieldIndexing: not Constants.IndexWriter.FieldIndexing.Exact
+                    })
+                {
                     InsertAnalyzedToken(context, ref entryReader, field, entryId, binding);
+                }
                 else
+                {
                     InsertToken(context, ref entryReader, field, entryId, binding);
+                }
             }
 
             return entryId;

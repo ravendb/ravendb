@@ -70,7 +70,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             ? RavenConstants.Documents.Indexing.Fields.ReduceKeyValueFieldName
             : RavenConstants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
 
-        knownFields = knownFields.AddBinding(0, value, null);
+        knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexing: Constants.IndexWriter.FieldIndexing.Exact);
         foreach (var field in index.Definition.IndexFields.Values)
         {
             Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
@@ -233,8 +233,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
             case ValueType.DynamicJsonObject:
                 var dynamicJson = (DynamicBlittableJson)value;
+                AssertAndThrowWhenTryingToIndexBlittable(field);
                 scope.Write(field.Id, dynamicJson.BlittableJson, ref entryWriter);
-
                 return;
 
             case ValueType.ConvertToJson:
@@ -244,12 +244,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     InsertRegularField(field, val, indexContext, ref entryWriter, scope, nestedArray);
                     return;
                 }
-
+                
+                AssertAndThrowWhenTryingToIndexBlittable(field);
                 var jsonScope = Scope.CreateJson(json, indexContext);
                 scope.Write(field.Id, jsonScope, ref entryWriter);
                 return;
 
             case ValueType.BlittableJsonObject:
+                AssertAndThrowWhenTryingToIndexBlittable(field);
                 HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope);
                 return;
 
@@ -302,14 +304,17 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             HandleArray((IEnumerable)values, field, indexContext, ref entryWriter, scope, true);
         }
 
-        _knownFields.GetByFieldId(field.Id).Analyzer = Analyzer.DefaultAnalyzer;
-        
+        _knownFields.GetByFieldId(field.Id).Analyzer = null;
+        scope.Write(field.Id, val, ref entryWriter);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void AssertAndThrowWhenTryingToIndexBlittable(IndexField field)
+    {
         if (field.Indexing is not FieldIndexing.No)
         {
-            throw new NotSupportedException("Your field contains JSON items. Corax doesn't support indexing of this type. If you want to save it in Index, you must set the \"Indexing\" option to \"No\". If you need to search by this, you have to call ToString() on the field in the index definition.");
+            throw new NotSupportedException($"The value of '{field.OriginalName ?? field.Name}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
         }
-        
-        scope.Write(field.Id, val, ref entryWriter);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -183,8 +183,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 case OperatorType.Equal:
                 {
                     value = (ValueExpression)expression.Right;
-                    field = (FieldExpression)expression.Left;
-                    fieldName = GetField(field);
+                    fieldName = GetField(expression.Left);
                     var match = _searcher.TermQuery(fieldName, GetFieldValue(value).ToString(), GetFieldIdInIndex(fieldName));
                     return scoreFunction is NullScoreFunction
                         ? match
@@ -377,6 +376,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 return indexField.Id;
             }
+            
 
             return fieldName switch
             {

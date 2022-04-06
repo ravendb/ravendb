@@ -82,7 +82,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         key = Encoding.UTF8.GetString(data.Slice(len, size));
         return new(data.Slice(size + len));
     }
-    
+
     public string GetIdentityFor(long id)
     {
         var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
@@ -96,13 +96,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         int size = ZigZagEncoding.Decode<int>(data, out var len);
         return data.Slice(len, size);
     }
-    
+
     [SkipLocalsInit]
     private Slice EncodeAndApplyAnalyzer(string term, int fieldId)
     {
         if (term is null)
             return default;
-        
+
         var encoded = Encoding.UTF8.GetBytes(term);
         Slice termSlice;
         if (fieldId == Constants.IndexSearcher.NonAnalyzer)
@@ -125,12 +125,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false)
             return originalTerm;
-
-        var analyzer = binding.Analyzer;
-
-        if (analyzer is null)
+        
+        if (binding.FieldIndexing == Constants.IndexWriter.FieldIndexing.Exact || binding.Analyzer is null)
+        {
             return originalTerm;
+        }
 
+        var analyzer = binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
         Span<byte> encoded = new byte[outputSize];
