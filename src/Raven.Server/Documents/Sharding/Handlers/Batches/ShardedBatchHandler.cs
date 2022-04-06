@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Batches
 
     public class SingleNodeShardedBatchCommand : ShardedCommand
     {
-        private readonly JsonOperationContext _context;
         private readonly List<Stream> _commands = new List<Stream>();
         private readonly List<int> _positionInResponse = new List<int>();
 
@@ -34,12 +33,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Batches
         private HashSet<Stream> _uniqueAttachmentStreams;
         private readonly TransactionMode _mode = TransactionMode.SingleNode;
         private readonly IDisposable _returnCtx;
-        public JsonOperationContext Context => _context;
-
-        public SingleNodeShardedBatchCommand(ShardedDatabaseRequestHandler handler, JsonContextPool pool) :
+        public SingleNodeShardedBatchCommand(ShardedDatabaseRequestHandler handler) :
             base(handler, Commands.Headers.None)
         {
-            _returnCtx = pool.AllocateOperationContext(out _context);
         }
 
         public void AddCommand(SingleShardedCommand command)
@@ -62,13 +58,23 @@ namespace Raven.Server.Documents.Sharding.Handlers.Batches
             }
         }
 
-        public void AssembleShardedReply(object[] reply)
+        public void AssembleShardedReply(JsonOperationContext context, object[] reply)
         {
             Result.TryGet(nameof(BatchCommandResult.Results), out BlittableJsonReaderArray partialResult);
             var count = 0;
             foreach (var o in partialResult.Items)
             {
                 var positionInResult = _positionInResponse[count++];
+                if (o is BlittableJsonReaderObject blittable)
+                {
+                    reply[positionInResult] = blittable.Clone(context);
+                    continue;
+                }
+                if (o is BlittableJsonReaderArray blittableArray)
+                {
+                    reply[positionInResult] = blittableArray.Clone(context);
+                    continue;
+                }
                 reply[positionInResult] = o;
             }
         }

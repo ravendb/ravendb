@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
-using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
