@@ -839,7 +839,7 @@ namespace Raven.Server.ServerWide
             {
                 case AddDatabaseCommand addDatabase:
                     var clusterTopology = GetClusterTopology(ctx);
-                    if (addDatabase.Record.Topology != null )
+                    if (addDatabase.Record.IsSharded == false)
                     {
                         if (addDatabase.Record.Topology.Count == 0)
                         {
@@ -2711,7 +2711,7 @@ namespace Raven.Server.ServerWide
         {
             databaseValues ??= new Dictionary<string, BlittableJsonReaderObject>();
 
-            if (record.Topology != null)
+            if (record.IsSharded == false)
             {
                 InitializeTopology(record.Topology);
             }

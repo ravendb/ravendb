@@ -1669,8 +1669,11 @@ namespace Raven.Server.ServerWide
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
-                        if (addDatabaseCommand.Record.Topology != null)
+                        if (addDatabaseCommand.Record.IsSharded == false)
                             return addDatabaseCommand.Record.Topology.Members;
+
+                        if (addDatabaseCommand.Record.ShardBucketRanges == null || addDatabaseCommand.Record.ShardBucketRanges.Count == 0)
+                            throw new RachisInvalidOperationException($"Can't create a sharded database {addDatabaseCommand.Name} with an empty {nameof(DatabaseRecord.ShardBucketRanges)}");
 
                         var set = new HashSet<string>();
                         foreach (var shard in addDatabaseCommand.Record.Shards)
