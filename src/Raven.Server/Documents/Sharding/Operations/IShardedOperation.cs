@@ -47,6 +47,9 @@ namespace Raven.Server.Documents.Sharding.Operations
         {
             foreach (var header in HeadersToCopy)
             {
+                if (request.Headers.Contains(header))
+                    continue;
+
                 if (HttpRequest.Headers.TryGetValue(header, out var value))
                 {
                     request.Headers.TryAddWithoutValidation(header, (IEnumerable<string>)value);
