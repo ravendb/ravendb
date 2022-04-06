@@ -144,6 +144,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _first = true;
         private long _operationId = -1;
         private string _nodeTag;
+        private string _database;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
         private readonly JsonSerializer _defaultSerializer;
@@ -207,6 +208,7 @@ namespace Raven.Client.Documents.BulkInsert
                 }
             });
 
+            _database = database;
             _token = token;
             _conventions = store.Conventions;
             if (string.IsNullOrWhiteSpace(database))
@@ -221,7 +223,7 @@ namespace Raven.Client.Documents.BulkInsert
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
-                entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
+                entity => throw new InvalidOperationException("Cannot generate ids synchronously in bulk insert operation, likely a bug"));
         }
 
         private async Task ThrowBulkInsertAborted(Exception e, Exception flushEx = null)
@@ -272,7 +274,13 @@ namespace Raven.Client.Documents.BulkInsert
         public async Task<string> StoreAsync(object entity, IMetadataDictionary metadata = null)
         {
             if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out var id) == false)
-                id = GetId(entity);
+            {
+                if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
+                {
+                    id = await _requestExecutor.Conventions.GenerateDocumentIdAsync(_database, entity).ConfigureAwait(false);
+                    _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
+                }
+            }
 
             await StoreAsync(entity, id, metadata).ConfigureAwait(false);
 
@@ -539,16 +547,6 @@ namespace Raven.Client.Documents.BulkInsert
         public Task DisposeAsync()
         {
             return _disposeOnce.DisposeAsync();
-        }
-
-        private string GetId(object entity)
-        {
-            if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id))
-                return id;
-
-            id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
-            _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
-            return id;
         }
     }
 }
