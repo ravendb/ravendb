@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.BulkInsert;
@@ -19,15 +20,18 @@ namespace Raven.Server.Documents.Sharding.Operations.BulkInsert;
 internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatchCommandData>, IShardedOperation<HttpResponseMessage>, IAsyncDisposable
 {
     private readonly bool _skipOverwriteIfUnchanged;
+    private readonly ShardedBulkInsertHandler _requestHandler;
     private readonly ShardedDatabaseContext _databaseContext;
     private readonly TransactionOperationContext _context;
     private readonly ShardedBulkInsertWriter[] _writers;
     private readonly List<IDisposable> _returnContexts = new();
 
-    public ShardedBulkInsertOperation(long id, bool skipOverwriteIfUnchanged, ShardedDatabaseContext databaseContext, JsonContextPoolBase<TransactionOperationContext> contextPool, CancellationToken token)
+    public ShardedBulkInsertOperation(long id, bool skipOverwriteIfUnchanged, ShardedBulkInsertHandler requestHandler, ShardedDatabaseContext databaseContext,
+        JsonContextPoolBase<TransactionOperationContext> contextPool, CancellationToken token)
     {
         OperationId = id;
         _skipOverwriteIfUnchanged = skipOverwriteIfUnchanged;
+        _requestHandler = requestHandler;
         _databaseContext = databaseContext;
 
         _returnContexts.Add(contextPool.AllocateOperationContext(out _context));
@@ -46,6 +50,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
     public CompressionLevel CompressionLevel { get; set; } = CompressionLevel.NoCompression;
 
+    public HttpRequest HttpRequest => _requestHandler.HttpContext.Request;
     public HttpResponseMessage Combine(Memory<HttpResponseMessage> results) => null;
 
     public RavenCommand<HttpResponseMessage> CreateCommandForShard(int shardNumber)
@@ -100,7 +105,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
     protected override async Task<BulkInsertAbortedException> GetExceptionFromOperation()
     {
-        var getStateOperation = new GetShardedOperationStateOperation(OperationId);
+        var getStateOperation = new GetShardedOperationStateOperation(_requestHandler.HttpContext, OperationId);
         var result = await _databaseContext.ShardExecutor.ExecuteParallelForAllAsync(getStateOperation);
 
         if (result?.Result is OperationMultipleExceptionsResult multipleErrors)
