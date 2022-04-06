@@ -285,7 +285,7 @@ namespace SlowTests.Cluster
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "This is flaky test, fix me")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CanImportExportAndBackupWithClusterTransactions(Options options)
         {
             var file = GetTempFileName();
