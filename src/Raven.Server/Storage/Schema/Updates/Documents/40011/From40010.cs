@@ -3,10 +3,13 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Voron;
 using Voron.Data.Tables;
-using static Raven.Server.Documents.AttachmentsStorage;
-using static Raven.Server.Documents.ConflictsStorage;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Raven.Server.Documents.Revisions.RevisionsStorage;
+using static Raven.Server.Documents.Schemas.Attachments;
+using static Raven.Server.Documents.Schemas.Collections;
+using static Raven.Server.Documents.Schemas.Conflicts;
+using static Raven.Server.Documents.Schemas.Documents;
+using static Raven.Server.Documents.Schemas.Revisions;
+using static Raven.Server.Documents.Schemas.Tombstones;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
@@ -21,10 +24,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             // Update collections
             using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var readTable = step.ReadTx.OpenTable(CollectionsSchema, CollectionsSlice);
+                var readTable = step.ReadTx.OpenTable(CollectionsSchemaBase, CollectionsSlice);
                 if (readTable != null)
                 {
-                    var writeTable = step.WriteTx.OpenTable(CollectionsSchema, CollectionsSlice);
+                    var writeTable = step.WriteTx.OpenTable(CollectionsSchemaBase, CollectionsSlice);
                     foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
@@ -63,14 +66,14 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
                     }
 
-                    var readTable = step.ReadTx.OpenTable(TombstonesSchema, tableName);
+                    var readTable = step.ReadTx.OpenTable(TombstonesSchemaBase, tableName);
                     if (readTable == null)
                         continue;
 
-                    var writeTable = step.WriteTx.OpenTable(TombstonesSchema, tableName);
+                    var writeTable = step.WriteTx.OpenTable(TombstonesSchemaBase, tableName);
                     // We seek by an index instead the PK because 
                     // we weed to ensure that we aren't accessing an IsGlobal key
-                    foreach (var read in readTable.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
+                    foreach (var read in readTable.SeekForwardFrom(TombstonesSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], 0, 0))
                     {
                         // We copy the memory of the read so AssertNoReferenceToOldData won't throw.
                         // This is done instead of moving AssertNoReferenceToOldData to assert later 
@@ -108,10 +111,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             // Update conflicts' collection value
             using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var readTable = step.ReadTx.OpenTable(ConflictsSchema, ConflictsSlice);
+                var readTable = step.ReadTx.OpenTable(ConflictsSchemaBase, ConflictsSlice);
                 if (readTable != null)
                 {
-                    var writeTable = step.WriteTx.OpenTable(ConflictsSchema, ConflictsSlice);
+                    var writeTable = step.WriteTx.OpenTable(ConflictsSchemaBase, ConflictsSlice);
                     foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))

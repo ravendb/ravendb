@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -19,6 +18,10 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.CountersStorage;
+using static Raven.Server.Documents.Schemas.Collections;
+using static Raven.Server.Documents.Schemas.Counters;
+using static Raven.Server.Documents.Schemas.Documents;
+using static Raven.Server.Documents.Schemas.Revisions;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
@@ -57,8 +60,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             UpdateSchemaForDocumentsAndRevisions(step);
 
-            var readTable = new Table(CountersSchema, step.WriteTx);
-            var countersTree = readTable.GetTree(CountersSchema.Key);
+            var readTable = new Table(CountersSchemaBase, step.WriteTx);
+            var countersTree = readTable.GetTree(CountersSchemaBase.Key);
             if (countersTree == null)
                 return true;
 
@@ -79,7 +82,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             while (done == false)
             {
-                readTable = new Table(CountersSchema, step.ReadTx);
+                readTable = new Table(CountersSchemaBase, step.ReadTx);
 
                 var processedInCurrentTx = 0;
 
@@ -150,17 +153,17 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private static void UpdateSchemaForDocumentsAndRevisions(UpdateStep step)
         {
             using var _ = step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
-            var collections = step.WriteTx.OpenTable(DocumentsStorage.CollectionsSchema, DocumentsStorage.CollectionsSlice);
+            var collections = step.WriteTx.OpenTable(CollectionsSchemaBase, CollectionsSlice);
             foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
             {
-                var collection = DocumentsStorage.TableValueToId(context, (int)DocumentsStorage.CollectionsTable.Name, ref tvr.Reader);
+                var collection = DocumentsStorage.TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
                 var collectionName = new CollectionName(collection);
                 var tableTree = step.WriteTx.CreateTree(collectionName.GetTableName(CollectionTableType.Documents), RootObjectType.Table);
-                DocumentsStorage.DocsSchema.SerializeSchemaIntoTableTree(tableTree);
+                DocsSchemaBase.SerializeSchemaIntoTableTree(tableTree);
 
                 var revisionsTree = step.WriteTx.ReadTree(collectionName.GetTableName(CollectionTableType.Revisions), RootObjectType.Table);
                 if (revisionsTree != null)
-                    RevisionsStorage.RevisionsSchema.SerializeSchemaIntoTableTree(revisionsTree);
+                    RevisionsSchemaBase.SerializeSchemaIntoTableTree(revisionsTree);
             }
         }
 
@@ -168,12 +171,13 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerDocId))
             {
-                var table = step.WriteTx.OpenTable(DocumentsStorage.DocsSchema, collection.GetTableName(CollectionTableType.Documents));
+                var table = step.WriteTx.OpenTable(DocsSchemaBase, collection.GetTableName(CollectionTableType.Documents));
                 if (table.ReadByKey(lowerDocId, out var tvr) == false)
                     return; // document doesn't exists
 
                 var tableId = tvr.Id;
-                var counterNames = step.DocumentsStorage.CountersStorage.GetCountersForDocument(context, step.WriteTx, docId).ToList();
+                var countersTable = new Table(CountersSchemaBase, step.WriteTx);
+                var counterNames = GetCountersForDocumentInternal(context, docId, countersTable).ToList();
                 var doc = step.DocumentsStorage.TableValueToDocument(context, ref tvr, skipValidationInDebug: true);
                 if (doc.TryGetMetadata(out var metadata) == false)
                 {
@@ -251,10 +255,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private static void DeleteProcessedEntries(UpdateStep step, List<long> toDelete, CollectionName collection)
         {
-            var table = step.WriteTx.OpenTable(CountersSchema, collection.GetTableName(CollectionTableType.CounterGroups));
+            var table = step.WriteTx.OpenTable(CountersSchemaBase, collection.GetTableName(CollectionTableType.CounterGroups));
             foreach (var etag in toDelete)
             {
-                table.DeleteByIndex(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag);
+                table.DeleteByIndex(CountersSchemaBase.FixedSizeIndexes[CollectionCountersEtagsSlice], etag);
             }
 
             toDelete.Clear();
@@ -295,7 +299,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
             {
-                var docsTable = new Table(DocumentsStorage.DocsSchema, step.ReadTx);
+                var docsTable = new Table(DocsSchemaBase, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out _) == false)
                 {
                     // document does not exist
@@ -306,7 +310,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var entriesToUpdate = _dictionariesPool.Allocate();
             try
             {
-                var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collection);
+                var table = step.DocumentsStorage.CountersStorage.GetOrCreateTable(step.WriteTx, CountersSchemaBase, collection, CollectionTableType.CounterGroups);
 
                 using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 {

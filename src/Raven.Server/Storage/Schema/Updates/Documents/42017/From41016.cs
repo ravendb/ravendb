@@ -17,6 +17,9 @@ using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
+using static Raven.Server.Documents.Schemas.Counters;
+using static Raven.Server.Documents.Schemas.Documents;
+using static Raven.Server.Documents.Schemas.Tombstones;
 using Constants = Voron.Global.Constants;
 
 #pragma warning disable 618
@@ -272,7 +275,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             // legacy counter tombstones processing
 
-            var counterTombstones = step.ReadTx.OpenTable(TombstonesSchema, CountersTombstonesSlice);
+            var counterTombstones = step.ReadTx.OpenTable(TombstonesSchemaBase, CountersTombstonesSlice);
             if (counterTombstones != null)
             {
                 // for each counter tombstone, delete the matching
@@ -296,8 +299,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     }
 
                     // delete counter-tombstones from Tombstones table
-                    var countersTombstoneTable = step.WriteTx.OpenTable(TombstonesSchema, CountersTombstonesSlice);
-                    DeleteFromTable(context, countersTombstoneTable, TombstonesSchema.Key, tvh =>
+                    var countersTombstoneTable = step.WriteTx.OpenTable(TombstonesSchemaBase, CountersTombstonesSlice);
+                    DeleteFromTable(context, countersTombstoneTable, TombstonesSchemaBase.Key, tvh =>
                     {
                         var type = *(Tombstone.TombstoneType*)tvh.Reader.Read((int)TombstoneTable.Type, out _);
                         return type != Tombstone.TombstoneType.Counter;
@@ -346,7 +349,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 string collection = null;
 
-                var docsTable = new Table(DocsSchema, step.ReadTx);
+                var docsTable = new Table(DocsSchemaBase, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out var tvr))
                 {
                     using (var doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context))
@@ -356,7 +359,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
 
                 var collectionName = new CollectionName(collection);
-                var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
+                var table = step.DocumentsStorage.CountersStorage.GetOrCreateTable(step.WriteTx, CountersSchemaBase, collectionName, CollectionTableType.CounterGroups);
 
                 if (table.ReadByKey(lowerId, out var existing) == false)
                     return;
@@ -410,7 +413,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerId))
             {
-                var docsTable = new Table(DocsSchema, step.ReadTx);
+                var docsTable = new Table(DocsSchemaBase, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out var tvr))
                 {
                     using (var doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context))
@@ -442,7 +445,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         var changeVector = ChangeVectorUtils.NewChangeVector(
                             step.DocumentsStorage.DocumentDatabase.ServerStore.NodeTag, etag, _dbId);
 
-                        var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
+                        var table = step.DocumentsStorage.CountersStorage.GetOrCreateTable(step.WriteTx, CountersSchemaBase, collectionName, CollectionTableType.CounterGroups);
                         data.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
                         BlittableJsonReaderObject.PropertyDetails prop = default;
                         values.GetPropertyByIndex(0, ref prop);
