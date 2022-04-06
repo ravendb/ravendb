@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -180,11 +178,8 @@ namespace SlowTests.Issues
 
                 await sessionTester.AssertOneAsync((_, session) =>
                 {
-                    using (session)
-                    {
-                        var attachment = session.Advanced.Attachments.Get(docId, attachmentName);
-                        Assert.NotNull(attachment);
-                    }
+                    var attachment = session.Advanced.Attachments.Get(docId, attachmentName);
+                    Assert.NotNull(attachment);
                 });
             }
         }
@@ -233,16 +228,11 @@ namespace SlowTests.Issues
                     Assert.Equal(lastEtags[key], stats.LastDocEtag);
                 });
 
-                var sessionTester = store.ForSessionTesting();
-
-                await sessionTester.AssertOneAsync((_, session) =>
+                using (var session = store.OpenAsyncSession())
                 {
-                    using (session)
-                    {
-                        var counter = session.CountersFor(docId).Get(counterName);
-                        Assert.Equal(1, counter);
-                    }
-                });
+                    var counter = await session.CountersFor(docId).GetAsync(counterName);
+                    Assert.Equal(1, counter);
+                }
             }
         }
 
@@ -290,18 +280,11 @@ namespace SlowTests.Issues
                     Assert.Equal(lastEtags[key], stats.LastDocEtag);
                 });
 
-                var sessionTester = store.ForSessionTesting();
-
-                await sessionTester.AssertOneAsync((_, session) =>
+                using (var session = store.OpenAsyncSession())
                 {
-                    using (session)
-                    {
-                        var entries = session.TimeSeriesFor(docId, timeSeriesName).Get();
-
-                        if (entries != null)
-                            Assert.Equal(1, entries.Length);
-                    }
-                });
+                    var entries = await session.TimeSeriesFor(docId, timeSeriesName).GetAsync();
+                    Assert.Equal(1, entries.Length);
+                }
             }
         }
     }

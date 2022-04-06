@@ -31,7 +31,10 @@ public class SessionTester
         {
             try
             {
-                assert(key, result);
+                using (result)
+                {
+                    assert(key, result);
+                }
             }
             catch (XunitException e)
             {
@@ -50,7 +53,10 @@ public class SessionTester
         {
             try
             {
-                assert(key, result);
+                using (result)
+                {
+                    assert(key, result);
+                }
 
                 succeededAtLeastOnce = true;
             }

@@ -15,7 +15,7 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Simple_Bulk_Insert_With_Ssl(RavenTestBase.Options options)
         {
             using (var x = new FastTests.Client.BulkInserts(Output))
