@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Raven.Server.Documents.Revisions.RevisionsStorage;
+using static Raven.Server.Documents.Schemas.Revisions;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
@@ -26,12 +26,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 {
                     var collectionName = new CollectionName(collection);
                     var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
-                    var readTable = step.ReadTx.OpenTable(RevisionsSchema, tableName);
+                    var readTable = step.ReadTx.OpenTable(RevisionsSchemaBase, tableName);
                     if (readTable == null)
                         continue;
 
-                    var writeTable = step.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(step.WriteTx, collectionName);
-                    foreach (var read in readTable.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], 0, 0))
+                    var writeTable = step.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(step.WriteTx, collectionName, RevisionsSchemaBase);
+                    foreach (var read in readTable.SeekForwardFrom(RevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], 0, 0))
                     {
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         using (writeTable.Allocate(out TableValueBuilder write))
