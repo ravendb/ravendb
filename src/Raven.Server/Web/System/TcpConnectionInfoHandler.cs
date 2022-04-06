@@ -204,6 +204,11 @@ namespace Raven.Server.Web.System
             {
                 return false;
             }
+
+            public bool IsPinnedToMentorNode()
+            {
+                return false;
+            }
         }
     }
 }
