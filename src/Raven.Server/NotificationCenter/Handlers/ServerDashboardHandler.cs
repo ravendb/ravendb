@@ -34,7 +34,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                         {
                             var databasesInfo = new List<AbstractDashboardNotification>();
 
-                            foreach (var item in DatabasesInfoRetriever.FetchDatabasesInfo(ServerStore, isValidFor, cts.Token))
+                            foreach (var item in DatabasesInfoRetriever.FetchDatabasesInfo(ServerStore, isValidFor, false, cts.Token))
                             {
                                 databasesInfo.Add(item);
                             }

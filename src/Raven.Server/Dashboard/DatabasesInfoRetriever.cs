@@ -57,7 +57,7 @@ namespace Raven.Server.Dashboard
 
         private List<AbstractDashboardNotification> CreateDatabasesInfo()
         {
-            List<AbstractDashboardNotification> result = FetchDatabasesInfo(_serverStore, _canAccessDatabase, _serverStore.ServerShutdown).ToList();
+            List<AbstractDashboardNotification> result = FetchDatabasesInfo(_serverStore, _canAccessDatabase, true, _serverStore.ServerShutdown).ToList();
 
             return result;
         }
@@ -87,7 +87,7 @@ namespace Raven.Server.Dashboard
             return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<DrivesUsage>().First();
         }
 
-        public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CanAccessDatabase isValidFor, CancellationToken token)
+        public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CanAccessDatabase isValidFor, bool collectOngoingTasks, CancellationToken token)
         {
             var databasesInfo = new DatabasesInfo();
             var databasesOngoingTasksInfo = new DatabasesOngoingTasksInfo();
@@ -157,8 +157,12 @@ namespace Raven.Server.Dashboard
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
              
-                        databasesOngoingTasksInfo.Items.Add(GetOngoingTasksInfoItem(database, serverStore, context, out var ongoingTasksCount));
-                        
+                        var ongoingTasksInfoItem = GetOngoingTasksInfoItem(database, serverStore, context, out var ongoingTasksCount);
+                        if (collectOngoingTasks)
+                        {
+                            databasesOngoingTasksInfo.Items.Add(ongoingTasksInfoItem);
+                        }
+
                         // TODO: RavenDB-17004 - hash should report on all relevant info 
                         var currentEnvironmentsHash = database.GetEnvironmentsHash();
 
@@ -259,10 +263,14 @@ namespace Raven.Server.Dashboard
             }
 
             yield return databasesInfo;
-            yield return databasesOngoingTasksInfo;
             yield return indexingSpeed;
             yield return trafficWatch;
             yield return drivesUsage;
+            
+            if (collectOngoingTasks)
+            {
+                yield return databasesOngoingTasksInfo;
+            }
         }
 
         private static DatabaseOngoingTasksInfoItem GetOngoingTasksInfoItem(DocumentDatabase database,  ServerStore serverStore, TransactionOperationContext context, out long ongoingTasksCount)
