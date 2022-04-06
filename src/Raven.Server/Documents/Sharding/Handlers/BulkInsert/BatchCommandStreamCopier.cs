@@ -24,7 +24,7 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver, IDi
     public BatchCommandStreamCopier(JsonOperationContext ctx)
     {
         _ctx = ctx;
-        CommandStream = ctx.CheckoutMemoryStream(); // TODO arek - let's use memory stream for now, then use context.GetMemoryBuffer(out var buffer)
+        CommandStream = ctx.CheckoutMemoryStream();
     }
 
     public override void OnCommandStart(UnmanagedJsonParser parser)

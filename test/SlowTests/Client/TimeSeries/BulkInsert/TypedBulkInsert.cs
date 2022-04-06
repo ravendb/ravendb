@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.Client.TimeSeries.Session.TimeSeriesTypedSessionTests;
@@ -24,10 +25,11 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
         }
 
-        [Fact]
-        public void CanCreateSimpleTimeSeries()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanCreateSimpleTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday.EnsureMilliseconds();
              
@@ -65,10 +67,11 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
-        public void CanCreateSimpleTimeSeries2()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanCreateSimpleTimeSeries2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
@@ -105,7 +108,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanCreateTimeSeriesWithoutPassingName()
         {
             using (var store = GetDocumentStore())
@@ -164,7 +167,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanDeleteTimestamp()
         {
             using (var store = GetDocumentStore())
@@ -211,7 +214,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void UsingDifferentTags()
         {
             using (var store = GetDocumentStore())
@@ -249,7 +252,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanStoreAndReadMultipleTimestamps()
         {
             using (var store = GetDocumentStore())
@@ -298,7 +301,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanStoreLargeNumberOfValues()
         {
             using (var store = GetDocumentStore())
@@ -345,7 +348,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanStoreValuesOutOfOrder()
         {
             using (var store = GetDocumentStore())
@@ -425,7 +428,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             [TimeSeriesValue(4)] public double Volume;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanGetTimeSeriesNames()
         {
             using (var store = GetDocumentStore())
@@ -500,7 +503,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanGetTimeSeriesNames2()
         {
             using (var store = GetDocumentStore())
@@ -587,7 +590,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void DocumentsChangeVectorShouldBeUpdatedAfterAddingNewTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -665,7 +668,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanStoreAndReadMultipleTimeseriesForDifferentDocuments()
         {
             using (var store = GetDocumentStore())
@@ -838,7 +841,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
 
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void ErrorHandling()
         {
             using (var store = GetDocumentStore())
@@ -886,7 +889,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public async Task CanHaveBulkInsertWithDocumentsAndAttachmentAndCountersAndTypedTimeSeries()
         {
             const int count = 100;

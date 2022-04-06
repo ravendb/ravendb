@@ -61,26 +61,23 @@ namespace SlowTests.Client.Attachments
 
                 await tester.AssertAllAsync((_, session) =>
                 {
-                    using (session)
-                    {
-                        var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+                    var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
 
-                        while (attachmentsEnumerator.MoveNext())
-                        {
-                            Assert.NotNull(attachmentsEnumerator.Current != null);
-                            Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[attachmentsEnumerator.Current.Details.Name]));
-                        }
+                    while (attachmentsEnumerator.MoveNext())
+                    {
+                        Assert.NotNull(attachmentsEnumerator.Current != null);
+                        Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[attachmentsEnumerator.Current.Details.Name]));
                     }
                 });
             }
         }
 
-        [Theory]
-        [InlineData(100, 100, 16 * 1024)]
-        [InlineData(75, 75, 64 * 1024)]
-        public async Task StoreManyAttachmentsAndDocs(int count, int attachments, int size)
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(100, 100, 16 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(75, 75, 64 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task StoreManyAttachmentsAndDocs(Options options, int count, int attachments, int size)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
                 using (var bulkInsert = store.BulkInsert())
@@ -106,9 +103,11 @@ namespace SlowTests.Client.Attachments
                     }
                 }
 
+                var tester = store.ForSessionTesting();
+
                 foreach (var id in streams.Keys)
                 {
-                    using (var session = store.OpenSession())
+                    await tester.AssertAllAsync((_, session) =>
                     {
                         var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
@@ -118,17 +117,17 @@ namespace SlowTests.Client.Attachments
                             Assert.NotNull(attachmentsEnumerator.Current != null);
                             Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
                         }
-                    }
+                    });
                 }
             }
         }
 
-        [Theory]
-        [InlineData(10, 100, 32 * 1024)]
-        [InlineData(500, 750, 16 * 1024)]
-        public async Task BulkStoreAttachmentsForRandomDocs(int count, int attachments, int size)
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(10, 100, 32 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(500, 750, 16 * 1024, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BulkStoreAttachmentsForRandomDocs(Options options, int count, int attachments, int size)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
                 var ids = new List<string>();
@@ -157,10 +156,12 @@ namespace SlowTests.Client.Attachments
                         streams[id][name] = stream;
                     }
                 }
+                
+                var tester = store.ForSessionTesting();
 
                 foreach (var id in streams.Keys)
                 {
-                    using (var session = store.OpenSession())
+                    await tester.AssertAllAsync((_, session) =>
                     {
                         var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
@@ -170,17 +171,20 @@ namespace SlowTests.Client.Attachments
                             Assert.NotNull(attachmentsEnumerator.Current != null);
                             Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
                         }
-                    }
+                    });
                 }
             }
         }
 
-        [Fact]
-        public async Task CanHaveAttachmentBulkInsertsWithCounters()
+
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanHaveAttachmentBulkInsertsWithCounters(Options options)
         {
             int count = 100;
             int size = 64 * 1024;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
                 var counters = new Dictionary<string, string>();
@@ -211,9 +215,11 @@ namespace SlowTests.Client.Attachments
                     }
                 }
 
+                var tester = store.ForSessionTesting();
+
                 foreach (var id in streams.Keys)
                 {
-                    using (var session = store.OpenSession())
+                    await tester.AssertAllAsync((_, session) =>
                     {
                         var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
@@ -223,7 +229,7 @@ namespace SlowTests.Client.Attachments
                             Assert.NotNull(attachmentsEnumerator.Current != null);
                             Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
                         }
-                    }
+                    });
 
                     var val = store.Operations
                         .Send(new GetCountersOperation(id, new[] { counters[id] }))
@@ -233,7 +239,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void StoreAsyncShouldThrowIfRunningTimeSeriesBulkInsert()
         {
             using (var store = GetDocumentStore())
@@ -252,7 +258,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void StoreAsyncNullId()
         {
             using (var store = GetDocumentStore())
@@ -270,13 +276,15 @@ namespace SlowTests.Client.Attachments
         }
 
         // RavenDB-14934
-        [Fact]
-        public async Task ShouldUpdateDocumentChangeAfterInsertingAttachment()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldUpdateDocumentChangeAfterInsertingAttachment(Options options)
         {
             int count = 10;
             int attachments = 10;
             int size = 16 * 1024;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
                 var changeVectorsBefore = new Dictionary<string, string>();
@@ -315,9 +323,11 @@ namespace SlowTests.Client.Attachments
                     }
                 }
 
+                var tester = store.ForSessionTesting();
+
                 foreach (var id in streams.Keys)
                 {
-                    using (var session = store.OpenSession())
+                    await tester.AssertAllAsync((_, session) =>
                     {
                         var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
@@ -327,7 +337,10 @@ namespace SlowTests.Client.Attachments
                             Assert.NotNull(attachmentsEnumerator.Current != null);
                             Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
                         }
+                    });
 
+                    using (var session = store.OpenSession())
+                    {
                         var u = session.Load<User>(id);
                         var changeVector = session.Advanced.GetChangeVectorFor(u);
                         changeVectorsAfter.Add(id, changeVector);

@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Client.Counters
         {
         }
 
-        [Fact]
-        public void IncrementCounter()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IncrementCounter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string userId1;
                 string userId2;
@@ -54,10 +56,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void AddDocumentAfterIncrementCounter()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void AddDocumentAfterIncrementCounter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string userId1;
                 string userId2;
@@ -97,10 +100,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void IncrementCounterInSeparateBulkInserts()
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IncrementCounterInSeparateBulkInserts(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string userId1;
                 string userId2;
@@ -140,7 +144,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void IncrementCounterNullId()
         {
             using (var store = GetDocumentStore())
@@ -157,15 +161,15 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Theory]
-        [InlineData(128)]
-        [InlineData(1000)]
-        [InlineData(10_000)]
-        [InlineData(50_000)]
-        [InlineData(100_000)]
-        public void IncrementManyCounters(int counterCount)
+        [RavenTheory(RavenTestCategory.BulkInsert)]
+        [RavenData(128, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(1000, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(10_000, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(50_000, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(100_000, DatabaseMode = RavenDatabaseMode.All)]
+        public void IncrementManyCounters(Options options, int counterCount)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string userId1;
                 using (var bulkInsert = store.BulkInsert())
