@@ -204,10 +204,17 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
         }
         catch (Exception e)
         {
+            await OnErrorAsync(e);
+
             HttpContext.Response.Headers["Connection"] = "close";
 
             throw new InvalidOperationException("Failed to process bulk insert. " + _progress, e);
         }
+    }
+
+    protected virtual Task OnErrorAsync(Exception exception)
+    {
+        return Task.CompletedTask;
     }
 
     private void ClearAttachmentStreamsTempFiles()

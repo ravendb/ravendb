@@ -67,4 +67,6 @@ public abstract class BulkInsertOperationBase<T>
     protected abstract Task EnsureStreamAsync();
 
     protected abstract Task<BulkInsertAbortedException> GetExceptionFromOperation();
+
+    public abstract Task AbortAsync();
 }

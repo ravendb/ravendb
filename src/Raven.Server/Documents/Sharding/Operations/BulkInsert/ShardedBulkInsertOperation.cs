@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.BulkInsert;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Http;
@@ -25,6 +26,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     private readonly TransactionOperationContext _context;
     private readonly ShardedBulkInsertWriter[] _writers;
     private readonly List<IDisposable> _returnContexts = new();
+    private readonly Dictionary<int, BulkInsertOperation.BulkInsertCommand> _bulkInsertCommands = new();
 
     public ShardedBulkInsertOperation(long id, bool skipOverwriteIfUnchanged, ShardedBulkInsertHandler requestHandler, ShardedDatabaseContext databaseContext,
         JsonContextPoolBase<TransactionOperationContext> contextPool, CancellationToken token)
@@ -55,7 +57,11 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
     public RavenCommand<HttpResponseMessage> CreateCommandForShard(int shardNumber)
     {
-        return new BulkInsertOperation.BulkInsertCommand(OperationId, _writers[shardNumber].StreamExposer, null, _skipOverwriteIfUnchanged);
+        var bulkInsertCommand = new BulkInsertOperation.BulkInsertCommand(OperationId, _writers[shardNumber].StreamExposer, null, _skipOverwriteIfUnchanged);
+
+        _bulkInsertCommands[shardNumber] = bulkInsertCommand;
+
+        return bulkInsertCommand;
     }
 
     protected override Task WaitForId()
@@ -112,6 +118,27 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
             return new BulkInsertAbortedException(string.Join(',', multipleErrors.Exceptions.Select(x => x.Error)));
 
         return null;
+    }
+
+    public override async Task AbortAsync()
+    {
+        if (BulkInsertExecuteTask == null)
+            return; // nothing was done, nothing to kill
+
+        foreach (var command in _bulkInsertCommands)
+        {
+            if (command.Value.RequestNodeTag == null)
+                continue; // request wasn't created
+
+            try
+            {
+                await _databaseContext.ShardExecutor.ExecuteSingleShardAsync(new KillOperationCommand(OperationId, command.Value.RequestNodeTag), command.Key);
+            }
+            catch
+            {
+                // ignore
+            }
+        }
     }
 
     public async ValueTask DisposeAsync()

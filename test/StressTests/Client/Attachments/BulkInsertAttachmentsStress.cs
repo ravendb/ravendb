@@ -30,7 +30,7 @@ namespace StressTests.Client.Attachments
         {
             using (var test = new BulkInsertAttachments(Output))
             {
-                await test.StoreManyAttachmentsAndDocs(count, attachments, size);
+                await test.StoreManyAttachmentsAndDocs(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single), count, attachments, size);
             }
         }
     }

@@ -61,8 +61,12 @@ namespace Raven.Client.Documents.BulkInsert
                 Timeout = TimeSpan.FromHours(12); // global max timeout
             }
 
+            internal string RequestNodeTag { get; private set; }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
+                RequestNodeTag = node.ClusterTag;
+
                 url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}&skipOverwriteIfUnchanged={_skipOverwriteIfUnchanged}";
                 var message = new HttpRequestMessage
                 {
@@ -418,7 +422,7 @@ namespace Raven.Client.Documents.BulkInsert
             await BulkInsertExecuteTask.ConfigureAwait(false);
         }
 
-        public async Task AbortAsync()
+        public override async Task AbortAsync()
         {
             if (OperationId == -1)
                 return; // nothing was done, nothing to kill
