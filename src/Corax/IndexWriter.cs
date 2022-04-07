@@ -117,7 +117,7 @@ namespace Corax
 
             foreach (var binding in knownFields)
             {
-                if (binding.FieldIndexing is Constants.IndexWriter.FieldIndexing.No)
+                if (binding.FieldIndexingMode is FieldIndexingMode.No)
                     continue;
 
                 var key = binding.FieldName;
@@ -130,7 +130,7 @@ namespace Corax
                 if (binding is
                     {
                         Analyzer: not null, 
-                        FieldIndexing: not Constants.IndexWriter.FieldIndexing.Exact
+                        FieldIndexingMode: not FieldIndexingMode.Exact
                     })
                 {
                     InsertAnalyzedToken(context, ref entryReader, field, entryId, binding);

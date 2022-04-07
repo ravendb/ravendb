@@ -70,13 +70,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             ? RavenConstants.Documents.Indexing.Fields.ReduceKeyValueFieldName
             : RavenConstants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
 
-        knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexing: Constants.IndexWriter.FieldIndexing.Exact);
+        knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Exact);
         foreach (var field in index.Definition.IndexFields.Values)
         {
             Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
             knownFields = knownFields.AddBinding(field.Id, value, null, 
                 hasSuggestion: field.HasSuggestions, 
-                fieldIndexing: TranslateRavenFieldIndexingIntoCoraxFieldIndexing(field.Indexing));
+                fieldIndexingMode: TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(field.Indexing));
         }
 
         if (index.Type.IsMapReduce())
@@ -232,8 +232,12 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.DynamicJsonObject:
+                if (field.Indexing is not FieldIndexing.No)
+                {
+                    ThrowIndexingComplexObjectNotSupported(field);
+                }
+
                 var dynamicJson = (DynamicBlittableJson)value;
-                AssertAndThrowWhenTryingToIndexBlittable(field);
                 scope.Write(field.Id, dynamicJson.BlittableJson, ref entryWriter);
                 return;
 
@@ -244,14 +248,22 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     InsertRegularField(field, val, indexContext, ref entryWriter, scope, nestedArray);
                     return;
                 }
+
+                if (field.Indexing is not FieldIndexing.No)
+                {
+                    ThrowIndexingComplexObjectNotSupported(field);
+                }
                 
-                AssertAndThrowWhenTryingToIndexBlittable(field);
                 var jsonScope = Scope.CreateJson(json, indexContext);
                 scope.Write(field.Id, jsonScope, ref entryWriter);
                 return;
 
             case ValueType.BlittableJsonObject:
-                AssertAndThrowWhenTryingToIndexBlittable(field);
+                if (field.Indexing is not FieldIndexing.No)
+                {
+                    ThrowIndexingComplexObjectNotSupported(field);
+                }
+                
                 HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope);
                 return;
 
@@ -308,23 +320,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         scope.Write(field.Id, val, ref entryWriter);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void AssertAndThrowWhenTryingToIndexBlittable(IndexField field)
-    {
-        if (field.Indexing is not FieldIndexing.No)
-        {
-            throw new NotSupportedException($"The value of '{field.OriginalName ?? field.Name}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
-        }
-    }
+    public void ThrowIndexingComplexObjectNotSupported(IndexField field) =>
+        throw new NotSupportedException($"The value of '{field.OriginalName ?? field.Name}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
+    
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static CoraxConstants.IndexWriter.FieldIndexing TranslateRavenFieldIndexingIntoCoraxFieldIndexing(FieldIndexing indexing) => indexing switch
+    private static FieldIndexingMode TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(FieldIndexing indexing) => indexing switch
     {
-        FieldIndexing.No => CoraxConstants.IndexWriter.FieldIndexing.No,
-        FieldIndexing.Search => CoraxConstants.IndexWriter.FieldIndexing.Search,
-        FieldIndexing.Exact => CoraxConstants.IndexWriter.FieldIndexing.Exact,
-        FieldIndexing.Default => CoraxConstants.IndexWriter.FieldIndexing.Default,
-        _ => throw new ArgumentOutOfRangeException(nameof(indexing), indexing, null)
+        FieldIndexing.No => FieldIndexingMode.No,
+        FieldIndexing.Exact => FieldIndexingMode.Exact,
+        _ => FieldIndexingMode.Normal,
     };
     
     public override void Dispose()
