@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             {
                 DatabaseName = $"for sharded database '{Database}' on '{_serverStore.NodeTag}'",
                 ClientType = $"'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'",
-                SubscriptionType = $"sharded subscription '{_options.SubscriptionName}', id '{SubscriptionId}'"
+                SubscriptionType = $"sharded subscription '{_options?.SubscriptionName}', id '{SubscriptionId}'"
             };
         }
 
