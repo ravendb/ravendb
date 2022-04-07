@@ -1,5 +1,8 @@
 ﻿import appUrl from "common/appUrl";
 
 export function useAppUrls() {
-    return appUrl.forCurrentDatabase();
+    return {
+        forCurrentDatabase: appUrl.forCurrentDatabase(),
+        appUrl
+    };
 }
