@@ -31,7 +31,7 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSearchByMultipleTerms(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -87,7 +87,7 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSearchByMultipleFields(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -141,7 +141,7 @@ namespace SlowTests.Core.Querying
                             .Search(x => x.Title, "nosql", options: SearchOptions.Not)
                             .Search(x => x.Desc, "querying")
                             .ToList();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, notNosqlOrQuerying.Count);
                     Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1-A"));
                     Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/3-A"));
@@ -158,7 +158,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
         public void CanDoSpatialSearch(Options options)
@@ -244,7 +244,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanDoSearchBoosting(Options options)
         {
@@ -283,7 +283,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanProvideSuggestionsAndLazySuggestions(Options options)
         {
@@ -311,7 +311,6 @@ namespace SlowTests.Core.Querying
                     });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
-
                     var suggestionResult = session.Query<User, Users_ByName>()
                         .SuggestUsing(f => f.ByField(x => x.Name, "johne"))
                         .Execute();
@@ -337,7 +336,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanPerformFacetedSearchAndLazyFacatedSearch(Options options)
         {

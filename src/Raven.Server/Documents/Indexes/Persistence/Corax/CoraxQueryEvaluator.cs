@@ -206,14 +206,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var right = expression.Right as BinaryExpression;
             var isRightUnary = IsUnary(right);
 
+
             return (isLeftUnary, isRightUnary) switch
             {
-                (false, false) => _searcher.And(Evaluate(expression.Left, isNegated, take, scoreFunction), Evaluate(expression.Right, isNegated, take, scoreFunction)),
+                (false, false) => DecideWhichAndTreeBuild(expression.Left, expression.Right),
                 (true, true) => EvaluateUnary(right.Operator, EvaluateUnary(left.Operator, _searcher.AllEntries(), left, isNegated, take, scoreFunction), right,
                     isNegated, take, scoreFunction),
                 (true, false) => EvaluateUnary(left.Operator, Evaluate(expression.Right, isNegated, take, scoreFunction), left, isNegated, take, scoreFunction),
                 (false, true) => EvaluateUnary(right.Operator, Evaluate(expression.Left, isNegated, take, scoreFunction), right, isNegated, take, scoreFunction),
             };
+
+
+            IQueryMatch DecideWhichAndTreeBuild(QueryExpression leftChild, QueryExpression rightChild)
+            {
+                if (expression.Left is NegatedExpression negatedExpression && expression.Right is not NegatedExpression)
+                    return _searcher.AndNot(Evaluate(negatedExpression.Expression, isNegated, take, scoreFunction), Evaluate(expression.Left, isNegated, take, scoreFunction));
+
+                if (expression.Left is not NegatedExpression && expression.Right is NegatedExpression negatedExpression2)
+                    return _searcher.AndNot(Evaluate(expression.Left, isNegated, take, scoreFunction), Evaluate(negatedExpression2.Expression, isNegated, take, scoreFunction));
+
+                return _searcher.And(Evaluate(expression.Left, isNegated, take, scoreFunction), Evaluate(expression.Right, isNegated, take, scoreFunction));
+            }
         }
 
         private IQueryMatch AllEntries<TScoreFunction>(TScoreFunction scoreFunction)
