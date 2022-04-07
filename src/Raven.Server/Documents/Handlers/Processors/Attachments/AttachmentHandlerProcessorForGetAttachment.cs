@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override ValueTask<AttachmentResult> GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+        protected override ValueTask<AttachmentResult> GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken _)
         {
             var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
             
@@ -47,11 +47,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             };
 
             return ValueTask.FromResult(attachmentResult);
-        }
-
-        protected override CancellationToken GetDataBaseShutDownToken()
-        {
-            return RequestHandler.Database.DatabaseShutdown;
         }
 
         protected override RavenTransaction OpenReadTransaction(DocumentsOperationContext context)

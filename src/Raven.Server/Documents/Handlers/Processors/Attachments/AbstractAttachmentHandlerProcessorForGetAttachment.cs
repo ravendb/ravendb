@@ -26,9 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             _isDocument = isDocument;
         }
 
-        protected abstract ValueTask<AttachmentResult> GetAttachmentAsync(TOperationContext context, string documentId, string name, AttachmentType type, string changeVector);
-
-        protected abstract CancellationToken GetDataBaseShutDownToken();
+        protected abstract ValueTask<AttachmentResult> GetAttachmentAsync(TOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token);
 
         protected abstract RavenTransaction OpenReadTransaction(TOperationContext context);
 
@@ -39,6 +37,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             using (OpenReadTransaction(context))
+            using (var token = RequestHandler.CreateOperationToken())
             {
                 var type = AttachmentType.Document;
                 string changeVector = null;
@@ -54,8 +53,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     if (request.TryGet("ChangeVector", out changeVector) == false && changeVector != null)
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
                 }
-
-                var attachment = await GetAttachmentAsync(context, documentId, name, type, changeVector);
+                
+                var attachment = await GetAttachmentAsync(context, documentId, name, type, changeVector, token.Token);
                 if (attachment == null)
                     return;
 
@@ -63,7 +62,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 {
                     var fileName = Path.GetFileName(attachment.Details.Name);
                     fileName = Uri.EscapeDataString(fileName);
-                    HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
+                    HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
                 }
                 catch (ArgumentException e)
                 {
@@ -72,17 +71,17 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 }
                 try
                 {
-                    HttpContext.Response.Headers["Content-Type"] = attachment.Details.ContentType;
+                    HttpContext.Response.Headers[Constants.Headers.ContentType] = attachment.Details.ContentType;
                 }
                 catch (InvalidOperationException e)
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Skip Content-Type header because of not valid content type: {attachment.Details.ContentType}", e);
-                    if (HttpContext.Response.Headers.ContainsKey("Content-Type"))
-                        HttpContext.Response.Headers.Remove("Content-Type");
+                    if (HttpContext.Response.Headers.ContainsKey(Constants.Headers.ContentType))
+                        HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
                 }
-                HttpContext.Response.Headers["Attachment-Hash"] = attachment.Details.Hash;
-                HttpContext.Response.Headers["Attachment-Size"] = attachment.Details.Size.ToString();
+                HttpContext.Response.Headers[Constants.Headers.AttachmentHash] = attachment.Details.Hash;
+                HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Details.Size.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Details.ChangeVector}\"";
 
                 using (context.GetMemoryBuffer(out var buffer))
@@ -92,7 +91,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
                     while (count > 0)
                     {
-                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), GetDataBaseShutDownToken());
+                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), token.Token);
                         // we know that this can never wait, so no need to do async i/o here
                         count = stream.Read(buffer.Memory.Memory.Span);
                     }

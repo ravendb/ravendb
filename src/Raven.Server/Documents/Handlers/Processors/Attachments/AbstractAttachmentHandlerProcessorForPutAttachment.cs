@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -15,11 +16,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
         
-        protected abstract ValueTask<AttachmentDetails> PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector); 
+        protected abstract ValueTask<AttachmentDetails> PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token); 
 
         public override async ValueTask ExecuteAsync()
         {
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
+            using (var token = RequestHandler.CreateOperationToken())
             {
                 var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -27,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 var requestBodyStream = RequestHandler.RequestBodyStream();
                 var changeVector = RequestHandler.GetStringFromHeaders("If-Match");
 
-                var result = await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector);
+                var result = await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, token.Token);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {

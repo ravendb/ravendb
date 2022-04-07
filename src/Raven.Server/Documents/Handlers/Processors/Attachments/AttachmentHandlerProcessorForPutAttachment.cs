@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask<AttachmentDetails> PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector)
+        protected override async ValueTask<AttachmentDetails> PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token)
         {
             AttachmentDetails result;
             using (var streamsTempFile = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 string hash;
                 try
                 {
-                    hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, requestBodyStream, stream, RequestHandler.Database.DatabaseShutdown);
+                    hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, requestBodyStream, stream, token);
                 }
                 catch (Exception)
                 {
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         // if we failed to read the entire request body stream, we might leave
                         // data in the pipe still, this will cause us to read and discard the
                         // rest of the attachment stream and return the actual error to the caller
-                        await requestBodyStream.CopyToAsync(Stream.Null);
+                        await requestBodyStream.CopyToAsync(Stream.Null, token);
                     }
                     catch (Exception)
                     {
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     Hash = hash,
                     ContentType = contentType
                 };
-                await stream.FlushAsync();
+                await stream.FlushAsync(token);
                 await RequestHandler.Database.TxMerger.Enqueue(cmd);
                 result = cmd.Result;
             }
