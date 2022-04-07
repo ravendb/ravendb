@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             ContinuationTokens = new ShardedContinuationTokensHandler(this);
         }
 
-        public void ModifyHeaders(HttpRequestMessage request)
+        private void ModifyHeaders(HttpRequestMessage request)
         {
             foreach (var header in HeadersToCopy)
             {
