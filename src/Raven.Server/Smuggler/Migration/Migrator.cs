@@ -109,9 +109,13 @@ namespace Raven.Server.Smuggler.Migration
                 buildInfo.TryGet(nameof(BuildInfo.FullVersion), out string fullVersion);
 
                 MajorVersion version;
-                if ((buildVersion >= 60 && buildVersion <= 1000) || buildVersion >= 60000)
+                if ((buildVersion >= 70 && buildVersion <= 1000) || buildVersion >= 70000)
                 {
                     version = MajorVersion.GreaterThanCurrent;
+                }
+                else if ((buildVersion >= 60 && buildVersion <= 69) || buildVersion >= 60000)
+                {
+                    version = MajorVersion.V6;
                 }
                 else if ((buildVersion >= 50 && buildVersion <= 59) || buildVersion >= 50000)
                 {
@@ -177,7 +181,7 @@ namespace Raven.Server.Smuggler.Migration
                     databases = new List<DatabaseMigrationSettings>();
 
                 var operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
-                if (_buildMajorVersion != MajorVersion.V4 && _buildMajorVersion != MajorVersion.V5 && _buildMajorVersion != MajorVersion.GreaterThanCurrent)
+                if (_buildMajorVersion != MajorVersion.V4 && _buildMajorVersion != MajorVersion.V5 && _buildMajorVersion != MajorVersion.V6 && _buildMajorVersion != MajorVersion.GreaterThanCurrent)
                 {
                     operateOnTypes |= DatabaseItemType.LegacyAttachments;
                 }
@@ -235,7 +239,7 @@ namespace Raven.Server.Smuggler.Migration
 
             try
             {
-                return (buildMajorVersion == MajorVersion.V4 || buildMajorVersion == MajorVersion.V5 || buildMajorVersion == MajorVersion.GreaterThanCurrent)
+                return (buildMajorVersion == MajorVersion.V4 || buildMajorVersion == MajorVersion.V5 || buildMajorVersion == MajorVersion.V6 || buildMajorVersion == MajorVersion.GreaterThanCurrent)
                     ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
                     : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, _skipServerCertificateValidation, isLegacyOAuthToken, _serverStore.ServerShutdown);
             }
@@ -309,6 +313,7 @@ namespace Raven.Server.Smuggler.Migration
                                     break;
                                 case MajorVersion.V4:
                                 case MajorVersion.V5:
+                                case MajorVersion.V6:
                                 case MajorVersion.GreaterThanCurrent:
                                     migrator = new Importer(options, parameters, _buildVersion);
                                     break;
