@@ -14,10 +14,15 @@ function canReadOnlyDatabase(db: database) {
     return accessManager.default.readOnlyOrAboveForDatabase(db);
 }
 
+function isOperatorOrAbove() {
+    return accessManager.default.isOperatorOrAbove();
+}
+
 export function useAccessManager() {
     return {
         canHandleOperation,
         canReadWriteDatabase,
-        canReadOnlyDatabase
+        canReadOnlyDatabase,
+        isOperatorOrAbove
     }
 }

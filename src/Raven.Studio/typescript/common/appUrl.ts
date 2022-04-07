@@ -410,7 +410,7 @@ class appUrl {
         return "#databases/settings/conflictResolution?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forManageDatabaseGroup(db: database | databaseInfo): string {
+    static forManageDatabaseGroup(db: database | databaseInfo | string): string {
         return "#databases/manageDatabaseGroup?" + appUrl.getEncodedDbPart(db);
     }
     

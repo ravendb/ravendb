@@ -16,7 +16,7 @@ interface IndexToolbarActionProps {
 }
 
 export default function IndexToolbarAction(props: IndexToolbarActionProps) {
-    const urls = useAppUrls();
+    const { forCurrentDatabase: urls } = useAppUrls();
     const newIndexUrl = urls.newIndex();
 
     const {

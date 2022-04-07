@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteDatabaseCommand extends commandBase {
 
-    constructor(private databases: Array<database>, private isHardDelete: boolean) {
+    constructor(private databases: string[], private isHardDelete: boolean) {
         super();
     }
 
@@ -13,7 +13,7 @@ class deleteDatabaseCommand extends commandBase {
         
         const payload: Raven.Client.ServerWide.Operations.DeleteDatabasesOperation.Parameters = {
             HardDelete: this.isHardDelete,
-            DatabaseNames: this.databases.map(x => x.name),
+            DatabaseNames: this.databases,
             FromNodes: undefined
         };
 

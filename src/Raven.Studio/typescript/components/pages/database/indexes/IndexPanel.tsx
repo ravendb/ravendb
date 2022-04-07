@@ -134,7 +134,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     
     const resetIndex = () => props.resetIndex();
     
-    const urls = useAppUrls();
+    const { forCurrentDatabase: urls } = useAppUrls();
     const queryUrl = urls.query(index.name)();
     const termsUrl = urls.terms(index.name)();
     const editUrl = urls.editIndex(index.name)();

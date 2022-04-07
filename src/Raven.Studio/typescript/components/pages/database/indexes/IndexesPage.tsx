@@ -62,7 +62,8 @@ interface NoIndexesProps {
 
 function NoIndexes(props: NoIndexesProps) {
     const { database } = props;
-    const newIndexUrl = useAppUrls().newIndex();
+    const { forCurrentDatabase } = useAppUrls();
+    const newIndexUrl = forCurrentDatabase.newIndex();
     const { canReadWriteDatabase } = useAccessManager();
     
     return (

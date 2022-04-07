@@ -40,9 +40,6 @@ class databaseInfo {
 
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     
-    badgeText: KnockoutComputed<string>;
-    badgeClass: KnockoutComputed<string>;
-
     online: KnockoutComputed<boolean>;
     isLoading: KnockoutComputed<boolean>;
     hasLoadError: KnockoutComputed<boolean>;
@@ -118,37 +115,6 @@ class databaseInfo {
 
         this.online = ko.pureComputed(() => {
             return !!this.uptime();
-        });
-
-        this.badgeClass = ko.pureComputed(() => {
-            if (this.hasLoadError()) {
-                return "state-danger";
-            }
-
-            if (this.disabled()) {
-                return "state-warning";
-            }
-
-            if (this.online()) {
-                return "state-success";
-            }
-
-            return "state-offline"; // offline
-        });
-
-        this.badgeText = ko.pureComputed(() => {
-            if (this.hasLoadError()) {
-                return "Error";
-            }
-
-            if (this.disabled()) {
-                return "Disabled";
-            }
-
-            if (this.online()) {
-                return "Online";
-            }
-            return "Offline";
         });
 
         this.canNavigateToDatabase = ko.pureComputed(() => {
