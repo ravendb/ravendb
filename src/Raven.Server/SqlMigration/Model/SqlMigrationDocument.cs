@@ -26,7 +26,7 @@ namespace Raven.Server.SqlMigration.Model
             {
                 [Constants.Documents.Metadata.Collection] = collectionName,
                 [Constants.Documents.Metadata.Id] = id,
-                ["@sql-keys"] = SpecialColumnsValues
+                ["Sql-Keys-Columns"] = SpecialColumnsValues
             };
             Collection = collectionName;
         }
