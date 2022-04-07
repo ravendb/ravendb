@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -116,8 +116,8 @@ namespace Corax.Queries
                 {
                     // RavenDB-17750: We have to fill everything possible UNTIL there are no more matches availables.
                     var results = _inner.Fill(resultsSpan);
-                    if (results == 0)
-                        break;
+                    if (results == 0)                         
+                        break; // We are certainly done. As `Fill` must not return 0 results unless it is done. 
 
                     totalResults += results;
                     iterations++;
@@ -134,15 +134,22 @@ namespace Corax.Queries
                     totalResults = Sorting.SortAndRemoveDuplicates(bufferBasePtr, totalResults);
                 }
 
+                // This is an early bailout, the only way this can happen is when Fill returns 0 and we dont have
+                // any match to return. 
                 if (totalResults == 0)
                     return 0;
                 
+                // We have matches and therefore we need now to remove the ones found in the outer buffer.
                 Span<long> outerBuffer = new Span<long>(_buffer, _bufferIdx);
                 Span<long> innerBuffer = matches.Slice(0, totalResults);
-
                 totalResults = MergeHelper.AndNot(innerBuffer, innerBuffer, outerBuffer);
+
+                // Since we would require to sort again if we dont return, we return what we have instead.
                 if (totalResults != 0)
-                    return totalResults;
+                    return totalResults; 
+
+                // If can happen that we filtered out everything, but we cannot return 0. Therefore, we will
+                // continue executing until we run out of any potential inner match. 
             }
         }
 
