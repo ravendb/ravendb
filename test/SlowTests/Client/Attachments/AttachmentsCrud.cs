@@ -8,10 +8,12 @@ using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit.Abstractions;
 
@@ -362,10 +364,11 @@ namespace SlowTests.Client.Attachments
             });
         }
 
-        [Fact]
-        public void PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 for (int i = 1; i <= 3; i++)
                 {
@@ -390,18 +393,22 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.Attachments.Get("users/3", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:8"));
+                        Assert.True(attachment.Details.ChangeVector.StartsWith(options.DatabaseMode == RavenDatabaseMode.Single ? "A:8" : "A:5"));
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("uuBtr5rVX6NAXzdW2DhuG04MGGyUzFzpS7TelHw3fJQ=", attachment.Details.Hash);
                         Assert.Equal(128 * 1024, attachmentStream.Position);
                         Assert.Equal(128 * 1024, attachment.Details.Size);
                         Assert.Equal(Enumerable.Range(1, 128 * 1024).Select(x => (byte)x), readBuffer.Take((int)attachmentStream.Position));
                     }
+
+                    var result = store.Operations.Send(new GetAttachmentOperation("users/1", "file3", AttachmentType.Document, "B:50-nonexistent"));
+                    Assert.Null(result);
+
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "big-file"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:10"));
+                        Assert.True(attachment.Details.ChangeVector.StartsWith(options.DatabaseMode == RavenDatabaseMode.Single  ? "A:10": "A:4"));
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                         Assert.Equal(999 * 1024, attachmentStream.Position);

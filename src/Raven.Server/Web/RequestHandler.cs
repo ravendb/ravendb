@@ -80,7 +80,7 @@ namespace Raven.Server.Web
             _context = context;
         }
 
-        protected Stream TryGetRequestFromStream(string itemName)
+        internal Stream TryGetRequestFromStream(string itemName)
         {
             if (HttpContext.Request.HasFormContentType == false)
                 return null;

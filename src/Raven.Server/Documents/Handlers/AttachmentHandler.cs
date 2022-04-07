@@ -52,15 +52,17 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/attachments", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public Task Get()
+        public async Task Get()
         {
-            return GetAttachment(true);
+            using (var processor = new AttachmentHandlerProcessorForGetAttachment(this, isDocument: true))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/attachments", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task GetPost()
+        public async Task GetPost()
         {
-            return GetAttachment(false);
+            using (var processor = new AttachmentHandlerProcessorForGetAttachment(this, isDocument: false))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
@@ -193,176 +195,17 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task GetAttachment(bool isDocument)
-        {
-            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var type = AttachmentType.Document;
-                string changeVector = null;
-                if (isDocument == false)
-                {
-                    var stream = TryGetRequestFromStream("ChangeVectorAndType") ?? RequestBodyStream();
-                    var request = await context.ReadForDiskAsync(stream, "GetAttachment");
-
-                    if (request.TryGet("Type", out string typeString) == false ||
-                        Enum.TryParse(typeString, out type) == false)
-                        throw new ArgumentException("The 'Type' field in the body request is mandatory");
-
-                    if (request.TryGet("ChangeVector", out changeVector) == false && changeVector != null)
-                        throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
-                }
-
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
-                if (attachment == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                var attachmentChangeVector = GetStringFromHeaders("If-None-Match");
-                if (attachmentChangeVector == attachment.ChangeVector)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
-
-                try
-                {
-                    var fileName = Path.GetFileName(attachment.Name);
-                    fileName = Uri.EscapeDataString(fileName);
-                    HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
-                }
-                catch (ArgumentException e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Skip Content-Disposition header because of not valid file name: {attachment.Name}", e);
-                }
-                try
-                {
-                    HttpContext.Response.Headers["Content-Type"] = attachment.ContentType.ToString();
-                }
-                catch (InvalidOperationException e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Skip Content-Type header because of not valid content type: {attachment.ContentType}", e);
-                    if (HttpContext.Response.Headers.ContainsKey("Content-Type"))
-                        HttpContext.Response.Headers.Remove("Content-Type");
-                }
-                HttpContext.Response.Headers["Attachment-Hash"] = attachment.Base64Hash.ToString();
-                HttpContext.Response.Headers["Attachment-Size"] = attachment.Stream.Length.ToString();
-                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
-
-                using (context.GetMemoryBuffer(out var buffer))
-                await using (var stream = attachment.Stream)
-                {
-                    var responseStream = ResponseBodyStream();
-                    var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
-                    while (count > 0)
-                    {
-                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), Database.DatabaseShutdown);
-                        // we know that this can never wait, so no need to do async i/o here
-                        count = stream.Read(buffer.Memory.Memory.Span);
-                    }
-                }
-            }
-        }
-
         [RavenAction("/databases/*/attachments", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-                var contentType = GetStringQueryString("contentType", false) ?? "";
-
-                AttachmentDetails result;
-                using (var streamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
-                await using (var stream = streamsTempFile.StartNewStream())
-                {
-                    Stream requestBodyStream = RequestBodyStream();
-                    string hash;
-                    try
-                    {
-                        hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, requestBodyStream, stream, Database.DatabaseShutdown);
-                    }
-                    catch (Exception)
-                    {
-                        try
-                        {
-                            // if we failed to read the entire request body stream, we might leave
-                            // data in the pipe still, this will cause us to read and discard the
-                            // rest of the attachment stream and return the actual error to the caller
-                            await requestBodyStream.CopyToAsync(Stream.Null);
-                        }
-                        catch (Exception)
-                        {
-                            // we tried, but we can't clean the request, so let's just kill
-                            // the connection
-                            HttpContext.Abort();
-                        }
-                        throw;
-                    }
-
-                    var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
-
-                    var cmd = new MergedPutAttachmentCommand
-                    {
-                        Database = Database,
-                        ExpectedChangeVector = changeVector,
-                        DocumentId = id,
-                        Name = name,
-                        Stream = stream,
-                        Hash = hash,
-                        ContentType = contentType
-                    };
-                    await stream.FlushAsync();
-                    await Database.TxMerger.Enqueue(cmd);
-                    result = cmd.Result;
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
-                    writer.WriteString(result.ChangeVector);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.Name));
-                    writer.WriteString(result.Name);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
-                    writer.WriteString(result.DocumentId);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
-                    writer.WriteString(result.ContentType);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.Hash));
-                    writer.WriteString(result.Hash);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.Size));
-                    writer.WriteInteger(result.Size);
-
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new AttachmentHandlerProcessorForPutAttachment(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/attachments", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Delete()
         {
-            using (var processor = new AttachmentsHandlerProcessorForDeleteAttachment(this))
+            using (var processor = new AttachmentHandlerProcessorForDeleteAttachment(this))
             {
                 await processor.ExecuteAsync();
             }

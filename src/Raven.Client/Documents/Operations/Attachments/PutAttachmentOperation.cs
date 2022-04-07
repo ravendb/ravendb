@@ -32,15 +32,21 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _changeVector);
         }
 
-        private class PutAttachmentCommand : RavenCommand<AttachmentDetails>
+        internal class PutAttachmentCommand : RavenCommand<AttachmentDetails>
         {
             private readonly string _documentId;
             private readonly string _name;
             private readonly Stream _stream;
             private readonly string _contentType;
             private readonly string _changeVector;
+            private readonly bool _validateStream;
 
-            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector)
+            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector) : 
+                this(documentId, name, stream, contentType, changeVector, validateStream: true)
+            {
+            }
+
+            internal PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, bool validateStream)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -52,13 +58,16 @@ namespace Raven.Client.Documents.Operations.Attachments
                 _stream = stream;
                 _contentType = contentType;
                 _changeVector = changeVector;
+                _validateStream = validateStream;
 
-                PutAttachmentCommandHelper.ValidateStream(stream);
+                if (_validateStream)
+                    PutAttachmentCommandHelper.ValidateStream(stream);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                PutAttachmentCommandHelper.PrepareStream(_stream);
+                if (_validateStream)
+                    PutAttachmentCommandHelper.PrepareStream(_stream);
 
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 if (string.IsNullOrWhiteSpace(_contentType) == false)

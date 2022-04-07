@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentCommand(context, _documentId, _name, _type, _changeVector);
         }
 
-        private class GetAttachmentCommand : RavenCommand<AttachmentResult>
+        internal class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
             private readonly JsonOperationContext _context;
             private readonly string _documentId;

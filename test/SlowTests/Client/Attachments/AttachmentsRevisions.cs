@@ -12,6 +12,8 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,12 +26,19 @@ namespace SlowTests.Client.Attachments
         }
 
         public static Guid dbId = new Guid("00000000-48c4-421e-9466-000000000000");
-        [Fact]
-        public async Task PutAttachments()
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PutAttachments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
-                await Databases.SetDatabaseId(store, dbId);
+                int? shardNumber = null;
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    shardNumber = await Sharding.GetShardNumber(store, "users/1");
+                }
+
                 await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = false;
@@ -43,7 +52,7 @@ namespace SlowTests.Client.Attachments
                     AssertRevisionAttachments(names, 2, revisions[1], session);
                     AssertRevisionAttachments(names, 1, revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
-                }, 9);
+                }, 9, shardNumber: shardNumber);
 
                 // Delete document should delete all the attachments
                 store.Commands().Delete("users/1", null);
@@ -53,7 +62,7 @@ namespace SlowTests.Client.Attachments
                     AssertRevisionAttachments(names, 3, revisions[1], session);
                     AssertRevisionAttachments(names, 2, revisions[2], session);
                     AssertRevisionAttachments(names, 1, revisions[3], session);
-                }, 6, expectedCountOfDocuments: 0);
+                }, 6, expectedCountOfDocuments: 0, shardNumber: shardNumber);
 
                 // Create another revision which should delete old revision
                 using (var session = store.OpenSession()) // This will delete the revision #1 which is without attachment
@@ -67,7 +76,7 @@ namespace SlowTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session, true);
                     AssertRevisionAttachments(names, 3, revisions[2], session);
                     AssertRevisionAttachments(names, 2, revisions[3], session);
-                }, 5);
+                }, 5, shardNumber: shardNumber);
 
                 using (var session = store.OpenSession()) // This will delete the revision #2 which is with attachment
                 {
@@ -80,7 +89,7 @@ namespace SlowTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session, true);
                     AssertRevisionAttachments(names, 3, revisions[3], session);
-                }, 3);
+                }, 3, shardNumber: shardNumber);
 
                 using (var session = store.OpenSession()) // This will delete the revision #3 which is with attachment
                 {
@@ -93,7 +102,7 @@ namespace SlowTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session, true);
-                }, 0, expectedCountOfUniqueAttachments: 0);
+                }, 0, expectedCountOfUniqueAttachments: 0, shardNumber: shardNumber);
 
                 using (var session = store.OpenSession()) // This will delete the revision #4 which is with attachment
                 {
@@ -106,7 +115,7 @@ namespace SlowTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
-                }, 0, expectedCountOfUniqueAttachments: 0);
+                }, 0, expectedCountOfUniqueAttachments: 0, shardNumber: shardNumber);
             }
         }
 
@@ -155,14 +164,19 @@ namespace SlowTests.Client.Attachments
         }
 
         private static void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
-            long expectedCountOfAttachments, long expectedCountOfDocuments = 1, long expectedCountOfUniqueAttachments = 3)
+            long expectedCountOfAttachments, long expectedCountOfDocuments = 1, long expectedCountOfUniqueAttachments = 3, int? shardNumber = null)
         {
-            var statistics = store.Maintenance.Send(new GetStatisticsOperation());
-            Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
-            Assert.Equal(expectedCountOfUniqueAttachments, statistics.CountOfUniqueAttachments);
-            Assert.Equal(4, statistics.CountOfRevisionDocuments);
-            Assert.Equal(expectedCountOfDocuments, statistics.CountOfDocuments);
-            Assert.Equal(0, statistics.CountOfIndexes);
+            store.Maintenance.ForTesting(() => new GetStatisticsOperation()).AssertAll((key, statistics) =>
+            {
+                if (key.ShardNumber.HasValue == false || key.ShardNumber == shardNumber)
+                {
+                    Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
+                    Assert.Equal(expectedCountOfUniqueAttachments, statistics.CountOfUniqueAttachments);
+                    Assert.Equal(4, statistics.CountOfRevisionDocuments);
+                    Assert.Equal(expectedCountOfDocuments, statistics.CountOfDocuments);
+                    Assert.Equal(0, statistics.CountOfIndexes);
+                }
+            });
 
             using (var session = store.OpenSession())
             {
