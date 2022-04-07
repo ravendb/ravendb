@@ -126,7 +126,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false)
             return originalTerm;
         
-        if (binding.FieldIndexing == Constants.IndexWriter.FieldIndexing.Exact || binding.Analyzer is null)
+        if (binding.FieldIndexingMode == FieldIndexingMode.Exact || binding.Analyzer is null)
         {
             return originalTerm;
         }

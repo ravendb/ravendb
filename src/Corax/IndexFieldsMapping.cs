@@ -27,11 +27,11 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
         _fieldsList = new List<IndexFieldBinding>();
     }
 
-    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, Constants.IndexWriter.FieldIndexing fieldIndexing = Constants.IndexWriter.FieldIndexing.Default)
+    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal)
     {
         if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
         {
-            var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, hasSuggestion, fieldIndexing);
+            var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, hasSuggestion, fieldIndexingMode);
             _fields[fieldName] = binding;
             _fieldsById[fieldId] = binding;
             _fieldsList.Add(binding);
@@ -56,7 +56,7 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
 
         foreach (var ifb in CollectionsMarshal.AsSpan(_fieldsList))
         {
-            if (ifb.FieldIndexing == Constants.IndexWriter.FieldIndexing.Exact)
+            if (ifb.FieldIndexingMode == FieldIndexingMode.Exact)
                 continue;
 
             ifb.Analyzer ??= analyzers.DefaultAnalyzer;
@@ -114,14 +114,14 @@ public class IndexFieldBinding
     public readonly Slice FieldName;
     public Corax.Analyzer Analyzer;
     public readonly bool HasSuggestions;
-    public readonly Constants.IndexWriter.FieldIndexing FieldIndexing; 
+    public readonly FieldIndexingMode FieldIndexingMode; 
 
-    public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, Constants.IndexWriter.FieldIndexing fieldIndexing = Constants.IndexWriter.FieldIndexing.Default)
+    public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal)
     {
         FieldId = fieldId;
         FieldName = fieldName;
         Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
-        FieldIndexing = fieldIndexing;
+        FieldIndexingMode = fieldIndexingMode;
     }
 }

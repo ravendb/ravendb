@@ -174,7 +174,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 expression.Operator = GetNegated(expression.Operator);
 
             ValueExpression value;
-            FieldExpression field;
             string fieldName;
             switch (expression.Operator)
             {
