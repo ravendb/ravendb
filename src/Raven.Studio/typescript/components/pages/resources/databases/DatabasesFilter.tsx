@@ -1,21 +1,36 @@
-﻿import React from "react";
+﻿import React, { ChangeEvent, useCallback } from "react";
+import { DatabaseFilterCriteria } from "../../../models/databases";
+import { CheckboxTriple } from "../../../common/CheckboxTriple";
 
+interface DatabasesFilterProps {
+    filter: DatabaseFilterCriteria;
+    setFilter: React.Dispatch<React.SetStateAction<DatabaseFilterCriteria>>;
+    toggleSelectAll: () => void;
+    selectionState: checkbox;
+}
 
-export function DatabasesFilter() {
-    return null as JSX.Element; //TODO:
-    /* TODO:
+export function DatabasesFilter(props: DatabasesFilterProps) {
+    const { filter, toggleSelectAll, selectionState } = props;
+    
+    const onSearchTextChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+        props.setFilter(f => ({
+            ...f,
+            searchText: e.target.value
+        }));
+    }, []);
+    
     return (
         <div className="databasesToolbar-filter">
-            <div className="checkbox checkbox-primary checkbox-inline align-checkboxes">
-                <input type="checkbox" className="styled"
-                       data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
-                    <label />
+            <div className="checkbox checkbox-primary checkbox-inline align-checkboxes"
+                 title="Select all or none">
+                <CheckboxTriple onChanged={toggleSelectAll} state={selectionState} />
+                <label/>
             </div>
             <div className="input-group">
                 <input type="text" className="form-control" placeholder="Filter" accessKey="/"
-                       title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText" />
+                       title="Filter databases (Alt+/)" value={filter.searchText} onChange={onSearchTextChange} />
             </div>
-            <div className="btn-group">
+            {/* TODO <div className="btn-group">
                 <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown"
                         data-bind="css: { 'active': filters.requestedState() !== 'all' }"
                         title="Filter visible databases">
@@ -72,8 +87,7 @@ export function DatabasesFilter() {
                               data-bind="text: $root.databasesByState().remote" />
                     </li>
                 </ul>
-            </div>
+            </div>*/}
         </div>
     )
-     */
 }

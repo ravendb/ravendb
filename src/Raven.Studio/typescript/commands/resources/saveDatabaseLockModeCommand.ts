@@ -1,10 +1,11 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import { DatabaseSharedInfo } from "../../components/models/databases";
 
 class saveDatabaseLockModeCommand extends commandBase {
 
-    constructor(private dbs: Array<database>, private lockMode: Raven.Client.ServerWide.DatabaseLockMode) {
+    constructor(private dbs: Array<database | DatabaseSharedInfo>, private lockMode: Raven.Client.ServerWide.DatabaseLockMode) {
         super();
     }
 
