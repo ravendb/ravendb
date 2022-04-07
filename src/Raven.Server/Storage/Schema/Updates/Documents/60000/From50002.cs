@@ -22,34 +22,50 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
 
         internal static int NumberOfItemsToMigrateInSingleTransaction = 10_000;
-        internal static int MaxSizeToMigrateInSingleTransaction = 64 * 1024 * 1024;
+
+        private long _processedSinceLastCommit;
 
         public bool Update(UpdateStep step)
         {
-            InsertIndexValuesFor(step, DocsSchemaBase60, DocsBucketAndEtagSlice);
-            InsertIndexValuesFor(step, TombstonesSchemaBase60, TombstonesBucketAndEtagSlice);
-            InsertIndexValuesFor(step, RevisionsSchemaBase60, RevisionsBucketAndEtagSlice);
-            InsertIndexValuesFor(step, TimeSeriesSchemaBase60, TimeSeriesBucketAndEtagSlice);
-            InsertIndexValuesFor(step, DeleteRangesSchemaBase60, DeletedRangesBucketAndEtagSlice);
-            InsertIndexValuesFor(step, CountersSchemaBase60, CountersBucketAndEtagSlice);
+            InsertIndexValuesFor(step, DocsSchemaBase60, DocsBucketAndEtagSlice,
+                fixedSizeIndex: DocsSchemaBase60.FixedSizeIndexes[AllDocsEtagsSlice]);
+
+            InsertIndexValuesFor(step, TombstonesSchemaBase60, TombstonesBucketAndEtagSlice,
+                fixedSizeIndex: TombstonesSchemaBase60.FixedSizeIndexes[AllTombstonesEtagsSlice]);
+
+            InsertIndexValuesFor(step, RevisionsSchemaBase60, RevisionsBucketAndEtagSlice,
+                fixedSizeIndex: RevisionsSchemaBase60.FixedSizeIndexes[AllRevisionsEtagsSlice]);
+
+            InsertIndexValuesFor(step, TimeSeriesSchemaBase60, TimeSeriesBucketAndEtagSlice,
+                fixedSizeIndex: TimeSeriesSchemaBase60.FixedSizeIndexes[AllTimeSeriesEtagSlice]);
+
+            InsertIndexValuesFor(step, DeleteRangesSchemaBase60, DeletedRangesBucketAndEtagSlice,
+                fixedSizeIndex: DeleteRangesSchemaBase60.FixedSizeIndexes[AllDeletedRangesEtagSlice]);
+
+            InsertIndexValuesFor(step, CountersSchemaBase60, CountersBucketAndEtagSlice,
+                fixedSizeIndex: CountersSchemaBase60.FixedSizeIndexes[AllCountersEtagSlice]);
 
             InsertIndexValuesFor(step, ConflictsSchemaBase60, ConflictsBucketAndEtagSlice,
                 fixedSizeIndex: ConflictsSchemaBase60.FixedSizeIndexes[AllConflictedDocsEtagsSlice]);
 
             InsertIndexValuesFor(step, AttachmentsSchemaBase60, AttachmentsBucketAndEtagSlice,
-                tableName: AttachmentsMetadataSlice.ToString(),
-                fixedSizeIndex: AttachmentsSchemaBase60.FixedSizeIndexes[AttachmentsEtagSlice]);
+                fixedSizeIndex: AttachmentsSchemaBase60.FixedSizeIndexes[AttachmentsEtagSlice],
+                tableName: AttachmentsMetadataSlice.ToString());
 
             return true;
         }
 
-        public static void InsertIndexValuesFor(UpdateStep step, TableSchema schema, Slice indexName, string tableName = null, TableSchema.FixedSizeKeyIndexDef fixedSizeIndex = null)
+        private void InsertIndexValuesFor(UpdateStep step, TableSchema schema, Slice indexName, TableSchema.FixedSizeKeyIndexDef fixedSizeIndex, string tableName = null)
         {
+            var fst = step.ReadTx.FixedTreeFor(fixedSizeIndex.Name, sizeof(long));
+            if (fst.NumberOfEntries == 0)
+                return;
+
             var indexTree = step.WriteTx.CreateTree(indexName, isIndexTree: true);
             var indexDef = schema.DynamicKeyIndexes[indexName];
             
             bool done = false;
-            long skip = 0;
+            long lastEtag = 0;
 
             while (done == false)
             {
@@ -64,18 +80,14 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
 
                     var commit = false;
+                    var fromEtag = lastEtag == 0 ? 0 : lastEtag + 1;
 
-                    var items = fixedSizeIndex == null
-                        ? table.SeekByPrimaryKey(Slices.BeforeAllKeys, skip)
-                        : table.SeekForwardFrom(fixedSizeIndex, 0, skip);
-
-                    foreach (var tvh in items)
+                    foreach (var tvh in table.SeekForwardFrom(fixedSizeIndex, fromEtag, 0))
                     {
                         if (processedInCurrentTx >= NumberOfItemsToMigrateInSingleTransaction ||
-                            context.AllocatedMemory >= MaxSizeToMigrateInSingleTransaction)
+                            _processedSinceLastCommit >= NumberOfItemsToMigrateInSingleTransaction)
                         {
                             commit = true;
-                            skip += processedInCurrentTx;
                             break;
                         }
 
@@ -87,12 +99,19 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         }
 
                         processedInCurrentTx++;
+                        _processedSinceLastCommit++;
                     }
 
                     if (commit)
                     {
                         step.Commit(context);
                         step.RenewTransactions();
+
+                        indexTree = step.WriteTx.ReadTree(indexName, isIndexTree: true);
+
+                        lastEtag += processedInCurrentTx;
+                        _processedSinceLastCommit = 0;
+
                         continue;
                     }
 
