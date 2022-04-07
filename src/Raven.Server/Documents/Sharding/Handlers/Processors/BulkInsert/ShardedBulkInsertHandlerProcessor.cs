@@ -61,6 +61,11 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
         return GetSizeAndOperationsCount(commandData.Data, estimatedChangeVectorSize: SampleChangeVector.Length);
     }
 
+    protected override async Task OnErrorAsync(Exception exception)
+    {
+        await _operation.AbortAsync();
+    }
+
     public async ValueTask DisposeAsync()
     {
         base.Dispose();
