@@ -120,7 +120,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task InitAsync()
         {
-            await ParseSubscriptionOptionsAsync();
             var message = CreateStatusMessage(ConnectionStatus.Create);
             AddToStatusDescription(message);
             if (_logger.IsInfoEnabled)
@@ -264,6 +263,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 try
                 {
+                    await ParseSubscriptionOptionsAsync();
+
                     if (TcpConnection.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore() == false)
                     {
                         throw new SubscriptionClosedException(
@@ -1140,7 +1141,7 @@ namespace Raven.Server.Documents.TcpHandlers
             var message = GetDefault();
             message.DatabaseName = $"{message.DatabaseName} on '{_serverStore.NodeTag}'";
             message.ClientType = $"{message.ClientType} with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
-            message.SubscriptionType = $"{message.SubscriptionType} '{_options.SubscriptionName}', id '{SubscriptionId}'";
+            message.SubscriptionType = $"{message.SubscriptionType} '{_options?.SubscriptionName}', id '{SubscriptionId}'";
 
             return message;
         }
