@@ -75,6 +75,8 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
 
     public void Initialize()
     {
+        AssertUsingCustomSorters();
+
         // now we have the index query, we need to process that and decide how to handle this.
         // There are a few different modes to handle:
         var queryTemplate = _query.ToJson(_context);
@@ -114,6 +116,18 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
             _commands[i] = new ShardedQueryCommand(_parent, queryTemplate, _query.Metadata.IndexName);
+        }
+    }
+
+    private void AssertUsingCustomSorters()
+    {
+        if (_query.Metadata.OrderBy == null)
+            return;
+
+        foreach (var field in _query.Metadata.OrderBy)
+        {
+            if (field.OrderingType == OrderByFieldType.Custom)
+                throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
         }
     }
 

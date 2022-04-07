@@ -1664,6 +1664,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     VerifyIndexNames(newDatabaseRecord);
+                    VerifyCustomSorters();
 
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
                     {
@@ -1754,6 +1755,17 @@ namespace Raven.Server.ServerWide
                                 throw new RachisInvalidOperationException($"Index name cannot start with {Constants.Documents.Indexing.SideBySideIndexNamePrefix} but got {indexName}");
                             }
                         }
+                    }
+
+                    void VerifyCustomSorters()
+                    {
+                        if (addDatabaseCommand.Record.IsSharded == false)
+                            return;
+
+                        if (addDatabaseCommand.Record.Sorters?.Count == 0)
+                            return;
+
+                        throw new RachisInvalidOperationException("Custom sorting is not supported in sharding as of yet");
                     }
                 }
             }
