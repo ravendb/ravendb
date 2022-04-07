@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
     {
         public ShardedDatabaseContext DatabaseContext;
         public TransactionContextPool ContextPool;
-        protected Logger Logger;
+        public Logger Logger;
 
         public HttpMethod Method;
         public string RelativeShardUrl;

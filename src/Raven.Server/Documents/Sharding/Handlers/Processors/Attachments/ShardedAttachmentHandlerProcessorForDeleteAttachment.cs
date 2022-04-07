@@ -7,9 +7,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
 {
-    internal class ShardedAttachmentsHandlerProcessorForDeleteAttachment : AbstractAttachmentsHandlerProcessorForDeleteAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal class ShardedAttachmentHandlerProcessorForDeleteAttachment : AbstractAttachmentHandlerProcessorForDeleteAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedAttachmentsHandlerProcessorForDeleteAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedAttachmentHandlerProcessorForDeleteAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
 
