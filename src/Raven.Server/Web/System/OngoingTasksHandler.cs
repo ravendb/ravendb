@@ -308,18 +308,23 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetConfiguration()
         {
+            await GetBackupConfiguration(this);
+        }
+
+        public static async Task GetBackupConfiguration(RequestHandler requestHandler)
+        {
             // FullPath removes the trailing '/' so adding it back for the studio
-            var localRootPath = ServerStore.Configuration.Backup.LocalRootPath;
+            var localRootPath = requestHandler.ServerStore.Configuration.Backup.LocalRootPath;
             var localRootFullPath = localRootPath != null ? localRootPath.FullPath + Path.DirectorySeparatorChar : null;
             var result = new DynamicJsonValue
             {
-                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
-                [nameof(ServerStore.Configuration.Backup.AllowedAwsRegions)] = ServerStore.Configuration.Backup.AllowedAwsRegions,
-                [nameof(ServerStore.Configuration.Backup.AllowedDestinations)] = ServerStore.Configuration.Backup.AllowedDestinations,
+                [nameof(requestHandler.ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
+                [nameof(requestHandler.ServerStore.Configuration.Backup.AllowedAwsRegions)] = requestHandler.ServerStore.Configuration.Backup.AllowedAwsRegions,
+                [nameof(requestHandler.ServerStore.Configuration.Backup.AllowedDestinations)] = requestHandler.ServerStore.Configuration.Backup.AllowedDestinations,
             };
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
             {
                 context.Write(writer, result);
             }

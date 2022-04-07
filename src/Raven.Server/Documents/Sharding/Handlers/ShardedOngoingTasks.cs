@@ -133,5 +133,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
             }
         }
+
+        [RavenShardedAction("/databases/*/admin/periodic-backup/config", "GET")]
+        public async Task GetConfiguration()
+        {
+            await OngoingTasksHandler.GetBackupConfiguration(this);
+        }
     }
 }
