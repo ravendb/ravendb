@@ -65,11 +65,19 @@ namespace Raven.Client
 
             public const string ContentEncoding = "Content-Encoding";
 
+            public const string ContentDisposition = "Content-Disposition";
+
+            public const string ContentType = "Content-Type";
+
             public const string ContentLength = "Content-Length";
 
             public const string IncrementalTimeSeriesPrefix = "INC:";
 
             internal const string Sharded = "Sharded";
+
+            public const string AttachmentHash = "Attachment-Hash";
+
+            public const string AttachmentSize = "Attachment-Size";
         }
 
         public class Platform

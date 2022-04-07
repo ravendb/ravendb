@@ -15,23 +15,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask<AttachmentResult> GetAttachmentAsync(TransactionOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
+        protected override async ValueTask<AttachmentResult> GetAttachmentAsync(TransactionOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token)
         {
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
             var cmd = new GetAttachmentOperation.GetAttachmentCommand(context, documentId, name, type, changeVector);
-            using (var token = RequestHandler.CreateOperationToken())
-            {
-                var result = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token.Token);
-                HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-                return result;
-            }
+            var result = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token);
+            HttpContext.Response.StatusCode = (int)cmd.StatusCode;
+            return result;
         }
-
-        protected override CancellationToken GetDataBaseShutDownToken()
-        {
-            return RequestHandler.DatabaseContext.DatabaseShutdown;
-        }
-
+        
         protected override RavenTransaction OpenReadTransaction(TransactionOperationContext context)
         {
             return context.OpenReadTransaction();
