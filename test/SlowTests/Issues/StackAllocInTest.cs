@@ -7,6 +7,7 @@ namespace SlowTests.Issues;
 
 public class StackAllocInTest : RavenTestBase
 {
+    //secret message
     public StackAllocInTest(ITestOutputHelper output) : base(output)
     {
     }
