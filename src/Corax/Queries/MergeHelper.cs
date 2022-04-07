@@ -52,7 +52,7 @@ namespace Corax.Queries
                 smallerEndPtr = left + leftLength;
                 largerPtr = right;
                 largerEndPtr = right + rightLength;
-                applyVectorization = rightLength > N;
+                applyVectorization = rightLength > N && leftLength > 0;               
             }
             else
             {
@@ -60,7 +60,7 @@ namespace Corax.Queries
                 smallerEndPtr = right + rightLength;
                 largerPtr = left;
                 largerEndPtr = left + leftLength;
-                applyVectorization = leftLength > N;
+                applyVectorization = leftLength > N && rightLength > 0;
             }
             
             if (applyVectorization)
@@ -131,6 +131,30 @@ namespace Corax.Queries
             }
 
             return (int)((ulong*)dstPtr - (ulong*)dst);
+        }
+
+        /// <summary>
+        /// dst and left *may* be the same thing, we can assume that dst is at least as large as the smallest of those
+        /// </summary>
+        internal static int AndVectorized(Span<long> dst, Span<long> left, Span<long> right)
+        {
+            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
+            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
+            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
+
+            return AndVectorized(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
+        }
+
+        /// <summary>
+        /// dst and left *may* be the same thing, we can assume that dst is at least as large as the smallest of those
+        /// </summary>
+        internal static int AndScalar(Span<long> dst, Span<long> left, Span<long> right)
+        {
+            var dstPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(dst));
+            var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
+            var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
+
+            return AndScalar(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
         }
 
         /// <summary>
