@@ -118,7 +118,7 @@ namespace Raven.Server.Web
             }
 
             // only all 4.0 and 4.1 less or equal to 41006
-            if (version.Revision < 60 || version.Revision > 41006)
+            if (version.Revision < 70 || version.Revision > 41006)
                 return;
 
             if (options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
