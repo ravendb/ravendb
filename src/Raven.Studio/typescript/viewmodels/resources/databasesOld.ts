@@ -37,12 +37,6 @@ class databases extends viewModelBase {
     
     view = require("views/resources/databases.html")
     
-    static readonly sizeLimits = {
-        databaseName: {
-            min: 150,
-            max: 1000
-        }
-    };
 
     databases = ko.observable<databasesInfo>();
     clusterManager = clusterTopologyManager.default;
@@ -220,7 +214,6 @@ class databases extends viewModelBase {
         super.compositionComplete();
         
         this.initTooltips();
-        this.initDatabaseNameResize();
         this.setupDisableReasons();
        
         if (this.databaseToCompact) {
@@ -289,41 +282,6 @@ class databases extends viewModelBase {
             });
     }
     
-    private initDatabaseNameResize() {
-        this.databaseNameWidth(this.loadDatabaseNamesSize());
-        
-        const $databases = $(".databases");
-        $databases.on("mousedown.resize", ".info-resize", e => {
-            
-            const initialX = e.clientX;
-            const initialWidth = this.databaseNameWidth();
-            
-            $databases.on("mousemove.resize", e => {
-                const currentX = e.clientX;
-                const deltaX = currentX - initialX;
-                const newWidth = initialWidth + deltaX;
-                const databaseWithLimits = databases.sizeLimits.databaseName;
-                const newWidthWithLimits = Math.max(databaseWithLimits.min, Math.min(databaseWithLimits.max, newWidth));
-                this.databaseNameWidth(newWidthWithLimits);
-            });
-            
-            e.preventDefault(); //prevent selections, etc
-            
-            window.addEventListener("click", e => {
-                e.preventDefault();
-                e.stopPropagation();
-            }, {
-                capture: true,
-                once: true
-            });
-            
-            $("body").one("mouseup.resize", e => {
-                e.preventDefault();
-                $databases.off("mousemove.resize");
-                this.saveDatabaseNamesSize(this.databaseNameWidth());
-            });
-        });
-    }
 
     private static getLocalStorageKeyForDbNameWidth() {
         return storageKeyProvider.storageKeyFor("databaseNameWidth");
@@ -503,24 +461,7 @@ class databases extends viewModelBase {
         const selected = this.selectedDatabases();
         return this.databases().sortedDatabases().filter(x => _.includes(selected, x.name));
     }
-
-    toggleSelectAll(): void {
-        const selectedCount = this.selectedDatabases().length;
-
-        if (selectedCount > 0) {
-            this.selectedDatabases([]);
-        } else {
-            const namesToSelect: string[] = [];
-
-            this.databases().sortedDatabases().forEach(db => {
-                if (!db.filteredOut()) {
-                    namesToSelect.push(db.name);
-                }
-            });
-
-            this.selectedDatabases(namesToSelect);
-        }
-    }
+    
 
     /*
     deleteDatabase(db: databaseInfo) {
@@ -725,32 +666,7 @@ class databases extends viewModelBase {
 
         this.notificationCenter.showNotifications.toggle();
     }
-
-    allowDatabaseDelete(db: databaseInfo) {
-        eventsCollector.default.reportEvent("databases", "set-lock-mode", "Unlock");
-        this.updateDatabaseLockMode(db, "Unlock");
-    }
-
-    preventDatabaseDelete(db: databaseInfo) {
-        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedIgnore");
-        this.updateDatabaseLockMode(db, "PreventDeletesIgnore");
-    }
-
-    preventDatabaseDeleteWithError(db: databaseInfo) {
-        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedError");
-        this.updateDatabaseLockMode(db, "PreventDeletesError");
-    }
-
-    private updateDatabaseLockMode(db: databaseInfo, newLockMode: Raven.Client.ServerWide.DatabaseLockMode) {
-        if (db.lockMode() !== newLockMode) {
-            this.spinners.localLockChanges.push(db.name);
-
-            new saveDatabaseLockModeCommand([db.asDatabase()], newLockMode)
-                .execute()
-                .done(() => db.lockMode(newLockMode))
-                .always(() => this.spinners.localLockChanges.remove(db.name));
-        }
-    }
+    
 
     unlockSelectedDatabases() {
         this.setLockModeSelectedDatabases("Unlock", "allow deletes");

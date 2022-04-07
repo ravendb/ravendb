@@ -1,4 +1,4 @@
-﻿import React, { useCallback } from "react";
+﻿import React, { MouseEventHandler, useCallback, useState } from "react";
 import { DatabaseSharedInfo } from "../../../models/databases";
 import classNames from "classnames";
 import { useActiveDatabase } from "../../../hooks/useActiveDatabase";
@@ -7,9 +7,14 @@ import databaseInfo from "models/resources/info/databaseInfo";
 import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import app from "durandal/app";
+import { useEventsCollector } from "../../../hooks/useEventsCollector";
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import { useServices } from "../../../hooks/useServices";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
+    selected: boolean;
+    toggleSelection: () => void;
 }
 
 
@@ -77,31 +82,72 @@ function deleteDatabases(toDelete: databaseInfo[]) {
 }
 
 export function DatabasePanel(props: DatabasePanelProps) {
-    const { db } = props;
+    const { db, selected, toggleSelection } = props;
     const { db: activeDatabase } = useActiveDatabase();
     const { appUrl } = useAppUrls();
+    const eventsCollector = useEventsCollector();
+    const { databasesService } = useServices();
+    
+    const [lockChanges, setLockChanges] = useState(false);
     
     const documentsUrl = appUrl.forDocuments(null, db.name);
     const manageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
     
+    //TODO: 
     const deleteDatabase = useCallback(() => deleteDatabases([{
         name: db.name,
-        isEncrypted: () => false //TODO
+        isEncrypted: () => db.encrypted
     } as any]), [db]);
     
+    const updateDatabaseLockMode = useCallback(async (db: DatabaseSharedInfo, lockMode: DatabaseLockMode) => {
+        if (db.lockMode === lockMode) {
+            return;
+        }
+        
+        setLockChanges(true);
+        try {
+            await databasesService.setLockMode(db, lockMode);
+        } finally {
+            setLockChanges(false);
+        }
+    }, [db]);
+    
+    const allowDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(async (e) => {
+        e.preventDefault();
+
+        eventsCollector.reportEvent("databases", "set-lock-mode", "Unlock");
+        await updateDatabaseLockMode(db, "Unlock");
+    }, [db]);
+    
+    const preventDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(async (e) => {
+        e.preventDefault();
+
+        eventsCollector.reportEvent("databases", "set-lock-mode", "LockedIgnore");
+        await updateDatabaseLockMode(db, "PreventDeletesIgnore");
+    }, [db]);
+    
+    const preventDatabaseDeleteWithError: MouseEventHandler<HTMLElement> = useCallback(async (e) => {
+        e.preventDefault();
+
+        eventsCollector.reportEvent("databases", "set-lock-mode", "LockedError");
+        await updateDatabaseLockMode(db, "PreventDeletesError");
+    }, [db]);
+    
+    
+    //TODO: createIsLocalDatabaseObservable -> relevant
     return (
-        <div className={classNames("panel panel-hover panel-state database-item", badgeClass(db), { active: activeDatabase?.name === db.name })} 
-             data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
-                            attr: {  ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
-            <div
-    data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"/>
+        <div className={classNames("panel panel-hover panel-state database-item", badgeClass(db), { active: activeDatabase?.name === db.name, relevant: true })} 
+             data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), 
+                           ) }">
+            <div className={classNames("state", badgeClass(db))} data-state-text={badgeText(db)}
+    data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', 
+    class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"/>
             <div className="padding">
                 <div className="database-header">
                     <div className="info-container flex-horizontal">
                         <div className="checkbox">
-                            <input type="checkbox" className="styled"
-                                   data-bind="checked: $root.selectedDatabases, checkedValue: name, disable: isBeingDeleted"/> 
-                                <label />
+                            <input type="checkbox" className="styled" checked={selected} onChange={toggleSelection} />
+                            <label/>
                         </div>
                         <div className="name">
                             {/* TODO <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
@@ -221,50 +267,193 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 <i className="icon-refresh-stats"/>
                             </button>*/}
                             <div className="btn-group" data-bind="visible: $root.accessManager.canDelete">
-                                <button type="button" onClick={deleteDatabase} className="btn" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted() || lockMode() !== 'Unlock',
-                                                                   css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock', 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) },
-                                                                   attr: { title: lockMode() === 'Unlock' ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }">
-                                    <i className="icon-trash" data-bind="visible: lockMode() === 'Unlock'"/>
-                                   {/* TODO <i className="icon-trash-cutout icon-addon-cancel"
-    data-bind="visible: lockMode() === 'PreventDeletesIgnore'"/>
-                                    <i className="icon-trash-cutout icon-addon-exclamation"
-    data-bind="visible: lockMode() === 'PreventDeletesError'"/>*/}
+                                <button type="button" onClick={deleteDatabase} 
+                                        title={db.lockMode === "Unlock" ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }
+                                        className={classNames("btn", { "btn-danger": db.lockMode === "Unlock", "btn-default": db.lockMode !== "Unlock", "btn-spinner": lockChanges })}
+                                        disabled={db.lockMode !== "Unlock"}
+                                        data-bind=" disable: isBeingDeleted() || lockMode() !== 'Unlock',
+                                                                   css: { 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }">
+                                    { db.lockMode === "Unlock" && (
+                                        <i className="icon-trash" />
+                                    )}
+                                    { db.lockMode === "PreventDeletesIgnore" && (
+                                        <i className="icon-trash-cutout icon-addon-cancel" />
+                                    )}
+                                    { db.lockMode === "PreventDeletesError" && (
+                                        <i className="icon-trash-cutout icon-addon-exclamation" />
+                                    )}
                                 </button>
-                                {/* TODO <button type="button" className="btn dropdown-toggle" data-toggle="dropdown"
-                                        aria-haspopup="true"
-                                        data-bind="css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock' }">
+                                <button type="button" 
+                                        className={classNames("btn dropdown-toggle", { "btn-danger": db.lockMode === "Unlock", "btn-default": db.lockMode !== "Unlock" })} 
+                                        data-toggle="dropdown"
+                                        aria-haspopup="true">
                                     <span className="caret"/>
                                     <span className="sr-only">Toggle Dropdown</span>
                                 </button>
                                 <ul className="dropdown-menu dropdown-menu-right">
                                     <li>
-                                        <a href="#" data-bind="click: $root.allowDatabaseDelete"
+                                        <a href="#" onClick={allowDatabaseDelete}
                                            title="Allow to delete database">
                                             <i className="icon-trash-cutout icon-addon-check"/> Allow database delete
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="#" data-bind="click: $root.preventDatabaseDelete"
+                                        <a href="#" onClick={preventDatabaseDelete}
                                            title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database.">
                                             <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database
                                             delete
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="#" data-bind="click: $root.preventDatabaseDeleteWithError"
+                                        <a href="#" onClick={preventDatabaseDeleteWithError}
                                            title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database.">
                                             <i className="icon-trash-cutout icon-addon-exclamation"/> Prevent
                                             database delete (Error)
                                         </a>
                                     </li>
-                                </ul>*/}
+                                </ul>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div className="panel-addon"
-                 data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
+            <ValidDatabasePropertiesPanel db={db} />
+            
+        </div>
+    )
+}
+
+interface ValidDatabasePropertiesPanelProps {
+    db: DatabaseSharedInfo;
+}
+
+function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) {
+    const { db } = props;
+    
+    return (
+        <div className="panel-addon"
+             data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
+            <div className="padding">
+                <div className="addons-container flex-wrap">
+                    <div className="database-properties">
+                        <div className="encryption">
+                            { db.encrypted && (
+                                <small title="This database is encrypted">
+                                    <i className="icon-key text-success"/>
+                                </small>
+                            )}
+                            { !db.encrypted && (
+                                <small title="This database is not encrypted">
+                                    <i className="icon-unencrypted text-muted"/>
+                                </small>
+                            )}
+                        </div>
+                        {/* TODO <div data-bind="if: databaseAccessText">
+                            <div className="database-access" title="Database access level">
+                                <i data-bind="attr: { class: databaseAccessColor() + ' ' + databaseAccessClass() }"/>
+                                <small data-bind="text: databaseAccessText"/>
+                            </div>
+                        </div>
+                        <div className="storage">
+                            <small><i className="icon-drive"/></small>
+                            <a className="set-size" data-toggle="size-tooltip"
+                               data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+                                <small
+    data-bind="text: $root.formatBytes(totalSize() + totalTempBuffersSize())"/>
+                            </a>
+                        </div>
+                        <div className="documents">
+                            <small><i className="icon-document-group"/></small>
+                            <a className="set-size" title="Number of documents. Click to view the Document List."
+                               data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() },">
+                                <small data-bind="text: (documentsCount() || 0).toLocaleString()"/>
+                            </a>
+                        </div>
+                        <div className="indexes">
+                            <small><i className="icon-index"/></small>
+                            <a className="set-size" title="Number of indexes. Click to view the Index List."
+                               data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+                                <small data-bind="text: (indexesCount() || 0).toLocaleString()"/>
+                            </a>
+                        </div>
+                        <!--ko if: !uptime()-->
+                        <div className="uptime text-muted">
+                            <small><i className="icon-recent"/></small>
+                            <small>Offline</small>
+                        </div>
+                        <!--/ko-->
+                        <!--ko if: uptime()-->
+                        <div className="uptime">
+                            <small><i className="icon-recent"/></small>
+                            <span title="The database uptime">
+                        <small className="hidden-compact">Up for</small>
+                        <small data-bind="text: uptime()"/>
+                    </span>
+                        </div>
+                        <!--/ko-->
+                        <div className="backup">
+                            <div className="properties-value value-only">
+                                <a className="set-size" title="Click to navigate to Backups view"
+                                   data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, attr: { href: $root.backupsViewUrl($data), class: backupStatus() }">
+                                    <small><i className="icon-backup"/></small>
+                                    <small data-bind="text: lastBackupText"/>
+                                </a>
+                            </div>
+                        </div>*/}
+                    </div>
+                    {/* TODO <div className="database-properties-right">
+                        <div className="indexing-errors text-danger" data-bind="visible: indexingErrors()">
+                            <small><i className="icon-exclamation"/></small>
+                            <a className="set-size text-danger"
+                               title="Indexing errors. Click to view the Indexing Errors."
+                               data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+                                <small data-bind="text: indexingErrors().toLocaleString()"/>
+                                <small className="hidden-compact"
+    data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors', true)"/>
+                            </a>
+                        </div>
+                        <div className="indexing-paused text-warning"
+                             data-bind="visible: indexingPaused() && !indexingDisabled()">
+                            <small><i className="icon-pause"/></small>
+                            <a className="set-size text-warning"
+                               title="Indexing is paused. Click to view the Index List."
+                               data-bind="attr: { href: $root.indexesUrl($data) }">
+                                <small>Indexing paused</small>
+                            </a>
+                        </div>
+                        <div className="indexing-disabled text-danger" data-bind="visible: indexingDisabled()">
+                            <span className="set-size" title="Indexing is disabled">
+                                <small><i className="icon-lock"/></small>
+                                <small>Indexing disabled</small>
+                            </span>
+                        </div>
+                        <div className="alerts text-warning" data-bind="visible: alerts()">
+                            <div className="set-size">
+                                <small><i className="icon-warning"/></small>
+                                <a className="set-size text-warning" title="Click to view alerts in Notification Center"
+                                   href="#"
+                                   data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
+                                    <small data-bind="text: alerts().toLocaleString()"/>
+                                    <small
+    data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"/>
+                                </a>
+                            </div>
+                        </div>
+                        <div className="performance-hints text-info" data-bind="visible: performanceHints()">
+                            <div className="set-size">
+                                <small><i className="icon-rocket"/></small>
+                                <a className="set-size text-info" title="Click to view hints in Notification Center"
+                                   href="#"
+                                   data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
+                                    <small data-bind="text: performanceHints().toLocaleString()"/>
+                                    <small className="hidden-compact"
+    data-bind="text: $root.pluralize(performanceHints().toLocaleString(), 'performance hint', 'performance hints', true)"/>
+                                </a>
+                            </div>
+                        </div>
+                      
+                    </div>*/}
+                </div>
             </div>
         </div>
     )
@@ -284,118 +473,4 @@ export function DatabasePanel(props: DatabasePanelProps) {
         </div>
     </div>
 </script>
-
-<script type="text/html" id="valid-database-properties-template">
-    <div class="padding">
-        <div class="addons-container flex-wrap">
-            <div class="database-properties">
-                <div class="encryption">
-                    <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-key text-success"></i></small>
-                    <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unencrypted text-muted"></i></small>
-                </div>
-                <div data-bind="if: databaseAccessText">
-                    <div class="database-access" title="Database access level">
-                        <i data-bind="attr: { class: databaseAccessColor() + ' ' + databaseAccessClass() }"></i>
-                        <small data-bind="text: databaseAccessText" ></small>
-                    </div>
-                </div>
-                <div class="storage">
-                    <small><i class="icon-drive"></i></small>
-                    <a class="set-size" data-toggle="size-tooltip"
-                       data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
-                        <small data-bind="text: $root.formatBytes(totalSize() + totalTempBuffersSize())"></small>
-                    </a>
-                </div>
-                <div class="documents">
-                    <small><i class="icon-document-group"></i></small>
-                    <a class="set-size" title="Number of documents. Click to view the Document List."
-                       data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() },">
-                        <small data-bind="text: (documentsCount() || 0).toLocaleString()"></small>
-                    </a>
-                </div>
-                <div class="indexes">
-                    <small><i class="icon-index"></i></small>
-                    <a class="set-size" title="Number of indexes. Click to view the Index List."
-                       data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
-                        <small data-bind="text: (indexesCount() || 0).toLocaleString()"></small>
-                    </a>
-                </div>
-                <!--ko if: !uptime()-->
-                <div class="uptime text-muted">
-                    <small><i class="icon-recent"></i></small>
-                    <small>Offline</small>
-                </div>
-                <!--/ko-->
-                <!--ko if: uptime()-->
-                <div class="uptime">
-                    <small><i class="icon-recent"></i></small>
-                    <span title="The database uptime">
-                        <small class="hidden-compact">Up for</small>
-                        <small data-bind="text: uptime()"></small>
-                    </span>
-                </div>
-                <!--/ko-->
-                <div class="backup">
-                    <div class="properties-value value-only">
-                        <a class="set-size" title="Click to navigate to Backups view"
-                           data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, attr: { href: $root.backupsViewUrl($data), class: backupStatus() }">
-                            <small><i class="icon-backup"></i></small>
-                            <small data-bind="text: lastBackupText"></small>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <div class="database-properties-right">
-                <div class="indexing-errors text-danger" data-bind="visible: indexingErrors()">
-                    <small><i class="icon-exclamation"></i></small>
-                    <a class="set-size text-danger" title="Indexing errors. Click to view the Indexing Errors."
-                       data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
-                        <small data-bind="text: indexingErrors().toLocaleString()"></small>
-                        <small class="hidden-compact" data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors', true)"></small>
-                    </a>
-                </div>
-                <div class="indexing-paused text-warning" data-bind="visible: indexingPaused() && !indexingDisabled()">
-                    <small><i class="icon-pause"></i></small>
-                    <a class="set-size text-warning" title="Indexing is paused. Click to view the Index List."
-                       data-bind="attr: { href: $root.indexesUrl($data) }">
-                        <small>Indexing paused</small>
-                    </a>
-                </div>
-                <div class="indexing-disabled text-danger" data-bind="visible: indexingDisabled()">
-                    <span class="set-size" title="Indexing is disabled">
-                        <small><i class="icon-lock"></i></small>
-                        <small>Indexing disabled</small>
-                    </span>
-                </div>
-                <div class="alerts text-warning" data-bind="visible: alerts()">
-                    <div class="set-size">
-                        <small><i class="icon-warning"></i></small>
-                        <a class="set-size text-warning" title="Click to view alerts in Notification Center" href="#"
-                           data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
-                            <small data-bind="text: alerts().toLocaleString()"></small>
-                            <small data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"></small>
-                        </a>
-                    </div>
-                </div>
-                <div class="performance-hints text-info" data-bind="visible: performanceHints()">
-                    <div class="set-size">
-                        <small><i class="icon-rocket"></i></small>
-                        <a class="set-size text-info" title="Click to view hints in Notification Center" href="#"
-                           data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
-                            <small data-bind="text: performanceHints().toLocaleString()"></small>
-                            <small class="hidden-compact" data-bind="text: $root.pluralize(performanceHints().toLocaleString(), 'performance hint', 'performance hints', true)"></small>
-                        </a>
-                    </div>
-                </div>
-                <div class="clients-rejection" data-bind="visible: rejectClients()">
-                    <div class="set-size text-warning" title="Clients rejection mode">
-                        <small><i class="icon-umbrella"></i></small>
-                        <small>Clients rejection mode</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</script>
-
  */

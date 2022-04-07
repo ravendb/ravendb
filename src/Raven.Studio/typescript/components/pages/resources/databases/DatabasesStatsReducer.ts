@@ -3,6 +3,8 @@ import DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 import DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 import { produce } from "immer";
 import { DatabaseSharedInfo } from "../../../models/databases";
+import DatabaseUtils from "../../../utils/DatabaseUtils";
+import { data } from "jquery";
 
 
 interface ActionStatsLoaded {
@@ -13,15 +15,17 @@ interface ActionStatsLoaded {
 type DatabasesStatsReducerAction =
     | ActionStatsLoaded;
 
-interface DatabasesStatsState {
+export interface DatabasesStatsState {
     databases: DatabaseSharedInfo[];
 }
 
 function mapToDatabaseShardedInfo(stats: DatabaseInfo): DatabaseSharedInfo {
-    //TODO: 
+    const sharded = DatabaseUtils.isSharded(stats.Name);
     return {
-        name: stats.Name,
-        sharded: false
+        name: DatabaseUtils.extractName(stats.Name),
+        sharded,
+        lockMode: stats.LockMode,
+        encrypted: stats.IsEncrypted
     }
 }
 
@@ -32,17 +36,14 @@ export const databasesStatsReducer: Reducer<DatabasesStatsState, DatabasesStatsR
                 const result: DatabaseSharedInfo[] = [];
 
                 action.stats.Databases.forEach(incomingDb => {
-                    const isSharded = incomingDb.Name.includes("$");
+                    const isSharded = DatabaseUtils.isSharded(incomingDb.Name);
                     //TODO: this is temp impl!
 
                     if (isSharded) {
                         // take first shard for now
                         const [name, shard] = incomingDb.Name.split("$");
                         if (shard === "0") {
-                            result.push({
-                                name,
-                                sharded: true
-                            });
+                            result.push(mapToDatabaseShardedInfo(incomingDb));
                         }
                     } else {
                         result.push(mapToDatabaseShardedInfo(incomingDb));
