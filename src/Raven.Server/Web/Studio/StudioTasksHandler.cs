@@ -291,22 +291,27 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task TestPeriodicBackupCredentials()
         {
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            await TestPeriodicBackupCredentials(this);
+        }
+
+        public static async Task TestPeriodicBackupCredentials(RequestHandler requestHandler)
+        {
+            var type = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
             if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
                 throw new ArgumentException($"Unknown backup connection: {type}");
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 DynamicJsonValue result;
                 try
                 {
-                    var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
+                    var connectionInfo = await context.ReadForMemoryAsync(requestHandler.RequestBodyStream(), "test-connection");
                     switch (connectionType)
                     {
                         case PeriodicBackupConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(s3Settings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
+                            using (var awsClient = new RavenAwsS3Client(s3Settings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
                             {
                                 await awsClient.TestConnectionAsync();
                             }
@@ -314,7 +319,7 @@ namespace Raven.Server.Web.Studio
 
                         case PeriodicBackupConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
+                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
                             {
                                 await glacierClient.TestConnectionAsync();
                             }
@@ -322,7 +327,7 @@ namespace Raven.Server.Web.Studio
 
                         case PeriodicBackupConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = RavenAzureClient.Create(azureSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
+                            using (var azureClient = RavenAzureClient.Create(azureSettings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
                             {
                                 await azureClient.TestConnectionAsync();
                             }
@@ -330,7 +335,7 @@ namespace Raven.Server.Web.Studio
 
                         case PeriodicBackupConnectionType.GoogleCloud:
                             var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
-                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
+                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
                             {
                                 await googleCloudClient.TestConnection();
                             }
@@ -364,7 +369,7 @@ namespace Raven.Server.Web.Studio
                     };
                 }
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
                     context.Write(writer, result);
                 }
