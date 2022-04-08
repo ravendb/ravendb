@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import shardingContext from "viewmodels/common/sharding/shardingContext";
 import { shardingTodo } from "common/developmentHelper";
+import router = require("plugins/router");
 
 class shardAwareContainer extends viewModelBase {
     protected rootActivator: DurandalActivator<any>;
@@ -55,9 +56,12 @@ class shardAwareContainer extends viewModelBase {
 
         this.activateChildView(db); //TODO: old child state
     }
-    
-    //TODO: candeactivate?
-    
+
+    canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
+        return this.rootActivator.canDeactivate(isClose)
+            .then(result => ({ can: result }))
+    }
+
     deactivate() {
         super.deactivate();
 
@@ -71,10 +75,16 @@ class shardAwareContainer extends viewModelBase {
         const child = new this.childCtr(db);
         
         this.rootActivator.activateItem(child, this.activationData)
-            .done(() => {
-                this.child(child);
-            })
-        //TODO: handle failure!
+            .done((result) => {
+                if (result) {
+                    this.child(child);
+                } else {
+                    const lifecycleData = (this.rootActivator.settings as any).lifecycleData;
+                    if (lifecycleData && lifecycleData.redirect) {
+                        router.navigate(lifecycleData.redirect);
+                    }
+                }
+            });
     }
 }
 
