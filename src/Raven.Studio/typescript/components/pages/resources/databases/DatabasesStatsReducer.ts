@@ -22,7 +22,7 @@ export interface DatabasesStatsState {
 function mapToDatabaseShardedInfo(stats: DatabaseInfo): DatabaseSharedInfo {
     const sharded = DatabaseUtils.isSharded(stats.Name);
     return {
-        name: DatabaseUtils.extractName(stats.Name),
+        name: DatabaseUtils.shardGroupKey(stats.Name),
         sharded,
         lockMode: stats.LockMode,
         encrypted: stats.IsEncrypted
@@ -41,8 +41,7 @@ export const databasesStatsReducer: Reducer<DatabasesStatsState, DatabasesStatsR
 
                     if (isSharded) {
                         // take first shard for now
-                        const [name, shard] = incomingDb.Name.split("$");
-                        if (shard === "0") {
+                        if (DatabaseUtils.shardNumber(incomingDb.Name) === 0) {
                             result.push(mapToDatabaseShardedInfo(incomingDb));
                         }
                     } else {

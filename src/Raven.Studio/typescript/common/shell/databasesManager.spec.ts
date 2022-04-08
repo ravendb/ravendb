@@ -133,6 +133,62 @@ describe("databasesManager", () => {
         expect(shard.shards())
             .toHaveLength(2);
     });
+    
+    it("can update manager after db was deleted", async () => {
+        const response = DatabaseStubs.shardedDatabasesResponse();
+
+        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
+            if (args.url === endpointConstants.global.databases.databases) {
+                return $.Deferred<typeof response>().resolve(response);
+            }
+        });
+
+        const manager = new databasesManager();
+        await manager.init();
+
+        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
+            if (args.url === endpointConstants.global.databases.databases) {
+                return $.Deferred<typeof response>().resolve({ 
+                    Databases: []
+                });
+            }
+        });
+        
+        await manager.refreshDatabases();
+        
+        expect(manager.databases())
+            .toHaveLength(0);
+    });
+
+    it("can update manager after single shard was deleted", async () => {
+        const response = DatabaseStubs.shardedDatabasesResponse();
+
+        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
+            if (args.url === endpointConstants.global.databases.databases) {
+                return $.Deferred<typeof response>().resolve(response);
+            }
+        });
+
+        const manager = new databasesManager();
+        await manager.init();
+
+        response.Databases.splice(0, 1);
+        
+        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
+            if (args.url === endpointConstants.global.databases.databases) {
+                return $.Deferred<typeof response>().resolve(response);
+            }
+        });
+
+        await manager.refreshDatabases();
+
+        expect(manager.databases())
+            .toHaveLength(1);
+        
+        const db1 = manager.getDatabaseByName("db") as shardedDatabase;
+        expect(db1.shards())
+            .toHaveLength(1);
+    })
 })
 
 

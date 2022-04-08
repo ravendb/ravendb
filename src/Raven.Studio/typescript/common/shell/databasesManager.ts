@@ -15,6 +15,7 @@ import shardedDatabase from "models/resources/shardedDatabase";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import shard from "models/resources/shard";
 import { shardingTodo } from "common/developmentHelper";
+import DatabaseUtils from "../../components/utils/DatabaseUtils";
 
 class databasesManager {
 
@@ -29,6 +30,7 @@ class databasesManager {
 
     databases = ko.observableArray<database>([]);
 
+    //TODO: make sure all those things are saved with root db name!
     onDatabaseDeletedCallbacks: Array<(qualifier: string, name: string) => void> = [
         (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
         (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n),
@@ -40,18 +42,14 @@ class databasesManager {
             return null;
         }
         
-        const singleShard = name.includes("$");
+        const singleShard = DatabaseUtils.isSharded(name);
         if (singleShard) {
-            const groupName = databasesManager.shardGroupKey(name);
-            const dbByName = this
-                .databases()
-                .find(x => groupName.toLowerCase() === x.name.toLowerCase()) as shardedDatabase;
-            
-            if (dbByName) {
-                return dbByName.shards().find(x => x.name.toLowerCase() === name.toLowerCase());
-            } else {
-                return null;
+            const groupName = DatabaseUtils.shardGroupKey(name);
+            const sharded = this.getDatabaseByName(groupName) as shardedDatabase;
+            if (sharded) {
+                return sharded.shards().find(x => x.name.toLowerCase() === name.toLowerCase());
             }
+            return null;
         } else {
             return this
                 .databases()
@@ -143,18 +141,10 @@ class databasesManager {
         }
     }
 
-    private static isSharded(data: Raven.Client.ServerWide.Operations.DatabaseInfo) {
-        return data.Name.includes("$");
-    }
-    
-    private static shardGroupKey(dbName: string) {
-        return dbName.split("$")[0];
-    }
-    
     private updateDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
         this.deleteRemovedDatabases(incomingData);
 
-        const nonSharded = incomingData.Databases.filter(x => !databasesManager.isSharded(x));
+        const nonSharded = incomingData.Databases.filter(x => !DatabaseUtils.isSharded(x.Name));
         nonSharded.forEach(dbInfo => {
             const existingDb = this.getDatabaseByName(dbInfo.Name);
             this.updateDatabase(dbInfo, existingDb);
@@ -162,8 +152,8 @@ class databasesManager {
         
         const sharded = new Map<string, Raven.Client.ServerWide.Operations.DatabaseInfo[]>();
         incomingData.Databases.forEach(db => {
-            if (databasesManager.isSharded(db)) {
-                const shardKey = databasesManager.shardGroupKey(db.Name);
+            if (DatabaseUtils.isSharded(db.Name)) {
+                const shardKey = DatabaseUtils.shardGroupKey(db.Name);
 
                 const items = sharded.get(shardKey) || [];
                 items.push(db);
@@ -172,18 +162,20 @@ class databasesManager {
         });
 
         sharded.forEach((shardGroup, shardName) => {
-            const existingDb = this.getDatabaseByName(shardName);
+            const existingDb = this.getDatabaseByName(shardName) as shardedDatabase;
             this.updateDatabaseGroup(shardGroup, existingDb);
         });
     }
 
     private deleteRemovedDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
+        const incomingDatabases = incomingData.Databases.map(x => DatabaseUtils.isSharded(x.Name) ? DatabaseUtils.shardGroupKey(x.Name) : x.Name);
+        
         const existingDatabase = this.databases;
 
         const toDelete: database[] = [];
 
         this.databases().forEach(db => {
-            const matchedDb = incomingData.Databases.find(x => x.Name.toLowerCase() === db.name.toLowerCase());
+            const matchedDb = incomingDatabases.find(x => x.toLowerCase() === db.name.toLowerCase());
             if (!matchedDb) {
                 toDelete.push(db);
             }
@@ -195,22 +187,14 @@ class databasesManager {
         toDelete.forEach(db => this.onDatabaseDeleted(db));
     }
 
-    private updateDatabaseGroup(dbs: Raven.Client.ServerWide.Operations.DatabaseInfo[], existingDb: database): shardedDatabase {
+    private updateDatabaseGroup(dbs: Raven.Client.ServerWide.Operations.DatabaseInfo[], existingDb: shardedDatabase): shardedDatabase {
         if (existingDb) {
-            shardingTodo("Marcin"); //TODO:
-            //TODO: existingDb.updateUsingGroup(dbs);
+            existingDb.updateUsingGroup(dbs);
             
-            return existingDb as shardedDatabase;
+            return existingDb;
         } else {
             const nodeTag = clusterTopologyManager.default.localNodeTag;
-            const group = new shardedDatabase(dbs[0], nodeTag);
-            shardingTodo("Marcin"); //TODO:
-            group.name = databasesManager.shardGroupKey(dbs[0].Name); //TODO: update other props! //TODO: 
-            group.shards(dbs.map(db => {
-                const singleShard = new shard(db, nodeTag);
-                singleShard.parent = group;
-                return singleShard;
-            }));
+            const group = new shardedDatabase(dbs, nodeTag);
 
             this.databases.push(group);
             this.databases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));

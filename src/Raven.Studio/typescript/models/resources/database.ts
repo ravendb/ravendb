@@ -25,7 +25,7 @@ abstract class database {
     databaseAccessText = ko.observable<string>();
     databaseAccessColor = ko.observable<string>();
     
-    private clusterNodeTag: KnockoutObservable<string>;
+    clusterNodeTag: KnockoutObservable<string>;
     
     abstract get root(): database;
 
@@ -91,7 +91,7 @@ abstract class database {
     }
 
     static getNameFromUrl(url: string) {
-        var index = url.indexOf("databases/");
+        const index = url.indexOf("databases/");
         return (index > 0) ? url.substring(index + 10) : "";
     }
 

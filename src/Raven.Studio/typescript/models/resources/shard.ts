@@ -1,15 +1,21 @@
 import database from "models/resources/database";
 import shardedDatabase from "models/resources/shardedDatabase";
+import DatabaseUtils from "../../components/utils/DatabaseUtils";
 
 class shard extends database {
-    parent: shardedDatabase;
+    readonly parent: shardedDatabase;
+
+    constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, parent: shardedDatabase) {
+        super(dbInfo, parent.clusterNodeTag);
+        this.parent = parent;
+    }
 
     get root(): database {
         return this.parent;
     }
     
     get shardNumber() {
-        return parseInt(this.name.split("$")[1], 10);
+        return DatabaseUtils.shardNumber(this.name);
     }
     
     get shardName() {
