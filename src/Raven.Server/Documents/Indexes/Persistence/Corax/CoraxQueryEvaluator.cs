@@ -1151,7 +1151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 ? new SortingMatch.AscendingMatchComparer(_searcher, 0, OrderTypeFieldConverter(orders[i].FieldType))
                                 : new SortingMatch.DescendingMatchComparer(_searcher, 0, OrderTypeFieldConverter(orders[i].FieldType)),
                             "score" => default(BoostingComparer),
-                            _ => throw new InvalidDataException($"Unknown {nameof(MethodExpression)} as argument of ORDER BY. Have you mean id() or score()?")
+                            _ => throw new InvalidDataException($"Unknown {nameof(MethodExpression)} as argument of ORDER BY. You can order by id() or score()?")
                         };
                         continue;
                     }
@@ -1170,7 +1170,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     (true, SortingType.Normal) => new SortingMatch.AscendingMatchComparer(_searcher, id, orderTypeField),
                     (false, SortingType.Normal) => new SortingMatch.DescendingMatchComparer(_searcher, id, orderTypeField),
                     (true, SortingType.Alphanumerical) => new SortingMatch.AlphanumericAscendingMatchComparer(_searcher, id, orderTypeField),
-                    (false, SortingType.Alphanumerical) => new SortingMatch.AlphanumericDescendingMatchComparer(_searcher, id, orderTypeField)
+                    (false, SortingType.Alphanumerical) => new SortingMatch.AlphanumericDescendingMatchComparer(_searcher, id, orderTypeField),
+                    _ => throw new ArgumentOutOfRangeException($"Unknown {typeof(SortingType)} at {nameof(CoraxQueryEvaluator)}.")
                 };
             }
 
