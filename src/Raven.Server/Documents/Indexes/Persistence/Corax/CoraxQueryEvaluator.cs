@@ -1176,7 +1176,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     (false, SortingType.Normal) => new SortingMatch.DescendingMatchComparer(_searcher, id, orderTypeField),
                     (true, SortingType.Alphanumerical) => new SortingMatch.AlphanumericAscendingMatchComparer(_searcher, id, orderTypeField),
                     (false, SortingType.Alphanumerical) => new SortingMatch.AlphanumericDescendingMatchComparer(_searcher, id, orderTypeField),
-                    _ => throw new ArgumentOutOfRangeException($"Unknown {typeof(SortingType)} at {nameof(CoraxQueryEvaluator)}.")
+                    _ => throw new InvalidDataException($"Unknown {typeof(SortingMatch)}: {sortingType} at {nameof(CoraxQueryEvaluator)}")
                 };
             }
 
