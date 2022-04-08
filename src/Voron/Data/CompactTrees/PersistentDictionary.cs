@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -78,8 +78,54 @@ namespace Voron.Data.CompactTrees
             var encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
                 new Encoder3Gram<NativeMemoryEncoderState>(
                     new NativeMemoryEncoderState(p.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize)));
-            encoder.Train(enumerator, MaxDictionarySize);
+            encoder.Train(enumerator, MaxDictionaryEntries);
 
+            header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
+
+#if DEBUG
+            VerifyTable(p);
+#endif
+
+            return new PersistentDictionary(p);
+        }
+
+
+        public static PersistentDictionary CreateIfBetter<TKeysEnumerator>(LowLevelTransaction llt, in TKeysEnumerator trainEnumerator, in TKeysEnumerator testEnumerator, PersistentDictionary previousDictionary = null)
+            where TKeysEnumerator : struct, IReadOnlySpanEnumerator
+        {
+            // Reserve the memory to create the encoder table. 
+            using var scope = llt.Allocator.Allocate(UsableDictionarySize, out var output);
+            
+            // Train the new dictionary.
+            var encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
+                                new Encoder3Gram<NativeMemoryEncoderState>(
+                                    new NativeMemoryEncoderState(output.Ptr, UsableDictionarySize)));
+            encoder.Train(trainEnumerator, MaxDictionaryEntries);
+
+            // Test the new dictionary to ensure that we have statistically better compression.
+            using var encodeBufferScope = llt.Allocator.Allocate(Constants.Storage.PageSize, out var encodeBuffer);
+            
+            int incumbentSize = 0;
+            int successorSize = 0;
+            var auxEncodeBuffer = encodeBuffer.ToSpan();
+            while (testEnumerator.MoveNext(out var testValue))
+            {                
+                incumbentSize += previousDictionary._encoder.Encode(testValue, auxEncodeBuffer);
+                successorSize += encoder.Encode(testValue, auxEncodeBuffer);
+            }
+
+            // If the new dictionary is not at least 2.5% better, we return the current dictionary.             
+            if (incumbentSize < successorSize * 1.025)
+                return previousDictionary;            
+                                    
+            var p = llt.AllocatePage(NumberOfPagesForDictionary);
+            p.Flags = PageFlags.Overflow;
+            p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
+
+            PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
+            header->CurrentId = p.PageNumber;
+            header->PreviousId = previousDictionary != null ? previousDictionary.PageNumber : 0;
+            output.CopyTo(0, p.DataPointer + PersistentDictionaryHeader.SizeOf, 0, UsableDictionarySize);
             header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
 
 #if DEBUG
@@ -94,7 +140,7 @@ namespace Voron.Data.CompactTrees
             var tableHash = XXHash64.Calculate(page.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)page.DataPointer;
 
-            // If checksume is not correct, we will throw a corruption exception
+            // If checksum is not correct, we will throw a corruption exception
             if (tableHash != header->TableHash)
                 throw new VoronErrorException($"Persistent storage checksum mismatch, expected: {tableHash}, actual: {header->TableHash}");
         }

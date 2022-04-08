@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
@@ -304,7 +304,8 @@ namespace Voron.Data.CompactTrees
                     LeafPages = 1,
                     RootPage = newPage.PageNumber,
                     NumberOfEntries = 0,
-                    CurrentDictionaryId = dictionaryId
+                    TreeDictionaryId = dictionaryId,
+                    NextTrainAt = 100000, // We wont try to train the encoder until we have more than 100K entries
                 };
             }
             else
@@ -858,16 +859,12 @@ namespace Voron.Data.CompactTrees
 
         private bool TryRecompressPage(in CursorState state)
         {
-            if (_internalCursor._pos > 0 || state.Page.PageNumber % 32 != 0)
-            {
-                //TODO: figure out better policy on when to recompress
-                //TODO: need to record the compression rate and only recompress if we are 15% or higher off
-                // we don't want to do recompression too often  
+            // Recompress will only trigger IF the page has been compressed with a lesser dictionary. 
+            if (state.Header->DictionaryId == _state.TreeDictionaryId)
                 return false;
-            }
             
             var oldDictionary = _dictionaries[state.Header->DictionaryId];
-            var newDictionary = PersistentDictionary.Create(_llt, new TreePageList(this, state, _dictionaries[state.Header->DictionaryId]));
+            var newDictionary = GetEncodingDictionary(_state.TreeDictionaryId);                
 
             using var _ = _llt.Environment.GetTemporaryPage(_llt, out var tmp);
             Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, Constants.Storage.PageSize);

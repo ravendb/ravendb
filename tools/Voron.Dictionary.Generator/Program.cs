@@ -63,7 +63,7 @@ namespace Voron.Data.CompactTrees;
 partial class PersistentDictionary
 {{
     private const int NumberOfPagesForDictionary = { pagesToUse };
-    public const int MaxDictionarySize = { dictionarySize };
+    public const int MaxDictionaryEntries = { dictionarySize };
 }}";
 
         File.WriteAllText(Path.Combine(treesDirectory.FullName, "PersistentDictionary.Generated.cs"), fileContent);
