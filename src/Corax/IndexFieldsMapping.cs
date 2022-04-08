@@ -114,7 +114,8 @@ public class IndexFieldBinding
     public readonly Slice FieldName;
     public Corax.Analyzer Analyzer;
     public readonly bool HasSuggestions;
-    public readonly FieldIndexingMode FieldIndexingMode; 
+    public readonly FieldIndexingMode FieldIndexingMode;
+    private string _fieldName;
 
     public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal)
     {
@@ -123,5 +124,13 @@ public class IndexFieldBinding
         Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
         FieldIndexingMode = fieldIndexingMode;
+    }
+
+    public string FieldNameAsString
+    {
+        get
+        {
+            return _fieldName ?? (_fieldName = FieldName.ToString());
+        }
     }
 }
