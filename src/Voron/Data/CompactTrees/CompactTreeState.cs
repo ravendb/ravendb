@@ -22,11 +22,13 @@ namespace Voron.Data.CompactTrees
         [FieldOffset(32)]
         public long LeafPages;
         [FieldOffset(40)]
-        public long CurrentDictionaryId;
+        public long TreeDictionaryId;
+        [FieldOffset(48)]
+        public long NextTrainAt;
 
         public override string ToString()
         {
-            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Flags)}: {Flags}, {nameof(Depth)}: {Depth}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}, {nameof(CurrentDictionaryId)}: {CurrentDictionaryId}";
+            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Flags)}: {Flags}, {nameof(Depth)}: {Depth}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}, {nameof(TreeDictionaryId)}: {TreeDictionaryId}";
         }
     }
 }
