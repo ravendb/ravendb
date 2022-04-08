@@ -32,7 +32,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Batches
         private List<Stream> _attachmentStreams;
         private HashSet<Stream> _uniqueAttachmentStreams;
         private readonly TransactionMode _mode = TransactionMode.SingleNode;
-        private readonly IDisposable _returnCtx;
         public SingleNodeShardedBatchCommand(ShardedDatabaseRequestHandler handler) :
             base(handler, Commands.Headers.None)
         {
@@ -130,8 +129,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Batches
             }
 
             Result?.Dispose();
-
-            _returnCtx?.Dispose();
         }
     }
 }

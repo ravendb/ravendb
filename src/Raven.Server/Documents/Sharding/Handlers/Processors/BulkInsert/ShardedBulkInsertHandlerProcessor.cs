@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.BulkInsert;
 
 internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProcessor<ShardedBatchCommandData, ShardedBulkInsertHandler, TransactionOperationContext>, IAsyncDisposable
 {
+    private readonly ShardedDatabaseContext _databaseContext;
     private const string SampleChangeVector = "A:2568-F9I6Egqwm0Kz+K0oFVIR9Q";
 
     private readonly ShardedBulkInsertOperation _operation;
@@ -23,6 +24,7 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
         long operationId, bool skipOverwriteIfUnchanged, CancellationToken token) :
         base(requestHandler, contextPool, null, skipOverwriteIfUnchanged, token)
     {
+        _databaseContext = databaseContext;
         _cts = CancellationTokenSource.CreateLinkedTokenSource(token, requestHandler.AbortRequestToken);
         _operation = new ShardedBulkInsertOperation(operationId, skipOverwriteIfUnchanged, requestHandler, databaseContext, contextPool, _cts.Token);
     }
@@ -47,7 +49,7 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
 
     protected override StreamsTempFile GetTempFile()
     {
-        return RequestHandler.ServerStore.GetTempFile("attachment", "sharded-bulk-insert");
+        return RequestHandler.ServerStore.GetTempFile("attachment", "sharded-bulk-insert", _databaseContext.Encrypted);
     }
 
     protected override async ValueTask<string> CopyAttachmentStream(Stream stream, Stream attachmentStream)

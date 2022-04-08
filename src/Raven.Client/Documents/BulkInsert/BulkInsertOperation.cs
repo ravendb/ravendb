@@ -273,7 +273,7 @@ namespace Raven.Client.Documents.BulkInsert
                     WriteString(id);
                     _writer.Write("\",\"Type\":\"PUT\",\"Document\":");
 
-                    await _writer.StreamWriter.FlushAsync().ConfigureAwait(false);
+                    await _writer.FlushAsync().ConfigureAwait(false);
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _writer.StreamWriter) == false)
                     {

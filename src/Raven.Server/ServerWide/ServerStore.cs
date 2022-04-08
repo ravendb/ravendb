@@ -3474,12 +3474,12 @@ namespace Raven.Server.ServerWide
             yield return usage;
         }
 
-        public StreamsTempFile GetTempFile(string fileTypeOrName, string suffix)
+        public StreamsTempFile GetTempFile(string fileTypeOrName, string suffix, bool? isEncrypted = null)
         {
             var name = $"{fileTypeOrName}.{Guid.NewGuid():N}.{suffix}";
             var tempPath = _env.Options.DataPager.Options.TempPath.Combine(name);
 
-            return new StreamsTempFile(tempPath.FullPath, _env.Options.Encryption.IsEnabled);
+            return new StreamsTempFile(tempPath.FullPath, isEncrypted ?? _env.Options.Encryption.IsEnabled);
         }
 
         internal TestingStuff ForTestingPurposes;
