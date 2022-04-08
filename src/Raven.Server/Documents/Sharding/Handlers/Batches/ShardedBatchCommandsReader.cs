@@ -16,11 +16,13 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
     public List<BufferedCommand> BufferedCommands = new();
 
     private readonly ShardedDatabaseContext _databaseContext;
+    private readonly BufferedCommandCopier _bufferedCommandCopier;
 
     public ShardedBatchCommandsReader(ShardedDatabaseRequestHandler handler) :
-            base(handler, handler.DatabaseContext.DatabaseName, handler.DatabaseContext.IdentityPartsSeparator, BatchRequestParser.Instance)
+            base(handler, handler.DatabaseContext.DatabaseName, handler.DatabaseContext.IdentityPartsSeparator, new BatchRequestParser())
     {
         _databaseContext = handler.DatabaseContext;
+        BatchRequestParser.CommandParsingObserver = _bufferedCommandCopier = new BufferedCommandCopier();
     }
 
     public override async Task SaveStream(JsonOperationContext context, Stream input)
@@ -44,9 +46,17 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
         try
         {
             var bufferedCommand = new BufferedCommand { CommandStream = ms };
-            var result = await BatchRequestParser.Instance.ReadAndCopySingleCommand(ctx, stream, state, parser, buffer, bufferedCommand, modifier, token);
+            
+            BatchRequestParser.CommandData result;
+
+            using (_bufferedCommandCopier.UseCommand(bufferedCommand))
+            {
+                result = await BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
+            }
+
             bufferedCommand.IsIdentity = IsIdentityCommand(ref result);
             BufferedCommands.Add(bufferedCommand);
+
             return result;
         }
         catch

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Batches;
@@ -13,34 +14,23 @@ public class ShardedBulkInsertCommandsReader : AbstractBulkInsertBatchCommandsRe
 
     public ShardedBulkInsertCommandsReader(JsonOperationContext ctx, Stream stream, JsonOperationContext.MemoryBuffer buffer, CancellationToken token) : base(ctx, stream, buffer, new BatchRequestParser(), token)
     {
-        BatchRequestParser.CommandParsingObserver = _commandStreamCopier = new BatchCommandStreamCopier(ctx);
+        BatchRequestParser.CommandParsingObserver = _commandStreamCopier = new BatchCommandStreamCopier();
     }
 
-    public override Task<ShardedBatchCommandData> GetCommandAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier)
+    public override async Task<ShardedBatchCommandData> GetCommandAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier)
     {
-        var moveNext = MoveNext(ctx, modifier);
+        var command = new ShardedBatchCommandData(ctx);
 
-        if (moveNext == null)
-            return null; // TODO arek
+        using (_commandStreamCopier.UseStream(command.Stream))
+        {
+            var moveNext = MoveNext(ctx, modifier);
 
-        return CopyCommandStream(ctx, moveNext);
-    }
+            if (moveNext == null)
+                return null;
 
-    private async Task<ShardedBatchCommandData> CopyCommandStream(JsonOperationContext ctx, Task<BatchRequestParser.CommandData> task)
-    {
-        var command = await task;
+            command.Data = await moveNext;
 
-        var shardedCommandData = new ShardedBatchCommandData(command, ctx);
-
-        await _commandStreamCopier.CopyToAsync(shardedCommandData.Stream);
-
-        return shardedCommandData;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-
-        _commandStreamCopier.Dispose();
+            return command;
+        }
     }
 }

@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.BulkInsert;
 
-public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver, IDisposable
+public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver
 {
 #if DEBUG
     private static bool ValidateCommands = false;
@@ -16,37 +16,46 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver, IDi
 
     private const int UninitializedPosition = -1;
 
-    private readonly JsonOperationContext _ctx;
-    private int _commandStartBufferPosition = UninitializedPosition;
-    public readonly MemoryStream CommandStream;
-
-
-    public BatchCommandStreamCopier(JsonOperationContext ctx)
-    {
-        _ctx = ctx;
-        CommandStream = ctx.CheckoutMemoryStream();
-    }
+    protected int CommandStartBufferPosition = UninitializedPosition;
+    protected Stream CommandStream;
 
     public override void OnCommandStart(UnmanagedJsonParser parser)
     {
-        _commandStartBufferPosition = parser.BufferOffset - 1;
+        CommandStartBufferPosition = parser.BufferOffset - 1;
     }
 
     public override void OnCommandEnd(UnmanagedJsonParser parser)
     {
-        parser.CopyParsedChunk(CommandStream, _commandStartBufferPosition);
+        parser.CopyParsedChunk(CommandStream, CommandStartBufferPosition);
 
-        _commandStartBufferPosition = UninitializedPosition;
+        CommandStartBufferPosition = UninitializedPosition;
     }
 
     public override void OnParserBufferRefill(UnmanagedJsonParser parser)
     {
-        if (_commandStartBufferPosition == UninitializedPosition)
+        if (CommandStartBufferPosition == UninitializedPosition)
             return;
 
-        parser.CopyParsedChunk(CommandStream, _commandStartBufferPosition);
+        parser.CopyParsedChunk(CommandStream, CommandStartBufferPosition);
 
-        _commandStartBufferPosition = 0;
+        CommandStartBufferPosition = 0;
+    }
+
+    public override void OnId(UnmanagedJsonParser parser, int idLength)
+    {
+    }
+
+    public override void OnIdsStart(UnmanagedJsonParser parser)
+    {
+    }
+
+    public override void OnIdsEnd(UnmanagedJsonParser parser)
+    {
+    }
+
+    public override void OnNullChangeVector(UnmanagedJsonParser parser)
+    {
+
     }
 
     public async Task CopyToAsync(MemoryStream stream)
@@ -66,16 +75,17 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver, IDi
             var state = new JsonParserState();
             var batchRequestParser = new BatchRequestParser();
 
-            using (var parser = new UnmanagedJsonParser(_ctx, state, "copied-bulk-insert-command-validation"))
-            using (_ctx.GetMemoryBuffer(out var buffer))
-            using (var modifier = new BlittableMetadataModifier(_ctx))
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var parser = new UnmanagedJsonParser(ctx, state, "copied-bulk-insert-command-validation"))
+            using (ctx.GetMemoryBuffer(out var buffer))
+            using (var modifier = new BlittableMetadataModifier(ctx))
             {
                 while (parser.Read() == false)
                     await batchRequestParser.RefillParserBuffer(stream, buffer, parser, CancellationToken.None);
 
                 try
                 {
-                    await BatchRequestParser.Instance.ReadSingleCommand(_ctx, stream, state, parser, buffer, modifier, CancellationToken.None);
+                    await BatchRequestParser.Instance.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, CancellationToken.None);
                     stream.Position = 0;
                 }
                 catch (Exception e)
@@ -94,8 +104,25 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver, IDi
 #endif
     }
 
-    public void Dispose()
+    public IDisposable UseStream(MemoryStream stream)
     {
-        _ctx.ReturnMemoryStream(CommandStream);
+        CommandStream = stream;
+
+        return new StreamScope(this);
+    }
+
+    private readonly struct StreamScope : IDisposable
+    {
+        private readonly BatchCommandStreamCopier _parent;
+
+        public StreamScope(BatchCommandStreamCopier parent)
+        {
+            _parent = parent;
+        }
+
+        public void Dispose()
+        {
+            _parent.CommandStream = null;
+        }
     }
 }

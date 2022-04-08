@@ -158,177 +158,6 @@ namespace Raven.Server.Documents.Handlers.Batches
             return *(long*)state.StringBuffer;
         }
 
-        public async Task<CommandData> ReadAndCopySingleCommand(JsonOperationContext ctx,
-            Stream stream,
-            JsonParserState state,
-            UnmanagedJsonParser parser,
-            JsonOperationContext.MemoryBuffer buffer,
-            BufferedCommand bufferedCommand,
-            BlittableMetadataModifier modifier,
-            CancellationToken token)
-        {
-            var commandData = new CommandData();
-            if (state.CurrentTokenType != JsonParserToken.StartObject)
-            {
-                ThrowUnexpectedToken(JsonParserToken.StartObject, state);
-            }
-
-            var commandCopy = bufferedCommand.CommandStream;
-            var position = parser.BufferOffset;
-            commandCopy.WriteByte((byte)'{'); // object start
-
-            var depth = 0;
-
-            while (true)
-            {
-                while (parser.Read() == false)
-                {
-                    parser.CopyParsedChunk(commandCopy, position);
-                    position = 0;
-                    await RefillParserBuffer(stream, buffer, parser, token);
-                }
-
-                if (state.CurrentTokenType == JsonParserToken.StartObject)
-                {
-                    depth++;
-                    continue;
-                }
-
-                if (state.CurrentTokenType == JsonParserToken.EndObject)
-                {
-                    if (depth == 0)
-                    {
-                        parser.CopyParsedChunk(commandCopy, position);
-                        break;
-                    }
-
-                    depth--;
-                }
-
-                if (depth > 0)
-                    continue;
-
-                switch (GetPropertyType(state))
-                {
-                    case CommandPropertyName.Type:
-                        while (parser.Read() == false)
-                        {
-                            parser.CopyParsedChunk(commandCopy, position);
-                            position = 0;
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        }
-                        if (state.CurrentTokenType != JsonParserToken.String)
-                        {
-                            ThrowUnexpectedToken(JsonParserToken.String, state);
-                        }
-
-                        commandData.Type = GetCommandType(state, ctx);
-                        break;
-                    case CommandPropertyName.Id:
-                        while (parser.Read() == false)
-                        {
-                            parser.CopyParsedChunk(commandCopy, position);
-                            position = 0;
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        }
-
-                        switch (state.CurrentTokenType)
-                        {
-                            case JsonParserToken.Null:
-                                commandData.Id = null;
-                                break;
-                            case JsonParserToken.String:
-                                bufferedCommand.IdStartPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - state.StringSize - 1));
-                                bufferedCommand.IdLength = state.StringSize;
-                                commandData.Id = GetStringPropertyValue(state);
-                                break;
-                            default:
-                                ThrowUnexpectedToken(JsonParserToken.String, state);
-                                break;
-                        }
-
-                        break;
-                    case CommandPropertyName.Ids:
-                        bufferedCommand.IsBatchPatch = true;
-                        bufferedCommand.IdsStartPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position));
-                        commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token);
-                        bufferedCommand.IdsEndPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position));
-                        break;
-
-                    case CommandPropertyName.ChangeVector:
-                        while (parser.Read() == false)
-                        {
-                            parser.CopyParsedChunk(commandCopy, position);
-                            position = 0;
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        }
-
-                        if (state.CurrentTokenType == JsonParserToken.Null)
-                        {
-                            // we need this only for identities and we expect to have always null
-                            bufferedCommand.ChangeVectorPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - 4));
-                        }
-                        break;
-                    case CommandPropertyName.OriginalChangeVector:
-                        while (parser.Read() == false)
-                        {
-                            parser.CopyParsedChunk(commandCopy, position);
-                            position = 0;
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        }
-
-                        if (state.CurrentTokenType == JsonParserToken.Null)
-                        {
-                            commandData.OriginalChangeVector = null;
-                        }
-                        else
-                        {
-                            if (state.CurrentTokenType != JsonParserToken.String)
-                            {
-                                ThrowUnexpectedToken(JsonParserToken.String, state);
-                            }
-
-                            commandData.OriginalChangeVector = GetLazyStringValue(ctx, state);
-                        }
-                        break;
-                    case CommandPropertyName.Document:
-                        while (parser.Read() == false)
-                        {
-                            parser.CopyParsedChunk(commandCopy, position);
-                            position = 0;
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        }
-
-                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
-                        commandData.SeenAttachments = modifier.SeenAttachments;
-                        commandData.SeenCounters = modifier.SeenCounters;
-                        commandData.SeenTimeSeries = modifier.SeenTimeSeries;
-                        break;
-                    case CommandPropertyName.Index:
-                        while (parser.Read() == false)
-                        {
-                            parser.CopyParsedChunk(commandCopy, position);
-                            position = 0;
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        }
-                        if (state.CurrentTokenType != JsonParserToken.Integer)
-                        {
-                            ThrowUnexpectedToken(JsonParserToken.Integer, state);
-                        }
-                        commandData.Index = state.Long;
-
-                        break;
-                }
-            }
-
-            if (commandData.Id == null && commandData.Ids == null)
-            {
-                throw new NotSupportedException($"The command type '{commandData.Type}' isn't supported, since it must contain Id or Ids property.");
-            }
-
-            return commandData;
-        }
-
         public async Task<CommandData> ReadSingleCommand(
             JsonOperationContext ctx,
             Stream stream,
@@ -383,6 +212,9 @@ namespace Raven.Server.Documents.Handlers.Batches
                                 break;
 
                             case JsonParserToken.String:
+
+                                CommandParsingObserver?.OnId(parser, state.StringSize);
+
                                 commandData.Id = GetStringPropertyValue(state);
                                 break;
 
@@ -393,7 +225,12 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
 
                     case CommandPropertyName.Ids:
+
+                        CommandParsingObserver?.OnIdsStart(parser);
+
                         commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token);
+
+                        CommandParsingObserver?.OnIdsEnd(parser);
                         break;
 
                     case CommandPropertyName.Name:
@@ -559,6 +396,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.ChangeVector = null;
+
+                            CommandParsingObserver?.OnNullChangeVector(parser);
                         }
                         else
                         {

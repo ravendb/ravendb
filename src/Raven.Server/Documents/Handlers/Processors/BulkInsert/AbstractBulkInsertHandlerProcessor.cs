@@ -102,7 +102,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                             using (var modifier = new BlittableMetadataModifier(docsCtx))
                             {
                                 var task = reader.GetCommandAsync(docsCtx, modifier);
-                                if (task == null)
+                                if (task == null || task.IsCompleted && task.Result == null)
                                     break;
 
                                 _cts.Token.ThrowIfCancellationRequested();
