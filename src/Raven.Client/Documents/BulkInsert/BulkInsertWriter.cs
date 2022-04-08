@@ -61,6 +61,11 @@ internal class BulkInsertWriter : BulkInsertWriterBase
         await base.DisposeAsync().ConfigureAwait(false);
     }
 
+    public Task FlushAsync()
+    {
+        return StreamWriter.FlushAsync();
+    }
+
     private static void ThrowUnexpectedWriteStream()
     {
         throw new InvalidOperationException("We got stream for which we don't have the stream writer defined");

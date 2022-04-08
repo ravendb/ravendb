@@ -28,7 +28,7 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
     public override async Task SaveStream(JsonOperationContext context, Stream input)
     {
         Streams ??= new List<Stream>();
-        var attachment = ServerStore.GetTempFile($"{_databaseContext.DatabaseName}.attachment", "sharded").StartNewStream();
+        var attachment = ServerStore.GetTempFile($"{_databaseContext.DatabaseName}.attachment", "sharded", _databaseContext.Encrypted).StartNewStream();
         await input.CopyToAsync(attachment, Handler.AbortRequestToken);
         await attachment.FlushAsync(Handler.AbortRequestToken);
         Streams.Add(attachment);
