@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -40,13 +41,18 @@ namespace Corax.Queries
             return false;
         }
 
-        public bool GetNextTerm(out Slice termSlice)
+        public bool GetNextTerm(out ReadOnlySpan<byte> term)
         {
-            while (_iterator.MoveNext(out termSlice, out var _))
+            while (_iterator.MoveNext(out Span<byte> termSlice, out var _))
             {
+                if (termSlice.Length <= 1)
+                    term = Span<byte>.Empty;
+                
+                term = termSlice.Slice(0, termSlice.Length - 1);
                 return true;
             }
 
+            term = Span<byte>.Empty;
             return false;
         }
         

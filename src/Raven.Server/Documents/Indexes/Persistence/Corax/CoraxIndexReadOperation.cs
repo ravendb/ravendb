@@ -172,7 +172,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             throw new NotImplementedException();
         }
 
-        [SkipLocalsInit]
         public override HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             HashSet<string> results = new();
@@ -184,7 +183,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 while (terms.GetNextTerm(out var termSlice))
                 {
                     token.ThrowIfCancellationRequested();
-                    if (termSlice.AsSpan().SequenceEqual(fromValueBytes))
+                    if (termSlice.SequenceEqual(fromValueBytes))
                         break;
                 }
             }
@@ -192,7 +191,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             while (pageSize > 0 && terms.GetNextTerm(out var termSlice))
             {
                 token.ThrowIfCancellationRequested();
-                results.Add(termSlice.ToString());
+                results.Add(Encodings.Utf8.GetString(termSlice));
                 pageSize--;
             }
 
@@ -237,7 +236,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             
             int docsToLoad = pageSize;
 
-            int i = Skip(out var read);
+            int read;
+            int i = Skip();
             while (true)
             {
                 token.ThrowIfCancellationRequested();
@@ -262,25 +262,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 var doc = new DynamicJsonValue();
                 foreach (var binding in _fieldMappings)
                 {
-                    if (binding.FieldIndexingMode is FieldIndexingMode.No || binding.FieldNameAsString is "__all_stored_fields")
+                    if (binding.FieldIndexingMode is FieldIndexingMode.No || binding.FieldNameAsString is Client.Constants.Documents.Indexing.Fields.AllStoredFields)
                         continue;
                     var type = reader.GetFieldType(binding.FieldId, out _);
                     if ((type & IndexEntryFieldType.List) != 0)
                     {
                         reader.TryReadMany(binding.FieldId, out var iterator);
-                        var map = new List<object>();
+                        var enumerableEntries = new List<object>();
                         while (iterator.ReadNext())
                         {
                             if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
                             {
-                                map.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                                enumerableEntries.Add(Encodings.Utf8.GetString(iterator.Sequence));
                                 continue;
                             }
 
-                            map.Add(GetAnalyzedItem(binding, iterator.Sequence));
+                            enumerableEntries.Add(GetAnalyzedItem(binding, iterator.Sequence));
                         }
                         
-                        doc[binding.FieldNameAsString] = map.ToArray();
+                        doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
                     }
                     else
                     {
@@ -337,7 +337,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
 
-            int Skip(out int read)
+            int Skip()
             {
                 while (true)
                 {
