@@ -59,7 +59,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void Can_Use_DynamicBlittableJson_Where(Options options)
         {
             using (var store = GetDocumentStore(options))

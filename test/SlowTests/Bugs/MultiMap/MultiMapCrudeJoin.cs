@@ -78,6 +78,11 @@ namespace SlowTests.Bugs.MultiMap
                                         TheRoot = g.Select(it => it.TheRoot).FirstOrDefault(it => it != null),
                                         Others = g.SelectMany(it => it.Others).ToArray()
                                     };
+                
+                Stores.Add(i=> i.TheRoot, FieldStorage.Yes);
+                Stores.Add(i=> i.Others, FieldStorage.Yes);
+                Index(i => i.TheRoot, FieldIndexing.No);
+                Index(i => i.Others, FieldIndexing.No);
             }
         }
     }

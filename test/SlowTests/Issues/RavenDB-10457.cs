@@ -203,6 +203,13 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             public TestDocumentByName()
             {
                 Map = docs => from doc in docs select new {doc.Name, doc.PriceConfig, doc.MusicCollection};
+                
+                Stores.Add(i => i.MusicCollection, FieldStorage.Yes);
+                Stores.Add(i => i.PriceConfig, FieldStorage.Yes);
+
+                Index(i => i.MusicCollection, FieldIndexing.No);
+                Index(i => i.PriceConfig, FieldIndexing.No);
+
             }
         }
 

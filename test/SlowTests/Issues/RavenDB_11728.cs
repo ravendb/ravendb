@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     });
 
                     session.SaveChanges();
-
+                    WaitForUserToContinueTheTest(store);
                     var results = session.Query<EmailSequenceWithStatusIndex.Result, EmailSequenceWithStatusIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
                     WaitForUserToContinueTheTest(store);                    
                     Assert.Equal(1, results.Count);
@@ -107,6 +107,11 @@ namespace SlowTests.Issues
                         Parameters = key.Parameters,
                         Emails = g.SelectMany(x => x.Emails).ToArray()
                     };
+                
+                Stores.Add(i => i.Parameters, FieldStorage.Yes);
+                Index(i => i.Parameters, FieldIndexing.No);
+                Stores.Add(i => i.Emails, FieldStorage.Yes);
+                Index(i => i.Emails, FieldIndexing.No);  
             }
         }
 

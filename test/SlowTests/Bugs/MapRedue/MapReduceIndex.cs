@@ -52,7 +52,6 @@ namespace SlowTests.Bugs.MapRedue
                                                           
                     session.SaveChanges();
                 }
-WaitForUserToContinueTheTest(store);
                 // index should return number of document equal to number of inserted
                 Assert.Equal(m_documentIds.Length,
                              NumberOfDocumentsInDbByIndex(store));
@@ -159,6 +158,8 @@ WaitForUserToContinueTheTest(store);
 
                 Store(x => x.Version, FieldStorage.Yes);
                 Store(x => x.Document, FieldStorage.Yes);
+                Index(x => x.Version, FieldIndexing.No);
+                Index(x => x.Document, FieldIndexing.No);
             }
         }
 

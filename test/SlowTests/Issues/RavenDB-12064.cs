@@ -13,8 +13,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldGetIdentityPropertyFromFilteredType()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldGetIdentityPropertyFromFilteredType(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void OfTypeAfterSelectShouldWorkFine(Options options)
         {
@@ -58,6 +59,7 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
+                WaitForUserToContinueTheTest(store);
                 Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -108,6 +110,9 @@ namespace SlowTests.Issues
                         Name = user.Name,
                         Friend = user.Friend
                     };
+                
+                Stores.Add(i => i.Friend, FieldStorage.Yes);
+                Index(i => i.Friend, FieldIndexing.No);
             }
             public class Result
             {

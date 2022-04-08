@@ -100,6 +100,8 @@ namespace SlowTests.Bugs
                                   Tags = doc.Tags
                               };
 
+                Stores.Add(i => i.Tags, FieldStorage.Yes);
+                Index(i => i.Tags, FieldIndexing.No);
                 Analyze(x => x.Title, "Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net");
             }
         }
