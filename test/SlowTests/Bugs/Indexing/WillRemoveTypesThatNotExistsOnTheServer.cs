@@ -73,6 +73,9 @@ namespace SlowTests.Bugs.Indexing
                                         Name = g.Key.Name,
                                         Address = new Address { City = g.Key.Address.City },
                                     };
+                
+                Stores.Add(i => i.Address, FieldStorage.Yes);
+                Index(i => i.Address, FieldIndexing.No);
             }
         }
     }

@@ -17,8 +17,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCompileIndex1(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-
+WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<User, LastAccessPerUserDateTimeIndex>()
@@ -72,8 +72,8 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCompileIndex2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCompileIndex3(Options options)
         {
@@ -182,7 +182,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCompileIndex4(Options options)
         {
@@ -265,6 +265,7 @@ namespace SlowTests.Issues
                     };
 
                 StoreAllFields(FieldStorage.Yes);
+                Index(i => i.LastAccess, FieldIndexing.No);
             }
         }
 
@@ -292,6 +293,7 @@ namespace SlowTests.Issues
                     };
 
                 StoreAllFields(FieldStorage.Yes);
+                Index(i => i.LastAccess, FieldIndexing.No);
             }
         }
 
