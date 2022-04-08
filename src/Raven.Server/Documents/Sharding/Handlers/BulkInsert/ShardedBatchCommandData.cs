@@ -11,16 +11,15 @@ public class ShardedBatchCommandData : IDisposable, IBatchCommandData
 {
     private readonly JsonOperationContext _ctx;
 
-    public ShardedBatchCommandData(BatchRequestParser.CommandData command, JsonOperationContext ctx)
+    public ShardedBatchCommandData(JsonOperationContext ctx)
     {
         _ctx = ctx;
-        Data = command;
         Stream = ctx.CheckoutMemoryStream();
     }
 
     public MemoryStream Stream { get; }
 
-    public BatchRequestParser.CommandData Data { get; }
+    public BatchRequestParser.CommandData Data { get; set; }
 
     public CommandType Type => Data.Type;
 

@@ -59,6 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Server\Documents\PeriodicBackup" />
+    <Folder Include="Sharding\Issues\" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Issues\RavenDB-13499.ravendbdump">

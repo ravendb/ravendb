@@ -27,7 +27,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
     private static readonly BatchRequestParser.CommandData[] Empty = Array.Empty<BatchRequestParser.CommandData>();
 
     private readonly char _identityPartsSeparator;
-    private readonly BatchRequestParser _batchRequestParser;
+    protected readonly BatchRequestParser BatchRequestParser;
     protected readonly RequestHandler Handler;
     private readonly string _database;
     protected ServerStore ServerStore => Handler.ServerStore;
@@ -47,7 +47,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         Handler = handler;
         _database = database;
         _identityPartsSeparator = identityPartsSeparator;
-        _batchRequestParser = batchRequestParser;
+        BatchRequestParser = batchRequestParser;
     }
 
     private void AddIdentity(JsonOperationContext ctx, ref BatchRequestParser.CommandData command, int index)
@@ -95,7 +95,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         BlittableMetadataModifier modifier,
         CancellationToken token)
     {
-        return _batchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
+        return BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
     }
 
     public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator)
@@ -108,13 +108,13 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false, DatabaseItemType.Attachments))
         {
             while (parser.Read() == false)
-                await _batchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
 
             if (state.CurrentTokenType != JsonParserToken.StartObject)
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.StartObject, state);
 
             while (parser.Read() == false)
-                await _batchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
 
             if (state.CurrentTokenType != JsonParserToken.String)
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -123,7 +123,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.String, state);
 
             while (parser.Read() == false)
-                await _batchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
 
             if (state.CurrentTokenType != JsonParserToken.StartArray)
                 BatchRequestParser.ThrowUnexpectedToken(JsonParserToken.StartArray, state);
@@ -131,7 +131,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
             while (true)
             {
                 while (parser.Read() == false)
-                    await _batchRequestParser.RefillParserBuffer(stream, buffer, parser);
+                    await BatchRequestParser.RefillParserBuffer(stream, buffer, parser);
 
                 if (state.CurrentTokenType == JsonParserToken.EndArray)
                     break;
@@ -199,7 +199,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                 _commands[_index] = commandData;
             }
 
-            if (await _batchRequestParser.IsClusterTransaction(stream, parser, buffer, state))
+            if (await BatchRequestParser.IsClusterTransaction(stream, parser, buffer, state))
                 IsClusterTransactionRequest = true;
         }
     }

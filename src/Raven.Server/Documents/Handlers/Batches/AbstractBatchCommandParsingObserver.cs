@@ -9,4 +9,12 @@ public abstract class AbstractBatchCommandParsingObserver
     public abstract void OnCommandEnd(UnmanagedJsonParser parser);
 
     public abstract void OnParserBufferRefill(UnmanagedJsonParser parser);
+
+    public abstract void OnId(UnmanagedJsonParser parser, int idLength);
+
+    public abstract void OnIdsStart(UnmanagedJsonParser parser);
+
+    public abstract void OnIdsEnd(UnmanagedJsonParser parser);
+
+    public abstract void OnNullChangeVector(UnmanagedJsonParser parser);
 }
