@@ -28,7 +28,7 @@ namespace Voron.Data.CompactTrees
         private IteratorCursorState _internalCursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
 
         // TODO: We will never rewrite a dictionary, only create new ones. Therefore, we can effectively cache them until removing them. 
-        private readonly Dictionary<long, PersistentHopeDictionary> _dictionaries = new(); 
+        private readonly Dictionary<long, PersistentDictionary> _dictionaries = new(); 
         
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
@@ -37,9 +37,9 @@ namespace Voron.Data.CompactTrees
         {
             private readonly CompactTree _tree;
             private readonly CursorState _state;
-            private readonly PersistentHopeDictionary _dictionary;
+            private readonly PersistentDictionary _dictionary;
 
-            public TreePageList(CompactTree tree, CursorState state, PersistentHopeDictionary dictionary)
+            public TreePageList(CompactTree tree, CursorState state, PersistentDictionary dictionary)
             {
                 _tree = tree;
                 _state = state;
@@ -254,6 +254,9 @@ namespace Voron.Data.CompactTrees
             return Create(llt, parent, name);
         }
 
+        private const long InvalidDictionaryId = -1;
+        private long _currentDictionaryId = InvalidDictionaryId;        
+
         public static CompactTree Create(LowLevelTransaction llt, Tree parent, Slice name)
         {
             CompactTreeState* header;
@@ -263,9 +266,10 @@ namespace Voron.Data.CompactTrees
             {
                 if (llt.Flags != TransactionFlags.ReadWrite)
                     return null;
-                
-                // TODO: This can be created a single time and stored in the root tree. 
-                var dictionaryId = PersistentHopeDictionary.CreateEmpty(llt);
+
+                // This will be created a single time and stored in the root page. 
+                var dictionaryId = PersistentDictionary.CreateDefault(llt);
+
                 var newPage = llt.AllocatePage(1);
                 var compactPageHeader = (CompactPageHeader*)newPage.Pointer;
                 compactPageHeader->PageFlags = CompactPageFlags.Leaf;
@@ -273,7 +277,7 @@ namespace Voron.Data.CompactTrees
                 compactPageHeader->Upper = Constants.Storage.PageSize;
                 compactPageHeader->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf);
                 compactPageHeader->DictionaryId = dictionaryId;
-                
+
                 using var _ = parent.DirectAdd(name, sizeof(CompactTreeState), out var p);
                 header = (CompactTreeState*)p;
                 *header = new CompactTreeState
@@ -285,6 +289,7 @@ namespace Voron.Data.CompactTrees
                     LeafPages = 1,
                     RootPage = newPage.PageNumber,
                     NumberOfEntries = 0,
+                    CurrentDictionaryId = dictionaryId
                 };
             }
             else
@@ -847,7 +852,7 @@ namespace Voron.Data.CompactTrees
             }
             
             var oldDictionary = _dictionaries[state.Header->DictionaryId];
-            var newDictionary = PersistentHopeDictionary.Create(_llt, new TreePageList(this, state, _dictionaries[state.Header->DictionaryId]));
+            var newDictionary = PersistentDictionary.Create(_llt, new TreePageList(this, state, _dictionaries[state.Header->DictionaryId]));
 
             using var _ = _llt.Environment.GetTemporaryPage(_llt, out var tmp);
             Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, Constants.Storage.PageSize);
@@ -1068,14 +1073,12 @@ namespace Voron.Data.CompactTrees
             var _ = GetEncodingDictionary(pageHeader->DictionaryId);
         }
 
-        private PersistentHopeDictionary CreateEncodingDictionary(long dictionaryId)
+        private PersistentDictionary CreateEncodingDictionary(long dictionaryId)
         {
-            Page page = _llt.GetPage(dictionaryId);
-            Debug.Assert(page.IsOverflow && page.OverflowSize == PersistentHopeDictionary.UsableDictionarySize);
-            return new PersistentHopeDictionary(page);
+            return new PersistentDictionary(_llt.GetPage(dictionaryId));
         }
 
-        private PersistentHopeDictionary GetEncodingDictionary(long dictionaryId)
+        private PersistentDictionary GetEncodingDictionary(long dictionaryId)
         {
             if (!_dictionaries.TryGetValue(dictionaryId, out var dictionary))
             {
