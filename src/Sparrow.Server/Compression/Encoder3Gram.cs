@@ -361,8 +361,8 @@ namespace Sparrow.Server.Compression
                 throw new NotSupportedException($"We do not support dictionaries with more items than {short.MaxValue - 1}");
 
             // We haven't stored it yet. So we are calculating it. 
-            int numberOfEntries = (_state.EncodingTable.Length - 4) / Unsafe.SizeOf<Interval3Gram>();
-            if (numberOfEntries < dictSize)
+            int numberOfEntriesInTable = (_state.EncodingTable.Length - 4) / Unsafe.SizeOf<Interval3Gram>();
+            if (numberOfEntriesInTable < dictSize)
                 throw new ArgumentException("Not enough memory to store the dictionary");
 
             int maxBitSequenceLength = 1;

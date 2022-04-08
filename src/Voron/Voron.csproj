@@ -20,7 +20,13 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Data\CompactTrees\dictionary.bin" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data\CompactTrees\dictionary.bin" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Memory" Version="4.5.4" />

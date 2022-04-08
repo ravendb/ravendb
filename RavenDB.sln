@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28803.202
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32317.152
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
 EndProject
@@ -81,7 +81,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TimeSeries.Benchmark", "ben
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LicenseTests", "test\LicenseTests\LicenseTests.csproj", "{E7ED7D1F-2A2A-44F0-8E87-6E4B15455C64}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Corax", "src\Corax\Corax.csproj", "{9AE9D686-5E30-4F52-BC8B-DE08130F6843}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Corax", "src\Corax\Corax.csproj", "{9AE9D686-5E30-4F52-BC8B-DE08130F6843}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron.Dictionary.Generator", "tools\Voron.Dictionary.Generator\Voron.Dictionary.Generator.csproj", "{4A27BC98-D655-4335-B761-A7084799CB77}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -96,6 +98,8 @@ Global
 		Validate|x86 = Validate|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Debug|x64.Build.0 = Debug|Any CPU
 		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -112,8 +116,6 @@ Global
 		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Validate|x64.Build.0 = Validate|Any CPU
 		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Validate|x86.ActiveCfg = Validate|Any CPU
 		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Validate|x86.Build.0 = Validate|Any CPU
-		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DC9C8F92-92F6-4C44-BBEA-39CF5D68FB13}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D5528D1-B2DD-484B-8606-91D68E065659}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6D5528D1-B2DD-484B-8606-91D68E065659}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D5528D1-B2DD-484B-8606-91D68E065659}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -687,6 +689,24 @@ Global
 		{9AE9D686-5E30-4F52-BC8B-DE08130F6843}.Validate|x64.Build.0 = Debug|Any CPU
 		{9AE9D686-5E30-4F52-BC8B-DE08130F6843}.Validate|x86.ActiveCfg = Debug|Any CPU
 		{9AE9D686-5E30-4F52-BC8B-DE08130F6843}.Validate|x86.Build.0 = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Debug|x64.Build.0 = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Debug|x86.Build.0 = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Release|x64.ActiveCfg = Release|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Release|x64.Build.0 = Release|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Release|x86.ActiveCfg = Release|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Release|x86.Build.0 = Release|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|Any CPU.Build.0 = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|x64.ActiveCfg = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|x64.Build.0 = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|x86.ActiveCfg = Debug|Any CPU
+		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -725,6 +745,7 @@ Global
 		{C5710444-1167-4DD3-B30E-28BDC0FBC10F} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 		{E7ED7D1F-2A2A-44F0-8E87-6E4B15455C64} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 		{9AE9D686-5E30-4F52-BC8B-DE08130F6843} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
+		{4A27BC98-D655-4335-B761-A7084799CB77} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {032D6274-16A5-43ED-920F-D37BBD4B9628}
