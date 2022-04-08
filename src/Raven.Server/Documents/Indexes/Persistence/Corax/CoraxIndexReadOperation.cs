@@ -1,20 +1,15 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
-using Size = Sparrow.Global.Constants.Size;
-using Raven.Client;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
@@ -23,8 +18,8 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Voron.Impl;
-using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
@@ -34,13 +29,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
         private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
+        private readonly ByteStringContext _allocator;
         private long _entriesCount = 0;
         private const int BufferSize = 4096;
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
-            _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(readTransaction.Allocator, index);
-            _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(readTransaction.Allocator, index, index.Definition, true));
+            _allocator = readTransaction.Allocator;
+            _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(_allocator, index);
+            _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, index, index.Definition, true));
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
             _coraxQueryEvaluator = new CoraxQueryEvaluator(index, _indexSearcher);
         }
@@ -64,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take)) is null)
+            if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take: take)) is null)
                 yield break;
 
             if (query.Metadata.FilterScript != null)
@@ -72,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 throw new NotSupportedException(
                     "Filter isn't supported by Corax. We need to extract the filter feature implementation so it won't be implemented inside the read operations");
             }
-            
+
             var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
             Span<long> ids = longIds;
             int docsToLoad = pageSize;
@@ -175,91 +172,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             throw new NotImplementedException();
         }
 
+        [SkipLocalsInit]
         public override HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
-            int fieldId = 0;
             HashSet<string> results = new();
+            var terms = _indexSearcher.GetTermsOfField(field);
 
-            if (field is Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName or Constants.Documents.Indexing.Fields.DocumentIdFieldName == false)
+            if (fromValue is not null)
             {
-                fieldId = -1;
-                foreach (var indexField in _index.Definition.IndexFields.Values)
-                {
-                    if (indexField.Name == field)
-                    {
-                        fieldId = indexField.Id;
-                    }
-                }
-
-                if (fieldId == -1)
-                    throw new InvalidDataException($"Cannot find {field} field in {_index.Name}'s terms.");
-            }
-
-            long[] ids = null;
-            try
-            {
-                ids = ArrayPool<long>.Shared.Rent(BufferSize);
-                int read = 0;
-                var allItems = _indexSearcher.AllEntries();
-
-                int skip = 0;
-                if (fromValue != null && int.TryParse(fromValue, out skip) == false)
-                    throw new InvalidDataException($"Wrong {fromValue} input. Please change it into integer number.");
-
-                Skip(ref allItems, skip, ref read, null, out _, ref ids, null, token);
-
-                var analyzer = _fieldMappings.GetByFieldId(fieldId).Analyzer;
-                analyzer.GetOutputBuffersSize(512, out int outputSize, out int tokenSize);
-                var encodedBuffer = new byte[outputSize];
-                var tokensBuffer = new Token[tokenSize];
-
-
-                while (read != 0 && results.Count < pageSize)
+                Span<byte> fromValueBytes = Encodings.Utf8.GetBytes(fromValue);
+                while (terms.GetNextTerm(out var termSlice))
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < read; ++i)
-                    {
-                        Span<byte> encoded = encodedBuffer;
-                        Span<Token> tokens = tokensBuffer;
-                        token.ThrowIfCancellationRequested();
-                        var reader = _indexSearcher.GetReaderFor(ids[i]);
-                        switch (reader.GetFieldType(fieldId, out _))
-                        {
-                            case IndexEntryFieldType.List:
-                                if (reader.TryReadMany(fieldId, out var iterator) == false)
-                                    continue;
-
-                                while (iterator.ReadNext())
-                                    TermToString(iterator.Sequence, analyzer, encoded, tokens, token);
-                                break;
-                            case IndexEntryFieldType.None:
-                            case IndexEntryFieldType.Tuple:
-                                reader.Read(fieldId, out var value);
-                                TermToString(value, analyzer, encoded, tokens, token);
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-
-                    read = allItems.Fill(ids);
+                    if (termSlice.AsSpan().SequenceEqual(fromValueBytes))
+                        break;
                 }
             }
-            finally
-            {
-                if (ids is not null)
-                    ArrayPool<long>.Shared.Return(ids);
-            }
 
-            void TermToString(in ReadOnlySpan<byte> value, Analyzer analyzer, Span<byte> encoded, Span<Token> tokens, CancellationToken token)
+            while (pageSize > 0 && terms.GetNextTerm(out var termSlice))
             {
-                analyzer.Execute(value, ref encoded, ref tokens);
-                for (int tIndex = 0; tIndex < tokens.Length; ++tIndex)
-                {
-                    token.ThrowIfCancellationRequested();
-                    var result = encoded.Slice(tokens[tIndex].Offset, (int)tokens[tIndex].Length);
-                    results.Add(System.Text.Encoding.UTF8.GetString(result));
-                }
+                token.ThrowIfCancellationRequested();
+                results.Add(termSlice.ToString());
+                pageSize--;
             }
 
             return results;
@@ -275,149 +209,157 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {
             var pageSize = query.PageSize;
-            var skip = query.Start;
+            var position = query.Start;
 
-            int outputSize = 0;
-            int tokenSize = 0;
-            foreach (var binding in _fieldMappings)
+            if (query.Metadata.IsDistinct)
+                throw new NotSupportedException("We don't support Distinct in \"Show Raw Entry\" of Index.");
+
+            var take = pageSize + position;
+            if (take > _indexSearcher.NumberOfEntries)
+                take = CoraxConstants.IndexSearcher.TakeAll;
+
+            IQueryMatch queryMatch;
+            if ((queryMatch = _coraxQueryEvaluator.Search(query, indexFieldsMapping: _fieldMappings, take: take)) is null)
+                yield break;
+
+            if (query.Metadata.FilterScript != null)
             {
-                var analyzer = binding.Analyzer;
-                if (analyzer == null)
-                    continue;
-
-                analyzer.GetOutputBuffersSize(512, out int tempOutputSize, out int tempTokenSize);
-
-                if (tempTokenSize > tokenSize)
-                    tokenSize = tempTokenSize;
-                if (tempOutputSize > outputSize)
-                    outputSize = tempOutputSize;
+                throw new NotSupportedException(
+                    "Filter isn't supported by Corax. We need to extract the filter feature implementation so it won't be implemented inside the read operations");
             }
 
-            if (outputSize is 0 || tokenSize is 0)
-                throw new InvalidDataException($"Analyzers of {_index.Name} does not exist or are invalid.");
+            var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
 
-            long[] ids = null;
-            byte[] encodedBuffer = null;
-            Token[] tokensBuffer = null;
+            List<string> itemList = new(32);
+            var bufferSizes = GetMaximumSizeOfBuffer();
+            var tokensBuffer = ArrayPool<Token>.Shared.Rent(bufferSizes.TokenSize);
+            var encodedBuffer = ArrayPool<byte>.Shared.Rent(bufferSizes.OutputSize);
+            
+            int docsToLoad = pageSize;
 
-            try
+            int i = Skip(out var read);
+            while (true)
             {
-                var names = MapIndexIdentifiers();
-                var allDocsInIndex = _coraxQueryEvaluator.Search(query, new FieldsToFetch(query, _index.Definition));
-                totalResults.Value = Convert.ToInt32(allDocsInIndex is SortingMatch ? 0 : allDocsInIndex.Count);
-                ids = ArrayPool<long>.Shared.Rent(BufferSize);
-
-                var read = 0;
-                Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, null, token);
-                int returnedCounter = 0;
-                List<string> listItemInIndex = null;
-
-
-                encodedBuffer = ArrayPool<byte>.Shared.Rent(outputSize);
-                tokensBuffer = ArrayPool<Token>.Shared.Rent(tokenSize);
-
-                while (read != 0 && returnedCounter < pageSize)
+                token.ThrowIfCancellationRequested();
+                for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < read && returnedCounter < pageSize; ++i)
+                    var reader = _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var id);
+                    yield return documentsContext.ReadObject(GetRawDocument(reader), id);
+                }
+
+                if ((read = queryMatch.Fill(longIds)) == 0)
+                    break;
+                totalResults.Value += read;
+            }
+            
+            ArrayPool<long>.Shared.Return(longIds);
+            ArrayPool<byte>.Shared.Return(encodedBuffer);
+            ArrayPool<Token>.Shared.Return(tokensBuffer);
+
+            DynamicJsonValue GetRawDocument(in IndexEntryReader reader)
+            {
+                var doc = new DynamicJsonValue();
+                foreach (var binding in _fieldMappings)
+                {
+                    if (binding.FieldIndexingMode is FieldIndexingMode.No || binding.FieldNameAsString is "__all_stored_fields")
+                        continue;
+                    var type = reader.GetFieldType(binding.FieldId, out _);
+                    if ((type & IndexEntryFieldType.List) != 0)
                     {
-                        token.ThrowIfCancellationRequested();
-                        var doc = new DynamicJsonValue();
-
-                        for (int fieldId = 0; fieldId < names.Count; ++fieldId)
+                        reader.TryReadMany(binding.FieldId, out var iterator);
+                        var map = new List<object>();
+                        while (iterator.ReadNext())
                         {
-                            token.ThrowIfCancellationRequested();
-
-                            var binding = _fieldMappings.GetByFieldId(fieldId);
-
-                            var analyzer = binding.Analyzer;
-                            var name = names[fieldId];
-                            var reader = _indexSearcher.GetReaderFor(ids[i]);
-                            Span<byte> encoded = encodedBuffer;
-                            Span<Token> tokens = tokensBuffer;
-                            var type = reader.GetFieldType(fieldId, out var intOffset);
-
-                            if (type is IndexEntryFieldType.List)
+                            if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
                             {
-                                reader.TryReadMany(fieldId, out var iterator);
-                                List<string[]> map = new(8);
-                                while (iterator.ReadNext())
-                                {
-                                    token.ThrowIfCancellationRequested();
-                                    encoded = encodedBuffer;
-                                    tokens = tokensBuffer;
-                                    analyzer.Execute(iterator.Sequence, ref encoded, ref tokens);
-                                    listItemInIndex ??= new(32);
-                                    listItemInIndex.Clear();
-                                    for (var index = 0; index < tokens.Length; index++)
-                                    {
-                                        token.ThrowIfCancellationRequested();
-                                        var t = tokens[index];
-                                        listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
-                                    }
-                                }
-
-                                map.Add(listItemInIndex.ToArray());
-                                doc[name] = map;
+                                map.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                                continue;
                             }
-                            else if (type is IndexEntryFieldType.Raw or IndexEntryFieldType.RawList)
-                            {
-                                doc[name] = $"BINARY_VALUE";
-                            }
-                            else
-                            {
-                                reader.Read(fieldId, out var value);
 
-                                analyzer.Execute(value, ref encoded, ref tokens);
-                                if (tokens.Length > 1)
-                                {
-                                    listItemInIndex ??= new(32);
-                                    listItemInIndex.Clear();
-                                    for (var index = 0; index < tokens.Length; index++)
-                                    {
-                                        token.ThrowIfCancellationRequested();
-                                        var t = tokens[index];
-                                        listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
-                                    }
-
-                                    doc[name] = listItemInIndex.ToArray();
-                                    continue;
-                                }
-
-                                doc[name] = Encodings.Utf8.GetString(encoded);
-                            }
+                            map.Add(GetAnalyzedItem(binding, iterator.Sequence));
+                        }
+                        
+                        doc[binding.FieldNameAsString] = map.ToArray();
+                    }
+                    else
+                    {
+                        reader.Read(binding.FieldId, out Span<byte> value);
+                        if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
+                        {
+                            doc[binding.FieldNameAsString] = Encodings.Utf8.GetString(value);
+                            continue;
                         }
 
-                        returnedCounter++;
-                        yield return documentsContext.ReadObject(doc, "index/entries");
+                        doc[binding.FieldNameAsString] = GetAnalyzedItem(binding, value);
+                    }
+                }
+
+                return doc;
+            }
+
+            object GetAnalyzedItem(IndexFieldBinding binding, ReadOnlySpan<byte> value)
+            {
+                var tokens = tokensBuffer.AsSpan();
+                var encoded = encodedBuffer.AsSpan();
+                itemList?.Clear();
+                binding.Analyzer.Execute(value, ref encoded, ref tokens);
+                for (var index = 0; index < tokens.Length; ++index)
+                {
+                    token.ThrowIfCancellationRequested();
+                    itemList.Add(Encodings.Utf8.GetString(encoded.Slice(tokens[index].Offset, (int)tokens[index].Length)));
+                }
+
+                return itemList.Count switch
+                {
+                    1 => itemList[0],
+                    > 1 => itemList.ToArray(),
+                    _ => string.Empty
+                };
+            }
+            
+            (int OutputSize, int TokenSize) GetMaximumSizeOfBuffer()
+            {
+                int outputSize = 512;
+                int tokenSize = 512;
+                foreach (var binding in _fieldMappings)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (binding.Analyzer is null)
+                        continue;
+
+                    binding.Analyzer.GetOutputBuffersSize(512, out int tempOutputSize, out int tempTokenSize);
+                    tokenSize = Math.Max(tempTokenSize, tokenSize);
+                    outputSize = Math.Max(tempOutputSize, outputSize);
+                }
+
+                return (outputSize, tokenSize);
+            }
+
+
+            int Skip(out int read)
+            {
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    read = queryMatch.Fill(longIds);
+                    totalResults.Value += read;
+                    
+                    if (position > read)
+                    {
+                        position -= read;
+                        continue;
                     }
 
-                    read = allDocsInIndex.Fill(ids);
-                }
-            }
-            finally
-            {
-                if (ids is not null)
-                    ArrayPool<long>.Shared.Return(ids);
-                if (encodedBuffer is not null)
-                    ArrayPool<byte>.Shared.Return(encodedBuffer);
-                if (tokensBuffer is not null)
-                    ArrayPool<Token>.Shared.Return(tokensBuffer);
-            }
+                    if (position == read)
+                    {
+                        read = queryMatch.Fill(longIds);
+                        totalResults.Value += read;
+                        return 0;
+                    }
 
-            Dictionary<int, string> MapIndexIdentifiers()
-            {
-                var dict = new Dictionary<int, string>();
-                var firstName = _index.Type.IsMapReduce()
-                    ? Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-                    : Constants.Documents.Indexing.Fields.DocumentIdFieldName;
-                dict.Add(0, firstName);
-                foreach (var field in _index.Definition.IndexFields.Values)
-                {
-                    dict.Add(field.Id, field.Name);
-                }
-
-                return dict;
+                    return position;
+                }                
             }
         }
 
@@ -429,61 +371,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     continue;
                 yield return field.Name;
             }
-        }
-        
-        private static void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
-            CoraxIndexQueryingScope queryingScope,
-            CancellationToken token)
-            where TQueryMatch : IQueryMatch
-        {
-            if (ids.Length is 0)
-                throw new OutOfMemoryException("Corax buffer has no memory.");
-
-            readCounter = 0;
-            if (position != 0)
-            {
-                int emptyRead = position / ids.Length;
-                while (emptyRead > 0)
-                {
-                    token.ThrowIfCancellationRequested();
-                    read = result.Fill(ids);
-                    readCounter += read;
-                    emptyRead--;
-                }
-
-                position %= ids.Length;
-
-                //We skipped N * BufferSize chunks but there are still items to skip
-                if (position > 0)
-                {
-                    read = result.Fill(ids);
-                    readCounter += read;
-
-                    if (read > position)
-                    {
-                        ids[position..read].CopyTo(ids, 0); // skipping elements
-                        read -= position;
-                    }
-                    else
-                        read = 0;
-                }
-                else
-                {
-                    read = result.Fill(ids);
-                    readCounter += read;
-                }
-
-                if (skippedResults is not null)
-                    skippedResults.Value = Convert.ToInt32(readCounter);
-            }
-            else
-            {
-                read = result.Fill(ids);
-                readCounter += read;
-            }
-
-            if (skippedResults is not null)
-                skippedResults.Value = 0;
         }
 
         public override void Dispose()

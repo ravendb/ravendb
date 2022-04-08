@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IndexQueryServerSide _query;
         private const int TakeAll = -1;
         private const int ScoreId = -1;
+        private IndexFieldsMapping _indexFieldsMapping;
 
         [CanBeNull]
         private FieldsToFetch _fieldsToFetch;
@@ -37,9 +38,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _index = index;
         }
 
-        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, int take = TakeAll)
+        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch = null, IndexFieldsMapping indexFieldsMapping = null, int take = TakeAll)
         {
             _fieldsToFetch = fieldsToFetch;
+            _indexFieldsMapping = indexFieldsMapping;
             _query = query;
 
             var match = _query.Metadata.Query.Where is null
@@ -368,8 +370,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private int GetFieldIdInIndex(string fieldName, bool isFieldType = true)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
+            
+            
             if (_fieldsToFetch is null)
+            {
+                if (_indexFieldsMapping is not null)
+                {
+                    if (_indexFieldsMapping.TryGetByFieldName(fieldName, out var binding))
+                    {
+                        return binding.FieldId;
+                    }
+                }
+                
                 throw new InvalidQueryException("Field doesn't found in Index.");
+            }
 
             if (isFieldType && _fieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
             {

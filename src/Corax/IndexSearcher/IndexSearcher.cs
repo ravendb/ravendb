@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Server.Compression;
 using Voron;
@@ -145,6 +144,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public AllEntriesMatch AllEntries()
     {
         return new AllEntriesMatch(_transaction);
+    }
+    
+    public ExistsTermProvider GetTermsOfField(string field)
+    {
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        var terms = fields?.CompactTreeFor(field);
+        
+        if (terms == null)
+        {
+            return default;
+        }
+        
+        return new ExistsTermProvider(this, _transaction.Allocator, terms, field);
     }
 
     public void Dispose()

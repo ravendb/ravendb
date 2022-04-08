@@ -40,6 +40,16 @@ namespace Corax.Queries
             return false;
         }
 
+        public bool GetNextTerm(out Slice termSlice)
+        {
+            while (_iterator.MoveNext(out termSlice, out var _))
+            {
+                return true;
+            }
+
+            return false;
+        }
+        
         public QueryInspectionNode Inspect()
         {
             return new QueryInspectionNode($"{nameof(ExistsTermProvider)}",

@@ -62,7 +62,7 @@ public partial class IndexSearcher
     {
         return MultiTermMatchBuilder<TScoreFunction, ExistsTermProvider>(field, null, scoreFunction, false, Constants.IndexSearcher.NonAnalyzer);
     }
-
+    
     public MultiTermMatch InQuery(string field, List<string> inTerms, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
