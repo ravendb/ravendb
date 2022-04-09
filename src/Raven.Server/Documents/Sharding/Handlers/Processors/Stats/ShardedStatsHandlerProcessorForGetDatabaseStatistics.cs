@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
 {
@@ -22,7 +23,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
         {
             var shardNumber = GetShardNumber();
 
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
+            var proxy = new ProxyRavenCommand<DatabaseStatistics>(command, RequestHandler.HttpContext.Response);
+
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxy, shardNumber);
 
             return command.Result;
         }

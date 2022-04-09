@@ -37,6 +37,7 @@ internal abstract class AbstractHandlerProxyReadProcessor<TResult, TRequestHandl
             result = await GetResultForRemoteNodeAsync(command);
         }
 
-        await WriteResultAsync(result);
+        if (result != null)
+            await WriteResultAsync(result);
     }
 }

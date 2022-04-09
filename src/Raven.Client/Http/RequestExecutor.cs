@@ -859,7 +859,7 @@ namespace Raven.Client.Http
                     return;
 
                 var refreshTask = RefreshIfNeeded(chosenNode, response);
-                
+
                 command.StatusCode = response.StatusCode;
 
                 if (response.IsSuccessStatusCode || command.StatusCode == HttpStatusCode.NotModified)
@@ -874,9 +874,7 @@ namespace Raven.Client.Http
 
                         cachedItem.NotModified();
 
-                        if (command.ResponseType == RavenCommandResponseType.Object)
-                            command.SetResponse(context, cachedValue, fromCache: true);
-
+                        await command.ResponseBehavior.HandleNotModifiedAsync(context, command, response, cachedValue).ConfigureAwait(false);
                         return;
                     }
 
@@ -926,7 +924,7 @@ namespace Raven.Client.Http
                 refreshTask = UpdateTopologyAsync(
                     new UpdateTopologyParameters(chosenNode)
                     {
-                        TimeoutInMs = 0, 
+                        TimeoutInMs = 0,
                         DebugTag = "refresh-topology-header"
                     });
             }
@@ -1067,7 +1065,7 @@ namespace Raven.Client.Http
             if (chosenNode.ShouldUpdateServerVersion())
             {
                 if (TryGetServerVersion(response, out var serverVersion))
-                    chosenNode.UpdateServerVersion(serverVersion);                    
+                    chosenNode.UpdateServerVersion(serverVersion);
             }
 
             LastServerVersion = chosenNode.LastServerVersion;
@@ -1370,23 +1368,15 @@ namespace Raven.Client.Http
             }
         }
 
-        public event Action<StringBuilder> AdditionalErrorInformation;
-
-        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
+        private async ValueTask<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, string url, SessionInfo sessionInfo, bool shouldRetry, CancellationToken token = default)
         {
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
                     Cache.SetNotFound(url, AggressiveCaching.Value != null);
-                    if (command.ResponseType == RavenCommandResponseType.Empty)
-                        return true;
-                    else if (command.ResponseType == RavenCommandResponseType.Object)
-                        command.SetResponse(context, null, fromCache: false);
-                    else
-                        command.SetResponseRaw(response, null, context);
-                    return true;
 
+                    return await command.ResponseBehavior.TryHandleNotFoundAsync(context, command, response).ConfigureAwait(false);
                 case HttpStatusCode.Forbidden:
                     var msg = await TryGetResponseOfError(response).ConfigureAwait(false);
                     var builder = new StringBuilder("Forbidden access to ").
@@ -1413,13 +1403,12 @@ namespace Raven.Client.Http
                     if (nodeIndex != null)
                         _nodeSelector.OnFailedRequest(nodeIndex.Value);
 
-                    if (command.FailedNodes == null)
-                        command.FailedNodes = new Dictionary<ServerNode, Exception>();
+                    command.FailedNodes ??= new Dictionary<ServerNode, Exception>();
 
                     if (command.IsFailedWithNode(chosenNode) == false)
                         command.FailedNodes[chosenNode] = new UnsuccessfulRequestException($"Request to '{request.RequestUri}' ({request.Method}) is not relevant for this node anymore.");
 
-                    var (index, node) = ChooseNodeForRequest(command, sessionInfo);
+                    (int index, ServerNode node) = ChooseNodeForRequest(command, sessionInfo);
 
                     if (command.FailedNodes.ContainsKey(node))
                     {
@@ -1446,8 +1435,7 @@ namespace Raven.Client.Http
                     return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo, shouldRetry, requestContext: null, token: token).ConfigureAwait(false);
 
                 case HttpStatusCode.Conflict:
-                    await HandleConflict(context, response).ConfigureAwait(false);
-                    break;
+                    return await command.ResponseBehavior.TryHandleConflictAsync(context, command, response).ConfigureAwait(false);
 
                 case (HttpStatusCode)425: // TooEarly
 
@@ -1457,8 +1445,7 @@ namespace Raven.Client.Http
                     if (nodeIndex != null)
                         _nodeSelector.OnFailedRequest(nodeIndex.Value);
 
-                    if (command.FailedNodes == null)
-                        command.FailedNodes = new Dictionary<ServerNode, Exception>();
+                    command.FailedNodes ??= new Dictionary<ServerNode, Exception>();
 
                     if (command.IsFailedWithNode(chosenNode) == false)
                         command.FailedNodes[chosenNode] = new UnsuccessfulRequestException($"Request to '{request.RequestUri}' ({request.Method}) is processing and not yet available on that node.");
@@ -1466,18 +1453,15 @@ namespace Raven.Client.Http
                     var nextNode = ChooseNodeForRequest(command, sessionInfo);
 
                     await ExecuteAsync(nextNode.CurrentNode, nextNode.CurrentIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
-                    
+
                     if (nodeIndex.HasValue)
                         _nodeSelector.RestoreNodeIndex(nodeIndex.Value);
 
                     return true;
 
                 default:
-                    command.OnResponseFailure(response);
-                    await ExceptionDispatcher.Throw(context, response, AdditionalErrorInformation).ConfigureAwait(false);
-                    break;
+                    return await command.ResponseBehavior.TryHandleUnsuccessfulResponseAsync(context, command, response).ConfigureAwait(false);
             }
-            return false;
         }
 
         private static async Task<string> TryGetResponseOfError(HttpResponseMessage response)
@@ -1490,11 +1474,6 @@ namespace Raven.Client.Http
             {
                 return "Could not read request: " + e.Message;
             }
-        }
-
-        private static Task HandleConflict(JsonOperationContext context, HttpResponseMessage response)
-        {
-            return ExceptionDispatcher.Throw(context, response);
         }
 
         public static async Task<Stream> ReadAsStreamUncompressedAsync(HttpResponseMessage response)

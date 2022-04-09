@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
+using Raven.Client.Http.Behaviors;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -48,6 +49,7 @@ namespace Raven.Client.Http
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
+
         public Dictionary<ServerNode, Exception> FailedNodes;
 
         public TResult Result;
@@ -55,13 +57,13 @@ namespace Raven.Client.Http
 
         public HttpStatusCode StatusCode;
 
-        public RavenCommandResponseType ResponseType { get; protected set; }
+        public virtual RavenCommandResponseType ResponseType { get; protected internal set; }
 
-        public TimeSpan? Timeout { get; protected set; }
-        public bool CanCache { get; protected set; }
-        public bool CanCacheAggressively { get; protected set; }
-        public string SelectedNodeTag { get; protected internal set; }
-        internal int? SelectedShardNumber { get; set; }
+        public virtual TimeSpan? Timeout { get; protected internal set; }
+        public virtual bool CanCache { get; protected internal set; }
+        public virtual bool CanCacheAggressively { get; protected internal set; }
+        public virtual string SelectedNodeTag { get; protected internal set; }
+        internal virtual int? SelectedShardNumber { get; set; }
         public int NumberOfAttempts { get; internal set; }
 
         internal long FailoverTopologyEtag = -2;
@@ -71,6 +73,8 @@ namespace Raven.Client.Http
         internal Action<HttpRequestMessage> ModifyRequest;
 
         internal Func<string, string> ModifyUrl;
+
+        internal AbstractCommandResponseBehavior ResponseBehavior = DefaultCommandResponseBehavior.Instance;
 
         protected RavenCommand(RavenCommand<TResult> copy)
         {

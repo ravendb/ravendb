@@ -63,7 +63,7 @@ namespace Raven.Client.Exceptions
             return exception;
         }
 
-        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response, Action<StringBuilder> additionalErrorInfo = null)
+        public static async Task Throw(JsonOperationContext context, HttpResponseMessage response)
         {
             if (response == null)
                 throw new ArgumentNullException(nameof(response));
@@ -86,17 +86,8 @@ namespace Raven.Client.Exceptions
                 Exception exception;
                 try
                 {
-                    string message;
-                    if (additionalErrorInfo != null)
-                    {
-                        var sb = new StringBuilder(schema.Error);
-                        additionalErrorInfo(sb);
-                        message = sb.ToString();
-                    }
-                    else
-                    {
-                        message = schema.Error;
-                    }
+                    var message = schema.Error;
+
                     exception = (Exception)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { message }, null, null);
                 }
                 catch (Exception)
