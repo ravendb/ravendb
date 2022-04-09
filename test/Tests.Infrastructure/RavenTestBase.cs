@@ -189,12 +189,6 @@ namespace FastTests
 
                     options.ModifyDocumentStore?.Invoke(store);
 
-                    //This gives too much error details in most cases, we don't need this now
-                    store.RequestExecutorCreated += (sender, executor) =>
-                    {
-                        executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(Cluster.GetLastStatesFromAllServersOrderedByTime());
-                    };
-
                     store.Initialize();
 
                     if (options.CreateDatabase)
