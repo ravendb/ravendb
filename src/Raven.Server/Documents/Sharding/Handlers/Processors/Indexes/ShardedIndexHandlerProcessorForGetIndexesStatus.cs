@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 {
@@ -15,9 +15,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
         }
         protected override bool SupportsCurrentNode => false;
 
-        protected override ValueTask<IndexingStatus> GetResultForCurrentNodeAsync() => throw new NotSupportedException();
+        protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-        protected override Task<IndexingStatus> GetResultForRemoteNodeAsync(RavenCommand<IndexingStatus> command) => 
-            RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, GetShardNumber());
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexingStatus> command)
+        {
+            var shardNumber = GetShardNumber();
+
+            return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
+        }
     }
 }

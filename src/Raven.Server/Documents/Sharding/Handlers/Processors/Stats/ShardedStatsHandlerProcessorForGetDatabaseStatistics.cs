@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
@@ -17,17 +16,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
 
         protected override bool SupportsCurrentNode => false;
 
-        protected override ValueTask<DatabaseStatistics> GetResultForCurrentNodeAsync() => throw new NotSupportedException();
+        protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-        protected override async Task<DatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DatabaseStatistics> command)
+        protected override async Task HandleRemoteNodeAsync(ProxyCommand<DatabaseStatistics> command)
         {
             var shardNumber = GetShardNumber();
 
-            var proxy = new ProxyRavenCommand<DatabaseStatistics>(command, RequestHandler.HttpContext.Response);
-
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxy, shardNumber);
-
-            return command.Result;
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
         }
     }
 }

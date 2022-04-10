@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -19,14 +21,14 @@ internal class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorF
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask<IndexProgress[]> GetResultForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var indexesProgress = GetIndexesProgress().ToArray();
 
-        return ValueTask.FromResult(indexesProgress);
+        return WriteResultAsync(indexesProgress);
     }
 
-    protected override Task<IndexProgress[]> GetResultForRemoteNodeAsync(RavenCommand<IndexProgress[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexProgress[]> command) => RequestHandler.ExecuteRemoteAsync(command);
 
     private IEnumerable<IndexProgress> GetIndexesProgress()
     {
@@ -62,6 +64,19 @@ internal class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorF
 
                 yield return indexProgress;
             }
+        }
+    }
+
+    private async ValueTask WriteResultAsync(IndexProgress[] result)
+    {
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            writer.WriteStartObject();
+
+            writer.WriteArray(context, "Results", result, (w, c, progress) => w.WriteIndexProgress(c, progress));
+
+            writer.WriteEndObject();
         }
     }
 }

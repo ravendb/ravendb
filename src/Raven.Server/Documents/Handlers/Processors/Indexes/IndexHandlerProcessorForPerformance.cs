@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
@@ -19,7 +21,7 @@ internal class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcess
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask<IndexPerformanceStats[]> GetResultForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var stats = GetIndexesToReportOn()
             .Select(x => new IndexPerformanceStats
@@ -29,10 +31,10 @@ internal class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcess
             })
             .ToArray();
 
-        return ValueTask.FromResult(stats);
+        return WriteResultAsync(stats);
     }
 
-    protected override Task<IndexPerformanceStats[]> GetResultForRemoteNodeAsync(RavenCommand<IndexPerformanceStats[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexPerformanceStats[]> command) => RequestHandler.ExecuteRemoteAsync(command);
 
     private IEnumerable<Index> GetIndexesToReportOn()
     {
@@ -46,5 +48,13 @@ internal class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcess
                 .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
 
         return indexes;
+    }
+    private async ValueTask WriteResultAsync(IndexPerformanceStats[] result)
+    {
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            writer.WritePerformanceStats(context, result);
+        }
     }
 }

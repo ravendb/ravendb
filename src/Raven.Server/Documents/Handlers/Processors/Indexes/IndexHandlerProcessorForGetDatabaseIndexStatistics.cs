@@ -4,12 +4,14 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
@@ -22,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         }
         protected override bool SupportsCurrentNode => true;
 
-        protected override ValueTask<IndexStats[]> GetResultForCurrentNodeAsync()
+        protected override ValueTask HandleCurrentNodeAsync()
         {
             var name = RequestHandler.GetStringQueryString("name", required: false);
             var logger = LoggingSource.Instance.GetLogger(RequestHandler.Database.Name, GetType().FullName);
@@ -113,17 +115,24 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                         if (index == null)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return ValueTask.FromResult(Array.Empty<IndexStats>());
+                            return ValueTask.CompletedTask;
                         }
 
                         indexesStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
                     }
                 }
 
-                return ValueTask.FromResult(indexesStats);
+                return WriteResultAsync(indexesStats);
             }
         }
 
-        protected override Task<IndexStats[]> GetResultForRemoteNodeAsync(RavenCommand<IndexStats[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexStats[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+
+        private async ValueTask WriteResultAsync(IndexStats[] result)
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                writer.WriteIndexesStats(context, result);
+        }
     }
 }

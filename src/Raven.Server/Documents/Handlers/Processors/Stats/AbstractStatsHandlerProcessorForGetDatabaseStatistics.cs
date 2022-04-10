@@ -17,12 +17,5 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
         }
 
         protected override RavenCommand<DatabaseStatistics> CreateCommandForNode(string nodeTag) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag);
-
-        protected override async ValueTask WriteResultAsync(DatabaseStatistics result)
-        {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                writer.WriteDatabaseStatistics(context, result);
-        }
     }
 }

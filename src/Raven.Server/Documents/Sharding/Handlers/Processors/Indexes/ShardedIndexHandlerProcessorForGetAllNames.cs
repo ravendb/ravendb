@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
@@ -16,12 +17,9 @@ internal class ShardedIndexHandlerProcessorForGetAllNames : AbstractIndexHandler
 
     protected override bool SupportsCurrentNode => false;
 
-    protected override ValueTask<string[]> GetResultForCurrentNodeAsync()
-    {
-        throw new NotSupportedException();
-    }
+    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-    protected override Task<string[]> GetResultForRemoteNodeAsync(RavenCommand<string[]> command)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<string[]> command)
     {
         var shardNumber = GetShardNumber();
 

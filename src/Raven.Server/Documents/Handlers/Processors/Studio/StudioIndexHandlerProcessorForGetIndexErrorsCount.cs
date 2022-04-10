@@ -3,12 +3,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Http;
-using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 using Raven.Server.Web.Studio.Processors;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio;
 
@@ -20,7 +21,7 @@ internal class StudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudi
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask<GetIndexErrorsCountCommand.IndexErrorsCount[]> GetResultForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var names = GetIndexNames();
 
@@ -52,8 +53,15 @@ internal class StudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudi
                 }).ToArray()
         }).ToArray();
 
-        return ValueTask.FromResult(indexErrorsCounts);
+        return WriteResultAsync(indexErrorsCounts);
     }
 
-    protected override Task<GetIndexErrorsCountCommand.IndexErrorsCount[]> GetResultForRemoteNodeAsync(RavenCommand<GetIndexErrorsCountCommand.IndexErrorsCount[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetIndexErrorsCountCommand.IndexErrorsCount[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+
+    private async ValueTask WriteResultAsync(GetIndexErrorsCountCommand.IndexErrorsCount[] result)
+    {
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            writer.WriteIndexErrorCounts(context, result);
+    }
 }

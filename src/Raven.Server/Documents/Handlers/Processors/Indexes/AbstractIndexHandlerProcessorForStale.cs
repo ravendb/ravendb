@@ -1,7 +1,5 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Client.Http;
-using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -24,22 +22,5 @@ internal abstract class AbstractIndexHandlerProcessorForStale<TRequestHandler, T
         var name = GetName();
 
         return new GetIndexStalenessCommand(name, nodeTag);
-    }
-
-    protected override async ValueTask WriteResultAsync(GetIndexStalenessCommand.IndexStaleness result)
-    {
-        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(result.IsStale));
-            writer.WriteBool(result.IsStale);
-            writer.WriteComma();
-
-            writer.WriteArray(nameof(result.StalenessReasons), result.StalenessReasons);
-
-            writer.WriteEndObject();
-        }
     }
 }

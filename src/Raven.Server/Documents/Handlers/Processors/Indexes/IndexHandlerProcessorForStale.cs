@@ -2,11 +2,11 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Http;
-using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -19,7 +19,7 @@ internal class IndexHandlerProcessorForStale : AbstractIndexHandlerProcessorForS
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask<GetIndexStalenessCommand.IndexStaleness> GetResultForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var name = GetName();
 
@@ -33,7 +33,7 @@ internal class IndexHandlerProcessorForStale : AbstractIndexHandlerProcessorForS
             var stalenessReasons = new List<string>();
             var isStale = index.IsStale(context, stalenessReasons: stalenessReasons);
 
-            return ValueTask.FromResult(new GetIndexStalenessCommand.IndexStaleness
+            return WriteResultAsync(new GetIndexStalenessCommand.IndexStaleness
             {
                 IsStale = isStale,
                 StalenessReasons = stalenessReasons
@@ -41,5 +41,22 @@ internal class IndexHandlerProcessorForStale : AbstractIndexHandlerProcessorForS
         }
     }
 
-    protected override Task<GetIndexStalenessCommand.IndexStaleness> GetResultForRemoteNodeAsync(RavenCommand<GetIndexStalenessCommand.IndexStaleness> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetIndexStalenessCommand.IndexStaleness> command) => RequestHandler.ExecuteRemoteAsync(command);
+
+    private async ValueTask WriteResultAsync(GetIndexStalenessCommand.IndexStaleness result)
+    {
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.IsStale));
+            writer.WriteBool(result.IsStale);
+            writer.WriteComma();
+
+            writer.WriteArray(nameof(result.StalenessReasons), result.StalenessReasons);
+
+            writer.WriteEndObject();
+        }
+    }
 }

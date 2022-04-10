@@ -3,9 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats
 {
@@ -17,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
 
         protected override bool SupportsCurrentNode => true;
 
-        protected override ValueTask<DatabaseStatistics> GetResultForCurrentNodeAsync()
+        protected override ValueTask HandleCurrentNodeAsync()
         {
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
             using (context.OpenReadTransaction())
@@ -26,12 +28,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
 
                 FillDatabaseStatistics(stats, context, RequestHandler.Database);
 
-                return ValueTask.FromResult(stats);
+                return WriteResultAsync(stats);
             }
         }
 
-        protected override Task<DatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DatabaseStatistics> command) => 
-            RequestHandler.ExecuteRemoteAsync(command);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<DatabaseStatistics> command) => RequestHandler.ExecuteRemoteAsync(command);
 
         internal static void FillDatabaseStatistics(DatabaseStatistics stats, QueryOperationContext context, DocumentDatabase database)
         {
@@ -96,6 +97,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
                 else
                     stats.LastIndexingTime = index.LastIndexingTime;
             }
+        }
+
+        private async ValueTask WriteResultAsync(DatabaseStatistics result)
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                writer.WriteDatabaseStatistics(context, result);
         }
     }
 }

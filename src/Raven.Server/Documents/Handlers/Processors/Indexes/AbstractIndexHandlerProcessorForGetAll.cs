@@ -1,10 +1,7 @@
-﻿using System.Net;
-using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
-using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
@@ -31,27 +28,5 @@ internal abstract class AbstractIndexHandlerProcessorForGetAll<TRequestHandler, 
             return new GetIndexesOperation.GetIndexesCommand(name, nodeTag);
         
         return new GetIndexesOperation.GetIndexesCommand(RequestHandler.GetStart(), RequestHandler.GetPageSize(), nodeTag);
-    }
-
-    protected override async ValueTask WriteResultAsync(IndexDefinition[] result)
-    {
-        if (result == null)
-        {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            return;
-        }
-
-        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-        {
-            writer.WriteStartObject();
-
-            writer.WriteArray(context, "Results", result, (w, c, indexDefinition) =>
-            {
-                w.WriteIndexDefinition(c, indexDefinition);
-            });
-
-            writer.WriteEndObject();
-        }
     }
 }
