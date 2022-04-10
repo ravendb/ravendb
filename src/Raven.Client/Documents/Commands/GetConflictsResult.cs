@@ -11,6 +11,8 @@ namespace Raven.Client.Documents.Commands
 
         public long LargestEtag { get; set; } //etag of the conflict itself
 
+        public long TotalResults { get; set; }
+
         public class Conflict
         {
             public DateTime LastModified { get; set; }
@@ -18,6 +20,20 @@ namespace Raven.Client.Documents.Commands
             public string ChangeVector { get; set; }
 
             public BlittableJsonReaderObject Doc { get; set; }
+        }
+    }
+
+    public class GetConflictsResultByEtag
+    {
+        public ResultByEtag[] Results { get; internal set; }
+
+        public long TotalResults { get; set; }
+
+        public class ResultByEtag
+        {
+            public string Id { get; set; }
+
+            public DateTime LastModified { get; set; }
         }
     }
 }
