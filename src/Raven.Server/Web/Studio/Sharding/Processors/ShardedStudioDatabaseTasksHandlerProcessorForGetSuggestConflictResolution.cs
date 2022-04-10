@@ -2,8 +2,10 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Server.Web.Http;
+using Raven.Server.Web.Operations;
 using Raven.Server.Web.Studio.Processors;
-using Raven.Server.Web.Studio.Sharding.Commands;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors
 {
@@ -16,10 +18,11 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
 
         protected override async Task GetSuggestConflictResolutionAsync(TransactionOperationContext context, string documentId)
         {
-            var cmd = new GetConflictResolutionCommand(RequestHandler, documentId);
+            var cmd = new GetSuggestConflictResolutionOperation.GetSuggestConflictResolutionCommand(documentId);
+            var proxyCommand = new ProxyCommand<ConflictResolverAdvisor.MergeResult>(cmd, RequestHandler.HttpContext.Response);
 
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);
         }
     }
 }
