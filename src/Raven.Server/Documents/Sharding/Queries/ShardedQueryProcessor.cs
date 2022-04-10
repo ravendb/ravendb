@@ -35,7 +35,7 @@ public class ShardedQueryProcessor : IDisposable
     private readonly bool _isMapReduceIndex;
     private readonly bool _isAutoMapReduceQuery;
     private readonly Dictionary<int, ShardedQueryCommand> _commands;
-    private readonly HashSet<int> _filteredShardIndexes;
+    //private readonly HashSet<int> _filteredShardIndexes;
     private readonly ShardedQueryResult _result;
     private readonly List<IDisposable> _disposables = new();
 
@@ -111,8 +111,8 @@ public class ShardedQueryProcessor : IDisposable
         // * For indexes, we sent to all shards
         for (int i = 0; i < _parent.DatabaseContext.NumberOfShardNodes; i++)
         {
-            if (_filteredShardIndexes?.Contains(i) == false)
-                continue;
+            //if (_filteredShardIndexes?.Contains(i) == false)
+            //    continue;
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
             _commands[i] = new ShardedQueryCommand(_parent, queryTemplate, _query.Metadata.IndexName);
@@ -212,8 +212,8 @@ public class ShardedQueryProcessor : IDisposable
 
         foreach ((int shardId, ShardLocator.IdsByShard<Slice> documentIds) in shards)
         {
-            if (_filteredShardIndexes?.Contains(shardId) == false)
-                continue;
+            //if (_filteredShardIndexes?.Contains(shardId) == false)
+            //    continue;
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
 
