@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Replication.Senders
             _currentWorker = _workEnumerators[0];
             for (var index = 1; index < _workEnumerators.Count; index++)
             {
-                if (_comparer.Compare(_workEnumerators[index].Current, _currentWorker.Current) > 0)
+                if (_comparer.Compare(_workEnumerators[index].Current, _currentWorker.Current) < 0)
                 {
                     _currentWorker = _workEnumerators[index];
                 }
