@@ -163,7 +163,7 @@
                             </div>
                         </div>
                         <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
-                            <div class="padding bg-warning small">
+                            <div class="padding bg-warning text-warning small">
                                 <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
                             </div>
                         </div>
@@ -215,6 +215,9 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="panel-addon margin-top-lg" data-bind="visible: $root.usingHttps">
+                    <div data-bind="compose: $root.certificateUploadInfoForOngoingTasks"></div>
                 </div>
             </form>
         </div>

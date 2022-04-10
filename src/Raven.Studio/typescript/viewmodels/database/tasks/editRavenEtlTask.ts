@@ -172,6 +172,7 @@ class editRavenEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editRavenEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringRaven.html")
+    certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;
@@ -202,6 +203,9 @@ class editRavenEtlTask extends viewModelBase {
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
 
     collections = collectionsTracker.default.collections;
+
+    usingHttps = location.protocol === "https:";
+    certificatesUrl = appUrl.forCertificates();
 
     constructor() {
         super();
