@@ -127,7 +127,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         foreach (var field in _query.Metadata.OrderBy)
         {
             if (field.OrderingType == OrderByFieldType.Custom)
-                throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
+                throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
         }
     }
 
@@ -176,7 +176,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         if (query.Load is { Count: > 0 })
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-17887");
-            throw new NotSupportedException("Loading a document inside a projection from a map-reduce index isn't supported");
+            throw new NotSupportedInShardingException("Loading a document inside a projection from a map-reduce index isn't supported");
         }
 
         var clone = query.ShallowCopy();
@@ -439,7 +439,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
                 return Random.Shared.Next(0, int.MaxValue);
 
             case OrderByFieldType.Custom:
-                throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
+                throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
             case OrderByFieldType.Score:
             case OrderByFieldType.Distance:
             default:

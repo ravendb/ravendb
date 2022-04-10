@@ -1,12 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Sorters;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
