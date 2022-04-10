@@ -7,6 +7,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;

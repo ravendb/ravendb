@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
