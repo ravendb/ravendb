@@ -138,7 +138,7 @@
                         <div class="form-group margin-top margin-top-lg">
                             <label for="connStrInfo" class="control-label">Connection String</label>
                             <div id="connStrInfo" class="flex-grow">
-                                <div class="text-info bg-info padding padding-xs">
+                                <div class="text-info bg-info padding padding-xs small">
                                     A connection string will be automatically created per database.<br>
                                     The source database name will be used as the destination database.
                                 </div>
@@ -184,6 +184,9 @@
                                 </span>
                             </div>
                         </div>
+                    </div>
+                    <div class="panel-addon" data-bind="visible: usingHttps">
+                        <div data-bind="compose: $root.certificateUploadInfoForOngoingTasks"></div>
                     </div>
                     <div class="panel-addon" data-bind="with: testConnectionResult">
                         <div class="padding bg-success small" data-bind="visible: Success">
