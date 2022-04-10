@@ -95,23 +95,36 @@ namespace Raven.Server.Documents
                 yield return list;
         }
 
-        public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag, long skip = 0)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
+            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, skip))
             {
                 yield return TableValueToConflictDocument(context, ref tvr.Reader);
             }
         }
 
-        public IEnumerable<DocumentConflict> GetConflictsAfter(DocumentsOperationContext context, long etag)
+        public GetConflictsResultByEtag GetConflictsResultByEtag(DocumentsOperationContext context, long etag, long skip = 0)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
+            var result = new GetConflictsResultByEtag();
+            var conflicts = new List<GetConflictsResultByEtag.ResultByEtag>();
+            
+            foreach (var documentConflict in GetConflictsFrom(context, etag, skip))
             {
-                yield return TableValueToConflictDocument(context, ref tvr.Reader);
+                var conflict = new GetConflictsResultByEtag.ResultByEtag
+                {
+                    Id = documentConflict.Id,
+                    LastModified = documentConflict.LastModified
+                };
+
+                conflicts.Add(conflict);
             }
+
+            result.TotalResults = GetNumberOfDocumentsConflicts(context);
+            result.Results = conflicts.ToArray();
+            return result;
         }
+
 
         public IEnumerable<DocumentConflict> GetConflictsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {

@@ -47,7 +47,7 @@ namespace SlowTests.Sharding.Client.Operations
 
                 using (context.OpenReadTransaction())
                 {
-                    var conflicts = db.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag: 0).ToList();
+                    var conflicts = db.DocumentsStorage.ConflictsStorage.GetConflictsFrom(context, etag: 0).ToList();
                     var expected = 20; // 2 conflicts per doc
                     Assert.Equal(expected, conflicts.Count);
 
@@ -57,11 +57,11 @@ namespace SlowTests.Sharding.Client.Operations
                     expected = 10;
                     Assert.Equal(expected, totalResults);
 
-                    var documentsConflict = await store.Maintenance.SendAsync(new GetReplicationConflictsOperation(etag: 0));
-                    Assert.Equal(expected, documentsConflict.Results.Length);
+                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(etag: 0));
+                    Assert.Equal(20, documentsConflict.Results.Length);
 
-                    documentsConflict = await store.Maintenance.SendAsync(new GetReplicationConflictsOperation(etag: fromEtag));
-                    Assert.Equal(4, documentsConflict.Results.Length);
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(etag: fromEtag));
+                    Assert.Equal(8, documentsConflict.Results.Length);
                 }
             }
         }
@@ -96,11 +96,11 @@ namespace SlowTests.Sharding.Client.Operations
 
                     var fromEtag = conflicts[12].Etag;
 
-                    var documentsConflict = await store.Maintenance.SendAsync(new GetReplicationConflictsOperation());
-                    Assert.Equal(10, documentsConflict.Results.Length);
+                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation());
+                    Assert.Equal(20, documentsConflict.Results.Length);
 
-                    documentsConflict = await store.Maintenance.SendAsync(new GetReplicationConflictsOperation(etag: fromEtag));
-                    Assert.Equal(4, documentsConflict.Results.Length);
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(etag: fromEtag));
+                    Assert.Equal(8, documentsConflict.Results.Length);
                 }
             }
         }

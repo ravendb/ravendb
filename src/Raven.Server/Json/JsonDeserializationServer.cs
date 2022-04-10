@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.TimeSeries;
@@ -231,6 +232,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LastChangeVectorForCollectionResult> LastChangeVectorForCollectionResult = GenerateJsonDeserializationRoutine<LastChangeVectorForCollectionResult>();
 
         public static readonly Func<BlittableJsonReaderObject, BlittableArrayResult> BlittableArrayResult = GenerateJsonDeserializationRoutine<BlittableArrayResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetConflictsResultByEtag> GetConflictResults = GenerateJsonDeserializationRoutine<GetConflictsResultByEtag>();
 
         public class Parameters
         {

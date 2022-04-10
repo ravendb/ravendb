@@ -1,40 +1,35 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Operations
 {
-    internal class GetReplicationConflictsOperation : IMaintenanceOperation<BlittableArrayResult>
+    internal class GetConflictsByEtagOperation : IMaintenanceOperation<GetConflictsResultByEtag>
     {
-        private readonly string _documentId;
         private readonly long _etag;
 
-        public GetReplicationConflictsOperation(string documentId = null, long etag = default)
+        public GetConflictsByEtagOperation(long etag = 0)
         {
-            _documentId = documentId;
             _etag = etag;
         }
 
-        public RavenCommand<BlittableArrayResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<GetConflictsResultByEtag> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetReplicationConflictsCommand(_documentId, _etag);
+            return new GetConflictsByEtagCommand(_etag);
         }
 
-        internal class GetReplicationConflictsCommand : RavenCommand<BlittableArrayResult>
+        internal class GetConflictsByEtagCommand : RavenCommand<GetConflictsResultByEtag>
         {
-            private readonly string _documentId;
             private readonly long _etag;
 
             public override bool IsReadRequest => true;
 
-            public GetReplicationConflictsCommand(string documentId = null, long etag = default)
+            public GetConflictsByEtagCommand(long etag = default)
             {
-                _documentId = documentId;
                 _etag = etag;
             }
 
@@ -42,10 +37,7 @@ namespace Raven.Server.Documents.Operations
             {
                 url = $"{node.Url}/databases/{node.Database}/replication/conflicts";
 
-                if (_documentId != null)
-                    url += $"?docId={Uri.EscapeDataString(_documentId)}";
-
-                else if (_etag != default)
+                if (_etag != default)
                     url += $"?etag={_etag}";
 
                 var request = new HttpRequestMessage { Method = HttpMethod.Get };
@@ -58,7 +50,7 @@ namespace Raven.Server.Documents.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationServer.BlittableArrayResult(response);
+                Result = JsonDeserializationServer.GetConflictResults(response);
             }
         }
     }

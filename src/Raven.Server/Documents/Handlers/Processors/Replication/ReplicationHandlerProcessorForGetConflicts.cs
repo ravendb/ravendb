@@ -15,12 +15,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override async Task GetConflictsByEtagAsync(DocumentsOperationContext context, long etag)
+        protected override Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(DocumentsOperationContext context, long etag)
         {
             using (context.OpenReadTransaction())
             {
-                var conflicts = RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
-                await WriteConflictsByEtag(context, conflicts);
+                return Task.FromResult(RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetConflictsResultByEtag(context, etag));
             }
         }
 
@@ -30,44 +29,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, documentId);
                 await WriteDocumentConflicts(context, documentId, conflicts);
-            }
-        }
-
-        private async Task WriteConflictsByEtag(DocumentsOperationContext context, IEnumerable<DocumentConflict> conflicts)
-        {
-            var skip = RequestHandler.GetStart();
-            var pageSize = RequestHandler.GetPageSize();
-
-            var alreadyAdded = new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
-            var array = new DynamicJsonArray();
-
-            foreach (var conflict in conflicts)
-            {
-                if (alreadyAdded.Add(conflict.Id))
-                {
-                    if (skip > 0)
-                    {
-                        skip--;
-                        continue;
-                    }
-                    if (pageSize-- <= 0)
-                        break;
-
-                    array.Add(new DynamicJsonValue
-                    {
-                        [nameof(GetConflictsResult.Id)] = conflict.Id,
-                        [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified
-                    });
-                }
-            }
-
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["TotalResults"] = RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                    [nameof(GetConflictsResult.Results)] = array
-                });
             }
         }
 
