@@ -2,8 +2,9 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
 
         protected override bool SupportsCurrentNode => true;
 
-        protected override ValueTask<IndexingStatus> GetResultForCurrentNodeAsync()
+        protected override ValueTask HandleCurrentNodeAsync()
         {
             var indexes = new List<IndexingStatus.IndexStatus>();
 
@@ -36,10 +37,49 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 Indexes = indexes.ToArray()
             };
 
-            return ValueTask.FromResult(indexesStatus);
+            return WriteResultAsync(indexesStatus);
         }
 
-        protected override Task<IndexingStatus> GetResultForRemoteNodeAsync(RavenCommand<IndexingStatus> command) => 
-            RequestHandler.ExecuteRemoteAsync(command);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexingStatus> command) => RequestHandler.ExecuteRemoteAsync(command);
+
+        private async ValueTask WriteResultAsync(IndexingStatus result)
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(IndexingStatus.Status));
+                writer.WriteString(result.Status.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(IndexingStatus.Indexes));
+                writer.WriteStartArray();
+                var isFirst = true;
+                foreach (var index in result.Indexes)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Name));
+                    writer.WriteString(index.Name);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Status));
+                    writer.WriteString(index.Status.ToString());
+
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndArray();
+
+                writer.WriteEndObject();
+            }
+        }
     }
 }

@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
@@ -17,9 +17,9 @@ internal class ShardedIndexHandlerProcessorForProgress : AbstractIndexHandlerPro
 
     protected override bool SupportsCurrentNode => false;
 
-    protected override ValueTask<IndexProgress[]> GetResultForCurrentNodeAsync() => throw new NotSupportedException();
+    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-    protected override Task<IndexProgress[]> GetResultForRemoteNodeAsync(RavenCommand<IndexProgress[]> command)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexProgress[]> command)
     {
         var shardNumber = GetShardNumber();
 

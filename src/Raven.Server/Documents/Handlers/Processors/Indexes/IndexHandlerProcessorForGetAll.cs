@@ -1,9 +1,12 @@
 ﻿using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -16,16 +19,16 @@ internal class IndexHandlerProcessorForGetAll : AbstractIndexHandlerProcessorFor
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask<IndexDefinition[]> GetResultForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var name = GetName();
 
         var indexDefinitions = GetIndexDefinitions(RequestHandler, name);
 
-        return ValueTask.FromResult(indexDefinitions);
+        return WriteResultAsync(indexDefinitions);
     }
 
-    protected override Task<IndexDefinition[]> GetResultForRemoteNodeAsync(RavenCommand<IndexDefinition[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexDefinition[]> command) => RequestHandler.ExecuteRemoteAsync(command);
 
     internal static IndexDefinition[] GetIndexDefinitions(DatabaseRequestHandler requestHandler, string indexName)
     {
@@ -51,5 +54,27 @@ internal class IndexHandlerProcessorForGetAll : AbstractIndexHandlerProcessorFor
         }
 
         return indexDefinitions;
+    }
+
+    private async ValueTask WriteResultAsync(IndexDefinition[] result)
+    {
+        if (result == null)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            return;
+        }
+
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            writer.WriteStartObject();
+
+            writer.WriteArray(context, "Results", result, (w, c, indexDefinition) =>
+            {
+                w.WriteIndexDefinition(c, indexDefinition);
+            });
+
+            writer.WriteEndObject();
+        }
     }
 }

@@ -1,10 +1,8 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
-using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
@@ -26,14 +24,5 @@ internal abstract class AbstractIndexHandlerProcessorForPerformance<TRequestHand
         var names = GetNames();
 
         return new GetIndexPerformanceStatisticsOperation.GetIndexPerformanceStatisticsCommand(names, nodeTag);
-    }
-
-    protected override async ValueTask WriteResultAsync(IndexPerformanceStats[] result)
-    {
-        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-        {
-            writer.WritePerformanceStats(context, result);
-        }
     }
 }

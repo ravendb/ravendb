@@ -5,17 +5,18 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
+using Raven.Server.Utils;
 using Raven.Server.Web.Http.Behaviors;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Http;
 
-public class ProxyRavenCommand<T> : RavenCommand
+public class ProxyCommand<T> : RavenCommand
 {
     private readonly RavenCommand<T> _command;
     private readonly HttpResponse _response;
 
-    public ProxyRavenCommand(RavenCommand<T> command, [NotNull] HttpResponse response)
+    public ProxyCommand(RavenCommand<T> command, [NotNull] HttpResponse response)
     {
         _command = command ?? throw new ArgumentNullException(nameof(command));
         _response = response ?? throw new ArgumentNullException(nameof(response));
@@ -29,17 +30,10 @@ public class ProxyRavenCommand<T> : RavenCommand
 
     public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
     {
-        _response.StatusCode = (int)response.StatusCode;
+        HttpResponseHelper.CopyStatusCode(response, _response);
+        HttpResponseHelper.CopyHeaders(response, _response);
 
-        foreach (var header in response.Headers)
-        {
-            if (response.Headers.Contains(header.Key))
-                continue;
-
-            _response.Headers.Add(header.Key, header.Value.ToArray());
-        }
-
-        await response.Content.CopyToAsync(_response.Body);
+        await HttpResponseHelper.CopyContentAsync(response, _response);
 
         return ResponseDisposeHandling.Automatic;
     }

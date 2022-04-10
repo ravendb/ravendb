@@ -1,9 +1,11 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats
 {
@@ -15,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
 
         protected override bool SupportsCurrentNode => true;
 
-        protected override ValueTask<DetailedDatabaseStatistics> GetResultForCurrentNodeAsync()
+        protected override ValueTask HandleCurrentNodeAsync()
         {
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
             using (context.OpenReadTransaction())
@@ -29,11 +31,17 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
                 stats.CountOfCompareExchange = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchange(context.Server, RequestHandler.Database.Name);
                 stats.CountOfCompareExchangeTombstones = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context.Server, RequestHandler.Database.Name);
 
-                return ValueTask.FromResult(stats);
+                return WriteResultAsync(stats);
             }
         }
 
-        protected override Task<DetailedDatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DetailedDatabaseStatistics> command) => 
-            RequestHandler.ExecuteRemoteAsync(command);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<DetailedDatabaseStatistics> command) => RequestHandler.ExecuteRemoteAsync(command);
+
+        private async ValueTask WriteResultAsync(DetailedDatabaseStatistics result)
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                writer.WriteDetailedDatabaseStatistics(context, result);
+        }
     }
 }

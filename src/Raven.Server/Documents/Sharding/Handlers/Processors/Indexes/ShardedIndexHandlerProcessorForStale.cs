@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Http;
-using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
@@ -18,9 +17,9 @@ internal class ShardedIndexHandlerProcessorForStale : AbstractIndexHandlerProces
 
     protected override bool SupportsCurrentNode => false;
 
-    protected override ValueTask<GetIndexStalenessCommand.IndexStaleness> GetResultForCurrentNodeAsync() => throw new NotSupportedException();
+    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-    protected override Task<GetIndexStalenessCommand.IndexStaleness> GetResultForRemoteNodeAsync(RavenCommand<GetIndexStalenessCommand.IndexStaleness> command)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetIndexStalenessCommand.IndexStaleness> command)
     {
         var shardNumber = GetShardNumber();
 

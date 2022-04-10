@@ -24,11 +24,4 @@ internal abstract class AbstractIndexHandlerProcessorForGetErrors<TRequestHandle
     {
         return RequestHandler.GetStringValuesQueryString("name", required: false);
     }
-
-    protected override async ValueTask WriteResultAsync(IndexErrors[] result)
-    {
-        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            writer.WriteIndexErrors(context, result);
-    }
 }

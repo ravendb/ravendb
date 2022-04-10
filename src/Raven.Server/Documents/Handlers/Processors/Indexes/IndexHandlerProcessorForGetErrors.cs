@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -18,7 +20,7 @@ internal class IndexHandlerProcessorForGetErrors : AbstractIndexHandlerProcessor
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask<IndexErrors[]> GetResultForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var names = GetIndexNames();
 
@@ -44,8 +46,15 @@ internal class IndexHandlerProcessorForGetErrors : AbstractIndexHandlerProcessor
             Errors = x.GetErrors().ToArray()
         }).ToArray();
 
-        return ValueTask.FromResult(indexErrors);
+        return WriteResultAsync(indexErrors);
     }
 
-    protected override Task<IndexErrors[]> GetResultForRemoteNodeAsync(RavenCommand<IndexErrors[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexErrors[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+
+    private async ValueTask WriteResultAsync(IndexErrors[] result)
+    {
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            writer.WriteIndexErrors(context, result);
+    }
 }
