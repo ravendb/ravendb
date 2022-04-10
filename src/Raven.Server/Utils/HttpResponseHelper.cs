@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -8,6 +9,14 @@ namespace Raven.Server.Utils;
 
 public static class HttpResponseHelper
 {
+    private static readonly HashSet<string> HeadersToIgnore = new HashSet<string>
+    {
+        "Vary",
+        "Date",
+        "Server",
+        "Transfer-Encoding"
+    };
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CopyStatusCode(HttpResponseMessage from, HttpResponse to)
     {
@@ -21,7 +30,15 @@ public static class HttpResponseHelper
 
         foreach (var header in from.Headers)
         {
-            if (to.Headers.ContainsKey(header.Key))
+            if (HeadersToIgnore.Contains(header.Key))
+                continue;
+
+            to.Headers.Add(header.Key, header.Value.ToArray());
+        }
+
+        foreach (var header in from.Content.Headers)
+        {
+            if (HeadersToIgnore.Contains(header.Key))
                 continue;
 
             to.Headers.Add(header.Key, header.Value.ToArray());
