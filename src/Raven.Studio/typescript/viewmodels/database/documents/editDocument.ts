@@ -1082,7 +1082,7 @@ class editDocument extends viewModelBase {
 
                 this.displayDocumentChange(false);
                 
-                if (this.collapseDocsWhenOpening()) {
+                if (this.collapseDocsWhenOpening() || this.isDocumentCollapsed()) {
                     this.forceFold = true;
                 }
             });
