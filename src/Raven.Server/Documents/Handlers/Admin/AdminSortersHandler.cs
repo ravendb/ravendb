@@ -1,8 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Admin.Processors.Sorters;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands.Sorters;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
