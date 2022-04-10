@@ -10,7 +10,6 @@ using FastTests;
 using FastTests.Client;
 using Nest;
 using Parquet;
-using Parquet.Data;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
@@ -1371,34 +1370,6 @@ loadToOrders(partitionBy(key), o);
                     foreach (var field in parquetReader.Schema.Fields)
                     {
                         Assert.True(field.Name.In(expectedFields));
-
-                        /*                        var data = rowGroupReader.ReadColumn((DataField)field).Data;
-                                                Assert.True(data.Length == 10);
-
-                                                if (field.Name == ParquetTransformedItems.LastModifiedColumn)
-                                                    continue;
-
-                                                long count = 1;
-                                                foreach (var val in data)
-                                                {
-                                                    switch (field.Name)
-                                                    {
-                                                        case ParquetTransformedItems.DefaultIdColumn:
-                                                            Assert.Equal($"orders/{count}", val);
-                                                            break;
-                                                        case "RequireAt":
-                                                            var expected = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count).AddDays(7), DateTimeKind.Utc));
-                                                            Assert.Equal(expected, val);
-                                                            break;
-                                                        case "Total":
-                                                            var expectedTotal = count * 1.25M * 10;
-                                                            Assert.Equal(expectedTotal, val);
-                                                            break;
-                                                    }
-
-                                                    count++;
-
-                                                }*/
                     }
                 }
             }
@@ -1408,6 +1379,8 @@ loadToOrders(partitionBy(key), o);
         public async Task OlapEtl_S3_Destination()
         {
             const string salesTableName = "Sales";
+            const string partitionColumn = "order_date";
+
             var settings = GetS3Settings();
 
             try
@@ -1477,8 +1450,8 @@ loadToOrders(partitionBy(key), o);
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
+                    var etlDone = WaitForEtlOnAllShards(store, (_, statistics) => statistics.LoadSuccesses != 0);
+                    
                     var script = @"
 var orderData = {
     Company : this.Company,
@@ -1498,7 +1471,7 @@ for (var i = 0; i < this.Lines.length; i++) {
     
     // load to 'sales' table
 
-    loadToSales(partitionBy(key), {
+    loadToSales(partitionBy(['order_date', key]), {
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.PricePerUnit
@@ -1506,27 +1479,43 @@ for (var i = 0; i < this.Lines.length; i++) {
 }
 
 // load to 'orders' table
-loadToOrders(partitionBy(key), orderData);
+loadToOrders(partitionBy(['order_date', key]), orderData);
 ";
 
 
                     SetupS3OlapEtl(store, script, settings);
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var waitHandles = etlDone.Select(mre => mre.WaitHandle).ToArray();
+                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/Orders";
-                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
+                        var forJanuary = $"{prefix}/{partitionColumn}=2020-01-01";
+                        var forFebruary = $"{prefix}/{partitionColumn}=2020-02-01";
 
-                        Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
-                        Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
-                        Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
+                        var januaryFiles = await s3Client.ListObjectsAsync(prefix: forJanuary, string.Empty, false);
+                        Assert.Equal(3, januaryFiles.FileInfoDetails.Count);
 
-                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath;
+                        var februaryFiles = await s3Client.ListObjectsAsync(prefix: forFebruary, string.Empty, false);
+                        Assert.Equal(3, februaryFiles.FileInfoDetails.Count);
+
+                        foreach (var files in new [] {januaryFiles, februaryFiles})
+                        {
+                            var paths = files.FileInfoDetails.Select(f => f.FullPath).ToList();
+
+                            for (int i = 0; i < 3; i++)
+                            {
+                                var shardName = $"{store.Database}${i}";
+                                Assert.True(paths.Any(path => path.Contains(shardName)));
+                            }
+                        }
+
+                        var fullPath = januaryFiles.FileInfoDetails[0].FullPath;
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
-                        blob.Data.CopyTo(ms);
+                        await blob.Data.CopyToAsync(ms);
 
                         using (var parquetReader = new ParquetReader(ms))
                         {
@@ -1539,9 +1528,6 @@ loadToOrders(partitionBy(key), orderData);
                             foreach (var field in parquetReader.Schema.Fields)
                             {
                                 Assert.True(field.Name.In(expectedFields));
-
-                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
-                                Assert.True(data.Length == 31);
                             }
                         }
                     }
@@ -1549,17 +1535,32 @@ loadToOrders(partitionBy(key), orderData);
                     using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
-                        var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
 
-                        Assert.Equal(2, cloudObjects.FileInfoDetails.Count);
-                        Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
-                        Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
+                        var forJanuary = $"{prefix}/{partitionColumn}=2020-01-01";
+                        var forFebruary = $"{prefix}/{partitionColumn}=2020-02-01";
 
-                        var fullPath = cloudObjects.FileInfoDetails[1].FullPath;
+                        var januaryFiles = await s3Client.ListObjectsAsync(prefix: forJanuary, string.Empty, false);
+                        Assert.Equal(3, januaryFiles.FileInfoDetails.Count);
+
+                        var februaryFiles = await s3Client.ListObjectsAsync(prefix: forFebruary, string.Empty, false);
+                        Assert.Equal(3, februaryFiles.FileInfoDetails.Count);
+
+                        foreach (var files in new[] { januaryFiles, februaryFiles })
+                        {
+                            var paths = files.FileInfoDetails.Select(f => f.FullPath).ToList();
+
+                            for (int i = 0; i < 3; i++)
+                            {
+                                var shardName = $"{store.Database}${i}";
+                                Assert.True(paths.Any(path => path.Contains(shardName)));
+                            }
+                        }
+
+                        var fullPath = februaryFiles.FileInfoDetails[1].FullPath;
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
-                        blob.Data.CopyTo(ms);
+                        await blob.Data.CopyToAsync(ms);
 
                         using (var parquetReader = new ParquetReader(ms))
                         {
@@ -1572,9 +1573,6 @@ loadToOrders(partitionBy(key), orderData);
                             foreach (var field in parquetReader.Schema.Fields)
                             {
                                 Assert.True(field.Name.In(expectedFields));
-
-                                var data = rowGroupReader.ReadColumn((DataField)field).Data;
-                                Assert.True(data.Length == 28 * 5);
                             }
                         }
                     }
