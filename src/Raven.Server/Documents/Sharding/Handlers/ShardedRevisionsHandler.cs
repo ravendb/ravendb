@@ -31,5 +31,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedRevisionsHandlerProcessorForPostRevisionsConfiguration(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/revisions/bin", "GET")]
+        public async Task GetRevisionsBin()
+        {
+            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsBin(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

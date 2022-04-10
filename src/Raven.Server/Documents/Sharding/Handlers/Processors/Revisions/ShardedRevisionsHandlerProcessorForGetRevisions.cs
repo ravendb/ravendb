@@ -10,7 +10,9 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Json;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -54,7 +56,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             }
             else
             {
-                await WriteRevisionsResultAsync(context, res, totalResult: null);
+                await WriteRevisionsResultAsync(context, RequestHandler, res, totalResult: null);
             }
 
             AddPagingPerformanceHint(PagingOperationType.Revisions, "", "", 0, 0, 0, 0);
@@ -86,7 +88,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             var result = await RequestHandler.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
             var array = result.Results.Items.Select(x => ((BlittableJsonReaderObject)x).Clone(context)).ToArray();
 
-            await WriteRevisionsResultAsync(context, array, result.TotalResults);
+            await WriteRevisionsResultAsync(context, RequestHandler, array, result.TotalResults);
 
             AddPagingPerformanceHint(PagingOperationType.Revisions, "", "", 0, 0, 0, 0);
         }
@@ -97,18 +99,27 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             return false;
         }
 
-        private async ValueTask WriteRevisionsResultAsync(JsonOperationContext context, BlittableJsonReaderObject[] array, long? totalResult)
+        public static async ValueTask WriteRevisionsResultAsync(JsonOperationContext context, ShardedDatabaseRequestHandler handler, BlittableJsonReaderObject[] array, long? totalResult, ContinuationToken continuationToken = null)
         {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, handler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();
+
                 writer.WriteArray(nameof(BlittableArrayResult.Results), array);
+
                 if (totalResult.HasValue)
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(BlittableArrayResult.TotalResults));
                     writer.WriteInteger(totalResult.Value);
                 }
+
+                if (continuationToken != null)
+                {
+                    writer.WriteComma();
+                    writer.WriteContinuationToken(context, continuationToken);
+                }
+
                 writer.WriteEndObject();
             }
         }

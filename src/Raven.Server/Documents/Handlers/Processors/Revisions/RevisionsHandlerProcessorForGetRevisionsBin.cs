@@ -1,0 +1,66 @@
+﻿using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
+using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+
+namespace Raven.Server.Documents.Handlers.Processors.Revisions
+{
+    internal class RevisionsHandlerProcessorForGetRevisionsBin : AbstractRevisionsHandlerProcessorForGetRevisionsBin<DatabaseRequestHandler, DocumentsOperationContext>
+    {
+        public RevisionsHandlerProcessorForGetRevisionsBin([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        {
+        }
+
+        protected override async ValueTask GetAndWriteRevisionsBinAsync(DocumentsOperationContext context, long etag, int pageSize)
+        {
+            using (context.OpenReadTransaction())
+            {
+                var sw = Stopwatch.StartNew();
+                var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
+                revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out var actualChangeVector);
+                if (actualChangeVector != null)
+                {
+                    if (RequestHandler.GetStringFromHeaders("If-None-Match") == actualChangeVector)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                        return;
+                    }
+
+                    HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
+                }
+                var revisions = revisionsStorage.GetRevisionsBinEntries(context, etag, pageSize).ToAsyncEnumerable();
+
+                long count;
+                long totalDocumentsSizeInBytes;
+
+                using (var token = RequestHandler.CreateOperationToken())
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+                    (count, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisions, metadataOnly: false, token.Token);
+                    writer.WriteEndObject();
+                }
+
+                AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+            }
+        }
+
+        protected override bool IsRevisionsConfigured()
+        {
+            var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
+            return revisionsStorage.Configuration != null;
+        }
+
+        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+            long totalDocumentsSizeInBytes)
+        {
+            RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
+        }
+    }
+}

@@ -1601,28 +1601,25 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, long startEtag, long take)
+        public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, long skip, long take)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-            using (GetEtagAsSlice(context, startEtag, out var slice))
+            foreach (var tvr in table.SeekBackwardFromLast(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], skip: skip))
             {
-                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], slice))
+                if (take-- <= 0)
+                    yield break;
+
+                var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Result.Reader);
+                if (etag == NotDeletedRevisionMarker)
+                    yield break;
+
+                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Result.Reader, out Slice lowerId))
                 {
-                    if (take-- <= 0)
-                        yield break;
-
-                    var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Result.Reader);
-                    if (etag == NotDeletedRevisionMarker)
-                        yield break;
-
-                    using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Result.Reader, out Slice lowerId))
-                    {
-                        if (IsRevisionsBinEntry(context, table, lowerId, etag) == false)
-                            continue;
-                    }
-
-                    yield return TableValueToRevision(context, ref tvr.Result.Reader);
+                    if (IsRevisionsBinEntry(context, table, lowerId, etag) == false)
+                        continue;
                 }
+
+                yield return TableValueToRevision(context, ref tvr.Result.Reader);
             }
         }
 

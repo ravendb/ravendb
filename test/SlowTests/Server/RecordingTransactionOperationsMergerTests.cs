@@ -40,6 +40,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -566,7 +567,7 @@ namespace SlowTests.Server
 
                 store.Commands().Put(id, null, user);
 
-                store.Maintenance.Send(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                store.Maintenance.Send(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
                 {
                     DocumentIds = new[] { id }
                 }));

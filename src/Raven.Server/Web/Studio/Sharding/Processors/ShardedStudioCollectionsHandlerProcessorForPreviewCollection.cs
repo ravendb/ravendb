@@ -158,7 +158,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         private class ShardedCollectionPreviewCommand : ShardedCommandAsStream
         {
-            public ShardedCollectionPreviewCommand(ShardedDatabaseRequestHandler handler, int start, int pageSize) : base(handler, Documents.Sharding.Commands.Headers.IfNoneMatch)
+            public ShardedCollectionPreviewCommand(ShardedDatabaseRequestHandler handler, long start, int pageSize) : base(handler, Documents.Sharding.Commands.Headers.IfNoneMatch)
             {
                 var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
                 queryString[Web.RequestHandler.StartParameter] = start.ToString();

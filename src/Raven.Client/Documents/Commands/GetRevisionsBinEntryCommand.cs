@@ -12,11 +12,19 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly long _etag;
         private readonly int? _pageSize;
+        private readonly string _continuationToken;
 
         public GetRevisionsBinEntryCommand(long etag, int? pageSize)
         {
             _etag = etag;
             _pageSize = pageSize;
+        }
+
+        public GetRevisionsBinEntryCommand(long etag, int? pageSize, string continuationToken)
+        {
+            _etag = etag;
+            _pageSize = pageSize;
+            _continuationToken = continuationToken;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -35,6 +43,9 @@ namespace Raven.Client.Documents.Commands
             if (_pageSize.HasValue)
                 pathBuilder.Append("&pageSize=").Append(_pageSize);
 
+            if (string.IsNullOrEmpty(_continuationToken) == false)
+                pathBuilder.Append("&continuationToken=").Append(_continuationToken);
+
             url = pathBuilder.ToString();
             return request;
         }
@@ -49,6 +60,7 @@ namespace Raven.Client.Documents.Commands
                 // we are still looking at this result, so we clone it to the side
                 response = response.Clone(context);
             }
+            
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
 

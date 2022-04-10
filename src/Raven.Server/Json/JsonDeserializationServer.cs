@@ -250,7 +250,7 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, SetLogsConfigurationOperation.Parameters> SetLogsConfigurationParameters = GenerateJsonDeserializationRoutine<SetLogsConfigurationOperation.Parameters>();
 
-            public static readonly Func<BlittableJsonReaderObject, AdminRevisionsHandler.Parameters> DeleteRevisionsParameters = GenerateJsonDeserializationRoutine<AdminRevisionsHandler.Parameters>();
+            public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsOperation.Parameters> DeleteRevisionsParameters = GenerateJsonDeserializationRoutine<DeleteRevisionsOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, UpdateUnusedDatabasesOperation.Parameters> UnusedDatabaseParameters = GenerateJsonDeserializationRoutine<UpdateUnusedDatabasesOperation.Parameters>();
 
