@@ -14,6 +14,7 @@ using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.BulkInsert;
 using Raven.Server.Documents.Handlers.Processors.BulkInsert;
+using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -238,8 +239,8 @@ namespace Raven.Server.Documents
                 case nameof(IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommand):
                     return jsonSerializer.Deserialize<IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommandDto>(reader);
 
-                case nameof(AdminRevisionsHandler.DeleteRevisionsCommand):
-                    return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);
+                case nameof(AdminRevisionsHandlerProcessorForDeleteRevisions.DeleteRevisionsCommand):
+                    return jsonSerializer.Deserialize<AdminRevisionsHandlerProcessorForDeleteRevisions.DeleteRevisionsCommandDto>(reader);
 
                 case nameof(RevisionsStorage.RevertDocumentsCommand):
                     return jsonSerializer.Deserialize<RevisionsStorage.RevertDocumentsCommandDto>(reader);

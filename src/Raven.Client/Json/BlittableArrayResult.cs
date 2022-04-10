@@ -6,6 +6,7 @@ namespace Raven.Client.Json
     {
         public BlittableJsonReaderArray Results { get; set; }
         public long TotalResults { get; set; }
+        public string ContinuationToken { get; set; }
     }
 
     public class BatchCommandResult

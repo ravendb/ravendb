@@ -5,13 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Exceptions.Documents.Revisions;
@@ -88,43 +84,6 @@ namespace Raven.Server.Documents.Handlers
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
-            }
-        }
-
-        [RavenAction("/databases/*/admin/revisions/conflicts/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task ConfigConflictedRevisions()
-        {
-            return DatabaseConfigurations(
-                ServerStore.ModifyRevisionsForConflicts,
-                "conflicted-revisions-config",
-                GetRaftRequestIdFromQuery());
-        }
-
-        [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task PostRevisionsConfiguration()
-        {
-            using (var processor = new RevisionsHandlerProcessorForPostRevisionsConfiguration(this))
-                await processor.ExecuteAsync();
-        }
-
-        [RavenAction("/databases/*/admin/revisions/config/enforce", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task EnforceConfigRevisions()
-        {
-            var token = CreateTimeLimitedOperationToken();
-            var operationId = ServerStore.Operations.GetNextOperationId();
-
-            var t = Database.Operations.AddOperation(
-                Database,
-                $"Enforce revision configuration in database '{Database.Name}'.",
-                Operations.Operations.OperationType.EnforceRevisionConfiguration,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, token),
-                operationId,
-                token: token);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
         }
 
@@ -215,44 +174,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions/bin", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsBin()
         {
-            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-
-            var sw = Stopwatch.StartNew();
-            var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
-            var pageSize = GetPageSize();
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out var actualChangeVector);
-                if (actualChangeVector != null)
-                {
-                    if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                        return;
-                    }
-
-                    HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
-                }
-
-                long count;
-                long totalDocumentsSizeInBytes;
-
-                using (var token = CreateOperationToken())
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-
-                    var revisions = revisionsStorage.GetRevisionsBinEntries(context, etag, pageSize);
-                    (count, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisions, metadataOnly: false, token.Token);
-
-                    writer.WriteEndObject();
-                }
-
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
-            }
+            using (var processor = new RevisionsHandlerProcessorForGetRevisionsBin(this))
+                await processor.ExecuteAsync();
         }
     }
 }

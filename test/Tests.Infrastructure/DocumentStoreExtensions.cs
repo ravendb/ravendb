@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Org.BouncyCastle.Asn1;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -194,6 +195,21 @@ namespace FastTests
                 var command = new GetRevisionsBinEntryCommand(etag, pageSize);
                 await RequestExecutor.ExecuteAsync(command, Context);
                 return new DynamicArray(command.Result.Results);
+            }
+
+            public async Task<(BlittableJsonReaderObject[] Results, string ContinuationToken)> GetRevisionsBinEntriesAndContinuationTokenAsync(JsonOperationContext context, long etag, int? pageSize = null, string continuationToken = null)
+            {
+                var command = new GetRevisionsBinEntryCommand(etag, pageSize, continuationToken);
+                await RequestExecutor.ExecuteAsync(command, Context);
+
+                var list = new BlittableJsonReaderObject[command.Result.Results.Length];
+                int i = 0;
+                foreach (BlittableJsonReaderObject item in command.Result.Results)
+                {
+                    list[i] = item.Clone(context);
+                    i++;
+                }
+                return (list, command.Result.ContinuationToken);
             }
 
             public async Task<DynamicArray> GetAsync(string[] ids)

@@ -16,9 +16,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             public ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context)
             {
+                return GetOrCreateContinuationToken(context, _handler.GetStart(), _handler.GetPageSize());
+            }
+
+            public ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context, long start, int pageSize)
+            {
                 var qToken = _handler.GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
                 var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ??
-                            new ShardedPagingContinuation(_handler.DatabaseContext, _handler.GetStart(), _handler.GetPageSize());
+                            new ShardedPagingContinuation(_handler.DatabaseContext, start, pageSize);
                 return token;
             }
 

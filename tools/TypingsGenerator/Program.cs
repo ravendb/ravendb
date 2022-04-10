@@ -526,7 +526,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetDatabasesLockOperation.Parameters));
             scripter.AddType(typeof(SetIndexesLockOperation.Parameters));
             scripter.AddType(typeof(SetIndexesPriorityOperation.Parameters));
-            scripter.AddType(typeof(AdminRevisionsHandler.Parameters));
+            scripter.AddType(typeof(DeleteRevisionsOperation.Parameters));
             scripter.AddType(typeof(ReorderDatabaseMembersOperation.Parameters));
 
             scripter.AddType(typeof(LicenseLimitException));

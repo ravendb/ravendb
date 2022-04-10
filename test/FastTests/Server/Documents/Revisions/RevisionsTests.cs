@@ -13,22 +13,28 @@ using System.Threading.Tasks;
 using FastTests.Utils;
 using NuGet.Packaging;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1580,7 +1586,7 @@ namespace FastTests.Server.Documents.Revisions
             {
                 await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
-                var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(0, deletedRevisions.Count());
 
                 var id = "users/1";
@@ -1616,7 +1622,7 @@ namespace FastTests.Server.Documents.Revisions
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
-                deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(1, deletedRevisions.Count());
 
                 using (var session = store.OpenAsyncSession())
@@ -1637,11 +1643,102 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisionsMetadata[3].GetString(Constants.Documents.Metadata.Flags));
                 }
 
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters { DocumentIds = new[] { id, "users/not/exists" } }));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters { DocumentIds = new[] { id, "users/not/exists" } }));
 
                 statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(0, statistics.CountOfRevisionDocuments);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task GetRevisionsBinEntries2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+
+                var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(0);
+                Assert.Equal(0, deletedRevisions.Count());
+
+                for (int i = 0; i < 200; i++)
+                {
+                    await store.Commands().PutAsync("users/" + i, null, new User { Name = "Stav" });
+                    await store.Commands().DeleteAsync("users/" + i, null);
+                }
+                
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    BlittableJsonReaderObject[] revisions;
+                    string continuationToken = null;
+                    var pageSize = 100;
+                    int amount = 200;
+                    int countId = amount;
+                    for (int i = 0; i < amount; i += pageSize)
+                    {
+                        (revisions, continuationToken) =
+                            await store.Commands().GetRevisionsBinEntriesAndContinuationTokenAsync(context, etag: 0, pageSize: 100, continuationToken);
+                        
+                        Assert.Equal(100, revisions.Count());
+
+                        string id;
+                        foreach (BlittableJsonReaderObject revision in revisions)
+                        {
+                            var metadata = revision.GetMetadata();
+                            id = metadata.GetId();
+                            Assert.Equal("users/" + (--countId), id);
+                        }
+                    }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DeleteRevisions(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var error = await Assert.ThrowsAsync<RevisionsDisabledException>( async () => await store.Commands().GetRevisionsBinEntriesAsync(0));
+                Assert.Contains("Revisions are disabled", error.Message);
+
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+
+                var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(0);
+                Assert.Equal(0, deletedRevisions.Count());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() {Name = "Stav"}, "users/1");
+                    await session.StoreAsync(new Order() {Employee = "Stav"}, "orders/1");
+                    await session.SaveChangesAsync();
+
+                    var usersShard = Sharding.GetShardNumber(store, "users/1");
+                    var ordersShard = Sharding.GetShardNumber(store, "orders/1");
+                    Assert.NotEqual(usersShard, ordersShard);
+
+                    var user = await session.LoadAsync<User>("users/1");
+                    var order = await session.LoadAsync<Order>("orders/1");
+                    for (int i = 0; i < 3; i++)
+                    {
+                        user.Name = "Stav"+i;
+                        order.Employee = "Stav" + i;
+                        await session.SaveChangesAsync();
+                    }
+
+                    var usersRevCount = await session.Advanced.Revisions.GetCountForAsync("users/1");
+                    var orderssRevCount = await session.Advanced.Revisions.GetCountForAsync("orders/1");
+                    Assert.Equal(4, usersRevCount);
+                    Assert.Equal(4, orderssRevCount);
+
+                    await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters() { DocumentIds = new[] { "users/1", "orders/1" } }));
+
+                    usersRevCount = await session.Advanced.Revisions.GetCountForAsync("users/1");
+                    orderssRevCount = await session.Advanced.Revisions.GetCountForAsync("orders/1");
+                    Assert.Equal(0, usersRevCount);
+                    Assert.Equal(0, orderssRevCount);
+                }
             }
         }
 
@@ -1998,49 +2095,6 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     var companiesRevisionsCount = await session.Advanced.Revisions.GetCountForAsync(company.Id);
                     Assert.Equal(2, companiesRevisionsCount);
-                }
-            }
-        }
-
-        public class DeleteRevisionsOperation : IMaintenanceOperation
-        {
-            private readonly AdminRevisionsHandler.Parameters _parameters;
-
-            public DeleteRevisionsOperation(AdminRevisionsHandler.Parameters parameters)
-            {
-                _parameters = parameters;
-            }
-
-            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new DeleteRevisionsCommand(conventions, context, _parameters);
-            }
-
-            private class DeleteRevisionsCommand : RavenCommand
-            {
-                private readonly BlittableJsonReaderObject _parameters;
-
-                public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, AdminRevisionsHandler.Parameters parameters)
-                {
-                    if (conventions == null)
-                        throw new ArgumentNullException(nameof(conventions));
-                    if (context == null)
-                        throw new ArgumentNullException(nameof(context));
-                    if (parameters == null)
-                        throw new ArgumentNullException(nameof(parameters));
-
-                    _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
-                }
-
-                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-                {
-                    url = $"{node.Url}/databases/{node.Database}/admin/revisions";
-
-                    return new HttpRequestMessage
-                    {
-                        Method = HttpMethod.Delete,
-                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _parameters).ConfigureAwait(false))
-                    };
                 }
             }
         }

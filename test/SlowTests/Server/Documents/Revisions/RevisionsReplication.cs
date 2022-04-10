@@ -22,6 +22,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -381,7 +382,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                Assert.Equal(0, db.DocumentsStorage.RevisionsStorage.GetRevisionsBinEntries(ctx, long.MaxValue, 128).Count());
+                Assert.Equal(0, db.DocumentsStorage.RevisionsStorage.GetRevisionsBinEntries(ctx, 0, 128).Count());
             }
         }
 
@@ -536,7 +537,7 @@ namespace SlowTests.Server.Documents.Revisions
                 });
                 await SetupReplicationAsync(store1, store2);
 
-                var deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                var deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(0, deletedRevisions.Count());
 
                 var id = "users/1";
@@ -572,10 +573,10 @@ namespace SlowTests.Server.Documents.Revisions
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
                 //sanity
-                deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(1, deletedRevisions.Count());
 
-                deletedRevisions = await store2.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
+                deletedRevisions = await store2.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(1, deletedRevisions.Count());
 
                 using (var session = store2.OpenAsyncSession())
@@ -596,7 +597,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisionsMetadata[3].GetString(Constants.Documents.Metadata.Flags));
                 }
 
-                await store1.Maintenance.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
                 {
                     DocumentIds = new[] { id, "users/not/exists" }
                 }));
