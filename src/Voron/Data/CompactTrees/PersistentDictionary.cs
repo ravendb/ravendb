@@ -45,40 +45,57 @@ namespace Voron.Data.CompactTrees
 
         public static long CreateDefault(LowLevelTransaction llt)
         {
-            var p = llt.AllocatePage(NumberOfPagesForDictionary);
-            p.Flags = PageFlags.Overflow;
-            p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
+            Slice.From(llt.Allocator, $"{nameof(PersistentDictionary)}.Default", out var defaultKey);
 
-            PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
-            header->TableSize = UsableDictionarySize;
-            header->TableMaxEntries = MaxDictionaryEntries;
-            header->CurrentId = p.PageNumber;
-            header->PreviousId = 0;
+            long pageNumber;
 
-            // We retrieve the embeeded file from the assembly, copy and checksum the entire thing.             
-            var embeddedFile = typeof(PersistentDictionary).Assembly.GetManifestResourceStream($"Voron.Data.CompactTrees.dictionary.bin");
-            if (embeddedFile == null)
-                VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "The default dictionary has not been included in the build, the build process needs to be corrected.");
+            var result = llt.RootObjects.DirectRead(defaultKey);
+            if (result != null)
+            {
+                pageNumber = *(long*)result;
+            }
+            else
+            {
+                var p = llt.AllocatePage(NumberOfPagesForDictionary);
+                p.Flags = PageFlags.Overflow;
+                p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
 
-            var dictionary = new byte[embeddedFile.Length];
-            embeddedFile.Read(dictionary);
+                PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
+                header->TableSize = UsableDictionarySize;
+                header->TableMaxEntries = MaxDictionaryEntries;
+                header->CurrentId = p.PageNumber;
+                header->PreviousId = 0;
 
-            var arrayAsInt = MemoryMarshal.Cast<byte, int>(dictionary.AsSpan());
-            int tableSize = arrayAsInt[0];
-            if (tableSize != DefaultDictionaryTableSize)
-                VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "There is an inconsistency between the expected size of the default compression dictionary and the one read from storage.");
+                // We retrieve the embeeded file from the assembly, copy and checksum the entire thing.             
+                var embeddedFile = typeof(PersistentDictionary).Assembly.GetManifestResourceStream($"Voron.Data.CompactTrees.dictionary.bin");
+                if (embeddedFile == null)
+                    VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "The default dictionary has not been included in the build, the build process needs to be corrected.");
 
-            dictionary.AsSpan()
-                .Slice(4) // Discard the table size.
-                .CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize));
+                var dictionary = new byte[embeddedFile.Length];
+                embeddedFile.Read(dictionary);
 
-            header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
+                var arrayAsInt = MemoryMarshal.Cast<byte, int>(dictionary.AsSpan());
+                int tableSize = arrayAsInt[0];
+                if (tableSize != DefaultDictionaryTableSize)
+                    VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "There is an inconsistency between the expected size of the default compression dictionary and the one read from storage.");
+
+                dictionary.AsSpan()
+                    .Slice(4) // Discard the table size.
+                    .CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize));
+
+                header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
 
 #if DEBUG
-            VerifyTable(p);
+                VerifyTable(p);
 #endif
 
-            return p.PageNumber;
+                pageNumber = p.PageNumber;
+
+                using var scope = llt.RootObjects.DirectAdd(defaultKey, sizeof(long), out var ptr);
+                *(long*)ptr = pageNumber;
+            }
+
+            return pageNumber;
         }
 
         public static PersistentDictionary Create<TKeysEnumerator>(LowLevelTransaction llt, in TKeysEnumerator enumerator, PersistentDictionary previousDictionary = null)
