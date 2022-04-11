@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -23,8 +22,8 @@ public class FilterTests : RavenTestBase
     {
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUseFilterAsContextualKeywordForBackwardCompatability(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -51,8 +50,8 @@ select filter(a)").Count();
         }
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUseFilterWithCollectionQuery(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -171,8 +170,8 @@ select filter(a)").Count();
         // with load
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public async Task AsyncCanUseFilterWithCollectionQuery(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -234,8 +233,8 @@ select filter(a)").Count();
         }
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanFilterWithLoad(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -285,7 +284,7 @@ select filter(a)").Count();
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     public void CanUseFilterQueryOnMapIndexes(Options options)
     {
@@ -492,7 +491,7 @@ filter Name = 'Frank'")
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData("from Employees filter spatial.within(spatial.point(Location.Latitude, Location.Longitude), spatial.wkt($wkt))", typeof(RavenException))]
     [InlineData("from Employees filter MoreLikeThis('emps/jane')", typeof(RavenException))]
     [InlineData("from Employees filter MoreLikeThis('emps/jane') select suggest(Name, 'jake')", typeof(RavenException))]
@@ -509,8 +508,8 @@ filter Name = 'Frank'")
         }
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void InvalidFilterQueriesInLinq(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -524,8 +523,8 @@ filter Name = 'Frank'")
         }
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUseFilterQueryOnMapReduce(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -575,8 +574,8 @@ filter Name = 'Frank'")
         }
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public async Task AsyncCanUseFilterQueryOnMapReduce(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -608,8 +607,8 @@ filter Name = 'Frank'")
         }
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void ExtendedLinqTest(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -652,8 +651,8 @@ filter Name = 'Frank'")
         }
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CannotUseFacetWithFilter(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -692,8 +691,8 @@ filter Name = 'Frank'")
         };
     }
 
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void Timings(Options options)
     {
         using var store = GetDocumentStore(options);

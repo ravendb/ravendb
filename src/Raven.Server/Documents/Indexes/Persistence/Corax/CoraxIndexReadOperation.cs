@@ -64,17 +64,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take: take)) is null)
                 yield break;
 
-            if (query.Metadata.FilterScript != null)
-            {
-                throw new NotSupportedException(
-                    "Filter isn't supported by Corax. We need to extract the filter feature implementation so it won't be implemented inside the read operations");
-            }
-
             var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
             Span<long> ids = longIds;
             int docsToLoad = pageSize;
-            using var queryScope = new CoraxIndexQueryingScope(_index.Type, query, fieldsToFetch, retriever, _indexSearcher, _fieldMappings);
             int queryStart = query.Start;
+
+
+            using var queryScope = new CoraxIndexQueryingScope(_index.Type, query, fieldsToFetch, retriever, _indexSearcher, _fieldMappings);
+            using var queryFilter = GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings);
 
             while (true)
             {
@@ -91,6 +88,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
 
                     var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var key), key);
+                    
+                    var filterResult = queryFilter?.Apply(ref retrieverInput, key);
+                    if (filterResult is not null and not FilterResult.Accepted)
+                    {
+                        docsToLoad++;
+                        if (filterResult is FilterResult.Skipped)
+                            continue;
+                        if (filterResult is FilterResult.LimitReached)
+                            break;
+                    }
+
                     bool markedAsSkipped = false;
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
 
@@ -125,6 +133,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     break;
                 totalResults.Value += read;
             }
+
 
             if (isDistinctCount)
                 totalResults.Value -= skippedResults.Value;
@@ -212,6 +221,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             if (query.Metadata.IsDistinct)
                 throw new NotSupportedException("We don't support Distinct in \"Show Raw Entry\" of Index.");
+            if (query.Metadata.FilterScript != null)
+                throw new NotSupportedException(
+                    "Filter isn't supported in Raw Index View.");
 
             var take = pageSize + position;
             if (take > _indexSearcher.NumberOfEntries)
@@ -221,19 +233,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if ((queryMatch = _coraxQueryEvaluator.Search(query, indexFieldsMapping: _fieldMappings, take: take)) is null)
                 yield break;
 
-            if (query.Metadata.FilterScript != null)
-            {
-                throw new NotSupportedException(
-                    "Filter isn't supported by Corax. We need to extract the filter feature implementation so it won't be implemented inside the read operations");
-            }
-
             var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
 
             List<string> itemList = new(32);
             var bufferSizes = GetMaximumSizeOfBuffer();
             var tokensBuffer = ArrayPool<Token>.Shared.Rent(bufferSizes.TokenSize);
             var encodedBuffer = ArrayPool<byte>.Shared.Rent(bufferSizes.OutputSize);
-            
+
             int docsToLoad = pageSize;
 
             int read;
@@ -252,7 +258,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     break;
                 totalResults.Value += read;
             }
-            
+
             ArrayPool<long>.Shared.Return(longIds);
             ArrayPool<byte>.Shared.Return(encodedBuffer);
             ArrayPool<Token>.Shared.Return(tokensBuffer);
@@ -279,7 +285,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                             enumerableEntries.Add(GetAnalyzedItem(binding, iterator.Sequence));
                         }
-                        
+
                         doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
                     }
                     else
@@ -317,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _ => string.Empty
                 };
             }
-            
+
             (int OutputSize, int TokenSize) GetMaximumSizeOfBuffer()
             {
                 int outputSize = 512;
@@ -344,7 +350,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     token.ThrowIfCancellationRequested();
                     read = queryMatch.Fill(longIds);
                     totalResults.Value += read;
-                    
+
                     if (position > read)
                     {
                         position -= read;
@@ -359,7 +365,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
 
                     return position;
-                }                
+                }
             }
         }
 
