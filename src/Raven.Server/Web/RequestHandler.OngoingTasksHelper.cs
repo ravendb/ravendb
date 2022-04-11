@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -12,6 +13,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
@@ -22,7 +24,7 @@ namespace Raven.Server.Web
 {
     public abstract partial class RequestHandler
     {
-        protected internal delegate void RefAction<T>(string databaseName, ref T configuration, JsonOperationContext context, ServerStore serverStore);
+        protected internal delegate void RefAction<T>(string databaseName, ref T configuration, JsonOperationContext context);
 
         protected internal delegate Task<(long, object)> SetupFunc<in T>(TransactionOperationContext context, string databaseName, T json, string raftRequestId);
 
@@ -32,6 +34,7 @@ namespace Raven.Server.Web
             string debug,
             string raftRequestId,
             string databaseName,
+            WaitForIndexFunc waitForIndex,
             RefAction<BlittableJsonReaderObject> beforeSetupConfiguration = null,
             Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
             HttpStatusCode statusCode = HttpStatusCode.OK)
@@ -39,7 +42,7 @@ namespace Raven.Server.Web
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                var result = await DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, databaseName, configurationJson, beforeSetupConfiguration);
+                var result = await DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, databaseName, configurationJson, waitForIndex, beforeSetupConfiguration);
 
                 if (result.Configuration == null)
                     return;
@@ -62,7 +65,8 @@ namespace Raven.Server.Web
             TransactionOperationContext context, 
             string raftRequestId, 
             string databaseName, 
-            T configurationJson, 
+            T configurationJson,
+            WaitForIndexFunc waitForIndex,
             RefAction<T> beforeSetupConfiguration = null)
         {
             if (await CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
@@ -73,29 +77,31 @@ namespace Raven.Server.Web
 
             await ServerStore.EnsureNotPassiveAsync();
 
-            beforeSetupConfiguration?.Invoke(databaseName, ref configurationJson, context, ServerStore);
+            beforeSetupConfiguration?.Invoke(databaseName, ref configurationJson, context);
 
             var (index, _) = await setupConfigurationFunc(context, databaseName, configurationJson, raftRequestId);
-            await WaitForIndexToBeApplied(context, index);
+            await waitForIndex(context, index);
 
             return (index, configurationJson);
         }
 
+        /*
         protected async Task PutConnectionString(string databaseName)
         {
             await DatabaseConfigurations(ServerStore.PutConnectionString, "put-connection-string", GetRaftRequestIdFromQuery(), databaseName);
         }
+        */
 
-        protected async Task ResetEtl(string databaseName)
+        protected async Task ResetEtl(string databaseName, WaitForIndexFunc waitForIndex)
         {
             var configurationName = GetStringQueryString("configurationName"); // etl task name
             var transformationName = GetStringQueryString("transformationName");
 
             await DatabaseConfigurations((_, db, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, db, configurationName, transformationName, guid),
-                "etl-reset", GetRaftRequestIdFromQuery(), databaseName);
+                "etl-reset", GetRaftRequestIdFromQuery(), databaseName, waitForIndex);
         }
 
-        protected async Task AddEtl(string databaseName)
+        protected async Task AddEtl(string databaseName, WaitForIndexFunc waitForIndex)
         {
             var id = GetLongQueryString("id", required: false);
 
@@ -105,6 +111,7 @@ namespace Raven.Server.Web
                         ServerStore.AddEtl(_, db, etlConfiguration, guid), "etl-add",
                     GetRaftRequestIdFromQuery(),
                     databaseName,
+                    waitForIndex,
                     beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                     fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
@@ -121,6 +128,7 @@ namespace Raven.Server.Web
             }, "etl-update",
                 GetRaftRequestIdFromQuery(),
                 databaseName,
+                waitForIndex,
                 beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
@@ -227,7 +235,7 @@ namespace Raven.Server.Web
             }
         }
 
-        protected async Task RemoveConnectionString(string databaseName)
+        protected async Task RemoveConnectionString(string databaseName, WaitForIndexFunc waitForIndex)
         {
             if (await CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
                 return;
@@ -241,11 +249,12 @@ namespace Raven.Server.Web
             await ServerStore.EnsureNotPassiveAsync();
 
             var (index, _) = await ServerStore.RemoveConnectionString(databaseName, connectionStringName, type, GetRaftRequestIdFromQuery());
-            await ServerStore.Cluster.WaitForIndexNotification(index);
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                await waitForIndex(context, index);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
@@ -302,6 +311,34 @@ namespace Raven.Server.Web
             }
         }
 
+        protected async Task UpdatePeriodicBackup(string databaseName, WaitForIndexFunc waitForIndex)
+        {
+            await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
+                "update-periodic-backup",
+                GetRaftRequestIdFromQuery(),
+                databaseName,
+                waitForIndex,
+                beforeSetupConfiguration: (string dbName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
+                {
+                    var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
+
+                    ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+                    BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
+                    BackupConfigurationHelper.AssertBackupConfiguration(configuration);
+                    BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
+
+                    readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
+                },
+                fillJson: (json, readerObject, index) =>
+                {
+                    var taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
+                    readerObject.TryGet(taskIdName, out long taskId);
+                    if (taskId == 0)
+                        taskId = index;
+                    json[taskIdName] = taskId;
+                });
+        }
+
         private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
             GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
@@ -355,21 +392,21 @@ namespace Raven.Server.Web
             return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings);
         }
 
-        private static void AssertCanAddOrUpdateEtl(string databaseName, ref BlittableJsonReaderObject etlConfiguration, JsonOperationContext context, ServerStore serverStore)
+        private void AssertCanAddOrUpdateEtl(string databaseName, ref BlittableJsonReaderObject etlConfiguration, JsonOperationContext context)
         {
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                    serverStore.LicenseManager.AssertCanAddRavenEtl();
+                    ServerStore.LicenseManager.AssertCanAddRavenEtl();
                     break;
                 case EtlType.Sql:
-                    serverStore.LicenseManager.AssertCanAddSqlEtl();
+                    ServerStore.LicenseManager.AssertCanAddSqlEtl();
                     break;
                 case EtlType.Olap:
-                    serverStore.LicenseManager.AssertCanAddOlapEtl();
+                    ServerStore.LicenseManager.AssertCanAddOlapEtl();
                     break;
                 case EtlType.ElasticSearch:
-                    serverStore.LicenseManager.AssertCanAddElasticSearchEtl();
+                    ServerStore.LicenseManager.AssertCanAddElasticSearchEtl();
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");

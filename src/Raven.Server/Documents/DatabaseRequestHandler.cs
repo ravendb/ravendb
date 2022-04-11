@@ -3,8 +3,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Util;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -74,6 +72,7 @@ namespace Raven.Server.Documents
                 debug,
                 raftRequestId,
                 Database.Name,
+                WaitForIndexToBeAppliedAsync,
                 beforeSetupConfiguration,
                 fillJson,
                 statusCode
@@ -82,7 +81,7 @@ namespace Raven.Server.Documents
 
         protected Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context, string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
         {
-            return DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, configurationJson, beforeSetupConfiguration);
+            return DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, configurationJson, WaitForIndexToBeAppliedAsync, beforeSetupConfiguration);
         }
 
         public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)

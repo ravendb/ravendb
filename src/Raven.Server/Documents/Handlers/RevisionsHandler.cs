@@ -13,7 +13,6 @@ using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 

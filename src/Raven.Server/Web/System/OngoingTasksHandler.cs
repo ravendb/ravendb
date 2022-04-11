@@ -202,7 +202,7 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
                 GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context, ServerStore serverStore) =>
+                beforeSetupConfiguration: (string dbName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
                 {
                     var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
 
@@ -455,13 +455,13 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
         {
-            await ResetEtl(Database.Name);
+            await ResetEtl(Database.Name, WaitForIndexToBeAppliedAsync);
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-            await AddEtl(Database.Name);
+            await AddEtl(Database.Name, WaitForIndexToBeAppliedAsync);
         }
 
         private OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
