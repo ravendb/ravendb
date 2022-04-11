@@ -23,7 +23,7 @@ namespace SlowTests.Sharding.Queries
         {
             DoNotReuseServer();
 
-            var error = Assert.Throws<NotSupportedInShardingException>(() =>
+            var error = Assert.Throws<RavenException>(() =>
             {
                 using (Sharding.GetDocumentStore(new Options
                        {
@@ -49,7 +49,7 @@ namespace SlowTests.Sharding.Queries
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var err = await Assert.ThrowsAsync<RavenException>(async () =>
+                    var err = await Assert.ThrowsAsync<NotSupportedInShardingException>(async () =>
                         await session
                             .Advanced
                             .AsyncRawQuery<Company>("from Companies order by custom(Name, 'MySorter')")
@@ -70,7 +70,7 @@ namespace SlowTests.Sharding.Queries
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var err = await Assert.ThrowsAsync<RavenException>(async () =>
+                    var err = await Assert.ThrowsAsync<NotSupportedInShardingException>(async () =>
                         await store.Maintenance.SendAsync(new PutSortersOperation(new SorterDefinition
                         {
                             Name = "MySorter",
