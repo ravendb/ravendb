@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void CanUseCustomSorter(Options options)
         {
             var sorterName = GetDatabaseName();
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void CanOverrideCustomSorter(Options options)
         {
             var sorterName = GetDatabaseName();

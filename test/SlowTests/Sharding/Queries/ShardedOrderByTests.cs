@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Sorters;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Sharding;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,7 +23,7 @@ namespace SlowTests.Sharding.Queries
         {
             DoNotReuseServer();
 
-            var error = Assert.Throws<RavenException>(() =>
+            var error = Assert.Throws<NotSupportedInShardingException>(() =>
             {
                 using (Sharding.GetDocumentStore(new Options
                        {
