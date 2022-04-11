@@ -13,7 +13,7 @@ namespace Raven.Abstractions.Util
         private readonly Stream wrapped;
         private readonly bool leaveOpen;
 
-        private int pos = 0;
+        private long pos = 0;
 
         public PositionWrapperStream(Stream wrapped, bool leaveOpen)
         {
