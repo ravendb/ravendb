@@ -12,10 +12,12 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.Sharding.Handlers
@@ -25,21 +27,23 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/connection-strings", "PUT")]
         public async Task PutConnectionString()
         {
-            await OngoingTasksHandler.PutConnectionString(DatabaseContext.DatabaseName, this);
+            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
 
         [RavenShardedAction("/databases/*/admin/connection-strings", "GET")]
         public async Task GetConnectionStrings()
         {
-            await OngoingTasksHandler.GetConnectionStrings(DatabaseContext.DatabaseName, this);
-
+            using (var processor = new OngoingTasksHandlerProcessorForGetConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/connection-strings", "DELETE")]
         public async Task RemoveConnectionString()
         {
-            await OngoingTasksHandler.RemoveConnectionString(DatabaseContext.DatabaseName, this);
+            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/etl", "PUT")]
@@ -137,7 +141,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/periodic-backup/config", "GET")]
         public async Task GetConfiguration()
         {
-            await OngoingTasksHandler.GetBackupConfiguration(this);
+            using (var processor = new OngoingTasksHandlerProcessorForGetPeriodicBackupConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/backup-data-directory", "GET")]
+        public async Task FullBackupDataDirectory()
+        {
+            using (var processor = new OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
     }
 }

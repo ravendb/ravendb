@@ -16,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
@@ -27,6 +28,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -98,7 +100,7 @@ namespace Raven.Server.Web.Studio
         internal static async Task GetFolderPathOptionsInternal(
             ServerStore serverStore,
             StringValues types,
-            bool isBackupFolder, 
+            bool isBackupFolder,
             string path,
             Func<Stream> requestBodyStream,
             Func<Stream> responseBodyStream)
@@ -122,7 +124,7 @@ namespace Raven.Server.Web.Studio
                 switch (connectionType)
                 {
                     case PeriodicBackupConnectionType.Local:
-                        
+
                         folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, serverStore.Configuration);
                         break;
 
@@ -291,89 +293,8 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task TestPeriodicBackupCredentials()
         {
-            await TestPeriodicBackupCredentials(this);
-        }
-
-        public static async Task TestPeriodicBackupCredentials(RequestHandler requestHandler)
-        {
-            var type = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
-                throw new ArgumentException($"Unknown backup connection: {type}");
-
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                DynamicJsonValue result;
-                try
-                {
-                    var connectionInfo = await context.ReadForMemoryAsync(requestHandler.RequestBodyStream(), "test-connection");
-                    switch (connectionType)
-                    {
-                        case PeriodicBackupConnectionType.S3:
-                            var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(s3Settings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
-                            {
-                                await awsClient.TestConnectionAsync();
-                            }
-                            break;
-
-                        case PeriodicBackupConnectionType.Glacier:
-                            var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
-                            {
-                                await glacierClient.TestConnectionAsync();
-                            }
-                            break;
-
-                        case PeriodicBackupConnectionType.Azure:
-                            var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = RavenAzureClient.Create(azureSettings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
-                            {
-                                await azureClient.TestConnectionAsync();
-                            }
-                            break;
-
-                        case PeriodicBackupConnectionType.GoogleCloud:
-                            var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
-                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, requestHandler.ServerStore.Configuration.Backup, cancellationToken: requestHandler.ServerStore.ServerShutdown))
-                            {
-                                await googleCloudClient.TestConnection();
-                            }
-                            break;
-
-                        case PeriodicBackupConnectionType.FTP:
-                            var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                            using (var ftpClient = new RavenFtpClient(ftpSettings))
-                            {
-                                ftpClient.TestConnection();
-                            }
-                            break;
-
-                        case PeriodicBackupConnectionType.Local:
-                        case PeriodicBackupConnectionType.None:
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-                    result = new DynamicJsonValue
-                    {
-                        [nameof(NodeConnectionTestResult.Success)] = true,
-                    };
-                }
-                catch (Exception e)
-                {
-                    result = new DynamicJsonValue
-                    {
-                        [nameof(NodeConnectionTestResult.Success)] = false,
-                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
-                    };
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
-                {
-                    context.Write(writer, result);
-                }
-            }
+            using (var processor = new StudioTasksHandlerProcessorForTestPeriodicBackupCredentials<RequestHandler, TransactionOperationContext>(this, ServerStore.ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -401,11 +322,11 @@ namespace Raven.Server.Web.Studio
                     case ItemType.Index:
                         isValid = IndexStore.IsValidIndexName(name, isStatic: true, out errorMessage);
                         break;
-                    
+
                     case ItemType.Script:
                         isValid = ResourceNameValidator.IsValidFileName(name, out errorMessage);
                         break;
-                    
+
                     case ItemType.ElasticSearchIndex:
                         isValid = ElasticSearchIndexValidator.IsValidIndexName(name, out errorMessage);
                         break;
