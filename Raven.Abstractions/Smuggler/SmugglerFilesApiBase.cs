@@ -296,7 +296,7 @@ namespace Raven.Abstractions.Smuggler
             if (exceptionHappened != null)
                 throw exceptionHappened;
 
-            Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+            Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
             return lastEtag;
         }
 
@@ -445,7 +445,7 @@ namespace Raven.Abstractions.Smuggler
             if (exceptionHappened != null)
                 throw exceptionHappened;
 
-            Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+            Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
             return lastEtag;
         }
 
@@ -978,7 +978,7 @@ namespace Raven.Abstractions.Smuggler
             if (exceptionHappened != null)
                 throw exceptionHappened;
 
-            Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalFiles, lastEtag);
+            Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalFiles, lastEtag);
             return lastEtag;
         }
     }
