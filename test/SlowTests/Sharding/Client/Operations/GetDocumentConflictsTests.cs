@@ -24,7 +24,7 @@ namespace SlowTests.Sharding.Client.Operations
         {
         }
 
-        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Revisions)]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetReplicationDocumentConflictsByEtag()
         {
             using var store = GetDocumentStore();
@@ -51,8 +51,6 @@ namespace SlowTests.Sharding.Client.Operations
                     var expected = 20; // 2 conflicts per doc
                     Assert.Equal(expected, conflicts.Count);
 
-                    var fromEtag = conflicts[12].Etag;
-
                     var totalResults = db.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context);
                     expected = 10;
                     Assert.Equal(expected, totalResults);
@@ -60,13 +58,13 @@ namespace SlowTests.Sharding.Client.Operations
                     var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(etag: 0));
                     Assert.Equal(20, documentsConflict.Results.Length);
 
-                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(etag: fromEtag));
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(etag: 12));
                     Assert.Equal(8, documentsConflict.Results.Length);
                 }
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding | RavenTestCategory.Revisions)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetReplicationDocumentConflictsByEtagForSharding()
         {
             using var store = Sharding.GetDocumentStore();
@@ -94,18 +92,17 @@ namespace SlowTests.Sharding.Client.Operations
                     var conflicts = db.DocumentsStorage.ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: 0).ToList();
                     Assert.Equal(20, conflicts.Count); // 2 conflicts per doc
 
-                    var fromEtag = conflicts[12].Etag;
+                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(0, pageSize: 15));
+                    Assert.Equal(15, documentsConflict.Results.Length);
 
-                    var documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation());
-                    Assert.Equal(20, documentsConflict.Results.Length);
-
-                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(etag: fromEtag));
-                    Assert.Equal(8, documentsConflict.Results.Length);
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsByEtagOperation(documentsConflict.ContinuationToken));
+                    Assert.Equal(5, documentsConflict.Results.Length);
+                    Assert.Equal(20, documentsConflict.TotalResults);
                 }
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Revisions)]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetReplicationDocumentConflictsByDocId()
         {
             using var store = GetDocumentStore();
@@ -141,7 +138,7 @@ namespace SlowTests.Sharding.Client.Operations
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding | RavenTestCategory.Revisions)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Sharding)]
         public async Task CanGetReplicationDocumentConflictsByDocIdForSharding()
         {
             using var store = Sharding.GetDocumentStore();

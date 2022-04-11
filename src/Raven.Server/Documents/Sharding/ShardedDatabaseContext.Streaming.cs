@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
@@ -162,6 +163,100 @@ namespace Raven.Server.Documents.Sharding
                 await foreach (var result in PagedShardedDocumentsByLastModified(documents, resultPropertyName, pagingContinuation))
                 {
                     yield return result.Item;
+                }
+            }
+
+            public IEnumerable<T> PagedShardedItem<T, TInput>(
+                Memory<TInput> results,
+                Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
+                Func<BlittableJsonReaderObject, T> converter,
+                Comparer<ShardStreamItem<T>> comparer,
+                ShardedPagingContinuation pagingContinuation)
+            {
+                var pageSize = pagingContinuation.PageSize;
+                foreach (var result in CombinedResults(results, selector, converter, comparer))
+                {
+                    if (pageSize-- <= 0)
+                        yield break;
+
+                    var shard = result.Shard;
+                    pagingContinuation.Pages[shard].Start++;
+
+                    yield return result.Item;
+                }
+            }
+
+            public IEnumerable<T> PagedShardedItem<T, TInput>(
+                Memory<TInput> results,
+                Func<TInput, IEnumerable<T>> selector,
+                Comparer<ShardStreamItem<T>> comparer,
+                ShardedPagingContinuation pagingContinuation)
+            {
+                var pageSize = pagingContinuation.PageSize;
+                foreach (var result in CombinedResults(results, selector, comparer))
+                {
+                    if (pageSize-- <= 0)
+                        yield break;
+
+                    var shard = result.Shard;
+                    pagingContinuation.Pages[shard].Start++;
+
+                    yield return result.Item;
+                }
+            }
+
+            public IEnumerable<ShardStreamItem<T>> CombinedResults<T, TInput>(
+                Memory<TInput> results,
+                Func<TInput, IEnumerable<T>> selector,
+                Comparer<ShardStreamItem<T>> comparer)
+            {
+                var shards = results.Span.Length;
+                using (var merged = new MergedEnumerator<ShardStreamItem<T>>(comparer))
+                {
+                    for (int i = 0; i < shards; i++)
+                    {
+                        var shardNumber = i;
+                        var r = selector(results.Span[i]);
+                        var it = r.Select(item => new ShardStreamItem<T>
+                        {
+                            Item = item,
+                            Shard = shardNumber
+                        });
+                        merged.AddEnumerator(it.GetEnumerator());
+                    }
+
+                    while (merged.MoveNext())
+                    {
+                        yield return merged.Current;
+                    }
+                }
+            }
+
+            public IEnumerable<ShardStreamItem<T>> CombinedResults<T, TInput>(
+                Memory<TInput> results,
+                Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
+                Func<BlittableJsonReaderObject, T> converter,
+                Comparer<ShardStreamItem<T>> comparer)
+            {
+                var shards = results.Span.Length;
+                using (var merged = new MergedEnumerator<ShardStreamItem<T>>(comparer))
+                {
+                    for (int i = 0; i < shards; i++)
+                    {
+                        var shardNumber = i;
+                        var r = selector(results.Span[i]);
+                        var it = r.Select(item => new ShardStreamItem<T>
+                        {
+                            Item = converter(item),
+                            Shard = shardNumber
+                        });
+                        merged.AddEnumerator(it.GetEnumerator());
+                    }
+
+                    while (merged.MoveNext())
+                    {
+                        yield return merged.Current;
+                    }
                 }
             }
 

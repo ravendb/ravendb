@@ -2,7 +2,7 @@
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
-{  
+{
     public class GetConflictsResult
     {
         public string Id { get; set; }
@@ -28,6 +28,8 @@ namespace Raven.Client.Documents.Commands
         public ResultByEtag[] Results { get; internal set; }
 
         public long TotalResults { get; set; }
+
+        public string ContinuationToken { get; set; }
 
         public class ResultByEtag
         {

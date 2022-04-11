@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(DocumentsOperationContext context, long etag)
+        protected override Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(DocumentsOperationContext context, long etag, int pageSize)
         {
             using (context.OpenReadTransaction())
             {
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                 await WriteDocumentConflicts(context, documentId, conflicts);
             }
         }
-
+        
         private async Task WriteDocumentConflicts(JsonOperationContext context, string documentId, IEnumerable<DocumentConflict> conflicts)
         {
             long maxEtag = 0;
