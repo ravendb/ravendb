@@ -129,6 +129,7 @@ namespace Raven.Client.Documents.BulkInsert
             _requestExecutor = store.GetRequestExecutor(database);
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _writer = new BulkInsertWriter(_context, _token);
+            _writer.Initialize();
             _countersOperation = new CountersBulkInsertOperation(this);
             _attachmentsOperation = new AttachmentsBulkInsertOperation(this);
 
