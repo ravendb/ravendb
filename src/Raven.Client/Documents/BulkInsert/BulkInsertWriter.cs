@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Json;
@@ -9,7 +8,7 @@ namespace Raven.Client.Documents.BulkInsert;
 
 internal class BulkInsertWriter : BulkInsertWriterBase
 {
-    private StreamWriter[] _writers = new StreamWriter[2];
+    private readonly StreamWriter[] _writers = new StreamWriter[2];
 
     public BulkInsertWriter(JsonOperationContext ctx, CancellationToken token) : base(ctx, token)
     {

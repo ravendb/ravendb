@@ -35,9 +35,6 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         _backgroundWriteStream = new MemoryStream();
         _asyncWrite = Task.CompletedTask;
 
-        // ReSharper disable once VirtualMemberCallInConstructor
-        OnCurrentWriteStreamSet(_currentWriteStream);
-
         var returnMemoryBuffer = ctx.GetMemoryBuffer(out _memoryBuffer);
         var returnBackgroundMemoryBuffer = ctx.GetMemoryBuffer(out _backgroundMemoryBuffer);
 
@@ -75,6 +72,11 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
                 }
             }
         });
+    }
+
+    public void Initialize()
+    {
+        OnCurrentWriteStreamSet(_currentWriteStream);
     }
 
     public virtual async Task FlushIfNeeded(bool force = false)

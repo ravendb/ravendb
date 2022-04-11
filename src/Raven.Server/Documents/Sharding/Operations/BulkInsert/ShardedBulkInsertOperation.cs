@@ -47,6 +47,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
             _returnContexts.Add(returnContext);
 
             _writers[shardNumber] = new ShardedBulkInsertWriter(context, token);
+            _writers[shardNumber].Initialize();
         }
     }
 
