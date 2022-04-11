@@ -41,7 +41,7 @@ namespace FastTests
             /// <summary>
             /// Run backup with provided task id and wait for completion. Full backup by default.
             /// </summary>
-            public async Task<long> RunBackupAsync(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
+            public async Task<long> RunBackupAsync(RavenServer server, long taskId, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
@@ -70,7 +70,7 @@ namespace FastTests
             /// Update backup config, run backup and wait for completion. Full backup by default.
             /// </summary>
             /// <returns>TaskId</returns>
-            public async Task<long> UpdateConfigAndRunBackupAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
+            public async Task<long> UpdateConfigAndRunBackupAsync(RavenServer server, PeriodicBackupConfiguration config, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 await RunBackupAsync(server, result.TaskId, store, isFullBackup, opStatus, timeout);
@@ -414,7 +414,7 @@ namespace FastTests
                 return string.Join(Environment.NewLine, result.Messages);
             }
 
-            private static async Task CheckBackupOperationStatus(OperationStatus expected, OperationStatus actual, DocumentStore store, long taskId, long opId,
+            private static async Task CheckBackupOperationStatus(OperationStatus expected, OperationStatus actual, IDocumentStore store, long taskId, long opId,
                 PeriodicBackupRunner periodicBackupRunner)
             {
                 if (expected == OperationStatus.Completed && actual == OperationStatus.Faulted)

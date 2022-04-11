@@ -1273,6 +1273,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal bool SimulateFailedBackup;
 
             internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
+
+            internal Action AfterBackupBatchCompleted;
         }
     }
 }

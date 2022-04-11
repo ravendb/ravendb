@@ -57,13 +57,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/etl", "PUT")]
         public async Task AddEtl()
         {
-            await AddEtl(DatabaseContext.DatabaseName);
+            await AddEtl(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
         }
 
         [RavenShardedAction("/databases/*/admin/etl", "RESET")]
         public async Task ResetEtl()
         {
-            await ResetEtl(DatabaseContext.DatabaseName);
+            await ResetEtl(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
         }
 
         [RavenShardedAction("/databases/*/admin/tasks", "DELETE")]
@@ -71,13 +71,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).First();
 
-            await DeleteOngoingTask(DatabaseContext.DatabaseName, database, waitForIndex: WaitForIndexToBeApplied);
+            await DeleteOngoingTask(DatabaseContext.DatabaseName, database, WaitForIndexToBeAppliedAsync);
         }
 
         [RavenShardedAction("/databases/*/admin/tasks/state", "POST")]
         public async Task ToggleTaskState()
         {
-            await ToggleTaskState(DatabaseContext.DatabaseName, waitForIndex: WaitForIndexToBeApplied);
+            await ToggleTaskState(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
@@ -146,6 +146,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     }
                 }
             }
+        }
+
+
+        [RavenShardedAction("/databases/*/admin/periodic-backup", "POST")]
+        public async Task UpdatePeriodicBackup()
+        {
+            await UpdatePeriodicBackup(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
         }
 
         [RavenShardedAction("/databases/*/admin/periodic-backup/config", "GET")]

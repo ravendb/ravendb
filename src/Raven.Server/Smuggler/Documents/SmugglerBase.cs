@@ -1003,7 +1003,7 @@ namespace Raven.Server.Smuggler.Documents
             CancellationToken token = default)
         {
             return options?.IsShard == true ?
-                new SingleShardDatabaseSmuggler(database, source, destination, time, context, options , result , onProgress , token) :
+                new SingleShardDatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token) :
                 new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
         }
 

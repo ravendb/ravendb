@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
-                        DatabaseSmuggler.EnsureProcessed(_backupResult);
+                        SmugglerBase.EnsureProcessed(_backupResult);
                         AddInfo(message);
 
                         return _backupResult;
@@ -204,6 +204,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info($"Successfully created {(_isFullBackup ? fullBackupText : "an incremental backup")} " +
                                  $"in {totalSw.ElapsedMilliseconds:#,#;;0} ms");
                 }
+
+                _forTestingPurposes?.AfterBackupBatchCompleted?.Invoke();
 
                 return _backupResult;
             }

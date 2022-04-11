@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -87,6 +89,25 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
 
             return Task.CompletedTask;
+        }
+
+        protected Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
+            string debug,
+            string raftRequestId,
+            RefAction<BlittableJsonReaderObject> beforeSetupConfiguration = null,
+            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
+            HttpStatusCode statusCode = HttpStatusCode.OK)
+        {
+            return DatabaseConfigurations(
+                setupConfigurationFunc,
+                debug,
+                raftRequestId,
+                DatabaseContext.DatabaseName,
+                WaitForIndexToBeAppliedAsync,
+                beforeSetupConfiguration,
+                fillJson,
+                statusCode
+            );
         }
 
         public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
