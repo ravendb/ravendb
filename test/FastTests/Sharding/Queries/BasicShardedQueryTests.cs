@@ -660,7 +660,7 @@ select project(o)")
 
                     Indexes.WaitForIndexing(store);
 
-                    var exception = Assert.Throws<RavenException>(() => (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
+                    var exception = Assert.Throws<NotSupportedInShardingException>(() => (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
                                                                          let anotherUser = RavenQuery.Load<User>(user.Name)
                                                                          select new
                                                                          {
