@@ -3,9 +3,9 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override ValueTask<(TimeSeriesRangeResult Result, long? TotalResults, HttpStatusCode StatusCode)> GetTimeSeriesAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
+        protected override async ValueTask GetTimeSeriesAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
             int start, int pageSize, bool includeDoc,
             bool includeTags, bool fullResults)
         {
@@ -25,7 +25,8 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, docId, name);
                 if (stats == default)
                 {
-                    return ValueTask.FromResult<(TimeSeriesRangeResult Result, long? TotalResults, HttpStatusCode StatusCode)>((null, null, HttpStatusCode.NotFound));
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
                 }
 
                 var includesCommand = includeDoc || includeTags
@@ -43,13 +44,11 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 var etag = RequestHandler.GetStringFromHeaders("If-None-Match");
                 if (etag == hash)
                 {
-                    return ValueTask.FromResult<(TimeSeriesRangeResult Result, long? TotalResults, HttpStatusCode StatusCode)>((null, null, HttpStatusCode.NotModified));
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
                 }
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + hash + "\"";
-
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
-                    "Make sure etag returns in the stream to the original caller.");
 
                 long? totalCount = null;
                 if (from <= stats.Start && to >= stats.End)
@@ -57,7 +56,10 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     totalCount = stats.Count;
                 }
 
-                return ValueTask.FromResult((rangeResult, totalCount, HttpStatusCode.OK));
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    WriteRange(writer, rangeResult, totalCount);
+                }
             }
         }
     }
