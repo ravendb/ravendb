@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -8,24 +9,32 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
     internal class ShardedReplicationHandlerProcessorForGetConflicts : AbstractReplicationHandlerProcessorForGetConflicts<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
+        private ShardedPagingContinuation _continuationToken;
+
         public ShardedReplicationHandlerProcessorForGetConflicts([NotNull] ShardedDatabaseRequestHandler requestHandler)
             : base(requestHandler, requestHandler.ContextPool)
         {
         }
 
-        protected override async Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(TransactionOperationContext context, long etag)
+        protected override async Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(TransactionOperationContext context, long etag, int pageSize)
         {
-            var op = new ShardedGetReplicationConflictsOperation(RequestHandler.HttpContext, etag);
-            var conflicts = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+            _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, (int)etag, pageSize);
 
-            return conflicts;
+            var op = new ShardedGetReplicationConflictsOperation(RequestHandler, _continuationToken);
+            var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+            result.ContinuationToken = _continuationToken.ToBase64(context);
+
+            return result;
         }
 
         protected override async Task GetConflictsForDocumentAsync(TransactionOperationContext context, string documentId)
@@ -38,47 +47,37 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
         internal readonly struct ShardedGetReplicationConflictsOperation : IShardedOperation<GetConflictsResultByEtag>
         {
-            private readonly HttpContext _httpContext;
-            private readonly long _etag;
+            private readonly ShardedDatabaseRequestHandler _handler;
+            private readonly ShardedPagingContinuation _token;
 
-            public ShardedGetReplicationConflictsOperation(HttpContext httpContext, long etag)
+            public ShardedGetReplicationConflictsOperation(ShardedDatabaseRequestHandler handler, ShardedPagingContinuation continuationToken)
             {
-                _httpContext = httpContext;
-                _etag = etag;
+                _handler = handler;
+                _token = continuationToken;
             }
 
-            public HttpRequest HttpRequest => _httpContext.Request;
+            public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
             public GetConflictsResultByEtag Combine(Memory<GetConflictsResultByEtag> results)
             {
                 var span = results.Span;
+                var final = new GetConflictsResultByEtag();
 
-                int len = 0;
-                foreach (var s in span)
-                {
-                    if (s != null)
-                        len += s.Results.Length;
-                }
-
-                if (len == 0)
-                    return null;
-
-                var conflicts = new List<GetConflictsResultByEtag.ResultByEtag>();
-                long totalResults = 0;
+                final.Results = _handler.DatabaseContext.Streaming.PagedShardedItem(
+                    results,
+                    selector: r => r.Results,
+                    Comparer<ShardStreamItem<GetConflictsResultByEtag.ResultByEtag>>.Default,
+                    _token).ToArray();
 
                 foreach (var s in span)
                 {
-                    totalResults += s.TotalResults;
-                    foreach (var res in s.Results)
-                    {
-                        conflicts.Add(res);
-                    }
+                    final.TotalResults += s.TotalResults;
                 }
 
-                return new GetConflictsResultByEtag { Results = conflicts.ToArray(), TotalResults = totalResults };
+                return final;
             }
 
-            public RavenCommand<GetConflictsResultByEtag> CreateCommandForShard(int shard) => new GetConflictsByEtagOperation.GetConflictsByEtagCommand(etag: _etag);
+            public RavenCommand<GetConflictsResultByEtag> CreateCommandForShard(int shard) => new GetConflictsByEtagOperation.GetConflictsByEtagCommand(_token.Pages[shard].Start, _token.PageSize);
         }
     }
 }

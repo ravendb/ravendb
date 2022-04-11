@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected abstract Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(TOperationContext context, long etag);
+        protected abstract Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(TOperationContext context, long etag, int pageSize);
 
         protected abstract Task GetConflictsForDocumentAsync(TOperationContext context, string documentId);
 
@@ -24,20 +24,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             var docId = RequestHandler.GetStringQueryString("docId", required: false);
             var etag = RequestHandler.GetLongQueryString("etag", required: false) ?? 0;
+            var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
                 if (string.IsNullOrWhiteSpace(docId))
                 {
-                    var result = await GetConflictsByEtagAsync(context, etag);
-                    await WriteResultsByEtagAsync(context, result);
+                    var result = await GetConflictsByEtagAsync(context, etag, pageSize);
+                    await WriteResultsAsync(context, result);
                 }
                 else
                     await GetConflictsForDocumentAsync(context, docId);
             }
         }
 
-        private async Task WriteResultsByEtagAsync(JsonOperationContext context, GetConflictsResultByEtag result)
+        protected async ValueTask WriteResultsAsync(JsonOperationContext context, GetConflictsResultByEtag result)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
@@ -48,14 +49,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                     array.Add(new DynamicJsonValue
                     {
                         [nameof(GetConflictsResultByEtag.ResultByEtag.Id)] = conflict.Id,
-                        [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified
+                        [nameof(GetConflictsResultByEtag.ResultByEtag.LastModified)] = conflict.LastModified
                     });
                 }
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(GetConflictsResult.TotalResults)] = result.TotalResults,
-                    [nameof(GetConflictsResult.Results)] = array
+                    [nameof(GetConflictsResultByEtag.TotalResults)] = result.TotalResults,
+                    [nameof(GetConflictsResultByEtag.Results)] = array,
+                    [nameof(GetConflictsResultByEtag.ContinuationToken)] = result.ContinuationToken
                 });
             }
         }

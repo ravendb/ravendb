@@ -104,13 +104,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public GetConflictsResultByEtag GetConflictsResultByEtag(DocumentsOperationContext context, long etag, long skip = 0)
+        public GetConflictsResultByEtag GetConflictsResultByEtag(DocumentsOperationContext context, long skip = 0)
         {
-            var result = new GetConflictsResultByEtag();
+            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
+
             var conflicts = new List<GetConflictsResultByEtag.ResultByEtag>();
-            
-            foreach (var documentConflict in GetConflictsFrom(context, etag, skip))
+            foreach (var tvr in table.SeekBackwardFromLast(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], skip))
             {
+                var documentConflict = TableValueToConflictDocument(context, ref tvr.Reader);
+
                 var conflict = new GetConflictsResultByEtag.ResultByEtag
                 {
                     Id = documentConflict.Id,
@@ -120,9 +122,11 @@ namespace Raven.Server.Documents
                 conflicts.Add(conflict);
             }
 
-            result.TotalResults = GetNumberOfDocumentsConflicts(context);
-            result.Results = conflicts.ToArray();
-            return result;
+            return new GetConflictsResultByEtag
+            {
+                TotalResults = GetNumberOfConflicts(context),
+                Results = conflicts.ToArray()
+            };
         }
 
 
@@ -280,7 +284,7 @@ namespace Raven.Server.Documents
                         _documentsStorage.RevisionsStorage.Put(
                             context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions, nonPersistentFlags, conflicted.ChangeVector,
                             conflicted.LastModified.Ticks,
-                            collectionName: collection, 
+                            collectionName: collection,
                             configuration: _documentsStorage.RevisionsStorage.ConflictConfiguration.Default);
                     }
                     else if (conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
@@ -352,7 +356,7 @@ namespace Raven.Server.Documents
             {
                 if (conflictsTable.DeleteByKey(changeVectorSlice) == false)
                     return;
-                
+
                 var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
                 tx.AfterCommitWhenNewTransactionsPrevented += _ =>
                 {
@@ -498,9 +502,9 @@ namespace Raven.Server.Documents
                     {
                         AddToConflictsTable(existingDoc.ChangeVector,
                             collectionName.Name,
-                            existingDoc.Data.BasePointer, 
-                            existingDoc.Data.Size, 
-                            existingDoc.LastModified.Ticks, 
+                            existingDoc.Data.BasePointer,
+                            existingDoc.Data.Size,
+                            existingDoc.LastModified.Ticks,
                             (int)existingDoc.Flags);
                     }
 
