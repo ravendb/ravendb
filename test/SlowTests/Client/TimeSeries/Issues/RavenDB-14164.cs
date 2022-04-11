@@ -1,8 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Exceptions;
-using Raven.Server.Exceptions;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -68,7 +66,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                     {
-                        var ex = Assert.Throws<RavenException>(getResultsFunc);
+                        var ex = Assert.Throws<NotSupportedInShardingException>(getResultsFunc);
                         Assert.Contains("Include tags of time series is not supported in sharding", ex.Message);
                         return;
                     }
