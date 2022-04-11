@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
@@ -22,20 +21,13 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
+        private readonly string _databaseName;
+
         public OngoingTasksHandlerProcessorForGetConnectionString([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+            [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
             : base(requestHandler, contextPool)
         {
-        }
-
-        private string GetDatabaseName()
-        {
-            return RequestHandler switch
-            {
-                ShardedDatabaseRequestHandler sharded => sharded.DatabaseContext.DatabaseName,
-                DatabaseRequestHandler database => database.Database.Name,
-                _ => null
-            };
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
         private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
@@ -93,12 +85,10 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         public override async ValueTask ExecuteAsync()
         {
-            var databaseName = GetDatabaseName();
-
-            if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(_databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            if (await RequestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: false) == false)
+            if (await RequestHandler.CanAccessDatabaseAsync(_databaseName, requireAdmin: true, requireWrite: false) == false)
                 return;
 
             var connectionStringName = RequestHandler.GetStringQueryString("connectionStringName", false);
@@ -115,7 +105,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
 
                 using (context.OpenReadTransaction())
-                using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
                 {
                     if (connectionStringName != null)
                     {

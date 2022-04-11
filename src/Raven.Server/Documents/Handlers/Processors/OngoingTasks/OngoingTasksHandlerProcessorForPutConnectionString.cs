@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Web;
 using Sparrow.Json;
 
@@ -11,28 +11,20 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
+        private readonly string _databaseName;
+
         public OngoingTasksHandlerProcessorForPutConnectionString([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+            [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
             : base(requestHandler, contextPool)
         {
-        }
-
-        private string GetDatabaseName()
-        {
-            return RequestHandler switch
-            {
-                ShardedDatabaseRequestHandler sharded => sharded.DatabaseContext.DatabaseName,
-                DatabaseRequestHandler database => database.Database.Name,
-                _ => null
-            };
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
         public override async ValueTask ExecuteAsync()
         {
-            var databaseName = GetDatabaseName();
             await DatabaseRequestHandler.DatabaseConfigurations(RequestHandler.ServerStore.PutConnectionString, "put-connection-string",
                 RequestHandler.GetRaftRequestIdFromQuery(),
-                databaseName, RequestHandler);
+                _databaseName, RequestHandler);
         }
     }
 }

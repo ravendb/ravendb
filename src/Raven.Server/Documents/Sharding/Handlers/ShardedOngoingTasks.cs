@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/connection-strings", "PUT")]
         public async Task PutConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool, DatabaseContext.DatabaseName))
                 await processor.ExecuteAsync();
         }
 
@@ -35,14 +35,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/connection-strings", "GET")]
         public async Task GetConnectionStrings()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForGetConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForGetConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool, DatabaseContext.DatabaseName))
                 await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/connection-strings", "DELETE")]
         public async Task RemoveConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool, DatabaseContext.DatabaseName))
                 await processor.ExecuteAsync();
         }
 
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/backup-data-directory", "GET")]
         public async Task FullBackupDataDirectory()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool, DatabaseContext.DatabaseName))
                 await processor.ExecuteAsync();
         }
     }

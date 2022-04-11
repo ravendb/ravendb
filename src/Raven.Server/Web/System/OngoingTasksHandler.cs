@@ -353,7 +353,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task FullBackupDataDirectory()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool, Database.Name))
                 await processor.ExecuteAsync();
         }
 
@@ -581,21 +581,21 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool, Database.Name))
                 await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetConnectionStrings()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForGetConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForGetConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool, Database.Name))
                 await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool, Database.Name))
                 await processor.ExecuteAsync();
         }
 

@@ -1,9 +1,9 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -15,30 +15,21 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
+        private readonly string _databaseName;
+
         public OngoingTasksHandlerProcessorForDeleteConnectionString([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+            [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
             : base(requestHandler, contextPool)
         {
-        }
-
-        private string GetDatabaseName()
-        {
-            return RequestHandler switch
-            {
-                ShardedDatabaseRequestHandler sharded => sharded.DatabaseContext.DatabaseName,
-                DatabaseRequestHandler database => database.Database.Name,
-                _ => null
-            };
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
         public override async ValueTask ExecuteAsync()
         {
-            var databaseName = GetDatabaseName();
-
-            if (await RequestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
+            if (await RequestHandler.CanAccessDatabaseAsync(_databaseName, requireAdmin: true, requireWrite: true) == false)
                 return;
 
-            if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(_databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             var connectionStringName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
@@ -46,7 +37,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             await RequestHandler.ServerStore.EnsureNotPassiveAsync();
 
-            var (index, _) = await RequestHandler.ServerStore.RemoveConnectionString(databaseName, connectionStringName, type, RequestHandler.GetRaftRequestIdFromQuery());
+            var (index, _) = await RequestHandler.ServerStore.RemoveConnectionString(_databaseName, connectionStringName, type, RequestHandler.GetRaftRequestIdFromQuery());
             await RequestHandler.ServerStore.Cluster.WaitForIndexNotification(index);
             RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 

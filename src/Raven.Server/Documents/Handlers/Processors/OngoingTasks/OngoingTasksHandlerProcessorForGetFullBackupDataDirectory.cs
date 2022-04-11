@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup;
@@ -12,32 +13,23 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
+        private readonly string _databaseName;
+
         public OngoingTasksHandlerProcessorForGetFullBackupDataDirectory([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+            [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
             : base(requestHandler, contextPool)
         {
-        }
-
-        private string GetDatabaseName()
-        {
-            return RequestHandler switch
-            {
-                ShardedDatabaseRequestHandler sharded => sharded.DatabaseContext.DatabaseName,
-                DatabaseRequestHandler database => database.Database.Name,
-                _ => null
-            };
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
         public override async ValueTask ExecuteAsync()
         {
-            var databaseName = GetDatabaseName();
-
             var path = RequestHandler.GetStringQueryString("path", required: true);
             var requestTimeoutInMs = RequestHandler.GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
             var getNodesInfo = RequestHandler.GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
 
             var pathSetting = new PathSetting(path);
-            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, databaseName, requestTimeoutInMs, getNodesInfo, RequestHandler.ServerStore, RequestHandler.ResponseBodyStream());
+            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, _databaseName, requestTimeoutInMs, getNodesInfo, RequestHandler.ServerStore, RequestHandler.ResponseBodyStream());
         }
     }
 }
