@@ -7,4 +7,5 @@ partial class PersistentDictionary
 {
     private const int NumberOfPagesForDictionary = 8;
     public const int MaxDictionaryEntries = 1439;
+    private const int DefaultDictionaryTableSize = 65440;
 }
