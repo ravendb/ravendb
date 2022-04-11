@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
                         
-                        var filterResult = queryFilter?.Apply(ref retrieverInput, key, _state);
+                        var filterResult = queryFilter?.Apply(ref retrieverInput, key);
                         if (filterResult is not null and not FilterResult.Accepted)
                         {
                             if (filterResult is FilterResult.Skipped)
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                     }
                     
-                    var filterResult = queryFilter?.Apply(ref retrieverInput, key, _state);
+                    var filterResult = queryFilter?.Apply(ref retrieverInput, key);
                     if (filterResult is not null and not FilterResult.Accepted)
                     {
                         if (filterResult is FilterResult.Skipped)
