@@ -1213,6 +1213,7 @@ namespace Raven.Client.Documents.Session
 
             var queryStatistics = new QueryStatistics();
             var highlightings = new LinqQueryHighlightings();
+            IncludeTimings(out _);
 
             var ravenQueryInspector = new RavenQueryInspector<T>();
             var ravenQueryProvider = new RavenQueryProvider<T>(
