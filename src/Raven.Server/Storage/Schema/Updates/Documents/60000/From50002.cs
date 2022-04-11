@@ -67,10 +67,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private void InsertIndexValuesFor(UpdateStep step, TableSchema schema, Slice indexName, TableSchema.FixedSizeKeyIndexDef fixedSizeIndex, int etagPosition, string tableName = null)
         {
-            var fst = step.ReadTx.FixedTreeFor(fixedSizeIndex.Name, sizeof(long));
-            if (fst.NumberOfEntries == 0)
-                return;
-
             var indexTree = step.WriteTx.CreateTree(indexName, isIndexTree: true);
             var indexDef = schema.DynamicKeyIndexes[indexName];
             
