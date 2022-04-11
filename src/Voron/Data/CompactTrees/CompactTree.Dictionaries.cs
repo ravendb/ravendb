@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow;
-using Sparrow.Server.Compression;
 
 namespace Voron.Data.CompactTrees;
 
@@ -88,7 +83,7 @@ unsafe partial class CompactTree
             _state.TreeDictionaryId = newDictionary.PageNumber;
 
         // We will update the number of entries regardless if we updated the current dictionary or not. 
-        _state.NumberOfEntries = (int)(_state.NumberOfEntries * 1.5);
+        _state.NextTrainAt = (long)(_state.NextTrainAt * 1.5);
         return true;
     }
 

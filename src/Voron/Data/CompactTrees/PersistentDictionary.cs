@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -18,13 +18,17 @@ namespace Voron.Data.CompactTrees
         [FieldOffset(0)]        
         public ulong TableHash;
         [FieldOffset(8)]
-        public long CurrentId;
+        public int TableSize;
+        [FieldOffset(12)]
+        public int TableMaxEntries;
         [FieldOffset(16)]
+        public long CurrentId;        
+        [FieldOffset(24)]
         public long PreviousId;
 
         public override string ToString()
         {
-            return $"{nameof(TableHash)}: {TableHash}, {nameof(CurrentId)}: {CurrentId}, {nameof(PreviousId)}: {PreviousId}";
+            return $"{nameof(TableHash)}: {TableHash}, {nameof(TableSize)}: {TableSize}, {nameof(TableMaxEntries)}: {TableMaxEntries}, {nameof(CurrentId)}: {CurrentId}, {nameof(PreviousId)}: {PreviousId}";
         }
     }
 
@@ -46,14 +50,27 @@ namespace Voron.Data.CompactTrees
             p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
+            header->TableSize = UsableDictionarySize;
+            header->TableMaxEntries = MaxDictionaryEntries;
             header->CurrentId = p.PageNumber;
             header->PreviousId = 0;
 
-            // We retrieve the embeeded file from the assembly, copy and checksum the entire thing. 
-            var dictionary = new byte[UsableDictionarySize];
+            // We retrieve the embeeded file from the assembly, copy and checksum the entire thing.             
             var embeddedFile = typeof(PersistentDictionary).Assembly.GetManifestResourceStream($"Voron.Data.CompactTrees.dictionary.bin");
+            if (embeddedFile == null)
+                VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "The default dictionary has not been included in the build, the build process needs to be corrected.");
+
+            var dictionary = new byte[embeddedFile.Length];
             embeddedFile.Read(dictionary);
-            dictionary.CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize));
+
+            var arrayAsInt = MemoryMarshal.Cast<byte, int>(dictionary.AsSpan());
+            int tableSize = arrayAsInt[0];
+            if (tableSize != DefaultDictionaryTableSize)
+                VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "There is an inconsistency between the expected size of the default compression dictionary and the one read from storage.");
+
+            dictionary.AsSpan()
+                .Slice(4) // Discard the table size.
+                .CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize));
 
             header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
 
@@ -72,6 +89,8 @@ namespace Voron.Data.CompactTrees
             p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
+            header->TableSize = UsableDictionarySize;
+            header->TableMaxEntries = MaxDictionaryEntries;
             header->CurrentId = p.PageNumber;
             header->PreviousId = previousDictionary != null ? previousDictionary.PageNumber : 0;
             
@@ -114,8 +133,8 @@ namespace Voron.Data.CompactTrees
                 successorSize += encoder.Encode(testValue, auxEncodeBuffer);
             }
 
-            // If the new dictionary is not at least 2.5% better, we return the current dictionary.             
-            if (incumbentSize < successorSize * 1.025)
+            // If the new dictionary is not at least 5% better, we return the current dictionary.             
+            if (incumbentSize < successorSize * 1.05)
                 return previousDictionary;            
                                     
             var p = llt.AllocatePage(NumberOfPagesForDictionary);
@@ -123,6 +142,8 @@ namespace Voron.Data.CompactTrees
             p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
+            header->TableSize = UsableDictionarySize;
+            header->TableMaxEntries = MaxDictionaryEntries;
             header->CurrentId = p.PageNumber;
             header->PreviousId = previousDictionary != null ? previousDictionary.PageNumber : 0;
             output.CopyTo(0, p.DataPointer + PersistentDictionaryHeader.SizeOf, 0, UsableDictionarySize);
@@ -137,21 +158,25 @@ namespace Voron.Data.CompactTrees
 
         public static void VerifyTable(Page page)
         {
-            var tableHash = XXHash64.Calculate(page.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)page.DataPointer;
 
             // If checksum is not correct, we will throw a corruption exception
+            var tableHash = XXHash64.Calculate(page.DataPointer + sizeof(long), (ulong)header->TableSize + PersistentDictionaryHeader.SizeOf - sizeof(long));
             if (tableHash != header->TableHash)
                 throw new VoronErrorException($"Persistent storage checksum mismatch, expected: {tableHash}, actual: {header->TableHash}");
+
+            // TODO: Perform more advanced encoding/decoding verifications to ensure the table is not corrupted. 
         }
 
         public PersistentDictionary(Page page)
         {
             _page = page;
 
+            PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)page.DataPointer;
+
             _encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
                 new Encoder3Gram<NativeMemoryEncoderState>(
-                    new NativeMemoryEncoderState(page.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize)));
+                    new NativeMemoryEncoderState(page.DataPointer + sizeof(PersistentDictionaryHeader), header->TableSize)));
         }
 
         public void Decode(ReadOnlySpan<byte> encodedKey, ref Span<byte> decodedKey)

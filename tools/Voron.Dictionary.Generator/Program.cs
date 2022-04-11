@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow;
 using Sparrow.Server.Compression;
 using Voron.Data;
@@ -35,7 +36,7 @@ unsafe
             int current = (lowerBound + higherBound) / 2;
             if (current == lowerBound)
                 break;
-            
+
             try
             {
                 encoder.Train(new StringArrayIterator(dictionary.ToArray()), current);
@@ -43,7 +44,7 @@ unsafe
             }
             catch
             {
-                higherBound = current-1;
+                higherBound = current - 1;
                 continue;
             }
         }
@@ -53,6 +54,10 @@ unsafe
         var dictionarySize = lowerBound;
         encoder.Train(new StringArrayIterator(dictionary.ToArray()), dictionarySize);
         var output = File.OpenWrite(Path.Combine(treesDirectory.FullName, "dictionary.bin"));
+
+        Span<int> tableSizeSpan = stackalloc int[1];
+        tableSizeSpan[0] = tableSize;
+        output.Write(MemoryMarshal.Cast<int, byte>(tableSizeSpan));
         output.Write(new ReadOnlySpan<byte>(dataPtr, tableSize));
 
         string fileContent = $@"
@@ -64,6 +69,7 @@ partial class PersistentDictionary
 {{
     private const int NumberOfPagesForDictionary = { pagesToUse };
     public const int MaxDictionaryEntries = { dictionarySize };
+    private const int DefaultDictionaryTableSize = { tableSize };
 }}";
 
         File.WriteAllText(Path.Combine(treesDirectory.FullName, "PersistentDictionary.Generated.cs"), fileContent);

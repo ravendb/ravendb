@@ -305,7 +305,11 @@ namespace Voron.Data.CompactTrees
                     RootPage = newPage.PageNumber,
                     NumberOfEntries = 0,
                     TreeDictionaryId = dictionaryId,
+#if DEBUG
+                    NextTrainAt = 5000,  // We want this to run far more often in debug to know we are exercising.
+#else
                     NextTrainAt = 100000, // We wont try to train the encoder until we have more than 100K entries
+#endif
                 };
             }
             else
@@ -1103,6 +1107,7 @@ namespace Voron.Data.CompactTrees
 
         private PersistentDictionary CreateEncodingDictionary(long dictionaryId)
         {
+            // TODO: Given that dictionaries are static when created, we can actually have a cache of them that could survive transactional work. 
             return new PersistentDictionary(_llt.GetPage(dictionaryId));
         }
 
