@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask<AttachmentDetails> PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token)
+        protected override async ValueTask PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token)
         {
             AttachmentDetails result;
             using (var streamsTempFile = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
@@ -63,7 +64,35 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-            return result;
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
+                writer.WriteString(result.ChangeVector);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AttachmentDetails.Name));
+                writer.WriteString(result.Name);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
+                writer.WriteString(result.DocumentId);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
+                writer.WriteString(result.ContentType);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AttachmentDetails.Hash));
+                writer.WriteString(result.Hash);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AttachmentDetails.Size));
+                writer.WriteInteger(result.Size);
+
+                writer.WriteEndObject();
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
         
-        protected abstract ValueTask<AttachmentDetails> PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token); 
+        protected abstract ValueTask PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token); 
 
         public override async ValueTask ExecuteAsync()
         {
@@ -29,37 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 var requestBodyStream = RequestHandler.RequestBodyStream();
                 var changeVector = RequestHandler.GetStringFromHeaders("If-Match");
 
-                var result = await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, token.Token);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
-                    writer.WriteString(result.ChangeVector);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.Name));
-                    writer.WriteString(result.Name);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
-                    writer.WriteString(result.DocumentId);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
-                    writer.WriteString(result.ContentType);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.Hash));
-                    writer.WriteString(result.Hash);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(AttachmentDetails.Size));
-                    writer.WriteInteger(result.Size);
-
-                    writer.WriteEndObject();
-                }
+                await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, token.Token);
             }
         }
     }

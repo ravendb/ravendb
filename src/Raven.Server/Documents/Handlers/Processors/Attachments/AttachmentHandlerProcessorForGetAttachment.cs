@@ -1,7 +1,10 @@
-﻿using System.Net;
+﻿using System;
+using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.ServerWide;
@@ -15,38 +18,61 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override ValueTask<AttachmentResult> GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken _)
+        protected override async ValueTask GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token)
         {
             var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
             
             if (attachment == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return ValueTask.FromResult<AttachmentResult>(null);
+                return;
             }
 
             var attachmentChangeVector = RequestHandler.GetStringFromHeaders("If-None-Match");
             if (attachmentChangeVector == attachment.ChangeVector)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return ValueTask.FromResult<AttachmentResult>(null);
+                return;
             }
 
-            AttachmentResult attachmentResult = new()
+            try
             {
-                Details = new AttachmentDetails()
-                {
-                    DocumentId = documentId,
-                    ChangeVector = attachment.ChangeVector,
-                    Hash = attachment.Base64Hash.ToString(),
-                    ContentType = attachment.ContentType,
-                    Name = attachment.Name,
-                    Size = attachment.Size
-                },
-                Stream = attachment.Stream
-            };
+                var fileName = Path.GetFileName(attachment.Name);
+                fileName = Uri.EscapeDataString(fileName);
+                HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
+            }
+            catch (ArgumentException e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Skip Content-Disposition header because of not valid file name: {attachment.Name}", e);
+            }
+            try
+            {
+                HttpContext.Response.Headers[Constants.Headers.ContentType] = attachment.ContentType.ToString();
+            }
+            catch (InvalidOperationException e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Skip Content-Type header because of not valid content type: {attachment.ContentType}", e);
+                if (HttpContext.Response.Headers.ContainsKey(Constants.Headers.ContentType))
+                    HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
+            }
+            HttpContext.Response.Headers[Constants.Headers.AttachmentHash] = attachment.Base64Hash.ToString();
+            HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Size.ToString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
 
-            return ValueTask.FromResult(attachmentResult);
+            using (context.GetMemoryBuffer(out var buffer))
+            await using (var stream = attachment.Stream)
+            {
+                var responseStream = RequestHandler.ResponseBodyStream();
+                var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
+                while (count > 0)
+                {
+                    await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), token);
+                    // we know that this can never wait, so no need to do async i/o here
+                    count = stream.Read(buffer.Memory.Memory.Span);
+                }
+            }
         }
 
         protected override RavenTransaction OpenReadTransaction(DocumentsOperationContext context)

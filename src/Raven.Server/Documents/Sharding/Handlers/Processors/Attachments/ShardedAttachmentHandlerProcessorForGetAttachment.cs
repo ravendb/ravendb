@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
 {
@@ -15,13 +16,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask<AttachmentResult> GetAttachmentAsync(TransactionOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token)
+        protected override async ValueTask GetAttachmentAsync(TransactionOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token)
         {
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
             var cmd = new GetAttachmentOperation.GetAttachmentCommand(context, documentId, name, type, changeVector);
-            var result = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token);
-            HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-            return result;
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new  ProxyCommand<AttachmentResult>(cmd, RequestHandler.HttpContext.Response), shardNumber, token);
         }
         
         protected override RavenTransaction OpenReadTransaction(TransactionOperationContext context)
