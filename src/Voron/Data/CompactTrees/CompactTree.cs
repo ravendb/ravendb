@@ -732,15 +732,19 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
             if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
             {
-                if (state.Header->FreeSpace >= requiredSize + sizeof(short))
-                    DefragPage(); // has enough free space, but not available try to defrag?
-
-                if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
+                // In splits we will always recompress IF the page has been compressed with an older dictionary.
+                bool splitAnyways = true;
+                if (state.Header->DictionaryId != _state.TreeDictionaryId)
                 {
-                    bool splitAnyways = true;
+                    // We will recompress with the new dictionary, which has the side effect of also reclaiming the
+                    // free space if there is any available. It may very well happen that this new dictionary
+                    // is not as good as the old for this particular page (rare but it can happen). In those cases,
+                    // we will not upgrade and just split the pages using the old dictionary. Eventually the new
+                    // dictionary will catch up. 
                     if (TryRecompressPage(state))
                     {
-                        // Recheck again. In case we should split anyways. 
+                        // It may happen that between the more effective dictionary and the reclaimed space we have enough
+                        // to avoid the split. 
                         if (state.Header->Upper - state.Header->Lower >= requiredSize + sizeof(short))
                             splitAnyways = false;
 
@@ -752,13 +756,24 @@ namespace Voron.Data.CompactTrees
                         requiredSize = key.Encoded.Length + keySizeEncoder.Length + valueEncoder.Length;
                         Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
                     }
-
-                    if (splitAnyways)
+                }
+                else
+                {
+                    // If we are not recompressing, but we still have enough free space available we will go for reclaiming space
+                    // by rearranging unused space.
+                    if (state.Header->FreeSpace >= requiredSize + sizeof(short))
                     {
-                        // DebugStuff.RenderAndShow(this);
-                        return SplitPage(key, value); // still can't do that, need to split the page
-                        // DebugStuff.RenderAndShow(this);
+                        DefragPage();
+                        splitAnyways = false;
                     }
+                }
+
+                if (splitAnyways)
+                {
+                    // DebugStuff.RenderAndShow(this);
+                    return SplitPage(key, value); // still can't do that, need to split the page
+                    // DebugStuff.RenderAndShow(this);
+
                 }
             }
 
@@ -876,10 +891,6 @@ namespace Voron.Data.CompactTrees
 
         private bool TryRecompressPage(in CursorState state)
         {
-            // Recompress will only trigger IF the page has been compressed with a lesser dictionary. 
-            if (state.Header->DictionaryId == _state.TreeDictionaryId)
-                return false;
-            
             var oldDictionary = _dictionaries[state.Header->DictionaryId];
             var newDictionary = GetEncodingDictionary(_state.TreeDictionaryId);                
 
@@ -923,8 +934,11 @@ namespace Voron.Data.CompactTrees
                 var keySizeEncoder = new Encoder();
                 keySizeEncoder.Encode7Bits((ulong)encodedKey.Length);
 
+                // It may very well happen that there is no enough encoding space to upgrade the page
+                // because of an slightly inefficiency at this particular page. In those cases, we wont
+                // upgrade the page and just fail. 
                 var requiredSize = encodedKey.Length + keySizeEncoder.Length + valueEncoder.Length;
-                if (512 + requiredSize + sizeof(ushort) > state.Header->FreeSpace)
+                if (requiredSize + sizeof(ushort) > state.Header->FreeSpace)
                     goto Failure;
 
                 state.Header->FreeSpace -= (ushort)(requiredSize + sizeof(ushort));
@@ -1010,9 +1024,6 @@ namespace Voron.Data.CompactTrees
 
         private void DefragPage()
         {                     
-            // TODO: The process of defrag could be the perfect place to upgrade a dictionary, as we are certainly going to be writing this new
-            //       page anyways; if that is the case, why not do it with the new dictionary.
-
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
             using (_llt.Environment.GetTemporaryPage(_llt, out var tmp))
