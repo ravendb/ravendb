@@ -1,13 +1,12 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Web.Studio.Processors
+namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
     internal class OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
