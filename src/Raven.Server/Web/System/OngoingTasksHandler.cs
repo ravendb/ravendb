@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -11,8 +10,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
-using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -25,10 +22,10 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -40,6 +37,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -134,7 +132,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var incoming in handlers)
                 {
-                    if (incoming is IncomingPullReplicationHandler pullHandler && 
+                    if (incoming is IncomingPullReplicationHandler pullHandler &&
                         pullHandler._incomingPullReplicationParams?.Name == sinkReplication.HubName)
                     {
                         handler = incoming;
@@ -226,7 +224,7 @@ namespace Raven.Server.Web.System
                 }
                 else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
                 {
-                    connectionStatus = connectionsState.IsSubscriptionActive()? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
+                    connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
                 }
                 else
                 {
@@ -308,26 +306,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetConfiguration()
         {
-            await GetBackupConfiguration(this);
-        }
-
-        public static async Task GetBackupConfiguration(RequestHandler requestHandler)
-        {
-            // FullPath removes the trailing '/' so adding it back for the studio
-            var localRootPath = requestHandler.ServerStore.Configuration.Backup.LocalRootPath;
-            var localRootFullPath = localRootPath != null ? localRootPath.FullPath + Path.DirectorySeparatorChar : null;
-            var result = new DynamicJsonValue
-            {
-                [nameof(requestHandler.ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
-                [nameof(requestHandler.ServerStore.Configuration.Backup.AllowedAwsRegions)] = requestHandler.ServerStore.Configuration.Backup.AllowedAwsRegions,
-                [nameof(requestHandler.ServerStore.Configuration.Backup.AllowedDestinations)] = requestHandler.ServerStore.Configuration.Backup.AllowedDestinations,
-            };
-
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
-            {
-                context.Write(writer, result);
-            }
+            using (var processor = new OngoingTasksHandlerProcessorForGetPeriodicBackupConfiguration<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -373,12 +353,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task FullBackupDataDirectory()
         {
-            var path = GetStringQueryString("path", required: true);
-            var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
-            var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-
-            var pathSetting = new PathSetting(path);
-            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, Database.Name, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
+            using (var processor = new OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
@@ -605,165 +581,22 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
-            await RemoveConnectionString(Database.Name, this);
-        }
-
-        public static async Task RemoveConnectionString(string databaseName, RequestHandler requestHandler)
-        {
-            if (await requestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
-                return;
-
-            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            var connectionStringName = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
-            var type = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            await requestHandler.ServerStore.EnsureNotPassiveAsync();
-
-            var (index, _) = await requestHandler.ServerStore.RemoveConnectionString(databaseName, connectionStringName, type, requestHandler.GetRaftRequestIdFromQuery());
-            await requestHandler.ServerStore.Cluster.WaitForIndexNotification(index);
-            requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["RaftCommandIndex"] = index
-                    });
-                }
-            }
+            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetConnectionStrings()
         {
-            await GetConnectionStrings(Database.Name, this);
-        }
-
-        public static async Task GetConnectionStrings(string databaseName, RequestHandler requestHandler)
-        {
-            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            if (await requestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: false) == false)
-                return;
-
-            var connectionStringName = requestHandler.GetStringQueryString("connectionStringName", false);
-            var type = requestHandler.GetStringQueryString("type", false);
-
-            await requestHandler.ServerStore.EnsureNotPassiveAsync();
-            requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                Dictionary<string, RavenConnectionString> ravenConnectionStrings;
-                Dictionary<string, SqlConnectionString> sqlConnectionStrings;
-                Dictionary<string, OlapConnectionString> olapConnectionStrings;
-                Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
-
-                using (context.OpenReadTransaction())
-                using (var rawRecord = requestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                {
-                    if (connectionStringName != null)
-                    {
-                        if (string.IsNullOrWhiteSpace(connectionStringName))
-                            throw new ArgumentException($"connectionStringName {connectionStringName}' must have a non empty value");
-
-                        if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
-                            throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-
-
-                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
-                    }
-                    else
-                    {
-                        ravenConnectionStrings = rawRecord.RavenConnectionStrings;
-                        sqlConnectionStrings = rawRecord.SqlConnectionStrings;
-                        olapConnectionStrings = rawRecord.OlapConnectionString;
-                        elasticSearchConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
-                    }
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
-                {
-                    var result = new GetConnectionStringsResult
-                    {
-                        RavenConnectionStrings = ravenConnectionStrings,
-                        SqlConnectionStrings = sqlConnectionStrings,
-                        OlapConnectionStrings = olapConnectionStrings,
-                        ElasticSearchConnectionStrings = elasticSearchConnectionStrings
-                    };
-                    context.Write(writer, result.ToJson());
-                }
-            }
-        }
-
-        internal static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
-            GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
-        {
-            var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
-            var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
-            var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
-            var elasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
-
-            switch (connectionStringType)
-            {
-                case ConnectionStringType.Raven:
-                    var recordRavenConnectionStrings = rawRecord.RavenConnectionStrings;
-                    if (recordRavenConnectionStrings != null && recordRavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
-                    {
-                        ravenConnectionStrings.TryAdd(connectionStringName, ravenConnectionString);
-                    }
-
-                    break;
-
-                case ConnectionStringType.Sql:
-                    var recordSqlConnectionStrings = rawRecord.SqlConnectionStrings;
-                    if (recordSqlConnectionStrings != null && recordSqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
-                    {
-                        sqlConnectionStrings.TryAdd(connectionStringName, sqlConnectionString);
-                    }
-
-                    break;
-                
-                case ConnectionStringType.Olap:
-                    var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
-                    if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
-                    {
-                        olapConnectionStrings.TryAdd(connectionStringName, olapConnectionString);
-                    }
-
-                    break;
-                
-                case ConnectionStringType.ElasticSearch:
-                    var recordElasticConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
-                    if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
-                    {
-                        elasticSearchConnectionStrings.TryAdd(connectionStringName, elasticConnectionString);
-                    }
-
-                    break;
-
-                default:
-                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-            }
-
-            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings);
+            using (var processor = new OngoingTasksHandlerProcessorForGetConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await PutConnectionString(Database.Name, this);
-        }
-
-        internal static async Task PutConnectionString(string databaseName, RequestHandler requestHandler)
-        {
-            await DatabaseConfigurations(requestHandler.ServerStore.PutConnectionString, "put-connection-string", requestHandler.GetRaftRequestIdFromQuery(), 
-                databaseName, requestHandler);
+            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
@@ -777,7 +610,7 @@ namespace Raven.Server.Web.System
             var configurationName = requestHandler.GetStringQueryString("configurationName"); // etl task name
             var transformationName = requestHandler.GetStringQueryString("transformationName");
 
-            await DatabaseConfigurations((_, db, etlConfiguration, guid) => requestHandler.ServerStore.RemoveEtlProcessState(_, db, configurationName, transformationName, guid), 
+            await DatabaseConfigurations((_, db, etlConfiguration, guid) => requestHandler.ServerStore.RemoveEtlProcessState(_, db, configurationName, transformationName, guid),
                 "etl-reset", requestHandler.GetRaftRequestIdFromQuery(), databaseName, requestHandler);
         }
 
@@ -927,7 +760,7 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.OlapEtls != null)
             {
                 foreach (var olapEtl in databaseRecord.OlapEtls)
@@ -960,13 +793,13 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.ElasticSearchEtls != null)
             {
                 foreach (var elasticSearchEtl in databaseRecord.ElasticSearchEtls)
                 {
                     databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
-                    
+
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
                     var taskState = GetEtlTaskState(elasticSearchEtl);
 
@@ -1149,7 +982,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            
+
                             await WriteResult(context, new OngoingTaskOlapEtlDetails
                             {
                                 TaskId = olapEtl.TaskId,
@@ -1168,7 +1001,7 @@ namespace Raven.Server.Web.System
                             break;
 
                         case OngoingTaskType.RavenEtl:
-                            
+
                             RavenEtlConfiguration ravenEtl;
                             if (sharded)
                             {
@@ -1207,7 +1040,7 @@ namespace Raven.Server.Web.System
                                 Error = ravenEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.ElasticSearchEtl:
 
                             var elasticSearchEtl = name != null ?
@@ -1287,7 +1120,7 @@ namespace Raven.Server.Web.System
                                 },
                                 TaskConnectionStatus = connectionStatus
                             };
-                            
+
                             await WriteResult(context, subscriptionStateInfo);
                             break;
 
@@ -1508,7 +1341,7 @@ namespace Raven.Server.Web.System
                     if (type == OngoingTaskType.Subscription)
                     {
                         database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
-                }
+                    }
                 }
                 finally
                 {
