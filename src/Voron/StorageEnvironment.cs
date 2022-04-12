@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -43,6 +44,8 @@ namespace Voron
         internal class IndirectReference
         {
             public StorageEnvironment Owner;
+
+            public WeakReference<StorageEnvironment> WeekReference { get; set; }
         }
 
         internal IndirectReference SelfReference = new IndirectReference();
@@ -125,6 +128,7 @@ namespace Voron
             try
             {
                 SelfReference.Owner = this;
+                SelfReference.WeekReference = new WeakReference<StorageEnvironment>(this);
                 _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath.FullPath);
                 _options = options;
                 _dataPager = options.DataPager;
@@ -152,7 +156,7 @@ namespace Voron
 
                 _journal = new WriteAheadJournal(this);
 
-                if (options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration) 
+                if (options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration)
                     options.Encryption.SetExternalCompressionBufferHandler(_journal);
 
                 if (isNew)
@@ -174,64 +178,97 @@ namespace Voron
                 throw;
             }
         }
-        private async Task IdleFlushTimer()
+
+        ~StorageEnvironment()
         {
+            if (_log.IsOperationsEnabled)
+                _log.Operations($"Finalizer of storage environment was called. Env: {this}");
+
             try
             {
-                var cancellationToken = _cancellationTokenSource.Token;
-
-                while (cancellationToken.IsCancellationRequested == false)
-                {
-                    if (Disposed)
-                        return;
-
-                    if (Options.ManualFlushing)
-                        return;
-
-                    try
-                    {
-                        if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
-                        {
-                            if (Journal.Applicator.ShouldFlush)
-                                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-
-                            else if (Journal.Applicator.ShouldSync)
-                                SuggestSyncDataFile();
-                        }
-                        else
-                        {
-                            await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), cancellationToken).ConfigureAwait(false);
-                        }
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        return;
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        return;
-                    }
-                }
+                Dispose();
             }
             catch (Exception e)
             {
-                int numberOfFailures = Interlocked.Increment(ref _idleFlushTimerFailures);
+                if (_log.IsOperationsEnabled) 
+                    _log.Operations($"Failed to dispose storage environment via finalizer. Env: {this}", e);
+            }
+        }
+
+        private static async Task IdleFlushTimer(WeakReference<StorageEnvironment> weakRef, CancellationToken token)
+        {
+            while (token.IsCancellationRequested == false)
+            {
+                // IMPORTANT: we have two separate await calls here (await IdleFlushTimerInternal() and await TimeoutManager.WaitFor()) to ensure that
+                // the reference to storage environment won't be copied to the state-machine produced by await TimeoutManager.WaitFor() call
+                // otherwise the reference is hold and that prevents from running the finalizer of the environment
+
+                var result = await IdleFlushTimerInternal(weakRef);
+                switch (result)
+                {
+                    case true:
+                        continue;
+                    case false:
+                        return;
+                    case null:
+                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), token);
+                        break;
+                }
+            }
+        }
+
+        private static async Task<bool?> IdleFlushTimerInternal(WeakReference<StorageEnvironment> weakRef)
+        {
+            if (weakRef.TryGetTarget(out var env) == false || env.Disposed || env.Options.ManualFlushing)
+                return false;
+
+            try
+            {
+
+                try
+                {
+                    if (await env._writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(env.Options.IdleFlushTimeout)) == false)
+                    {
+                        if (env.Journal.Applicator.ShouldFlush)
+                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(env);
+                        else if (env.Journal.Applicator.ShouldSync)
+                            env.SuggestSyncDataFile();
+
+                        return true;
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    return false;
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+
+                return null;
+            }
+            catch (Exception e)
+            {
+                int numberOfFailures = Interlocked.Increment(ref env._idleFlushTimerFailures);
 
                 string message = $"{nameof(IdleFlushTimer)} failed (numberOfFailures: {numberOfFailures}), unable to schedule flush / syncs of data file. Will be restarted on new write transaction";
 
-                if (_log.IsOperationsEnabled)
+                if (env._log.IsOperationsEnabled)
                 {
-                    _log.Operations(message, e);
+                    env._log.Operations(message, e);
                 }
 
                 try
                 {
-                    _options.InvokeRecoverableFailure(message, e);
+                    env._options.InvokeRecoverableFailure(message, e);
                 }
                 catch
                 {
                     // ignored 
                 }
+
+                return false;
             }
         }
 
@@ -519,6 +556,8 @@ namespace Voron
                     }
                 }
 
+                GC.SuppressFinalize(this);
+
                 if (errors.Count != 0)
                     throw new AggregateException(errors);
             }
@@ -660,9 +699,9 @@ namespace Voron
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                     }
 
-                    if (Options.ManualFlushing == false && _idleFlushTimer.IsCompleted)
+                    if (Options.ManualFlushing == false && _idleFlushTimer.IsCompleted) // on storage environment creation or if the task has failed
                     {
-                        _idleFlushTimer = Task.Run(IdleFlushTimer); // on storage environment creation or if the task has failed
+                        _idleFlushTimer = Task.Run(() => IdleFlushTimer(SelfReference.WeekReference, Token), Token); 
                     }
                 }
 
@@ -816,7 +855,7 @@ namespace Voron
         {
             if (_txCreation.IsWriteLockHeld)
                 return default;
-            
+
             _txCreation.EnterWriteLock();
             return new ExitWriteLock(_txCreation);
         }
@@ -1331,7 +1370,7 @@ namespace Voron
                 {
                     if (_env.Options.Encryption.IsEnabled)
                         Sodium.sodium_memzero(_tmp.TempPagePointer, (UIntPtr)_tmp.PageSize);
-                    
+
                     _tmp.UnpinMemory();
                     _env._tempPagesPool.Enqueue(_tmp);
                 }
@@ -1454,7 +1493,7 @@ namespace Voron
             internal Action ActionToCallDuringFullBackupRighAfterCopyHeaders;
         }
     }
-    
+
     public class StorageEnvironmentWithType
     {
         public string Name { get; set; }
