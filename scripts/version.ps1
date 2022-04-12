@@ -40,7 +40,9 @@ function SetVersionInfo($projectDir) {
     $builtAt = [DateTime]::UtcNow
     $builtAtString = $builtAt.ToString("yyyyMMdd-HHmm")
 
-    if ($buildType.ToLower() -eq 'nightly') {
+    $useBuiltAtForVersioning = $env:RAVEN_RELEASE_VERSIONING_TYPE -eq 'use_build_date'
+
+    if (($buildType.ToLower() -eq 'nightly') -or $useBuiltAtForVersioning) {
         $versionSuffix = "$buildType-$builtAtString"
         $buildNumber = $DEV_BUILD_NUMBER
     }
