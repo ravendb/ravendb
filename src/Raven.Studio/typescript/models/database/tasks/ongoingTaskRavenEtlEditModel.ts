@@ -50,6 +50,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                 this.taskName,
                 this.taskState,
                 this.mentorNode,
+                this.pinMentorNode,
                 this.manualChooseMentor,
                 this.connectionStringName,
                 this.allowEtlOnNonEncryptedChannel,
@@ -95,6 +96,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
+            this.pinMentorNode(dto.Configuration.PinToMentorNode);
             this.loadRequestTimeout(dto.Configuration.LoadRequestTimeoutInSec);
         }
     }
@@ -108,8 +110,8 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             Transforms: this.transformationScripts().map(x => x.toDto()),
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            PinToMentorNode: this.pinMentorNode(),
             TaskId: this.taskId,
-            PinToMentorNode: false,
             LoadRequestTimeoutInSec: this.loadRequestTimeout() || null,
         };
     }
