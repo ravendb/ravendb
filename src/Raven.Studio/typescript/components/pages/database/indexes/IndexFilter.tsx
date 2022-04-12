@@ -4,7 +4,7 @@ import { shardingTodo } from "common/developmentHelper";
 import {
     IndexStatus,
     IndexFilterCriteria,
-    IndexGroup
+    IndexGroup, IndexSharedInfo
 } from "../../../models/indexes";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../utils/IndexUtils";
@@ -46,17 +46,14 @@ function hasAnyStateFilter(filter: IndexFilterCriteria) {
 
 interface IndexFilterDescriptionProps {
     filter: IndexFilterCriteria;
-    groups: IndexGroup[];
+    indexes: IndexSharedInfo[];
 }
 
 export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
-    const { filter, groups } = props;
+    const { filter, indexes } = props;
 
-    let indexesCount = 0;
+    let indexesCount = indexes.length;
     
-    groups.forEach(group => {
-        indexesCount += group.indexes.length;
-    });
     
     shardingTodo();
     /* TODO

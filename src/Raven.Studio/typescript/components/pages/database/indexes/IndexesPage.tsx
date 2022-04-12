@@ -27,6 +27,9 @@ import { useAppUrls } from "../../../hooks/useAppUrls";
 import { useAccessManager } from "../../../hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { shardingTodo } from "common/developmentHelper";
+import useTimeout from "../../../hooks/useTimeout";
+import useInterval from "../../../hooks/useInterval";
+import messagePublisher from "common/messagePublisher";
 
 interface IndexesPageProps {
     database: database;
@@ -110,7 +113,8 @@ function matchesAnyIndexStatus(index: IndexSharedInfo, status: IndexStatus[], gl
 function indexMatchesFilter(index: IndexSharedInfo, filter: IndexFilterCriteria, globalIndexingStatus: IndexRunningStatus): boolean {
     const nameMatch = !filter.searchText || index.name.toLowerCase().includes(filter.searchText.toLowerCase());
     const statusMatch = matchesAnyIndexStatus(index, filter.status, globalIndexingStatus);
-    const indexingErrorsMatch = true; //TODO:  !withIndexingErrorsOnly || (withIndexingErrorsOnly && !!this.errorsCount());
+    const indexingErrorsMatch = !filter.showOnlyIndexesWithIndexingErrors 
+        || (filter.showOnlyIndexesWithIndexingErrors && index.nodesInfo.some(x => x.details?.errorCount > 0));
 
     return nameMatch && statusMatch && indexingErrorsMatch;
 }
@@ -163,30 +167,24 @@ function groupAndFilterIndexStats(indexes: IndexSharedInfo[], collections: colle
     }
 }
 
-function getAllIndexes(groups: IndexGroup[]) {
+function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
     const allIndexes: IndexSharedInfo[] = [];
     groups.forEach(group => allIndexes.push(...group.indexes));
+    allIndexes.push(...replacements);
     return allIndexes;
 }
 
 export function IndexesPage(props: IndexesPageProps) {
-    
-    
     const { database, stale, indexToHighlight } = props;
     const locations = database.getLocations();
     
     const { indexesService } = useServices();
     const eventsCollector = useEventsCollector();
-    
     const { canReadWriteDatabase } = useAccessManager();
-    
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
 
     shardingTodo("ANY");
     const globalIndexingStatus: IndexRunningStatus = "Running"; //TODO:
-    
-    const nodeTag = clusterTopologyManager.default.localNodeTag();
-    const initialLocation = database.getFirstLocation(nodeTag);
 
     const [filter, setFilter] = useState<IndexFilterCriteria>(() => {
         if (stale) {
@@ -201,12 +199,13 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
     const [swapNowProgress, setSwapNowProgress] = useState<string[]>([]);
+    const [globalLockChanges, setGlobalLockChanges] = useState(false);
     
     const { groups, replacements } = useMemo(() => {
         const collections = collectionsTracker.default.collections();
         const groupedIndexes = groupAndFilterIndexStats(stats.indexes, collections, filter, globalIndexingStatus);
         
-        const allVisibleIndexes = getAllIndexes(groupedIndexes.groups);
+        const allVisibleIndexes = getAllIndexes(groupedIndexes.groups, groupedIndexes.replacements);
         const newSelection = selectedIndexes.filter(x => allVisibleIndexes.some(idx => idx.name === x));
         if (newSelection.length !== selectedIndexes.length) {
             setSelectedIndexes(newSelection);
@@ -225,28 +224,27 @@ export function IndexesPage(props: IndexesPageProps) {
         });
     }
     
-    const fetchStats = async (location: databaseLocationSpecifier) => {
+    const fetchStats = useCallback(async (location: databaseLocationSpecifier) => {
         const stats = await indexesService.getStats(database, location);
         dispatch({
             type: "StatsLoaded",
             location,
             stats
         });
-    };
+    }, [database]);
     
     useEffect(() => {
+        const nodeTag = clusterTopologyManager.default.localNodeTag();
+        const initialLocation = database.getFirstLocation(nodeTag);
+        
         fetchStats(initialLocation);
     }, []);
     
-    useEffect(() => {
-        const progressTimer = setInterval(() => {
-            if (filter.autoRefresh) {
-                database.getLocations().forEach(location => fetchProgress(location));    
-            }
-        }, 10_000);
-        
-        return () => clearInterval(progressTimer);
-    });
+    useInterval(() => {
+        if (filter.autoRefresh) {
+            database.getLocations().forEach(location => fetchProgress(location));
+        }
+    }, 10_000);
     
     const highlightUsed = useRef<boolean>(false);
     
@@ -256,81 +254,141 @@ export function IndexesPage(props: IndexesPageProps) {
             highlightUsed.current = true;
 
             setTimeout(() => {
-                node.classList.add("blink-style-basic");
+                if (document.body.contains(node)) {
+                    node.classList.add("blink-style-basic");
+                }
             }, 600);
         }
     }, []);
     
-    const getSelectedIndexes = (): IndexSharedInfo[] => stats.indexes.filter(x => selectedIndexes.includes(x.name));
+    const getSelectedIndexes = useCallback((): IndexSharedInfo[] => stats.indexes.filter(x => selectedIndexes.includes(x.name)), 
+        [selectedIndexes, stats]);
     
     const deleteSelectedIndexes = () => {
         eventsCollector.reportEvent("indexes", "delete-selected");
         return confirmDeleteIndexes(database, getSelectedIndexes());
     }
 
-    const toggleDisableSelectedIndexes = async (enableIndex: boolean) => {
-        const indexes = getSelectedIndexes();
+    const disableIndexes = async (enableIndex: boolean, indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+        eventsCollector.reportEvent("index", "toggle-status", status);
+
+        const locationsToApply = [...locations];
         
-        const confirmation = enableIndex ? bulkIndexOperationConfirm.forEnable(indexes) : bulkIndexOperationConfirm.forDisable(indexes);
+        while (locationsToApply.length > 0) {
+            const location = locationsToApply.pop();
+
+            const indexesToApply = [...indexes];
+            while (indexesToApply.length > 0) {
+                const index = indexesToApply.pop();
+                if (enableIndex) {
+                    await indexesService.enable(index, database, location);
+                } else {
+                    await indexesService.disable(index, database, location);
+                }
+
+                dispatch({
+                    type: enableIndex ? "EnableIndexing" : "DisableIndexing",
+                    indexName: index.name,
+                    location
+                });
+            }
+        }
+    }
+    
+    const toggleDisableIndexes = useCallback(async (enableIndex: boolean, indexes: IndexSharedInfo[]) => {
+        const locations = database.getLocations();
+        const confirmation = enableIndex ? bulkIndexOperationConfirm.forEnable(indexes, locations) : bulkIndexOperationConfirm.forDisable(indexes, locations);
         
         confirmation.result
             .done(result => {
                 if (result.can) {
-                    //TODO: add locations selector!
-                    eventsCollector.reportEvent("index", "toggle-status", status);
-                    indexes.forEach(i => enableIndex ? enableIndexing(i) : disableIndexing(i));
+                    disableIndexes(enableIndex, indexes, result.locations);
                 }
             });
 
         app.showBootstrapDialog(confirmation);
+    }, []);
+    
+    const enableSelectedIndexes = useCallback(() => toggleDisableIndexes(true, getSelectedIndexes()), [getSelectedIndexes]);
+    
+    const disableSelectedIndexes = useCallback(() => toggleDisableIndexes(false, getSelectedIndexes()), [getSelectedIndexes]);
+
+    const pauseIndexes = async (resume: boolean, indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+        eventsCollector.reportEvent("index", "toggle-status", status);
+
+        const locationsToApply = [...locations];
         
+        while (locationsToApply.length > 0) {
+            const location = locationsToApply.pop();
+            
+            const indexesToApply = [...indexes];
+            while (indexesToApply.length > 0) {
+                const index = indexesToApply.pop();
+                if (resume) {
+                    await indexesService.resume(index, database, location);
+                } else {
+                    await indexesService.pause(index, database, location);
+                }
+
+                dispatch({
+                    type: resume ? "ResumeIndexing" : "PauseIndexing",
+                    indexName: index.name,
+                    location
+                });
+            }
+        }
     }
     
-    const enableSelectedIndexes = () => toggleDisableSelectedIndexes(true);
-    
-    const disableSelectedIndexes = () => toggleDisableSelectedIndexes(false);
-
-    const togglePauseSelectedIndexes = async (resume: boolean) => {
-        const indexes = getSelectedIndexes();
-
-        const confirmation = resume ? bulkIndexOperationConfirm.forResume(indexes) : bulkIndexOperationConfirm.forPause(indexes);
+    const togglePauseIndexes = useCallback(async (resume: boolean, indexes: IndexSharedInfo[]) => {
+        const locations = database.getLocations();
+        const confirmation = resume ? bulkIndexOperationConfirm.forResume(indexes, locations) : bulkIndexOperationConfirm.forPause(indexes, locations);
 
         confirmation.result
             .done(result => {
                 if (result.can) {
-                    eventsCollector.reportEvent("index", "toggle-status", status);
-
-                    indexes.forEach(i => resume ? resumeIndexing(i) : pauseIndexing(i));
+                    pauseIndexes(resume, indexes, result.locations);
                 }
             });
 
         app.showBootstrapDialog(confirmation);
-    }
+    }, []);
     
-    const resumeSelectedIndexes = () => togglePauseSelectedIndexes(true);
+    const resumeSelectedIndexes = useCallback(() => togglePauseIndexes(true, getSelectedIndexes()), [getSelectedIndexes]);
 
-    const pauseSelectedIndexes = () => togglePauseSelectedIndexes(false);
-    
-    const lockErrorSelectedIndexes = async () => {
-        const indexes = getSelectedIndexes();
-        while (indexes.length) {
-            await setIndexLockMode(indexes.pop(), "LockedError");
+    const pauseSelectedIndexes = useCallback(() => togglePauseIndexes(false, getSelectedIndexes()), [getSelectedIndexes]);
+
+    const setLockModeSelectedIndexes = async (lockMode: IndexLockMode, indexes: IndexSharedInfo[]) => {
+        eventsCollector.reportEvent("index", "set-lock-mode-selected", lockMode);
+
+        if (indexes.length) {
+            setGlobalLockChanges(true);
+
+            try {
+                while (indexes.length) {
+                    await setIndexLockModeInternal(indexes.pop(), lockMode);
+                }
+                messagePublisher.reportSuccess("Lock mode was set to: " + IndexUtils.formatLockMode(lockMode));
+            } finally {
+                setGlobalLockChanges(false);
+            }
         }
     }
-    
-    const lockSelectedIndexes = async () => {
-        const indexes = getSelectedIndexes();
-        while (indexes.length) {
-            await setIndexLockMode(indexes.pop(), "LockedIgnore");
-        }
-    }
-    
-    const unlockSelectedIndexes = async () => {
-        const indexes = getSelectedIndexes();
-        while (indexes.length) {
-            await setIndexLockMode(indexes.pop(), "Unlock");
-        }
-    }
+
+    const confirmSetLockModeSelectedIndexes = useCallback(async (lockMode: IndexLockMode) => {
+        const lockModeFormatted = IndexUtils.formatLockMode(lockMode);
+
+        const indexes = getSelectedIndexes().filter(index => index.type !== "AutoMap" && index.type !== "AutoMapReduce");
+        
+        viewHelpers.confirmationMessage("Are you sure?", 
+            `Do you want to <strong>${genUtils.escapeHtml(lockModeFormatted)}</strong> selected indexes?</br>Note: Static-indexes only will be set, 'Lock Mode' is not relevant for auto-indexes.`, {
+            html: true
+        })
+            .done(can => {
+                if (can) {
+                   setLockModeSelectedIndexes(lockMode, indexes);
+                }
+            })
+    }, [selectedIndexes, stats, setLockModeSelectedIndexes, getSelectedIndexes]);
     
     const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
         eventsCollector.reportEvent("indexes", "delete");
@@ -360,7 +418,7 @@ export function IndexesPage(props: IndexesPageProps) {
         });
     }
     
-    const setIndexLockMode = async (index: IndexSharedInfo, lockMode: IndexLockMode) => {
+    const setIndexLockModeInternal = useCallback(async (index: IndexSharedInfo, lockMode: IndexLockMode) => {
         await indexesService.setLockMode([index], lockMode, database);
         
         dispatch({
@@ -368,11 +426,26 @@ export function IndexesPage(props: IndexesPageProps) {
             lockMode,
             indexName: index.name
         });
+    }, [database]);
+
+    const setIndexLockMode = useCallback(async (index: IndexSharedInfo, lockMode: IndexLockMode) => {
+        await setIndexLockModeInternal(index, lockMode);
+        messagePublisher.reportSuccess("Lock mode was set to: " + IndexUtils.formatLockMode(lockMode));
+    }, [setIndexLockModeInternal]);
+
+    const loadMissing = async () => {
+        const tasks = stats.indexes[0].nodesInfo.map(async nodeInfo => {
+            await fetchProgress(nodeInfo.location);
+
+            if (nodeInfo.status === "notLoaded") {
+                await fetchStats(nodeInfo.location);
+            }
+        });
+
+        await Promise.all(tasks);
     }
 
-    if (stats.indexes.length === 0) {
-        return <NoIndexes database={database} />
-    }
+    useTimeout(loadMissing, 3_000);
 
     const toggleSelection = (index: IndexSharedInfo) => {
         if (selectedIndexes.includes(index.name)) {
@@ -381,78 +454,7 @@ export function IndexesPage(props: IndexesPageProps) {
             setSelectedIndexes(s => s.concat(index.name));
         }
     }
-    
-    const loadMissing = async () => {
-        const tasks = stats.indexes[0].nodesInfo.map(nodeInfo => {
-            //TODO: find better place for that
-            fetchProgress(nodeInfo.location);
-            
-            if (nodeInfo.status === "notLoaded") {
-                return fetchStats(nodeInfo.location);
-            }
-            return undefined;
-        });
-        
-        await Promise.all(tasks);
-    }
-    
-    const enableIndexing = async (index: IndexSharedInfo) => {
-        //TODO: dialog with confirmation which locations should be modified
-        const locations = database.getLocations();
-        while (locations.length > 0) {
-            const location = locations.pop();
-            await indexesService.enable(index, database, location);
-            dispatch({
-                type: "EnableIndexing",
-                indexName: index.name,
-                location
-            });
-        }
-    }
-    
-    const disableIndexing = async (index: IndexSharedInfo) => {
-        //TODO: dialog with confirmation which locations should be modified
-        const locations = database.getLocations();
-        while (locations.length > 0) {
-            const location = locations.pop();
-            await indexesService.disable(index, database, location);
-            dispatch({
-                type: "DisableIndexing",
-                indexName: index.name,
-                location
-            });
-        }
-    }
-    
-    const pauseIndexing = async (index: IndexSharedInfo) => {
-        const locations = database.getLocations();
-        
-        while (locations.length > 0) {
-            const location = locations.pop();
-            await indexesService.pause([index], database, location); 
-            dispatch({
-                type: "PauseIndexing",
-                indexName: index.name,
-                location
-            });
-        }
-    }
 
-    const resumeIndexing = async (index: IndexSharedInfo) => {
-        eventsCollector.reportEvent("indexes", "resume");
-        
-        const locations = database.getLocations();
-        while (locations.length > 0) {
-            const location = locations.pop();
-            await indexesService.resume([index], database, location);
-            dispatch({
-                type: "ResumeIndexing",
-                indexName: index.name,
-                location
-            });
-        }
-    }
-    
     const openFaulty = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
         viewHelpers.confirmationMessage("Open index?", `You're opening a faulty index <strong>'${genUtils.escapeHtml(index.name)}'</strong>`, {
             html: true
@@ -475,6 +477,8 @@ export function IndexesPage(props: IndexesPageProps) {
             while (locations.length) {
                 await indexesService.resetIndex(index, database, locations.pop());
             }
+            
+            messagePublisher.reportSuccess("Index " + index.name + " successfully reset");
             
             /* TODO
              // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
@@ -508,7 +512,7 @@ export function IndexesPage(props: IndexesPageProps) {
         let text = `<li ${margin}>Index: <strong>${genUtils.escapeHtml(index.name)}</strong></li>`;
         text += `<li ${margin}>Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the replacement index.</li>`;
 
-        /*
+        /* TODO:
         const replacementIndex = irdx.replacement();
         if (replacementIndex.progress() && replacementIndex.progress().rollingProgress().length) {
             text += `<li ${margin}>Actual indexing will occur once the node reaches its turn in the rolling deployment process.</li>`;
@@ -537,28 +541,14 @@ export function IndexesPage(props: IndexesPageProps) {
             groups.forEach(group => {
                 toSelect.push(...group.indexes.map(x => x.name));
             });
+            toSelect.push(...replacements.map(x => x.name));
             setSelectedIndexes(toSelect); 
-            /* TODO handle replacements
-             this.indexGroups().forEach(indexGroup => {
-                if (!indexGroup.groupHidden()) {
-                    indexGroup.indexes().forEach(index => {
-                        if (!index.filteredOut() && !_.includes(namesToSelect, index.name)) {
-                            namesToSelect.push(index.name);
-
-                            if (index.replacement()) {
-                                namesToSelect.push(index.replacement().name);
-                            }
-                        }
-                    });
-                }
-            });
-             */
         }
     }
     
     const indexesSelectionState = (): checkbox => {
         const selectedCount = selectedIndexes.length;
-        const indexesCount = getAllIndexes(groups).length;
+        const indexesCount = getAllIndexes(groups, replacements).length;
         if (indexesCount && selectedCount === indexesCount) {
             return "checked";
         }
@@ -567,7 +557,11 @@ export function IndexesPage(props: IndexesPageProps) {
         }
         return "unchecked";
     };
-    
+
+    if (stats.indexes.length === 0) {
+        return <NoIndexes database={database} />
+    }
+
     return (
         <div className="flex-vertical absolute-fill">
             <div className="flex-header">
@@ -592,9 +586,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                         disableSelectedIndexes={disableSelectedIndexes}
                                         pauseSelectedIndexes={pauseSelectedIndexes}
                                         resumeSelectedIndexes={resumeSelectedIndexes}
-                                        lockSelectedIndexes={lockSelectedIndexes}
-                                        unlockSelectedIndexes={unlockSelectedIndexes}
-                                        lockErrorSelectedIndexes={lockErrorSelectedIndexes}
+                                        setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
                                     />
                                 )}
                             </div>
@@ -602,8 +594,7 @@ export function IndexesPage(props: IndexesPageProps) {
                         { /*  TODO  <IndexGlobalIndexing /> */ }
                     </div>
                 )}
-                <IndexFilterDescription filter={filter} groups={groups} />
-                <button type="button" onClick={loadMissing}>Load Missing</button>
+                <IndexFilterDescription filter={filter} indexes={getAllIndexes(groups, replacements)} />
             </div>
             <div className="flex-grow scroll js-scroll-container">
                 {groups.map(group => {
@@ -621,10 +612,10 @@ export function IndexesPage(props: IndexesPageProps) {
                                                     globalIndexingStatus={globalIndexingStatus}
                                                     resetIndex={() => resetIndex(index)}
                                                     openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
-                                                    enableIndexing={() => enableIndexing(index)}
-                                                    disableIndexing={() => disableIndexing(index)}
-                                                    pauseIndexing={() => pauseIndexing(index)}
-                                                    resumeIndexing={() => resumeIndexing(index)}
+                                                    enableIndexing={() => toggleDisableIndexes(true, [index])}
+                                                    disableIndexing={() => toggleDisableIndexes(false, [index])}
+                                                    pauseIndexing={() => togglePauseIndexes(false, [index])}
+                                                    resumeIndexing={() => togglePauseIndexes(true, [index])}
                                                     index={index}
                                                     hasReplacement={!!replacement}
                                                     database={database}
@@ -659,10 +650,10 @@ export function IndexesPage(props: IndexesPageProps) {
                                                         globalIndexingStatus={globalIndexingStatus}
                                                         resetIndex={() => resetIndex(replacement)}
                                                         openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
-                                                        enableIndexing={() => enableIndexing(replacement)}
-                                                        disableIndexing={() => disableIndexing(replacement)}
-                                                        pauseIndexing={() => pauseIndexing(replacement)}
-                                                        resumeIndexing={() => resumeIndexing(replacement)}
+                                                        enableIndexing={() => toggleDisableIndexes(true, [replacement])}
+                                                        disableIndexing={() => toggleDisableIndexes(false, [replacement])}
+                                                        pauseIndexing={() => togglePauseIndexes(false, [replacement])}
+                                                        resumeIndexing={() => togglePauseIndexes(true, [replacement])}
                                                         index={replacement}
                                                         database={database}
                                                         deleteIndex={() => confirmDeleteIndexes(database, [replacement])}

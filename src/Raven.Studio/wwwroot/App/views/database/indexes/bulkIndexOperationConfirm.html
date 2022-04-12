@@ -11,9 +11,12 @@
             
             <ul data-bind="foreach: indexes" style="max-height: 200px; overflow-y: auto;">
                 <li class="padding padding-xs">
-                    <strong data-bind="text: name"></strong>                   
+                    <strong data-bind="text: name"></strong>
                 </li>
             </ul>
+
+            <p>Select context:</p>
+            <div data-bind="react: locationSelectorOptions"></div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>

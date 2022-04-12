@@ -1,7 +1,8 @@
-﻿import React from "react";
+﻿import React, { useCallback } from "react";
 import { useAppUrls } from "../../../hooks/useAppUrls";
 import classNames from "classnames";
 import { withPreventDefault } from "../../../utils/common";
+import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 
 interface IndexToolbarActionProps {
     selectedIndexes: string[];
@@ -10,9 +11,7 @@ interface IndexToolbarActionProps {
     disableSelectedIndexes: () => Promise<void>;
     pauseSelectedIndexes: () => Promise<void>;
     resumeSelectedIndexes: () => Promise<void>;
-    unlockSelectedIndexes: () => Promise<void>;
-    lockSelectedIndexes: () => Promise<void>;
-    lockErrorSelectedIndexes: () => Promise<void>;
+    setLockModeSelectedIndexes: (lockMode: IndexLockMode) => Promise<void>;
 }
 
 export default function IndexToolbarAction(props: IndexToolbarActionProps) {
@@ -26,10 +25,23 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
         disableSelectedIndexes,
         pauseSelectedIndexes,
         resumeSelectedIndexes,
-        lockErrorSelectedIndexes,
-        lockSelectedIndexes,
-        unlockSelectedIndexes
+        setLockModeSelectedIndexes
     } = props;
+    
+    const unlockSelectedIndexes = useCallback(async (e: React.MouseEvent<HTMLElement>) => {
+        e.preventDefault();
+        await setLockModeSelectedIndexes("Unlock");
+    }, [setLockModeSelectedIndexes]);
+
+    const lockSelectedIndexes = useCallback(async (e: React.MouseEvent<HTMLElement>) => {
+        e.preventDefault();
+        await setLockModeSelectedIndexes("LockedIgnore");
+    }, [setLockModeSelectedIndexes]);
+    
+    const lockErrorSelectedIndexes = useCallback(async (e: React.MouseEvent<HTMLElement>) => {
+        e.preventDefault();
+        await setLockModeSelectedIndexes("LockedError");
+    }, [setLockModeSelectedIndexes]);
     
     return (
         <div className="indexesToolbar-actions">
@@ -88,19 +100,19 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                     </button>
                     <ul className="dropdown-menu">
                         <li>
-                            <a href="#" title="Unlock selected indexes" onClick={withPreventDefault(unlockSelectedIndexes)}>
+                            <a href="#" title="Unlock selected indexes" onClick={unlockSelectedIndexes}>
                                 <i className="icon-unlock"/>
                                 <span>Unlock</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#" title="Lock selected indexes" onClick={withPreventDefault(lockSelectedIndexes)}>
+                            <a href="#" title="Lock selected indexes" onClick={lockSelectedIndexes}>
                                 <i className="icon-lock"/>
                                 <span>Lock</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#" title="Lock (Error) selected indexes" onClick={withPreventDefault(lockErrorSelectedIndexes)}>
+                            <a href="#" title="Lock (Error) selected indexes" onClick={lockErrorSelectedIndexes}>
                                 <i className="icon-lock-error"/>
                                 <span>Lock (Error)</span>
                             </a>

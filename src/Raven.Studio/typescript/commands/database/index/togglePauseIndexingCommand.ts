@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 type optsNames = {
-    name: Array<string>;
+    name: string;
 }
 
 type toggleType = "map" | "map-reduce";
@@ -15,7 +15,7 @@ type optsType = {
 class togglePauseIndexingCommand extends commandBase {
 
     private toggleAll = false;
-    private names: Array<string>;
+    private name: string;
     private type: toggleType;
     private location: databaseLocationSpecifier;
 
@@ -25,7 +25,7 @@ class togglePauseIndexingCommand extends commandBase {
         this.location = location;
         
         if (options && "name" in options) {
-            this.names = options.name;
+            this.name = options.name;
         } else if (options && "type" in options) {
             this.type = options.type;
         } else {
@@ -39,8 +39,8 @@ class togglePauseIndexingCommand extends commandBase {
         let args: any = {
             ...this.location
         };
-        if (this.names) {
-            args.name = this.names;
+        if (this.name) {
+            args.name = this.name;
         } else if (this.type) {
             args.type = this.type;
         }
