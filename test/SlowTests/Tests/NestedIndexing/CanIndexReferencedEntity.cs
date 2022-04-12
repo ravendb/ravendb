@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Tests.NestedIndexing
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void Simple()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Simple(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -55,10 +57,11 @@ namespace SlowTests.Tests.NestedIndexing
             }
         }
 
-        [Fact]
-        public void WhenReferencedItemChanges()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhenReferencedItemChanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -99,10 +102,11 @@ namespace SlowTests.Tests.NestedIndexing
             }
         }
 
-        [Fact]
-        public void WhenReferencedItemChangesInBatch()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhenReferencedItemChangesInBatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -144,10 +148,11 @@ namespace SlowTests.Tests.NestedIndexing
             }
         }
 
-        [Fact]
-        public void WhenReferencedItemDeleted()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhenReferencedItemDeleted(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
@@ -188,10 +193,11 @@ namespace SlowTests.Tests.NestedIndexing
             }
         }
 
-        [Fact]
-        public void NightOfTheLivingDead()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NightOfTheLivingDead(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation( new [] {new IndexDefinition
                 {
@@ -240,10 +246,11 @@ namespace SlowTests.Tests.NestedIndexing
             }
         }
 
-        [Fact]
-        public void SelfReferencing()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SelfReferencing(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
@@ -283,10 +290,11 @@ namespace SlowTests.Tests.NestedIndexing
             }
         }
 
-        [Fact]
-        public void Loops()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Loops(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
