@@ -39,14 +39,19 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
+            var firstNodeUrl = "";
+
             using (var session = store.OpenAsyncSession())
             {
+                session.Advanced.RequestExecutor.OnSucceedRequest += (sender, args) =>
+                {
+                    var firstUri = new Uri(args.Url);
+                    firstNodeUrl = $"http://{firstUri.Host}:{firstUri.Port}";
+                };
                 var lazilyLoaded0 = await session.LoadAsync<TestObj>(id);
             }
 
-            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-            var firstNode = record.Topology.Members.First();
-            var firstServer = nodes.Single(n => n.ServerStore.NodeTag == firstNode);
+            var firstServer = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == firstNodeUrl );
 
             await DisposeServerAndWaitForFinishOfDisposalAsync(firstServer);
 
@@ -56,7 +61,7 @@ namespace SlowTests.Issues
                 var loaded0 = await lazilyLoaded0.Value;
                 Assert.NotNull(loaded0);
             }
-
+            
             using (var session = store.OpenAsyncSession())
             {
                 var lazilyLoaded0 = session.Advanced.Lazily.LoadAsync<TestObj>(id);
