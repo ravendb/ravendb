@@ -9,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Sparrow.Utils;
 using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Routing
@@ -234,13 +235,12 @@ namespace Raven.Server.Routing
             var database = CreateDatabase(context);
             if (database == null)
             {
-#if DEBUG
                 if (_shardedRequest == null)
                 {
-                    throw new InvalidOperationException("Unable to run request " + context.HttpContext.Request.GetFullUrl() +
-                                                        ", the database is sharded, but no shared route is defined for this operation!");
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Critical, "Remove this!");
+                    throw new InvalidOperationException($"Unable to run request {context.HttpContext.Request.GetFullUrl()}, the database is sharded, but no shared route is defined for this operation!");
                 }
-#endif
+
                 return Tuple.Create<HandleRequest, Task<HandleRequest>>(_shardedRequest, null);
             }
 
