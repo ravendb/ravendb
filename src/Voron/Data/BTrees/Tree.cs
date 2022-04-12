@@ -1289,6 +1289,15 @@ namespace Voron.Data.BTrees
             return Name + " " + State.NumberOfEntries;
         }
 
+        internal void PrepareForCommit()
+        {
+            if (_compactTrees != null)
+            {
+                foreach (var ct in _compactTrees.Values)
+                    ct.PrepareForCommit();
+            }
+        }
+
         public void Dispose()
         {
             if (_fixedSizeTrees != null)
@@ -1381,7 +1390,7 @@ namespace Voron.Data.BTrees
 
             if (_compactTrees.TryGetValue(key, out var compactTree) == false)
             {
-                compactTree = CompactTree.Create(_llt, this, key);
+                compactTree = CompactTree.InternalCreate(this, key);
                 if (compactTree == null) // missing value on read transaction
                     return null;
                 

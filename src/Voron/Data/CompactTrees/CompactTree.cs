@@ -243,9 +243,10 @@ namespace Voron.Data.CompactTrees
             }
         }
         
-        private CompactTree(Slice name)
+        private CompactTree(Slice name, Tree parent)
         {
-            Name = name;
+            Name = name.Clone(parent.Llt.Allocator, ByteStringType.Immutable);
+            _parent = parent;
         }
 
         public Slice Name 
@@ -254,26 +255,34 @@ namespace Voron.Data.CompactTrees
             private set;
         }
 
+        private Tree _parent;
+
         public long NumberOfEntries => _state.NumberOfEntries;
 
         public static CompactTree Create(LowLevelTransaction llt, string name)
         {
-            using var _ = Slice.From(llt.Allocator, name, out var slice);
-            return Create(llt, llt.RootObjects, slice);
+            return llt.RootObjects.CompactTreeFor(name);
         }
 
         public static CompactTree Create(LowLevelTransaction llt, Slice name)
         {
-            return Create(llt, llt.RootObjects, name);
+            return llt.RootObjects.CompactTreeFor(name);
         }
 
-        public static CompactTree Create(LowLevelTransaction llt, Tree parent, string name)
+        public static CompactTree Create(Tree parent, string name)
         {
-            return Create(llt, parent, name);
+            return parent.CompactTreeFor(name);
         }
 
-        public static CompactTree Create(LowLevelTransaction llt, Tree parent, Slice name)
+        public static CompactTree Create(Tree parent, Slice name)
         {
+            return parent.CompactTreeFor(name);
+        }
+
+        public static CompactTree InternalCreate(Tree parent, Slice name)
+        {
+            var llt = parent.Llt;
+
             CompactTreeState* header;
 
             var existing = parent.Read(name);
@@ -282,7 +291,7 @@ namespace Voron.Data.CompactTrees
                 if (llt.Flags != TransactionFlags.ReadWrite)
                     return null;
 
-                // This will be created a single time and stored in the root page. 
+                // This will be created a single time and stored in the root page.                 
                 var dictionaryId = PersistentDictionary.CreateDefault(llt);
 
                 var newPage = llt.AllocatePage(1);
@@ -321,11 +330,17 @@ namespace Voron.Data.CompactTrees
                 throw new InvalidOperationException($"Tried to open {name} as a compact tree, but it is actually a " +
                                                     header->RootObjectType);
 
-            return new CompactTree(name)
+            return new CompactTree(name, parent)
             {
                 _llt = llt,
                 _state = *header
             };
+        }
+
+        public void PrepareForCommit()
+        {
+            using var _ = _parent.DirectAdd(Name, sizeof(CompactTreeState), out var ptr);
+            _state.CopyTo((CompactTreeState*)ptr);
         }
 
         public static void Delete(CompactTree tree)
@@ -1354,5 +1369,6 @@ namespace Voron.Data.CompactTrees
             state.LastSearchPosition = 0;       
             return encodedKey;
         }
+
     }
 }

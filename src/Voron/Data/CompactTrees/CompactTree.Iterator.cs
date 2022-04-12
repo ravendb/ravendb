@@ -122,6 +122,8 @@ namespace Voron.Data.CompactTrees
             }
         }
 
+
+
         public unsafe struct FuzzyIterator
         {
             private Slice _baseKey;
@@ -252,5 +254,6 @@ namespace Voron.Data.CompactTrees
         {
             return new Iterator(this);
         }
+
     }
 }

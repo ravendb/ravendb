@@ -150,8 +150,8 @@ namespace FastTests.Voron
                 }
             }
         }
-        
-        
+
+
         [Fact]
         public void CanDeleteLargeNumberOfItemsInRandomOrder()
         {
@@ -166,14 +166,14 @@ namespace FastTests.Voron
                 }
                 wtx.Commit();
             }
-            
+
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
                 for (int i = 0; i < Size; i++)
                 {
-                   Assert.True(tree.TryRemove("hi" + i, out var v));
-                   Assert.Equal(i, v);
+                    Assert.True(tree.TryRemove("hi" + i, out var v));
+                    Assert.Equal(i, v);
                 }
                 wtx.Commit();
             }
@@ -186,8 +186,8 @@ namespace FastTests.Voron
                 Assert.Equal(1, tree.State.Depth);
             }
         }
-        
-        
+
+
         [Fact]
         public void CanDeleteLargeNumberOfItemsFromStart()
         {
@@ -280,6 +280,83 @@ namespace FastTests.Voron
                     Assert.True(result);
                     Assert.Equal(i, r);
                 }
+            }
+        }
+
+
+        [Fact]
+        public void CanRecompressItemsWithDeletesAndInserts()
+        {
+            static void Shuffle(string[] list, Random rng)
+            {
+                int n = list.Length;
+                while (n > 1)
+                {
+                    n--;
+                    int k = rng.Next(n + 1);
+                    var value = list[k];
+                    list[k] = list[n];
+                    list[n] = value;
+                }
+            }
+
+            const int Size = 200000;
+
+            Random random = new Random(1337);
+
+            var uniqueKeys = new HashSet<string>();
+            var inTreeKeys = new HashSet<string>();
+            var removedKeys = new HashSet<string>();
+
+            for ( int iter = 0; iter < 4; iter++ )
+            {
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                    for (int i = 0; i < Size; i++)
+                    {
+                        var rname = random.Next();
+                        var key = "hi" + rname;
+                        if (!uniqueKeys.Contains(key))
+                        {
+                            uniqueKeys.Add(key);
+                            inTreeKeys.Add(key);
+                            tree.Add(key, rname);
+                        }
+                    }
+
+                    tree.TryImproveDictionaryByFullScanning();
+                    wtx.Commit();
+                }
+
+                var values = inTreeKeys.ToArray();
+                Shuffle(values, random);
+
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                    for (int i = 0; i < Size / 2; i++)
+                    {                        
+                        Assert.True(tree.TryRemove(values[i], out var v));
+                        inTreeKeys.Remove(values[i]);
+                        removedKeys.Add(values[i]);
+                    }
+                    wtx.Commit();
+                }
+            }
+
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+                Assert.Equal(inTreeKeys.Count, tree.State.NumberOfEntries);
+                Assert.True(inTreeKeys.Count <= tree.State.NextTrainAt);
+
+
+                foreach (var key in inTreeKeys)
+                    Assert.True(tree.TryGetValue(key, out var v));
+
+                foreach (var key in removedKeys)
+                    Assert.False(tree.TryGetValue(key, out var v));
             }
         }
     }
