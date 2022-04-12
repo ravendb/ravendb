@@ -41,7 +41,9 @@ function FormatBuildDownloadVersion($versionInfo) {
     $builtAtString = $versionInfo.BuiltAtString
     $buildType = $versionInfo.BuildType
 
-    if ($buildType.ToLower() -eq 'nightly') {
+    $useBuiltAtForVersioning = $env:RAVEN_RELEASE_VERSIONING_TYPE -eq 'use_build_date'
+
+    if (($buildType.ToLower() -eq 'nightly') -or $useBuiltAtForVersioning) {
         $versionString = "$builtAtString-$((Get-Culture).textinfo.toTitleCase($buildType))"
     } else {
         if ($buildType.ToLower() -eq 'stable') {
