@@ -138,6 +138,31 @@ module.exports = (env, args) => {
                         }
                     ]
                 },
+                {
+                    test: /\.scss$/,
+                    use: [
+                        {
+                            loader: isProductionMode
+                                ? MiniCssExtractPlugin.loader
+                                : 'style-loader'
+                        },
+                        {
+                            loader: "css-loader",
+                            options: {
+                                url: true
+                            }
+                        },
+                        {
+                            loader: 'resolve-url-loader',
+                            options: {
+                            }
+                        },
+                        {
+                            loader: "sass-loader",
+                            options: {}
+                        }
+                    ]
+                },
                 { 
                     test: /\.css$/,
                     use: [
