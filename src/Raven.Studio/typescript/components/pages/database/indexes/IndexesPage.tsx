@@ -31,6 +31,8 @@ import useTimeout from "../../../hooks/useTimeout";
 import useInterval from "../../../hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 
+import "./IndexesPage.scss";
+
 interface IndexesPageProps {
     database: database;
     stale?: boolean;
