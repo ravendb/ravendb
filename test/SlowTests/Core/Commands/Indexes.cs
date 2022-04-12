@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;
@@ -58,10 +59,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanGetTermsForIndex()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetTermsForIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

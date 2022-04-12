@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Sorting;
@@ -231,6 +232,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LastChangeVectorForCollectionResult> LastChangeVectorForCollectionResult = GenerateJsonDeserializationRoutine<LastChangeVectorForCollectionResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetConflictsPreviewResult> GetConflictResults = GenerateJsonDeserializationRoutine<GetConflictsPreviewResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, TermsQueryResultServerSide> TermsQueryResult = GenerateJsonDeserializationRoutine<TermsQueryResultServerSide>();
 
         public class Parameters
         {

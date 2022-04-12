@@ -305,69 +305,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Terms()
         {
-            var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
-
-            using (var token = CreateTimeLimitedOperationToken())
-            using (var context = QueryOperationContext.Allocate(Database))
-            {
-                var name = GetIndexNameFromCollectionAndField(field) ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-                var fromValue = GetStringQueryString("fromValue", required: false);
-                var existingResultEtag = GetLongFromHeaders(Constants.Headers.IfNoneMatch);
-
-                var result = Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token, out var index);
-
-                if (result.NotModified)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
-
-                HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
-                {
-                    if (field.EndsWith("__minX") ||
-                        field.EndsWith("__minY") ||
-                        field.EndsWith("__maxX") ||
-                        field.EndsWith("__maxY"))
-                    {
-                        if (index.Definition.IndexFields != null &&
-                            index.Definition.IndexFields.TryGetValue(field.Substring(0, field.Length - 6), out var indexField) == true)
-                        {
-                            if (indexField.Spatial?.Strategy == Client.Documents.Indexes.Spatial.SpatialSearchStrategy.BoundingBox)
-                            {
-                                // Term-values for 'Spatial Index Fields' with 'BoundingBox' are encoded in Lucene as 'prefixCoded bytes'
-                                // Need to convert to numbers for the Studio
-                                var readableTerms = new HashSet<string>();
-                                foreach (var item in result.Terms)
-                                {
-                                    var num = Lucene.Net.Util.NumericUtils.PrefixCodedToDouble(item);
-                                    readableTerms.Add(NumberUtil.NumberToString(num));
-                                }
-
-                                result.Terms = readableTerms;
-                            }
-                        }
-                    }
-
-                    writer.WriteTermsQueryResult(context.Documents, result);
-                }
-            }
-        }
-
-        private string GetIndexNameFromCollectionAndField(string field)
-        {
-            var collection = GetStringQueryString("collection", false);
-            if (string.IsNullOrEmpty(collection))
-                return null;
-            var query = new IndexQueryServerSide(new QueryMetadata($"from {collection} select {field}", null, 0));
-            var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(Database.IndexStore);
-            var match = dynamicQueryToIndex.Match(DynamicQueryMapping.Create(query));
-            if (match.MatchType == DynamicQueryMatchType.Complete ||
-                match.MatchType == DynamicQueryMatchType.CompleteButIdle)
-                return match.IndexName;
-            throw new IndexDoesNotExistException($"There is no index to answer the following query: from {collection} select {field}");
+            using (var processor = new IndexHandlerProcessorForTerms(this, token: CreateTimeLimitedOperationToken(), existingResultEtag: GetLongFromHeaders("If-None-Match")))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/total-time", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
