@@ -1,4 +1,4 @@
-<form class="content-margin edit-backup" data-bind="with: configuration" autocomplete="off">
+<form class="content-margin edit-backup edit-ongoing-task" data-bind="with: configuration" autocomplete="off">
     <div class="toolbar" data-bind="with: $root">
         <button data-bind="click: onSubmit, enable: dirtyFlag().isDirty" type="submit" class="btn btn-primary">
             <i class="icon-save"></i><span data-bind="text: configuration().backupOperation === 'manual' ? 'Backup Now' : 'Save'"></span>
@@ -67,20 +67,20 @@
                 <div class="row margin-bottom">
                     <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
                         <div class="toggle">
-                            <div class="responsible-node">
+                            <div class="toggle" data-placement="right" data-toggle="tooltip" title="Toggle on to set a responsible node for the task" data-animation="true">
                                 <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor">
-                                <label for="responsibleNode">Set preferred responsible node</label>
+                                <label for="responsibleNode">Set responsible node</label>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
-                    <div class="row margin-bottom">
+                    <div class="row" data-bind="css: { 'margin-bottom-xs': mentorNode() }">
                         <label class="control-label col-sm-4 col-lg-2">Responsible Node</label>
-                        <div class="col-sm-4">
+                        <div class="col-sm-4 flex-horizontal">
                             <div class="dropdown btn-block">
                                 <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                    <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred responsible node'"></span>
+                                    <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select responsible node'"></span>
                                     <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
@@ -88,6 +88,12 @@
                                 </ul>
                                 <span class="help-block" data-bind="validationMessage: mentorNode"></span>
                             </div>
+                            <span data-bind="compose: 'partial/pinResponsibleNodeButtonsScript.html'"></span>
+                        </div>
+                    </div>
+                    <div class="row margin-bottom small">
+                        <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="visible: mentorNode">
+                            <div data-bind="compose: 'partial/pinResponsibleNodeTextScript.html'"></div>
                         </div>
                     </div>
                 </div>

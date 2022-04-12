@@ -38,6 +38,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.taskState,
             this.connectionStringName,
             this.mentorNode,
+            this.pinMentorNode,
             this.manualChooseMentor,
             this.customPartition,
             this.customPartitionEnabled,
@@ -88,6 +89,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
         if (configuration) {
             this.connectionStringName(configuration.ConnectionStringName);
             this.manualChooseMentor(!!configuration.MentorNode);
+            this.pinMentorNode(configuration.PinToMentorNode);
             
             this.customPartition(configuration.CustomPartitionValue);
             this.customPartitionEnabled(!!configuration.CustomPartitionValue);
@@ -117,10 +119,10 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             AllowEtlOnNonEncryptedChannel: true,
             Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            PinToMentorNode: this.pinMentorNode(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
             CustomPartitionValue: this.customPartitionEnabled() ? this.customPartition() : null,
             RunFrequency: this.runFrequency(),
-            PinToMentorNode: false,
             OlapTables: this.olapTables().map(x => x.toDto()),
             Format: undefined
         };
