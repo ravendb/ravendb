@@ -199,28 +199,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {
-            await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
-                "update-periodic-backup",
-                GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string dbName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
-                {
-                    var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
-
-                    ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
-                    BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
-                    BackupConfigurationHelper.AssertBackupConfiguration(configuration);
-                    BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
-
-                    readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
-                },
-                fillJson: (json, readerObject, index) =>
-                {
-                    var taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
-                    readerObject.TryGet(taskIdName, out long taskId);
-                    if (taskId == 0)
-                        taskId = index;
-                    json[taskIdName] = taskId;
-                });
+            using (var processor = new OngoingTasksHandlerProcessorForUpdatePeriodicBackup(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
