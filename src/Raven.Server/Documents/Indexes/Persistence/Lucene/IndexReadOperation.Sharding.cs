@@ -16,6 +16,7 @@ public partial class IndexReadOperation
         if (_index.DocumentDatabase is ShardedDocumentDatabase == false || query.Metadata.OrderBy?.Length > 0 == false || _indexType.IsMapReduce())
             return;
 
+        //https://issues.hibernatingrhinos.com/issue/RavenDB-18457
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "review after Corax is merged");
 
         var documentWithOrderByFields = DocumentWithOrderByFields.From(d);
@@ -25,13 +26,13 @@ public partial class IndexReadOperation
             switch (field.OrderingType)
             {
                 case OrderByFieldType.Long:
-                    documentWithOrderByFields.AddLongOrderByField(_searcher.IndexReader.GetLongValueFor(field.LuceneOrderByName, FieldCache_Fields.NUMERIC_UTILS_LONG_PARSER, doc, _state));
+                    documentWithOrderByFields.AddLongOrderByField(_searcher.IndexReader.GetLongValueFor(field.OrderByName, FieldCache_Fields.NUMERIC_UTILS_LONG_PARSER, doc, _state));
                     break;
                 case OrderByFieldType.Double:
-                    documentWithOrderByFields.AddDoubleOrderByField(_searcher.IndexReader.GetDoubleValueFor(field.LuceneOrderByName, FieldCache_Fields.NUMERIC_UTILS_DOUBLE_PARSER, doc, _state));
+                    documentWithOrderByFields.AddDoubleOrderByField(_searcher.IndexReader.GetDoubleValueFor(field.OrderByName, FieldCache_Fields.NUMERIC_UTILS_DOUBLE_PARSER, doc, _state));
                     break;
                 default:
-                    documentWithOrderByFields.AddStringOrderByField(_searcher.IndexReader.GetStringValueFor(field.LuceneOrderByName, doc, _state));
+                    documentWithOrderByFields.AddStringOrderByField(_searcher.IndexReader.GetStringValueFor(field.OrderByName, doc, _state));
                     break;
             }
         }
