@@ -16,7 +16,8 @@ namespace Raven.Server.Documents.Queries
             Ascending = ascending;
             Arguments = arguments;
             AggregationOperation = AggregationOperation.None;
-            LuceneOrderByName = orderingType switch
+
+            OrderByName = orderingType switch
             {
                 OrderByFieldType.Long => $"{name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixLong}",
                 OrderByFieldType.Double => $"{name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble}",
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly MethodType? Method;
 
-        public readonly string LuceneOrderByName;
+        public readonly string OrderByName;
 
         public struct Argument
         {
