@@ -358,7 +358,7 @@ namespace Corax
             foreach (var binding in _fieldsMapping)
             {
                 var analyzer = binding.Analyzer;
-                if (analyzer is null)
+                if (analyzer is null || binding.FieldIndexingMode is FieldIndexingMode.Exact)
                     continue;
 
                 var fieldId = binding.FieldId;
@@ -375,8 +375,11 @@ namespace Corax
             {
                 var entryReader = IndexSearcher.GetReaderFor(Transaction, ref page, id);
 
-                foreach (var binding in _fieldsMapping) // TODO maciej: this is wrong, need to get all the fields from the entry
+                foreach (var binding in _fieldsMapping) // todo maciej: this part needs to be rebuilt after implementing DynamicFields
                 {
+                    if (binding.FieldIndexingMode is FieldIndexingMode.No)
+                        continue;
+                    
                     int fieldId = binding.FieldId;
                     Slice fieldName = binding.FieldName;
                     Analyzer analyzer = binding.Analyzer;
@@ -388,7 +391,7 @@ namespace Corax
 
                         while (it.ReadNext())
                         {
-                            if (analyzer is null)
+                            if (binding.FieldIndexingMode is FieldIndexingMode.Exact || analyzer is null)
                             {
                                 DeleteField(id, fieldName, tmpBuf, it.Sequence);
 
@@ -418,12 +421,9 @@ namespace Corax
                     }
                     else
                     {
-                        if (fieldType.HasFlag(IndexEntryFieldType.Raw))
-                            continue;
-
                         entryReader.Read(fieldId, out var termValue);
 
-                        if (analyzer is null)
+                        if (binding.FieldIndexingMode is FieldIndexingMode.Exact || analyzer is null)
                         {
                             DeleteField(id, fieldName, tmpBuf, termValue);
                             if (binding.HasSuggestions)
@@ -514,7 +514,7 @@ namespace Corax
 
             var fieldTree = fieldsTree.CompactTreeFor(key);
             var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-            Debug.Assert(entriesCount - _entriesToDelete.Count >= 1);
+            Debug.Assert(entriesCount - _entriesToDelete.Count >= 0);
 
             if (fieldTree.TryGetValue(term, out long id) == false)
                 return false;
