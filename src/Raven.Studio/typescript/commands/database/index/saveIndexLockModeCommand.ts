@@ -5,7 +5,7 @@ import { IndexSharedInfo } from "../../../components/models/indexes";
 
 class saveIndexLockModeCommand extends commandBase {
 
-    constructor(private indexes: Array<IndexSharedInfo>, private lockMode: Raven.Client.Documents.Indexes.IndexLockMode, private db: database, private lockTitle: string) {
+    constructor(private indexes: Array<IndexSharedInfo>, private lockMode: Raven.Client.Documents.Indexes.IndexLockMode, private db: database) {
         super();
     }
 
@@ -18,10 +18,6 @@ class saveIndexLockModeCommand extends commandBase {
         const url = endpoints.databases.index.indexesSetLock;
 
         return this.post(url, JSON.stringify(payload), this.db, { dataType: undefined })
-            .done(() => {
-                const indexesNameStr = this.indexes.length === 1 ? this.indexes[0].name : "Indexes";
-                this.reportSuccess(`${indexesNameStr} mode was set to: ${this.lockTitle}`);
-             })
             .fail((response: JQueryXHR) => this.reportError("Failed to set index lock mode", response.responseText));
     }
 } 

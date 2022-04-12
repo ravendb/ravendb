@@ -25,7 +25,7 @@ export default class IndexesService {
     }
     
     async setLockMode(indexes: IndexSharedInfo[], lockMode: IndexLockMode, db: database) {
-        await new saveIndexLockModeCommand(indexes, lockMode, db, IndexUtils.formatLockMode(lockMode))
+        await new saveIndexLockModeCommand(indexes, lockMode, db)
             .execute();
     }
     
@@ -56,13 +56,13 @@ export default class IndexesService {
             .execute();
     }
 
-    async pause(indexes: IndexSharedInfo[], db: database, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(false, db, { name: indexes.map(x => x.name) }, location)
+    async pause(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(false, db, { name: index.name }, location)
             .execute();
     }
 
-    async resume(indexes: IndexSharedInfo[], db: database, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(true, db, { name: indexes.map(x => x.name) }, location)
+    async resume(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
+        await new togglePauseIndexingCommand(true, db, { name: index.name }, location)
             .execute();
     }
     

@@ -169,7 +169,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 )}
                             </div>
                             <div className="flex-horizontal clear-left index-info nospacing">
-                                <div className="index-type-icon" data-bind="tooltipText: mapReduceIndexInfoTooltip" id={reduceOutputId}>
+                                <div className="index-type-icon" id={reduceOutputId}>
                                     { index.reduceOutputCollectionName && !index.patternForReferencesToReduceOutputCollection && (
                                         <span>
                                             <i className="icon-output-collection" />
@@ -266,57 +266,59 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                         </div>
                                     </div>
                                 )}
-                                
-                                <div className="properties-item mode"
-                                     data-bind="css: { 'hidden': type() === 'AutoMap' || type() === 'AutoMapReduce' || isSideBySide() }">
-                                    <span className="properties-label">Mode:</span>
-                                    <div className="btn-group properties-value">
-                                        <button type="button" 
-                                                className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLockMode, enable: !updatingLockMode })} 
-                                                data-toggle="dropdown"
-                                                disabled={!canReadWriteDatabase(database)}>
-                                            {index.lockMode === "Unlock" && (
-                                                <span>
+
+                                { index.type !== "AutoMap" && index.type !== "AutoMapReduce" && !IndexUtils.isSideBySide(index) && (
+                                    <div className="properties-item mode">
+                                        <span className="properties-label">Mode:</span>
+                                        <div className="btn-group properties-value">
+                                            <button type="button"
+                                                    className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLockMode, enable: !updatingLockMode })}
+                                                    data-toggle="dropdown"
+                                                    disabled={!canReadWriteDatabase(database)}>
+                                                {index.lockMode === "Unlock" && (
+                                                    <span>
                                                 <i className="icon-unlock"/><span>Unlocked</span>
                                             </span>
-                                            )}
-                                            {index.lockMode === "LockedIgnore" && (
-                                                <span>
+                                                )}
+                                                {index.lockMode === "LockedIgnore" && (
+                                                    <span>
                                                 <i className="icon-lock"/><span>Locked</span>
                                             </span>
-                                            )}
-                                            {index.lockMode === "LockedError" && (
-                                                <span>
+                                                )}
+                                                {index.lockMode === "LockedError" && (
+                                                    <span>
                                                 <i className="icon-lock-error"/><span>Locked (Error)</span>
                                             </span>
-                                            )}
-                                            <span className="caret"/>
-                                        </button>
-                                        <ul className="dropdown-menu">
-                                            <li>
-                                                <a href="#" onClick={e => setLockMode(e, "Unlock")} title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
-                                                    <i className="icon-unlock"/>
-                                                    <span>Unlock</span>
-                                                </a>
-                                            </li>
-                                            <li className="divider"/>
-                                            <li>
-                                                <a href="#" onClick={e => setLockMode(e, "LockedIgnore")}
-                                                   title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
-                                                    <i className="icon-lock"/>
-                                                    <span>Lock</span>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="#" onClick={e => setLockMode(e, "LockedError")}
-                                                   title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
-                                                    <i className="icon-lock-error"/>
-                                                    <span>Lock (Error)</span>
-                                                </a>
-                                            </li>
-                                        </ul>
+                                                )}
+                                                <span className="caret"/>
+                                            </button>
+                                            <ul className="dropdown-menu">
+                                                <li>
+                                                    <a href="#" onClick={e => setLockMode(e, "Unlock")} title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
+                                                        <i className="icon-unlock"/>
+                                                        <span>Unlock</span>
+                                                    </a>
+                                                </li>
+                                                <li className="divider"/>
+                                                <li>
+                                                    <a href="#" onClick={e => setLockMode(e, "LockedIgnore")}
+                                                       title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
+                                                        <i className="icon-lock"/>
+                                                        <span>Lock</span>
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="#" onClick={e => setLockMode(e, "LockedError")}
+                                                       title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
+                                                        <i className="icon-lock-error"/>
+                                                        <span>Lock (Error)</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+                                
                             </div>
                         )}
                         
