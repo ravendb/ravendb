@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.CompactTrees
 {
@@ -29,6 +30,19 @@ namespace Voron.Data.CompactTrees
         public override string ToString()
         {
             return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Flags)}: {Flags}, {nameof(Depth)}: {Depth}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}, {nameof(TreeDictionaryId)}: {TreeDictionaryId}";
+        }
+
+        public void CopyTo(CompactTreeState* header)
+        {
+            header->RootObjectType = RootObjectType;
+            header->Flags = Flags;
+            header->Depth = Depth;
+            header->RootPage = RootPage;
+            header->NumberOfEntries = NumberOfEntries;
+            header->BranchPages = BranchPages;
+            header->LeafPages = LeafPages;
+            header->TreeDictionaryId = TreeDictionaryId;
+            header->NextTrainAt = NextTrainAt;
         }
     }
 }

@@ -118,6 +118,7 @@ namespace Voron.Impl
                 return; // nothing to do
 
             PrepareForCommit();
+                      
             _lowLevelTransaction.Commit();
         }
 
@@ -127,6 +128,7 @@ namespace Voron.Impl
                 ThrowInvalidAsyncCommitOnRead();
 
             PrepareForCommit();
+            
             var tx = _lowLevelTransaction.BeginAsyncCommitAndStartNewTransaction(persistentContext);
             return new Transaction(tx);
         }
@@ -254,6 +256,8 @@ namespace Voron.Impl
                 if (tree == null)
                     continue;
 
+                tree.PrepareForCommit();
+
                 var treeState = tree.State;
                 if (treeState.IsModified)
                 {
@@ -270,6 +274,7 @@ namespace Voron.Impl
                 }
             }
 
+            _lowLevelTransaction.PrepareForCommit();
         }
 
         internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)

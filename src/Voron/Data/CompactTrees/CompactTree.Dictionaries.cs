@@ -47,6 +47,7 @@ unsafe partial class CompactTree
         {
             _tree = tree;
             _iterator = _tree.Iterate();
+            _iterator.Reset();
         }
 
         public bool MoveNext(out ReadOnlySpan<byte> result)
@@ -59,6 +60,7 @@ unsafe partial class CompactTree
         public void Reset()
         {
             _iterator = _tree.Iterate();
+            _iterator.Reset();
         }
     }
 
@@ -70,7 +72,7 @@ unsafe partial class CompactTree
     {
         Debug.Assert(_llt.Flags == TransactionFlags.ReadWrite);
 
-        if (_state.NextTrainAt < _state.NumberOfEntries)
+        if (_state.NextTrainAt > _state.NumberOfEntries)
             return false;
 
         // We will try to improve the dictionary by scanning the whole tree over a maximum budget.    
@@ -83,7 +85,7 @@ unsafe partial class CompactTree
             _state.TreeDictionaryId = newDictionary.PageNumber;
 
         // We will update the number of entries regardless if we updated the current dictionary or not. 
-        _state.NextTrainAt = (long)(_state.NextTrainAt * 1.5);
+        _state.NextTrainAt = (long)(Math.Max(_state.NextTrainAt, _state.NumberOfEntries) * 1.5);
         return true;
     }
 

@@ -963,6 +963,10 @@ namespace Voron.Impl
             }
         }
 
+        internal void PrepareForCommit()
+        {
+            _root.PrepareForCommit();
+        }
 
         public void Commit()
         {
