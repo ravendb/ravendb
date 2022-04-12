@@ -15,11 +15,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         public override async ValueTask ExecuteAsync()
         {
-            await RequestHandler.DatabaseConfigurations(RequestHandler.ServerStore.PutConnectionString, 
+            // todo 
+            /*await RequestHandler.DatabaseConfigurations(RequestHandler.ServerStore.PutConnectionString, 
                 "put-connection-string",
                 RequestHandler.GetRaftRequestIdFromQuery(),
                 _databaseName, 
-                waitForIndex: RequestHandler.WaitForIndexToBeAppliedAsync);
+                waitForIndex: RequestHandler.WaitForIndexToBeAppliedAsync);*/
         }
     }
 }

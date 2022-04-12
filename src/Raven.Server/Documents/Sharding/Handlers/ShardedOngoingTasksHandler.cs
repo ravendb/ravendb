@@ -152,7 +152,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/periodic-backup", "POST")]
         public async Task UpdatePeriodicBackup()
         {
-            await UpdatePeriodicBackup(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForUpdatePeriodicBackup(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/periodic-backup/config", "GET")]
