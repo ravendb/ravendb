@@ -54,6 +54,11 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
             throw new AuthorizationException($"Cannot modify configuration of '{databaseName}' database due to insufficient privileges.");
     }
 
+    protected virtual ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, string databaseName, T configuration, string raftRequestId)
+    {
+        return ValueTask.CompletedTask;
+    }
+
     public override async ValueTask ExecuteAsync()
     {
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -75,7 +80,8 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
                 OnBeforeUpdateConfiguration(ref configuration, context);
 
-                var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, RequestHandler.GetRaftRequestIdFromQuery());
+                var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
+                var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, raftRequestId);
 
                 await RequestHandler.WaitForIndexNotificationAsync(index);
 
@@ -89,6 +95,8 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
                 OnBeforeResponseWrite(context, json, configuration, index);
 
                 context.Write(writer, json);
+
+                await OnAfterUpdateConfiguration(context, databaseName, configuration, raftRequestId);
             }
         }
     }

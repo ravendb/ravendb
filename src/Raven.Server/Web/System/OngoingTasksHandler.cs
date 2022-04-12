@@ -455,13 +455,15 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
         {
-            await ResetEtl(Database.Name, WaitForIndexToBeAppliedAsync);
+            using (var processor = new OngoingTasksHandlerProcessorForResetEtl(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-            await AddEtl(Database.Name, WaitForIndexToBeAppliedAsync);
+            using (var processor = new OngoingTasksHandlerProcessorForAddEtl(this))
+                await processor.ExecuteAsync();
         }
 
         private OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
@@ -853,8 +855,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
-            await ToggleTaskState(Database.Name, waitForIndex:  (_, index) => 
-                Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
+            using (var processor = new OngoingTasksHandlerProcessorForToggleTaskState(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -881,8 +883,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteOngoingTask()
         {
-            await DeleteOngoingTask(Database.Name, Database, waitForIndex: (_, index) => 
-                Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
+            using (var processor = new OngoingTasksHandlerProcessorForDeleteOngoingTask(this))
+                await processor.ExecuteAsync();
         }
 
         internal static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString

@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -57,27 +56,29 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/etl", "PUT")]
         public async Task AddEtl()
         {
-            await AddEtl(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForAddEtl(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/etl", "RESET")]
         public async Task ResetEtl()
         {
-            await ResetEtl(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForResetEtl(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/tasks", "DELETE")]
         public async Task DeleteOngoingTask()
         {
-            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).First();
-
-            await DeleteOngoingTask(DatabaseContext.DatabaseName, database, WaitForIndexToBeAppliedAsync);
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForDeleteOngoingTask(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/tasks/state", "POST")]
         public async Task ToggleTaskState()
         {
-            await ToggleTaskState(DatabaseContext.DatabaseName, WaitForIndexToBeAppliedAsync);
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForToggleTaskState(this))
+                await processor.ExecuteAsync();
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
@@ -147,7 +148,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
             }
         }
-
 
         [RavenShardedAction("/databases/*/admin/periodic-backup", "POST")]
         public async Task UpdatePeriodicBackup()

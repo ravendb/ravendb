@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,7 +95,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 await DatabaseContext.RachisLogIndexNotifications.WaitForIndexNotification(index, cts.Token);
 
-                var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).ToList();
+                var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName);
 
                 foreach (var task in dbs)
                 {
