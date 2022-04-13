@@ -1492,6 +1492,12 @@ namespace Raven.Server.Web.System
                             if (olapEtl != null)
                                 _deletingEtl = (olapEtl.Name, olapEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
                             break;
+                        case OngoingTaskType.ElasticSearchEtl:
+                            var elasticEtls = rawRecord.ElasticSearchEtls;
+                            var elasticEtl = elasticEtls?.Find(x => x.TaskId == id);
+                            if (elasticEtl != null)
+                                _deletingEtl = (elasticEtl.Name, elasticEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
                     }
                 }
             }
