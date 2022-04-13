@@ -129,15 +129,16 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         var analyzer = binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
-        Debug.Assert(outputSize < 1024 * 1024);
-        Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024);
+        
+        Debug.Assert(outputSize < 1024 * 1024, "Term size is too big for analyzer.");
+        Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024, "Analyzer wants to create too much tokens.");
         
         Span<byte> encoded = new byte[outputSize];
         Token* tokensPtr = stackalloc Token[tokenSize];
         var tokens = new Span<Token>(tokensPtr, tokenSize);
         
         analyzer.Execute(originalTerm, ref encoded, ref tokens);
-        Debug.Assert(tokens.Length == 1);
+        Debug.Assert(tokens.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
 
         return encoded;
     }
