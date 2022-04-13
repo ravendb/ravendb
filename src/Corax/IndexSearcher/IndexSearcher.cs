@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow.Server.Compression;
@@ -117,26 +118,26 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     //todo maciej: notice this is very inefficient. We need to improve it in future. 
     // Only for KeywordTokenizer
     [SkipLocalsInit]
-    private unsafe ReadOnlySpan<byte> ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId)
+    internal unsafe ReadOnlySpan<byte> ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId)
     {
-        if (_fieldMapping.Count == 0)
-            return originalTerm;
-
-        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false)
-            return originalTerm;
-        
-        if (binding.FieldIndexingMode == FieldIndexingMode.Exact || binding.Analyzer is null)
+        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact
+            || binding.Analyzer is null)
         {
             return originalTerm;
         }
 
         var analyzer = binding.Analyzer!;
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
-
+        Debug.Assert(outputSize < 1024 * 1024);
+        Debug.Assert(Unsafe.SizeOf<Token>() * tokenSize < 1024 * 1024);
+        
         Span<byte> encoded = new byte[outputSize];
         Token* tokensPtr = stackalloc Token[tokenSize];
         var tokens = new Span<Token>(tokensPtr, tokenSize);
+        
         analyzer.Execute(originalTerm, ref encoded, ref tokens);
+        Debug.Assert(tokens.Length == 1);
 
         return encoded;
     }

@@ -36,6 +36,8 @@ namespace Corax
         Raw = 1 << 4,
         Invalid = 1 << 6,
         
+        
+        TupleList = List | Tuple,
         RawList = List | Raw
     }
 
@@ -276,7 +278,7 @@ namespace Corax
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the list metadata information. 
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)(IndexEntryFieldType.List | IndexEntryFieldType.Tuple), dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)(IndexEntryFieldType.TupleList), dataLocation);
             dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
 
             // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).

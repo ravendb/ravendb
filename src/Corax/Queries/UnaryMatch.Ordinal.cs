@@ -63,26 +63,25 @@ namespace Corax.Queries
                     if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
                     {
                         var read = reader.Read(match._fieldId, out var resultX);
-                        if (read && comparer.Compare(currentType, resultX))
+                        var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
+                        if (read && comparer.Compare(currentType, analyzedTerm))
                         {
                             // We found a match.
                             isMatch = true;
                         }
                     }
-                    else if (type is IndexEntryFieldType.List)
+                    else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
                     {
                         var iterator = reader.ReadMany(match._fieldId);
-                        var unacceptableItem = false;
                         while (iterator.ReadNext())
                         {
-                            if (comparer.Compare(currentType, iterator.Sequence) == false)
+                            var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
+                            if (comparer.Compare(currentType, analyzedTerm))
                             {
-                                unacceptableItem = true;
+                                isMatch = true;
                                 break;
                             }
                         }
-
-                        isMatch = unacceptableItem == false;
                     }
 
                     if (isMatch)
@@ -132,20 +131,17 @@ namespace Corax.Queries
                             if (read)
                                 isMatch = comparer.Compare((long)(object)currentType, resultX);
                         }
-                        else if (type is IndexEntryFieldType.List)
+                        else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
                         {
                             var iterator = reader.ReadMany(match._fieldId);
-                            var unacceptableItem = false;
                             while (iterator.ReadNext())
                             {
-                                if (comparer.Compare((long)(object)currentType, iterator.Long) == false)
+                                if (comparer.Compare((long)(object)currentType, iterator.Long))
                                 {
-                                    unacceptableItem = true;
+                                    isMatch = true;
                                     break;
                                 }
                             }
-
-                            isMatch = unacceptableItem == false;
                         }
                     }
                     else if (typeof(TValueType) == typeof(double))
@@ -156,20 +152,17 @@ namespace Corax.Queries
                             if (read)
                                 isMatch = comparer.Compare((double)(object)currentType, resultX);
                         }
-                        else if (type is IndexEntryFieldType.List)
+                        else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
                         {
                             var iterator = reader.ReadMany(match._fieldId);
-                            var unacceptableItem = false;
                             while (iterator.ReadNext())
                             {
-                                if (comparer.Compare((double)(object)currentType, iterator.Double) == false)
+                                if (comparer.Compare((double)(object)currentType, iterator.Double))
                                 {
-                                    unacceptableItem = true;
+                                    isMatch = true;
                                     break;
                                 }
                             }
-
-                            isMatch = unacceptableItem == false;
                         }
                     }
 
