@@ -97,7 +97,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
-        var path = field.Name;
         var valueType = GetValueType(value);
         long @long;
         double @double;
@@ -160,7 +159,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.String:
-                scope.Write(field.Id, (string)value, ref entryWriter);
+                scope.Write(field.Id, value.ToString(), ref entryWriter);
                 return;
 
             case ValueType.LazyCompressedString:
@@ -224,6 +223,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.Enumerable:
+                RuntimeHelpers.EnsureSufficientExecutionStack();
                 var iterator = (IEnumerable)value;
                 if (EnumerableDataStructExist == false)
                 {
@@ -233,13 +233,24 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     BlittableJsonReaderObjectsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
                 }
 
-                var enumerableScope = new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
+                var canFinishEnumerableWriting = false;
+                if (scope is not EnumerableWriterScope enumerableWriterScope)
+                {
+                    canFinishEnumerableWriting = true;
+                    enumerableWriterScope = new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope,
+                        BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
+                }
+               
                 foreach (var item in iterator)
                 {
-                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableScope);
+                    InsertRegularField(field, item, indexContext, ref entryWriter, enumerableWriterScope);
                 }
 
-                enumerableScope.Finish(field.Id, ref entryWriter);
+                if (canFinishEnumerableWriting)
+                {
+                    enumerableWriterScope.Finish(field.Id, ref entryWriter);
+                }
+                
                 return;
 
             case ValueType.DynamicJsonObject:
@@ -270,11 +281,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 return;
 
             case ValueType.BlittableJsonObject:
-                if (field.Indexing is not FieldIndexing.No)
-                {
-                    ThrowIndexingComplexObjectNotSupported(field);
-                }
-                
                 HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope);
                 return;
 
@@ -303,35 +309,27 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     }
     
-    void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
-        IWriterScope scope, bool nestedArray = false)
-    {
-        //todo maciej https://github.com/ravendb/ravendb/pull/12689/files/d7ab5b0c9db82dff655b647a7cc97a8cdaf8a6fe#r701808845
-        if (nestedArray)
-        {
-            return;
-        }
-
-        foreach (var itemToIndex in itemsToIndex)
-        {
-            InsertRegularField(field, itemToIndex, indexContext, ref entryWriter, scope);
-        }
-    }
-    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
         if (val.TryGetMember(RavenConstants.Json.Fields.Values, out var values) &&
             IsArrayOfTypeValueObject(val))
         {
-            HandleArray((IEnumerable)values, field, indexContext, ref entryWriter, scope, true);
+            InsertRegularField(field, (IEnumerable)values, indexContext, ref entryWriter, scope, nestedArray);
+            return;
         }
-
+        
+        if (field.Indexing is not FieldIndexing.No)
+        {
+            ThrowIndexingComplexObjectNotSupported(field);
+        }
+        
         _knownFields.GetByFieldId(field.Id).Analyzer = null;
         scope.Write(field.Id, val, ref entryWriter);
     }
 
-    public void ThrowIndexingComplexObjectNotSupported(IndexField field) =>
+    private static void ThrowIndexingComplexObjectNotSupported(IndexField field) =>
         throw new NotSupportedException($"The value of '{field.OriginalName ?? field.Name}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
     
 
