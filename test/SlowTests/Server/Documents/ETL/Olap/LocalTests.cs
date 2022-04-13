@@ -27,8 +27,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
     public class LocalTests : EtlTestBase
     {
         internal const string DefaultFrequency = "* * * * *"; // every minute
-        private const string AllFilesPattern = "*.*";
-
+        internal const string AllFilesPattern = "*.*";
 
         public LocalTests(ITestOutputHelper output) : base(output)
         {
@@ -2467,7 +2466,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             return scriptPath;
         }
 
-        private void SetupLocalOlapEtl(DocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)
+        internal static AddEtlOperationResult SetupLocalOlapEtl(DocumentStore store, string script, string path, string name = "olap-test", string frequency = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to local";
             var configuration = new OlapEtlConfiguration
@@ -2486,10 +2485,10 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
             };
 
-            SetupLocalOlapEtl(store, configuration, path, connectionStringName);
+            return SetupLocalOlapEtl(store, configuration, path, connectionStringName);
         }
 
-        private void SetupLocalOlapEtl(DocumentStore store, OlapEtlConfiguration configuration, string path, string connectionStringName)
+        private static AddEtlOperationResult SetupLocalOlapEtl(DocumentStore store, OlapEtlConfiguration configuration, string path, string connectionStringName)
         {
             var connectionString = new OlapConnectionString
             {
@@ -2500,7 +2499,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
             };
 
-            AddEtl(store, configuration, connectionString);
+            return FailoverTests.AddOlapEtl(store, configuration, connectionString);
         }
 
         private class User
