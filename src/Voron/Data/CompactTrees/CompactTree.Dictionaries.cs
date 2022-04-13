@@ -51,7 +51,7 @@ unsafe partial class CompactTree
         }
 
         public bool MoveNext(out ReadOnlySpan<byte> result)
-        {            
+        {
             bool operationResult = _iterator.MoveNext(out Span<byte> resultSlice, out long _);
             result = resultSlice;
             return operationResult;
@@ -64,21 +64,54 @@ unsafe partial class CompactTree
         }
     }
 
+    private struct RandomDictionaryKeyScanner : IReadOnlySpanEnumerator
+    {
+        private readonly CompactTree _tree;
+        private readonly int _samples;
+        private readonly int _seed;
+        private RandomIterator _iterator;
+
+        public RandomDictionaryKeyScanner(CompactTree tree, int samples, int seed = 0)
+        {
+            _tree = tree;
+            _seed = seed;
+            _samples = samples;
+            _iterator = _tree.RandomIterate(samples, seed: seed);
+            _iterator.Reset();
+        }
+
+        public bool MoveNext(out ReadOnlySpan<byte> result)
+        {
+            bool operationResult = _iterator.MoveNext(out Span<byte> resultSlice, out long _);
+            result = resultSlice;
+            return operationResult;
+        }
+
+        public void Reset()
+        {
+            _iterator = _tree.RandomIterate(_samples, seed: _seed);
+            _iterator.Reset();
+        }
+    }
+
     /// <summary>
     /// We will try to improve the dictionary by scanning the whole tree and using the data. This may be costly and alternative and probably
     /// less effective solutions may need to be developed for when this method becomes prohibitive. 
     /// </summary>    
-    public bool TryImproveDictionaryByFullScanning()
+    public bool TryImproveDictionaryByFullScanning(bool force = false)
     {
         Debug.Assert(_llt.Flags == TransactionFlags.ReadWrite);
 
-        if (_state.NextTrainAt > _state.NumberOfEntries)
+        if (force == false && _state.NextTrainAt > _state.NumberOfEntries)
             return false;
 
         // We will try to improve the dictionary by scanning the whole tree over a maximum budget.    
         // We will do this by randomly selecting a page and then randomly selecting a key from that page.
         var currentDictionary = GetEncodingDictionary(_state.TreeDictionaryId);
-        var newDictionary = PersistentDictionary.CreateIfBetter(_llt, new FullDictionaryKeyScanner(this), new FullDictionaryKeyScanner(this), currentDictionary);
+        var newDictionary = PersistentDictionary.CreateIfBetter(_llt, 
+                                new FullDictionaryKeyScanner(this), 
+                                new FullDictionaryKeyScanner(this), 
+                                currentDictionary);
 
         // If the new dictionary is actually better, then update the current dictionary at the tree level.    
         if (currentDictionary != newDictionary)
@@ -96,8 +129,27 @@ unsafe partial class CompactTree
     /// <param name="samples"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public bool TryImproveDictionaryByRandomlyScanning(int samples)
+    public bool TryImproveDictionaryByRandomlyScanning(int samples, int seed = 0, bool force = false)
     {
-        throw new NotImplementedException();
+        Debug.Assert(_llt.Flags == TransactionFlags.ReadWrite);
+
+        if (force == false && _state.NextTrainAt > _state.NumberOfEntries)
+            return false;
+
+        // We will try to improve the dictionary by scanning the whole tree over a maximum budget.    
+        // We will do this by randomly selecting a page and then randomly selecting a key from that page.
+        var currentDictionary = GetEncodingDictionary(_state.TreeDictionaryId);
+        var newDictionary = PersistentDictionary.CreateIfBetter(_llt, 
+                                new RandomDictionaryKeyScanner(this, samples, seed),                               
+                                new RandomDictionaryKeyScanner(this, samples, seed), 
+                                currentDictionary);
+
+        // If the new dictionary is actually better, then update the current dictionary at the tree level.    
+        if (currentDictionary != newDictionary)
+            _state.TreeDictionaryId = newDictionary.PageNumber;
+
+        // We will update the number of entries regardless if we updated the current dictionary or not. 
+        _state.NextTrainAt = (long)(Math.Max(_state.NextTrainAt, _state.NumberOfEntries) * 1.5);
+        return true;
     }
 }

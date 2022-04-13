@@ -126,8 +126,9 @@ namespace Voron.Data.CompactTrees
         }
 
 
-        public static PersistentDictionary CreateIfBetter<TKeysEnumerator>(LowLevelTransaction llt, in TKeysEnumerator trainEnumerator, in TKeysEnumerator testEnumerator, PersistentDictionary previousDictionary = null)
-            where TKeysEnumerator : struct, IReadOnlySpanEnumerator
+        public static PersistentDictionary CreateIfBetter<TKeys1, TKeys2>(LowLevelTransaction llt, TKeys1 trainEnumerator, TKeys2 testEnumerator, PersistentDictionary previousDictionary = null)
+            where TKeys1 : struct, IReadOnlySpanEnumerator
+            where TKeys2 : struct, IReadOnlySpanEnumerator
         {
             // Reserve the memory to create the encoder table. 
             using var scope = llt.Allocator.Allocate(UsableDictionarySize, out var output);

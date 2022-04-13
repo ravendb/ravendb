@@ -1183,7 +1183,7 @@ namespace Voron.Data.CompactTrees
             return (int)(entryPos - page.Pointer - entryOffset);
         }
 
-        internal static int GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> key, out long value)
+        internal static void GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> key, out long value)
         {
             var result = GetEncodedEntry(page, entriesOffset, out key, out value);
             EncodedKey encodedKey = EncodedKey.From(key, tree, ((CompactPageHeader*)page.Pointer)->DictionaryId);
@@ -1191,10 +1191,9 @@ namespace Voron.Data.CompactTrees
             tree.Llt.Allocator.Allocate(encodedKey.Key.Length, out var output);
             
             encodedKey.Key.CopyTo(output.ToSpan());
-
+            
             var outputSpan = output.ToSpan();
             key = output[^1] == 0 ? outputSpan : outputSpan.Slice(0, outputSpan.Length - 1);
-            return result;
         }
 
         private static void GetEntryBuffer(Page page, ushort entryOffset, out byte* b, out int len)

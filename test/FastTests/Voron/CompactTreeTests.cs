@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Sparrow.Server.Debugging;
+using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace FastTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void TrickyAttempts()
         {
             using (var wtx = Env.WriteTransaction())
@@ -43,7 +44,8 @@ namespace FastTests.Voron
                 Assert.Equal(5, r);
             }
         }
-        [Fact]
+        
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanCreateCompactTree()
         {
             using (var wtx = Env.WriteTransaction())
@@ -60,7 +62,7 @@ namespace FastTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanFindElementInSinglePage()
         {
             using (var wtx = Env.WriteTransaction())
@@ -84,7 +86,7 @@ namespace FastTests.Voron
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanHandleVeryLargeKey()
         {
             using (var wtx = Env.WriteTransaction())
@@ -100,8 +102,8 @@ namespace FastTests.Voron
                 Assert.Equal(5, r);
             }
         }
-        
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteItem()
         {
             using (var wtx = Env.WriteTransaction())
@@ -124,9 +126,9 @@ namespace FastTests.Voron
                 Assert.False(tree.TryGetValue("hi", out var r));
             }
         }
-        
-        
-        [Fact]
+
+
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreLargeNumberOfItemsInRandomlyOrder()
         {
             const int Size = 400000;
@@ -152,7 +154,7 @@ namespace FastTests.Voron
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteLargeNumberOfItemsInRandomOrder()
         {
             const int Size = 400000;
@@ -188,7 +190,7 @@ namespace FastTests.Voron
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteLargeNumberOfItemsFromStart()
         {
             const int Size = 400000;
@@ -221,9 +223,9 @@ namespace FastTests.Voron
                 Assert.Equal(1, tree.State.Depth);
             }
         }
-        
-              
-        [Fact]
+
+
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteLargeNumberOfItemsFromEnd()
         {
             const int Size = 400000;
@@ -258,7 +260,7 @@ namespace FastTests.Voron
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreLargeNumberOfItemsInSequentialOrder()
         {
             const int Size = 400000;
@@ -280,83 +282,6 @@ namespace FastTests.Voron
                     Assert.True(result);
                     Assert.Equal(i, r);
                 }
-            }
-        }
-
-
-        [Fact]
-        public void CanRecompressItemsWithDeletesAndInserts()
-        {
-            static void Shuffle(string[] list, Random rng)
-            {
-                int n = list.Length;
-                while (n > 1)
-                {
-                    n--;
-                    int k = rng.Next(n + 1);
-                    var value = list[k];
-                    list[k] = list[n];
-                    list[n] = value;
-                }
-            }
-
-            const int Size = 200000;
-
-            Random random = new Random(1337);
-
-            var uniqueKeys = new HashSet<string>();
-            var inTreeKeys = new HashSet<string>();
-            var removedKeys = new HashSet<string>();
-
-            for ( int iter = 0; iter < 4; iter++ )
-            {
-                using (var wtx = Env.WriteTransaction())
-                {
-                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-                    for (int i = 0; i < Size; i++)
-                    {
-                        var rname = random.Next();
-                        var key = "hi" + rname;
-                        if (!uniqueKeys.Contains(key))
-                        {
-                            uniqueKeys.Add(key);
-                            inTreeKeys.Add(key);
-                            tree.Add(key, rname);
-                        }
-                    }
-
-                    tree.TryImproveDictionaryByFullScanning();
-                    wtx.Commit();
-                }
-
-                var values = inTreeKeys.ToArray();
-                Shuffle(values, random);
-
-                using (var wtx = Env.WriteTransaction())
-                {
-                    var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-                    for (int i = 0; i < Size / 2; i++)
-                    {                        
-                        Assert.True(tree.TryRemove(values[i], out var v));
-                        inTreeKeys.Remove(values[i]);
-                        removedKeys.Add(values[i]);
-                    }
-                    wtx.Commit();
-                }
-            }
-
-            using (var rtx = Env.ReadTransaction())
-            {
-                var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
-                Assert.Equal(inTreeKeys.Count, tree.State.NumberOfEntries);
-                Assert.True(inTreeKeys.Count <= tree.State.NextTrainAt);
-
-
-                foreach (var key in inTreeKeys)
-                    Assert.True(tree.TryGetValue(key, out var v));
-
-                foreach (var key in removedKeys)
-                    Assert.False(tree.TryGetValue(key, out var v));
             }
         }
     }
