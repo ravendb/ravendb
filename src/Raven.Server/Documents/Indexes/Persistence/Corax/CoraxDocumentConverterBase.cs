@@ -69,7 +69,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         //todo maciej: perf
         Slice.From(allocator, index.Type.IsMapReduce()
             ? RavenConstants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-            : RavenConstants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
+            : RavenConstants.Documents.Indexing.Fields.DocumentIdMethodName, ByteStringType.Immutable, out var value);
 
         knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Exact);
         foreach (var field in index.Definition.IndexFields.Values)
@@ -329,9 +329,18 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         scope.Write(field.Id, val, ref entryWriter);
     }
 
-    private static void ThrowIndexingComplexObjectNotSupported(IndexField field) =>
-        throw new NotSupportedException($"The value of '{field.OriginalName ?? field.Name}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
-    
+    internal static void ThrowIndexingComplexObjectNotSupported(object field)
+    {
+        var fieldName = field switch
+        {
+            IndexField indexField => indexField.OriginalName ?? indexField.Name,
+            IndexFieldBinding indexFieldBinding => indexFieldBinding.FieldNameAsString,
+            _ => throw new InvalidDataException($"{nameof(ThrowIndexingComplexObjectNotSupported)} requires as input instance of {nameof(IndexField)} or {nameof(IndexFieldBinding)}.")
+        };
+        
+        throw new NotSupportedException(
+            $"The value of '{fieldName}' field is a complex object item. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". Note that you can still store it and use it in projections.\nIf you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.");
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static FieldIndexingMode TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(FieldIndexing indexing) => indexing switch
