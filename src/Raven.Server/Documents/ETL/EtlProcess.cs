@@ -703,7 +703,7 @@ namespace Raven.Server.Documents.ETL
 
                     var state = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
-                    var loadLastProcessedEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
+                    var startEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
 
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -723,7 +723,7 @@ namespace Raven.Server.Documents.ETL
                                 using (var scope = new DisposableScope())
                                 using (var merged = new ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation>(stats))
                                 {
-                                    var nextEtag = loadLastProcessedEtag + 1;
+                                    var nextEtag = startEtag + 1;
 
                                     Extract(context, merged, nextEtag, EtlItemType.Document, stats, scope);
 
@@ -737,13 +737,13 @@ namespace Raven.Server.Documents.ETL
 
                                     var noFailures = Load(transformations, context, stats);
 
-                                    var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
+                                    var lastProcessedInBatch = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
 
-                                    if (lastProcessed > Statistics.LastProcessedEtag && noFailures)
+                                    if (lastProcessedInBatch > startEtag && noFailures)
                                     {
                                         didWork = true;
 
-                                        Statistics.LastProcessedEtag = lastProcessed;
+                                        Statistics.LastProcessedEtag = lastProcessedInBatch;
                                         Statistics.LastChangeVector = stats.ChangeVector;
                                         RecordSuccessfulBatch(stats);
 
@@ -777,15 +777,15 @@ namespace Raven.Server.Documents.ETL
                         try
                         {
                             UpdateEtlProcessState(state);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            return;
-                        }
-
-                        if (CancellationToken.IsCancellationRequested == false)
-                        {
                             Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
+                        }
+                        catch (Exception e)
+                        {
+                            if (CancellationToken.IsCancellationRequested == false)
+                            {
+                                if (Logger.IsOperationsEnabled) 
+                                    Logger.Operations($"{Tag} Failed to update state of ETL process '{Name}'", e);
+                            }
                         }
 
                         continue;
