@@ -1252,11 +1252,11 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            result.Completed = (result.NumberOfDocumentsToProcess > 0
-                                && result.NumberOfDocumentTombstonesToProcess > 0
-                                && result.NumberOfCounterGroupsToProcess > 0
-                                && result.NumberOfTimeSeriesSegmentsToProcess > 0
-                                && result.NumberOfTimeSeriesDeletedRangesToProcess > 0) == false;
+            result.Completed = result.NumberOfDocumentsToProcess == 0
+                               && result.NumberOfDocumentTombstonesToProcess == 0
+                               && result.NumberOfCounterGroupsToProcess == 0
+                               && result.NumberOfTimeSeriesSegmentsToProcess == 0
+                               && result.NumberOfTimeSeriesDeletedRangesToProcess == 0;
 
             var performance = _lastStats?.ToPerformanceLiveStats();
 
@@ -1282,11 +1282,11 @@ namespace Raven.Server.Documents.ETL
                 if (result.NumberOfTimeSeriesDeletedRangesToProcess > 0)
                     result.NumberOfTimeSeriesDeletedRangesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.TimeSeries];
 
-                result.Completed = (result.NumberOfDocumentsToProcess > 0
-                                   && result.NumberOfDocumentTombstonesToProcess > 0
-                                   && result.NumberOfCounterGroupsToProcess > 0
-                                   && result.NumberOfTimeSeriesSegmentsToProcess > 0
-                                   && result.NumberOfTimeSeriesDeletedRangesToProcess > 0) == false;
+                result.Completed = result.NumberOfDocumentsToProcess == 0
+                                   && result.NumberOfDocumentTombstonesToProcess == 0
+                                   && result.NumberOfCounterGroupsToProcess == 0
+                                   && result.NumberOfTimeSeriesSegmentsToProcess == 0
+                                   && result.NumberOfTimeSeriesDeletedRangesToProcess == 0;
 
                 if (result.Completed && performance.Completed == null)
                 {
