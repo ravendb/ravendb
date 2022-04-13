@@ -69,7 +69,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             Write(field, value, ref entryWriter);
             _longValues.Add(longValue);
             _doubleValues.Add(doubleValue);
-            _count.Strings++;
             _count.Longs++;
             _count.Doubles++;
         }
@@ -92,8 +91,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             {
                 entryWriter.Write(field, new StringArrayIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
             }
-
-            if (_count is { Raws: > 0, Strings: 0 })
+            else if (_count is { Raws: > 0, Strings: 0 })
             {
                 if (_count.Raws == 1)
                 {
@@ -110,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             {
                 entryWriter.Write(field, new StringArrayIterator(_stringValues));
             }
-
+            
             _stringValues.Clear();
             _longValues.Clear();
             _doubleValues.Clear();

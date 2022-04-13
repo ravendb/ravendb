@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanEnumerateOnLsv()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanEnumerateOnLsv(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             store.ExecuteIndex(new User_Index());
             var u = new User
             {
@@ -34,7 +36,7 @@ namespace SlowTests.Issues
 
                 session.SaveChanges();
             }
-
+            WaitForUserToContinueTheTest(store);
             Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenSession())
