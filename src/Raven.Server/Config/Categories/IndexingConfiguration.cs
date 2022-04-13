@@ -68,6 +68,7 @@ namespace Raven.Server.Config.Categories
             protected set => _runInMemory = value;
         }
 
+        [Description("Indicate if all indexes in the database are disabled")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
