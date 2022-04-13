@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanQueryDateTime()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryDateTime(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new DateIndex());
 
@@ -48,10 +50,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanIndexDateTimeArrayProperly1()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexDateTimeArrayProperly1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new LastAccessIndex());
 
@@ -105,10 +108,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanIndexDateTimeArrayProperly2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexDateTimeArrayProperly2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new LastAccessPerName());
 
@@ -159,10 +163,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanIndexGuidArrayProperly1()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexGuidArrayProperly1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new DummyIndex());
 
@@ -196,10 +201,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanIndexGuidArrayProperly2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexGuidArrayProperly2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new DummyGuidList());
 
@@ -238,10 +244,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanIndexNumericArrayProperly()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexNumericArrayProperly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new DummyIndexCount());
 
@@ -280,7 +287,6 @@ namespace SlowTests.Issues
                     var list = session.Query<DummyIndexCount.Result, DummyIndexCount>()
                         .Where(x => x.IntCount.Any(d => d == 2))
                         .ToList();
-
                     Assert.Equal(1, list.Count);
                     Assert.Equal(newGuid, list[0].Guid);
                     Assert.Equal(new int[] { 2 }, list[0].IntCount);

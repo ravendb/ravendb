@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -203,7 +204,17 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
 
                 return;
-
+            
+            case ValueType.DateOnly:
+                var dateOnly = ((DateOnly)value).ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                scope.Write(field.Id, dateOnly, ref entryWriter);
+                return;
+            
+            case ValueType.TimeOnly:
+                var timeOnly = ((TimeOnly)value).ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                scope.Write(field.Id, timeOnly, ref entryWriter);
+                return;
+            
             case ValueType.Convertible:
                 var iConvertible = (IConvertible)value;
                 @long = iConvertible.ToInt64(CultureInfo.InvariantCulture);
