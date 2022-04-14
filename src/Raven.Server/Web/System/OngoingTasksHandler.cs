@@ -973,27 +973,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdateExternalReplication()
         {
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                ExternalReplication watcher = null;
-                await DatabaseConfigurations(
-                    (_, databaseName, blittableJson, guid) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, guid, out watcher), "update_external_replication",
-                    GetRaftRequestIdFromQuery(),
-                    fillJson: (json, _, index) =>
-                    {
-                        using (context.OpenReadTransaction())
-                        {
-                            var topology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
-                            var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
-                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(topology, watcher, taskStatus);
-                        }
-
-                        json[nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId;
-                    }, statusCode: HttpStatusCode.Created);
-            }
+            using (var processor = new OngoingTasksHandlerProcessorForUpdateExternalReplication(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]

@@ -15,6 +15,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -156,6 +157,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task FullBackupDataDirectory()
         {
             using (var processor = new OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/tasks/external-replication", "POST")]
+        public async Task UpdateExternalReplication()
+        {
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForUpdateExternalReplication(this))
                 await processor.ExecuteAsync();
         }
     }
