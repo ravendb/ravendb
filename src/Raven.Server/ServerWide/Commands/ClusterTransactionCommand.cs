@@ -146,7 +146,7 @@ namespace Raven.Server.ServerWide.Commands
             ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
             ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
         {
-            DatabaseName = databaseName;
+            DatabaseName = ShardHelper.ToDatabaseName(databaseName);
             Options = options;
             CommandCreationTicks = SystemTime.UtcNow.Ticks;
 
