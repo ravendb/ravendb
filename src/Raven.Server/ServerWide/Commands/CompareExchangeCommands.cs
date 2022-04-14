@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Client.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -41,6 +42,8 @@ namespace Raven.Server.ServerWide.Commands
                 throw new ArgumentNullException(nameof(database), "The database argument must have value");
             if (index < 0)
                 throw new InvalidDataException("Index must be a non-negative number");
+            if (ShardHelper.IsShardedName(database))
+                throw new ArgumentException($"The sharded database '{database}' is not allow");
 
             Key = key;
             Index = index;

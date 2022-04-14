@@ -10,6 +10,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -133,11 +134,13 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DatabaseSmugglerOptionsServerSide _options;
             protected readonly ShardedDatabaseContext DatabaseContext;
             protected readonly T[] _actions;
+            protected readonly T _last;
 
             protected ShardedActions(ShardedDatabaseContext databaseContext, T[] actions, DatabaseSmugglerOptionsServerSide options)
             {
                 DatabaseContext = databaseContext;
                 _actions = actions;
+                _last = _actions.Last();
                 _options = options;
                 _rtnCtx = DatabaseContext.AllocateContext(out _context);
             }
@@ -166,16 +169,28 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
             {
-                var bucket = ShardHelper.GetBucket(key);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
-                await _actions[shardNumber].WriteKeyValueAsync(key, value);
+                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
+                {
+                    var bucket = ShardHelper.GetBucket(docId);
+                    var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                    await _actions[shardNumber].WriteKeyValueAsync(key, value);
+                    return;
+                }
+               
+                await _last.WriteKeyValueAsync(key, value);
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
             {
-                var bucket = ShardHelper.GetBucket(key);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
-                await _actions[shardNumber].WriteTombstoneKeyAsync(key);
+                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
+                {
+                    var bucket = ShardHelper.GetBucket(docId);
+                    var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                    await _actions[shardNumber].WriteTombstoneKeyAsync(key);
+                    return;
+                }
+
+                await _last.WriteTombstoneKeyAsync(key);
             }
         }
 

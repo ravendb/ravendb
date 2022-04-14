@@ -335,9 +335,9 @@ namespace SlowTests.Cluster
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public async Task CanImportExportAndBackupWithClusterTransactions(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanImportExportAndBackupWithClusterTransactions(Options options, bool disableGuards)
         {
             var file = GetTempFileName();
 
@@ -375,7 +375,7 @@ namespace SlowTests.Cluster
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide,
-                    DisableAtomicDocumentWritesInClusterWideTransaction = true
+                    DisableAtomicDocumentWritesInClusterWideTransaction = disableGuards
                 }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user1);
@@ -385,7 +385,16 @@ namespace SlowTests.Cluster
                     session.Advanced.Clear();
 
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user2);
-                    await session.StoreAsync(user2, "foo/bar");
+                    if (disableGuards == false)
+                    {
+                        var u = await session.LoadAsync<User>("foo/bar");
+                        u.Name = user2.Name;
+                        await session.StoreAsync(u, "foo/bar");
+                    }
+                    else
+                    {
+                        await session.StoreAsync(user2, "foo/bar");
+                    }
                     await session.StoreAsync(new User(), "foo/bar3");
                     await session.SaveChangesAsync();
                     session.Advanced.Clear();
