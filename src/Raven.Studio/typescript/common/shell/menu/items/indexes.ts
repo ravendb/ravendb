@@ -18,7 +18,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/indexes",
             moduleId: require("viewmodels/database/indexes/indexes"),
-            css: 'icon-indexing',
+            css: 'icon-list-of-indexes',
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
@@ -27,7 +27,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Indexing Performance',
             tooltip: "Shows details about indexing peformance",
             nav: true,
-            css: 'icon-index-batch-size',
+            css: 'icon-indexing-performance',
             dynamicHash: appUrls.indexPerformance
         }),
         new leafMenuItem({
