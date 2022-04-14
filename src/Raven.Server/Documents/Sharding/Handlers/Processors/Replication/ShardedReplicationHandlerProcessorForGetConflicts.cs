@@ -8,12 +8,11 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
@@ -26,9 +25,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
         {
         }
 
-        protected override async Task<GetConflictsResultByEtag> GetConflictsByEtagAsync(TransactionOperationContext context, long etag, int pageSize)
+        protected override async Task<GetConflictsPreviewResult> GetConflictsPreviewAsync(TransactionOperationContext context, long start, int pageSize)
         {
-            _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, (int)etag, pageSize);
+            _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, (int)start, pageSize);
 
             var op = new ShardedGetReplicationConflictsOperation(RequestHandler, _continuationToken);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
@@ -39,13 +38,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
         protected override async Task GetConflictsForDocumentAsync(TransactionOperationContext context, string documentId)
         {
-            var cmd = new GetDocumentConflictsCommand(RequestHandler, documentId);
+            var cmd = new GetConflictsCommand(id: documentId);
+            var proxyCommand = new ProxyCommand<GetConflictsResult>(cmd, RequestHandler.HttpContext.Response);
 
             var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);
         }
 
-        internal readonly struct ShardedGetReplicationConflictsOperation : IShardedOperation<GetConflictsResultByEtag>
+        internal readonly struct ShardedGetReplicationConflictsOperation : IShardedOperation<GetConflictsPreviewResult>
         {
             private readonly ShardedDatabaseRequestHandler _handler;
             private readonly ShardedPagingContinuation _token;
@@ -58,15 +58,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
             public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-            public GetConflictsResultByEtag Combine(Memory<GetConflictsResultByEtag> results)
+            public GetConflictsPreviewResult Combine(Memory<GetConflictsPreviewResult> results)
             {
                 var span = results.Span;
-                var final = new GetConflictsResultByEtag();
+                var final = new GetConflictsPreviewResult();
 
                 final.Results = _handler.DatabaseContext.Streaming.PagedShardedItem(
                     results,
                     selector: r => r.Results,
-                    Comparer<ShardStreamItem<GetConflictsResultByEtag.ResultByEtag>>.Default,
+                    comparer: ConflictsLastModifiedComparer.Instance,
                     _token).ToArray();
 
                 foreach (var s in span)
@@ -77,7 +77,26 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                 return final;
             }
 
-            public RavenCommand<GetConflictsResultByEtag> CreateCommandForShard(int shard) => new GetConflictsByEtagOperation.GetConflictsByEtagCommand(_token.Pages[shard].Start, _token.PageSize);
+            public RavenCommand<GetConflictsPreviewResult> CreateCommandForShard(int shard) => new GetConflictsOperation.GetConflictsCommand(_token.Pages[shard].Start, _token.PageSize);
         }
+
+        public class ConflictsLastModifiedComparer : Comparer<ShardStreamItem<GetConflictsPreviewResult.ConflictPreview>>
+        {
+            public override int Compare(ShardStreamItem<GetConflictsPreviewResult.ConflictPreview> x,
+                ShardStreamItem<GetConflictsPreviewResult.ConflictPreview> y)
+            {
+                if (x == null)
+                    return -1;
+
+                if (y == null)
+                    return 1;
+
+                return ConflictsPreviewComparer.Instance.Compare(x.Item, y.Item);
+            }
+
+            public static ConflictsLastModifiedComparer Instance = new();
+        }
+
+
     }
 }

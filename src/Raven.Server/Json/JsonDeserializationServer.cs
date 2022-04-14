@@ -15,7 +15,6 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -231,9 +230,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, LastChangeVectorForCollectionResult> LastChangeVectorForCollectionResult = GenerateJsonDeserializationRoutine<LastChangeVectorForCollectionResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, BlittableArrayResult> BlittableArrayResult = GenerateJsonDeserializationRoutine<BlittableArrayResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, GetConflictsResultByEtag> GetConflictResults = GenerateJsonDeserializationRoutine<GetConflictsResultByEtag>();
+        public static readonly Func<BlittableJsonReaderObject, GetConflictsPreviewResult> GetConflictResults = GenerateJsonDeserializationRoutine<GetConflictsPreviewResult>();
 
         public class Parameters
         {
