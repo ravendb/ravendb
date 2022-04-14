@@ -23,15 +23,15 @@ namespace Raven.Client.Documents.Commands
         }
     }
 
-    public class GetConflictsResultByEtag
+    public class GetConflictsPreviewResult
     {
-        public ResultByEtag[] Results { get; internal set; }
+        public ConflictPreview[] Results { get; internal set; }
 
         public long TotalResults { get; set; }
 
         public string ContinuationToken { get; set; }
 
-        public class ResultByEtag
+        public class ConflictPreview
         {
             public string Id { get; set; }
 

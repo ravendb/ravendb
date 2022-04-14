@@ -13,63 +13,62 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Operations
 {
-    internal class GetConflictsByEtagOperation : IMaintenanceOperation<GetConflictsResultByEtag>
+    internal class GetConflictsOperation : IMaintenanceOperation<GetConflictsPreviewResult>
     {
-        private readonly long _etag;
+        private readonly long _start;
         private readonly int? _pageSize;
         [CanBeNull]
         private readonly string _token;
 
-        public GetConflictsByEtagOperation(long etag = 0)
+        public GetConflictsOperation(long start = 0)
         {
-            _etag = etag;
+            _start = start;
         }
 
-        public GetConflictsByEtagOperation(long etag, int pageSize)
+        public GetConflictsOperation(long start, int pageSize)
         {
-            _etag = etag;
+            _start = start;
             _pageSize = pageSize;
         }
 
-        public GetConflictsByEtagOperation(string continuationToken)
+        public GetConflictsOperation(string continuationToken)
         {
             _token = continuationToken;
         }
 
-        public RavenCommand<GetConflictsResultByEtag> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<GetConflictsPreviewResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             if (_token.IsNullOrWhiteSpace() == false)
-                return new GetConflictsByEtagCommand(_token);
+                return new GetConflictsCommand(_token);
 
             if (_pageSize.HasValue)
-                return new GetConflictsByEtagCommand(_etag, _pageSize.Value);
+                return new GetConflictsCommand(_start, _pageSize.Value);
 
-            return new GetConflictsByEtagCommand(_etag);
+            return new GetConflictsCommand(_start);
         }
 
-        internal class GetConflictsByEtagCommand : RavenCommand<GetConflictsResultByEtag>
+        internal class GetConflictsCommand : RavenCommand<GetConflictsPreviewResult>
         {
-            private readonly long _etag;
+            private readonly long _start;
             private readonly int? _pageSize;
             [CanBeNull]
             private readonly string _token;
 
             public override bool IsReadRequest => true;
 
-            public GetConflictsByEtagCommand(long etag = 0)
+            public GetConflictsCommand(long start = 0)
             {
-                _etag = etag;
+                _start = start;
             }
 
-            public GetConflictsByEtagCommand(long etag = 0, int pageSize = int.MaxValue)
+            public GetConflictsCommand(long start = 0, int pageSize = int.MaxValue)
             {
-                _etag = etag;
+                _start = start;
                 _pageSize = pageSize;
             }
 
-            public GetConflictsByEtagCommand(string continuationToken)
+            public GetConflictsCommand(string continuationToken)
             {
-                _etag = 0;
                 _token = continuationToken;
             }
 
@@ -82,7 +81,7 @@ namespace Raven.Server.Documents.Operations
                     sb.Append($"?{ContinuationToken.ContinuationTokenQueryString}={Uri.EscapeDataString(_token)}");
                 else
                 {
-                    sb.Append($"?etag={_etag}");
+                    sb.Append($"?start={_start}");
 
                     if (_pageSize.HasValue)
                         sb.Append($"&pageSize={_pageSize}");

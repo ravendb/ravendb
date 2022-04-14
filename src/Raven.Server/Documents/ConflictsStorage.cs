@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -104,16 +105,16 @@ namespace Raven.Server.Documents
             }
         }
 
-        public GetConflictsResultByEtag GetConflictsResultByEtag(DocumentsOperationContext context, long skip = 0)
+        public GetConflictsPreviewResult GetConflictsPreviewResult(DocumentsOperationContext context, long skip = 0)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            var conflicts = new List<GetConflictsResultByEtag.ResultByEtag>();
+            var conflicts = new List<GetConflictsPreviewResult.ConflictPreview>();
             foreach (var tvr in table.SeekBackwardFromLast(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], skip))
             {
                 var documentConflict = TableValueToConflictDocument(context, ref tvr.Reader);
 
-                var conflict = new GetConflictsResultByEtag.ResultByEtag
+                var conflict = new GetConflictsPreviewResult.ConflictPreview
                 {
                     Id = documentConflict.Id,
                     LastModified = documentConflict.LastModified
@@ -122,7 +123,9 @@ namespace Raven.Server.Documents
                 conflicts.Add(conflict);
             }
 
-            return new GetConflictsResultByEtag
+            conflicts.Sort(ConflictsPreviewComparer.Instance);
+
+            return new GetConflictsPreviewResult
             {
                 TotalResults = GetNumberOfConflicts(context),
                 Results = conflicts.ToArray()
