@@ -113,7 +113,7 @@ namespace Raven.Server.Rachis
             return null;
         }
 
-        public string GetTypeFromCommand(BlittableJsonReaderObject cmd)
+        public static string GetTypeFromCommand(BlittableJsonReaderObject cmd)
         {
             if (cmd.TryGet("Type", out string type) == false)
             {

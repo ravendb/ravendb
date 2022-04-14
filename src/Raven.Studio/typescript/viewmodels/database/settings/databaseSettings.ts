@@ -397,7 +397,7 @@ class databaseSettings extends viewModelBase {
             return acc;
         }, {} as Record<string, string>);
 
-        const saveSettingsModel = new saveDatabaseSettingsConfirm(settingsToSaveObject, this.howToReloadDatabaseHtml);
+        const saveSettingsModel = new saveDatabaseSettingsConfirm(settingsToSaveObject, databaseSettings.howToReloadDatabaseHtml);
 
         saveSettingsModel.result.done(result => {
             if (result.can) {
@@ -449,7 +449,7 @@ class databaseSettings extends viewModelBase {
 
         popoverUtils.longWithHover($("#pendingValuesWarning"),
             {
-                content: `<div class="margin-left margin-right margin-right-lg">${this.howToReloadDatabaseHtml}</div>`,
+                content: `<div class="margin-left margin-right margin-right-lg">${databaseSettings.howToReloadDatabaseHtml}</div>`,
                 placement: 'bottom'
             });
         
@@ -566,21 +566,21 @@ class databaseSettings extends viewModelBase {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    readonly howToReloadDatabaseHtml = `<h4>There are two ways to reload the database:</h4>
-                                        <ul>
-                                            <li>
-                                                <small>
-                                                    Disable and then enable the database from the databases view in the Studio.<br>
-                                                    This will reload the database on all the cluster nodes immediately.
-                                                </small>
-                                            </li>
-                                            <li class="margin-top margin-top-sm">
-                                                <small>
-                                                    Restart RavenDB on all nodes.<br>
-                                                    The database settings configuration will become effective per node that is restarted.
-                                                </small>
-                                            </li>
-                                        </ul>`;
+    static readonly howToReloadDatabaseHtml = `<h4>There are two ways to reload the database:</h4>
+                                               <ul>
+                                                   <li>
+                                                       <small>
+                                                           Disable and then enable the database from the databases view in the Studio.<br>
+                                                           This will reload the database on all the cluster nodes immediately.
+                                                       </small>
+                                                   </li>
+                                                   <li class="margin-top margin-top-sm">
+                                                       <small>
+                                                           Restart RavenDB on all nodes.<br>
+                                                           The database settings configuration will become effective per node that is restarted.
+                                                       </small>
+                                                   </li>
+                                               </ul>`;
 }
 
 export = databaseSettings;

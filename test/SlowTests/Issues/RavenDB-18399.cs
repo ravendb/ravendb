@@ -61,7 +61,7 @@ public class RavenDB_18399 : RavenTestBase
     }
 
     [Fact]
-    public async Task UsingFilter()
+    public void UsingFilter()
     {
         var dateOnly = default(DateOnly).AddDays(300);
         var timeOnly = new TimeOnly(0, 0, 0, 234).AddMinutes(300);
@@ -272,7 +272,7 @@ from DateAndTimeOnlies where DateOnly != null update { this.DateOnly = modifyDat
     }
 
     [Fact]
-    public async Task QueriesAsTicks()
+    public void QueriesAsTicks()
     {
         using var store = GetDocumentStore();
         var data = CreateDatabaseData(store);

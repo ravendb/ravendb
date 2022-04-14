@@ -57,5 +57,10 @@ namespace Raven.Server.Extensions
         {
             return request.Headers.ContainsKey(Constants.Headers.StudioVersion);
         }
+
+        public static bool IsFromClientApi(this HttpRequest request)
+        {
+            return request.Headers.ContainsKey(Constants.Headers.ClientVersion);
+        }
     }
 }
