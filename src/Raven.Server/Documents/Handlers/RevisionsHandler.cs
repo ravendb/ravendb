@@ -389,8 +389,6 @@ namespace Raven.Server.Documents.Handlers
         public async Task GetRevisionsBin()
         {
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-            if (revisionsStorage.Configuration == null)
-                throw new RevisionsDisabledException();
 
             var sw = Stopwatch.StartNew();
             var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
