@@ -7,7 +7,7 @@
                     <h3>Sample scripts</h3>
                     <div data-bind="foreach: $data.constructor.samples">
                         <div class="margin-top" data-bind="text: title"></div>
-                        <pre class="margin-bottom copy-area"><a href="#" class="copy-button-hidden pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+                        <pre class="margin-bottom copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
                     </div>
                 </div>
                 <div class="col-xs-12 col-lg-6">
