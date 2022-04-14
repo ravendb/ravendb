@@ -168,6 +168,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                 _cached = null;
             }
+
             return readAllFromCache;
         }
 
@@ -201,11 +202,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     {
                         var command = _commands[i];
 
-                        MaybeSetCache(getResponse, command);
-
-                    Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified
-                        ? new GetResponse { Result = _cached.Values[i].Cached?.Clone(context), StatusCode = HttpStatusCode.NotModified }
-                        : getResponse);
+                        MaybeSetCache(getResponse, command, i);
+                    Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified ? new GetResponse { Result = _cached.Values[i].Cached?.Clone(context), StatusCode = HttpStatusCode.NotModified } : getResponse);
 
                         i++;
                     }
@@ -312,13 +310,16 @@ namespace Raven.Client.Documents.Commands.MultiGet
             return getResponse;
         }
 
-        private void MaybeSetCache(GetResponse getResponse, GetRequest command)
+        private void MaybeSetCache(GetResponse getResponse, GetRequest command, int cachedIndex)
         {
             if (getResponse.StatusCode == HttpStatusCode.NotModified)
+            {
+                // if not modified - update age
+                _cached?.Values[cachedIndex].Release.NotModified();
                 return;
+            }
 
             var cacheKey = GetCacheKey(command, out string _);
-
             var result = getResponse.Result as BlittableJsonReaderObject;
             if (result == null)
             {
@@ -342,8 +343,24 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         private void DisposeCache()
         {
-            _cached?.Dispose();
+            //If _cached is not null - it means that the client approached with this multitask request to node and the request failed.
+            //and now client tries to send it to another node.
+            if (_cached != null)
+            {
+                _cached.Dispose();
             _cached = null;
+
+                // The client sends the commands.
+                // Some of which could be saved in cache with a response 
+                // that includes the change vector that received from the old fallen node.
+                // The client can't use those responses because their URLs are different 
+                // (include the IP and port of the old node), because of that the client 
+                // needs to get those docs again from the new node.
+                foreach (var command in _commands)
+                {
+                    command.Headers.Remove(Constants.Headers.IfNoneMatch);
+        }
+            } 
         }
 
         private class Cached : IDisposable

@@ -830,7 +830,7 @@ namespace Raven.Server.Documents.Handlers
                 var name = GetIndexNameFromCollectionAndField(field) ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
                 var fromValue = GetStringQueryString("fromValue", required: false);
-                var existingResultEtag = GetLongFromHeaders("If-None-Match");
+                var existingResultEtag = GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
                 var result = Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token, out var index);
 

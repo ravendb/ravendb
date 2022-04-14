@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Commands
             {
                 Method = HttpMethod.Get
             };
-            request.Headers.Add("If-None-Match", '"' + _changeVector + '"');
+            request.Headers.Add(Constants.Headers.IfNoneMatch, '"' + _changeVector + '"');
             url = pathBuilder.ToString();
             return request;
         }

@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task FacetedQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+            var existingResultEtag = GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
             var result = await Database.QueryRunner.ExecuteFacetedQuery(indexQuery, existingResultEtag, queryContext, token);
 
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Handlers
             if (TrafficWatchManager.HasRegisteredClients)
                 TrafficWatchQuery(indexQuery);
 
-            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+            var existingResultEtag = GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
             if (indexQuery.Metadata.HasFacet)
             {
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+            var existingResultEtag = GetLongFromHeaders(Constants.Headers.IfNoneMatch);
             var result = await Database.QueryRunner.ExecuteSuggestionQuery(indexQuery, queryContext, existingResultEtag, token);
             if (result.NotModified)
             {
@@ -600,7 +600,7 @@ namespace Raven.Server.Documents.Handlers
         private async Task IndexEntries(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool ignoreLimit)
         {
             var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
-            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+            var existingResultEtag = GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
             var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, ignoreLimit, existingResultEtag, token);
 

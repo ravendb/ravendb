@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands.MultiGet;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Client;
 
 namespace SlowTests.Tests.MultiGet
 {
@@ -177,7 +178,7 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/1-A",
                             Headers =
                             {
-                                {"If-None-Match", firstCommand.Result[0].Headers["ETag"]}
+                                {Constants.Headers.IfNoneMatch, firstCommand.Result[0].Headers["ETag"]}
                             }
                         },
                         new GetRequest
@@ -186,7 +187,7 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/2-A",
                             Headers =
                             {
-                                {"If-None-Match", firstCommand.Result[1].Headers["ETag"]}
+                                {Constants.Headers.IfNoneMatch, firstCommand.Result[1].Headers["ETag"]}
                             }
                         }
                     });

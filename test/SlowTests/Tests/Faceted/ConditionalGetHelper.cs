@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow.Json;
+using Raven.Client;
 
 namespace SlowTests.Tests.Faceted
 {
@@ -76,7 +77,7 @@ namespace SlowTests.Tests.Faceted
                 };
 
                 if (_requestEtag != null)
-                    request.Headers.TryAddWithoutValidation("If-None-Match", _requestEtag);
+                    request.Headers.TryAddWithoutValidation(Constants.Headers.IfNoneMatch, _requestEtag);
 
                 if (_method == HttpMethod.Post)
                     request.Content = new StringContent(_payload);

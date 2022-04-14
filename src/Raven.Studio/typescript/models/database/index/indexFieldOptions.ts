@@ -113,6 +113,7 @@ class indexFieldOptions {
     storage = ko.observable<Raven.Client.Documents.Indexes.FieldStorage>();
     effectiveStorage = this.effectiveComputed(x => x.storage());
     defaultStorage = this.defaultComputed(x => x.storage());
+    showStoreInfo: KnockoutComputed<boolean>;
 
     suggestions = ko.observable<boolean>();
     effectiveSuggestions = this.effectiveComputed(x => x.suggestions(), yesNoLabelProvider);
@@ -308,9 +309,9 @@ class indexFieldOptions {
             }
         });
 
-        this.indexOrStore = ko.pureComputed(() => {
-            return !(this.indexing() === "No" && this.effectiveStorage().includes("No"));
-        });
+        this.indexOrStore = ko.pureComputed(() => !(this.indexing() === "No" && this.effectiveStorage().includes("No")));
+        
+        this.showStoreInfo = ko.pureComputed(() => this.effectiveStorage().includes("Yes"));
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.name,
