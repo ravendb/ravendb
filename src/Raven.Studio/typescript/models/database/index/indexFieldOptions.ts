@@ -135,15 +135,17 @@ class indexFieldOptions {
     hasSpatialOptions = ko.observable<boolean>(false);
 
     indexOrStore: KnockoutComputed<boolean>;
+    indexDefinitionHasReduce: KnockoutObservable<boolean>;
     
     showAdvancedOptions = ko.observable<boolean>(false);
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
     
-    constructor(name: string, dto: Raven.Client.Documents.Indexes.IndexFieldOptions, parentFields?: indexFieldOptions) {
+    constructor(name: string, dto: Raven.Client.Documents.Indexes.IndexFieldOptions, indexHasReduce: KnockoutObservable<boolean>, parentFields?: indexFieldOptions) {
         this.name(name);
         this.parent(parentFields);
+        this.indexDefinitionHasReduce = indexHasReduce;
         
         const analyzerPositionInName = dto.Analyzer ? dto.Analyzer.lastIndexOf(".") : 0;
         const analyzerNameInDto = analyzerPositionInName !== -1 && dto.Analyzer ? dto.Analyzer.substring(analyzerPositionInName + 1) : dto.Analyzer;
@@ -471,7 +473,7 @@ class indexFieldOptions {
         this.indexOrStore.extend({
             validation: [
                 {
-                    validator: () => this.indexOrStore(),
+                    validator: () => this.indexDefinitionHasReduce() || this.indexOrStore(),
                     message: "'Indexing' and 'Store' cannot be set to 'No' at the same time. A field must be either Indexed or Stored."
                 }
             ]
@@ -483,15 +485,15 @@ class indexFieldOptions {
         });
     }
     
-    static defaultFieldOptions() {
-        return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexFieldOptions.globalDefaults());
+    static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>) {
+        return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexHasReduce, indexFieldOptions.globalDefaults(indexHasReduce));
     }
 
-    static empty() {
-        return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexFieldOptions.globalDefaults());
+    static empty(indexHasReduce: KnockoutObservable<boolean>) {
+        return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexHasReduce, indexFieldOptions.globalDefaults(indexHasReduce));
     }
 
-    static globalDefaults() {
+    static globalDefaults(indexHasReduce: KnockoutObservable<boolean>) {
         const field = new indexFieldOptions("", {
             Storage: "No",
             Indexing: "Default",
@@ -499,7 +501,7 @@ class indexFieldOptions {
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: "No"
-        });
+        }, indexHasReduce);
         field.fullTextSearch(false);
         field.highlighting(false);
 
