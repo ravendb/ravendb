@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.ContinuationTokens
 
         public string ToBase64(JsonOperationContext context)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "does not sound right");
             var json = context.ReadObject(ToJson(), $"token for {GetType()}");
             return Convert.ToBase64String(json.AsSpan());
         }

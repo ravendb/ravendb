@@ -422,7 +422,7 @@ namespace Raven.Server.Web.System
             using (ctx.OpenReadTransaction())
             {
                 DatabaseTopology topology;
-                if (databaseRecord.Shards?.Length > 0)
+                if (databaseRecord.IsSharded)
                 {
                     topology = new DatabaseTopology
                     {

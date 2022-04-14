@@ -49,12 +49,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        public async Task<TResult> ExecuteSingleShardAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
+        public Task<TResult> ExecuteSingleShardAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {
             command.ModifyRequest = ModifyHeaders;
-            var executor = ShardExecutor.GetRequestExecutorAt(shardNumber);
-            await executor.ExecuteAsync(command, context, token: token);
-            return command.Result;
+            return ShardExecutor.ExecuteSingleShardAsync(context, command, shardNumber, token);
         }
 
 
