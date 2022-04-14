@@ -159,44 +159,6 @@ namespace Raven.Server.Documents.Handlers
             return rangeResultDictionary;
         }
 
-        private static void MergeIncrementalTimeSeriesValues(SingleResult singleResult, string nodeTag, double[] values, ref TimeSeriesEntry entry, bool returnFullResults)
-        {
-            if (entry.Values.Length < values.Length) // need to allocate more space for new values
-            {
-                var updatedValues = singleResult.Values.Span;
-
-                for (int i = 0; i < entry.Values.Length; i++)
-                    updatedValues[i] += entry.Values[i];
-
-                entry.Values = updatedValues.ToArray();
-            }
-            else
-            {
-                for (int i = 0; i < values.Length; i++)
-                    entry.Values[i] += values[i];
-            }
-
-            if (returnFullResults == false)
-                return;
-
-            if (entry.NodeValues.TryGetValue(nodeTag, out var nodeValues))
-            {
-                if (nodeValues.Length < values.Length) // need to allocate more space for new values
-                {
-                    for (int i = 0; i < nodeValues.Length; i++)
-                        values[i] += nodeValues[i];
-
-                    entry.NodeValues[nodeTag] = values;
-                    return;
-                }
-
-                for (int i = 0; i < values.Length; i++)
-                    nodeValues[i] += values[i];
-            }
-            else
-                entry.NodeValues[nodeTag] = values;
-        }
-
         private static unsafe string CombineHashesFromMultipleRanges(Dictionary<string, List<TimeSeriesRangeResult>> ranges)
         {
             // init hash

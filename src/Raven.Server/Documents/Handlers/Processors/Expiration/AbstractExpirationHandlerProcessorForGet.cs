@@ -23,7 +23,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Expiration
             var expirationConfig = GetExpirationConfiguration();
 
             using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 if (expirationConfig != null)
                 {

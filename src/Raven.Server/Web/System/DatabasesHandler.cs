@@ -150,7 +150,7 @@ namespace Raven.Server.Web.System
                     {
                         long stampIndex;
                         IEnumerable<DynamicJsonValue> dbNodes;
-                        if (rawRecord.Shards?.Length > 0)
+                        if (rawRecord.IsSharded())
                         {
                             dbNodes = clusterTopology.Members.Keys.Select(x => 
                                 TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Member));

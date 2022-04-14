@@ -632,7 +632,7 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                if (databaseRecord.Shards?.Length > 0)
+                if (databaseRecord.IsSharded())
                 {
                     var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
                     var currentTask = _shardedDatabases.GetOrAdd(databaseName, newTask);

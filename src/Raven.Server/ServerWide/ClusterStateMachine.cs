@@ -1446,7 +1446,7 @@ namespace Raven.Server.ServerWide
             await _rachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
         }
 
-        private unsafe void RemoveNodeFromDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
+        private void RemoveNodeFromDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             Exception exception = null;
             RemoveNodeFromDatabaseCommand remove = null;

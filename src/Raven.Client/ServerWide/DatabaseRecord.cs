@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.ServerWide.Sharding;
@@ -314,8 +315,7 @@ namespace Raven.Client.ServerWide
         {
             if (IsSharded)
             {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-17763");
-                throw new NotImplementedException("Rolling index deployment for a sharded database is currently not supported");
+                throw new NotSupportedInShardingException("Rolling index deployment for a sharded database is currently not supported");
             }
 
             RollingIndexes ??= new Dictionary<string, RollingIndex>();
