@@ -2017,7 +2017,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             {
                 var notOne = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);
-                var notTwo = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
+              //  var notTwo = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("1") == false);
                 var result = notOne.Fill(ids);

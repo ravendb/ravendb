@@ -22,8 +22,8 @@ namespace Corax.Queries
             var innerBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, buffer.Length);
             Debug.Assert(innerBuffer.Length == buffer.Length);
 
-            var count = match._fillFunc(ref match, innerBuffer);            
-            
+            var count = match._fillFunc(ref match, innerBuffer);
+
             var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
             var baseMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(innerBuffer));
             var result = MergeHelper.And(matchesPtr, buffer.Length, matchesPtr, matches, baseMatchesPtr, count);
@@ -73,17 +73,24 @@ namespace Corax.Queries
                     else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
                     {
                         var iterator = reader.ReadMany(match._fieldId);
+                        
+                        //If we query unary, we want to find items where at least one element is valid for our conditions, so we look for the first match.
+                        //For example: Terms [1,2,3] Q: 'where Term < 3'. We check '1 < 3' and thats it.
+                        //The only difference is with NotMatch. We have to look through the whole collection and check if there are elements that accept our condition.
+                        var answer = match._distinct == false;
+                        isMatch = match._distinct;
+                        
                         while (iterator.ReadNext())
                         {
                             var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
-                            if (comparer.Compare(currentType, analyzedTerm))
+                            if (comparer.Compare(currentType, analyzedTerm) == answer)
                             {
-                                isMatch = true;
+                                isMatch = answer;
                                 break;
                             }
                         }
                     }
-
+                    
                     if (isMatch)
                     {
                         currentMatches[storeIdx] = freeMemory[i];
@@ -134,11 +141,13 @@ namespace Corax.Queries
                         else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
                         {
                             var iterator = reader.ReadMany(match._fieldId);
+                            var answer = match._distinct == false;
+                            isMatch = match._distinct;
                             while (iterator.ReadNext())
                             {
-                                if (comparer.Compare((long)(object)currentType, iterator.Long))
+                                if (comparer.Compare((long)(object)currentType, iterator.Long) == answer)
                                 {
-                                    isMatch = true;
+                                    isMatch = answer;
                                     break;
                                 }
                             }
@@ -155,11 +164,13 @@ namespace Corax.Queries
                         else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
                         {
                             var iterator = reader.ReadMany(match._fieldId);
+                            var answer = match._distinct == false;
+                            isMatch = match._distinct;
                             while (iterator.ReadNext())
                             {
-                                if (comparer.Compare((double)(object)currentType, iterator.Double))
+                                if (comparer.Compare((double)(object)currentType, iterator.Double) == answer)
                                 {
-                                    isMatch = true;
+                                    isMatch = answer;
                                     break;
                                 }
                             }
@@ -180,7 +191,8 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = false,
+            int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -188,7 +200,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.GreaterThan,
                     searcher, fieldId, value,
                     &FillFuncSequence<GreaterThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
             else
             {
@@ -196,11 +208,12 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.GreaterThan,
                     searcher, fieldId, value,
                     &FillFuncNumerical<GreaterThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldGreaterThanOrEqualMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldGreaterThanOrEqualMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
+            bool distinct = false, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -208,7 +221,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.GreaterThanOrEqual,
                     searcher, fieldId, value,
                     &FillFuncSequence<GreaterThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
             else
             {
@@ -216,11 +229,12 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.GreaterThanOrEqual,
                     searcher, fieldId, value,
                     &FillFuncNumerical<GreaterThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = false,
+            int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -228,7 +242,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.LessThan,
                     searcher, fieldId, value,
                     &FillFuncSequence<LessThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
             else
             {
@@ -236,11 +250,12 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.LessThan,
                     searcher, fieldId, value,
                     &FillFuncNumerical<LessThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldLessThanOrEqualMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldLessThanOrEqualMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
+            bool distinct = false, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -248,7 +263,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.LessThanOrEqual,
                     searcher, fieldId, value,
                     &FillFuncSequence<LessThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
             else
             {
@@ -256,11 +271,12 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.LessThanOrEqual,
                     searcher, fieldId, value,
                     &FillFuncNumerical<LessThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldNotEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldNotEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = true,
+            int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -268,7 +284,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotEquals,
                     searcher, fieldId, value,
                     &FillFuncSequence<NotEqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
             else
             {
@@ -276,11 +292,12 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotEquals,
                     searcher, fieldId, value,
                     &FillFuncNumerical<NotEqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = false,
+            int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -288,7 +305,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.Equals,
                     searcher, fieldId, value,
                     &FillFuncSequence<EqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
             else
             {
@@ -296,7 +313,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.Equals,
                     searcher, fieldId, value,
                     &FillFuncNumerical<EqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
             }
         }
 
