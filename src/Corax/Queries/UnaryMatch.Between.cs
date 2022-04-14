@@ -128,7 +128,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.Between, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncBetweenSequence, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
             }
             else if (typeof(TValueType) == typeof(long))
             {
@@ -145,7 +145,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.Between, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncBetweenNumerical, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
             }
             else
             {
@@ -161,7 +161,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncBetweenNumerical, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
             }
         }
 
@@ -284,7 +284,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncNotBetweenSequence, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
             }
             else if (typeof(TValueType) == typeof(long))
             {
@@ -301,7 +301,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncNotBetweenNumerical, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
             }
             else
             {
@@ -317,7 +317,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncNotBetweenNumerical, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
             }
         }
     }

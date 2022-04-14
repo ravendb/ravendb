@@ -33,7 +33,8 @@ namespace Corax.Queries
         private readonly TValueType _value;
         private readonly TValueType _valueAux;
         private readonly int _take;
-
+        private readonly bool _distinct;
+        
         private long _totalResults;
         private long _current;
         private QueryCountConfidence _confidence;
@@ -52,7 +53,9 @@ namespace Corax.Queries
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> andWithFunc,
             long totalResults,
-            QueryCountConfidence confidence, int take = -1)
+            QueryCountConfidence confidence, 
+            bool distinct = false,
+            int take = -1)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
@@ -67,6 +70,7 @@ namespace Corax.Queries
             _value = value;
             _valueAux = default;
             _confidence = confidence;
+            _distinct = distinct;
             _take = take <= 0 ? int.MaxValue : take;
         }
 
@@ -79,7 +83,9 @@ namespace Corax.Queries
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> andWith,
             long totalResults,
-            QueryCountConfidence confidence, int take = -1)
+            QueryCountConfidence confidence, 
+            bool distinct = false,
+            int take = -1)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
@@ -94,6 +100,7 @@ namespace Corax.Queries
             _value = value1;
             _valueAux = value2;
             _confidence = confidence;
+            _distinct = distinct;
             _take = take <= 0 ? int.MaxValue : take;
         }
 
