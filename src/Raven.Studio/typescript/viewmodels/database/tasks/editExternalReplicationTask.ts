@@ -48,6 +48,7 @@ class editExternalReplicationTask extends shardViewModelBase {
 
     constructor(db: database) {
         super(db);
+        
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "setState");
     }
 
