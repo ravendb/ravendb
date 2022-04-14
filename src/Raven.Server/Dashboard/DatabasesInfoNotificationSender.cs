@@ -45,7 +45,7 @@ namespace Raven.Server.Dashboard
 
                 var databasesInfo = new List<AbstractDashboardNotification>();
 
-                foreach (var item in DatabasesInfoRetriever.FetchDatabasesInfo(_serverStore, null, Cts.Token))
+                foreach (var item in DatabasesInfoRetriever.FetchDatabasesInfo(_serverStore, null, false, Cts.Token))
                 {
                     databasesInfo.Add(item);
                 }
