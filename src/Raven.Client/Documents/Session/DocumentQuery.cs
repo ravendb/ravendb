@@ -1198,6 +1198,7 @@ namespace Raven.Client.Documents.Session
                 DisableCaching = DisableCaching,
                 ProjectionBehavior = queryData?.ProjectionBehavior ?? ProjectionBehavior,
                 QueryTimings = QueryTimings,
+                ShouldIncludeTimings = ShouldIncludeTimings,
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
@@ -1213,7 +1214,7 @@ namespace Raven.Client.Documents.Session
 
             var queryStatistics = new QueryStatistics();
             var highlightings = new LinqQueryHighlightings();
-            IncludeTimings(out _);
+            QueryTimings = new QueryTimings();
 
             var ravenQueryInspector = new RavenQueryInspector<T>();
             var ravenQueryProvider = new RavenQueryProvider<T>(
