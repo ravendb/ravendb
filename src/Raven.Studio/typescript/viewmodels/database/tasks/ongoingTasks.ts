@@ -37,7 +37,7 @@ class ongoingTasks extends viewModelBase {
     private graph = new databaseGroupGraph();
     
     private watchedBackups = new Map<number, number>();
-    private etlProgressWatch: number;
+    private etlProgressWatch: ReturnType<typeof setTimeout>;
 
     private definitionsCache: etlScriptDefinitionCache;
 
@@ -270,18 +270,18 @@ class ongoingTasks extends viewModelBase {
                 .done(result => {
                     if (!result.OnGoingBackup) {
                         clearInterval(intervalId);
-                        intervalId = 0;
+                        intervalId = null;
                         this.watchedBackups.delete(task.taskId);
                     }
                 })
             }, 3000);
-            this.watchedBackups.set(task.taskId, intervalId);
+            this.watchedBackups.set(task.taskId, intervalId as unknown as number);
             
             this.registerDisposable({
                 dispose: () => {
                     if (intervalId) {
                         clearInterval(intervalId);
-                        intervalId = 0;
+                        intervalId = null;
                         this.watchedBackups.delete(task.taskId);
                     }
                 }
@@ -303,7 +303,7 @@ class ongoingTasks extends viewModelBase {
                 dispose: () => {
                     if (intervalId) {
                         clearInterval(intervalId);
-                        intervalId = 0;
+                        intervalId = null;
                         this.etlProgressWatch = null;
                     }
                 }

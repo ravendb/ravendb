@@ -46,7 +46,7 @@ class licenseWidget extends widget {
         
         if (this.canLoadCertificateInfo()) {
             this.loadServerCertificate();
-            this.refreshIntervalId = setInterval(() => this.loadServerCertificate(), 3600 * 1000);
+            this.refreshIntervalId = setInterval(() => this.loadServerCertificate(), 3600 * 1000) as unknown as number;
         }
     }
     

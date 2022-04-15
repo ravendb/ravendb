@@ -229,7 +229,7 @@ class menu {
     }
 
     private initializeOnClickOutsideOfMenuResetLevelToActiveItem() {
-        let scheduleResetTimer: number = null;
+        let scheduleResetTimer: ReturnType<typeof setTimeout> = null;
 
         const menuClickHandler = () => {
             if (scheduleResetTimer) {

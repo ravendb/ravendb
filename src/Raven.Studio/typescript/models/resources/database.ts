@@ -1,6 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import accessManager = require("common/shell/accessManager");
+import accessManager from "common/shell/accessManager";
 
 abstract class database {
     static readonly type = "database";

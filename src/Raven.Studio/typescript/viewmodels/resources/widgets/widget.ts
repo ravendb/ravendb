@@ -56,8 +56,8 @@ abstract class widget<TConfig = unknown, TState = unknown> {
         // align first execution to second
         const firstInvocationIn = new Date().getTime() % 1000;
         this.firstSyncUpdateTaskId = setTimeout(() => {
-            this.syncUpdateTaskId = setInterval(() => this.syncUpdate(), 1000);
-        }, firstInvocationIn);
+            this.syncUpdateTaskId = setInterval(() => this.syncUpdate(), 1000) as unknown as number;
+        }, firstInvocationIn) as unknown as number;
         this.syncUpdatesEnabled = true;
     }
     

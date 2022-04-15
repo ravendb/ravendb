@@ -25,6 +25,7 @@ module.exports = {
     ],
     moduleNameMapper: {
         "^common/(.*)$": "<rootDir>/typescript/common/$1",
+        "^external/(.*)$": "<rootDir>/typescript/external/$1",
         "^models/(.*)$": "<rootDir>/typescript/models/$1",
         "^plugins/(.*)$": "<rootDir>/node_modules/durandal/js/plugins/$1",
         "^durandal/(.*)$": "<rootDir>/node_modules/durandal/js/$1",

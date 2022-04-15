@@ -11,10 +11,21 @@
         "webpack-watch": "npm run fix-packages && webpack --config webpack.config.js --watch",
         "release": "npm run fix-packages && node scripts/typings.js && webpack --config webpack.config.js --mode production",
         "fix-packages": "node scripts/fix_packages.js",
-        "test": "jest"
+        "test": "jest",
+        "storybook": "start-storybook --no-manager-cache -p 6006",
+        "build-storybook": "build-storybook"
     },
     "private": true,
     "devDependencies": {
+        "@babel/core": "^7.17.8",
+        "@storybook/addon-actions": "^6.4.19",
+        "@storybook/addon-essentials": "^6.4.19",
+        "@storybook/addon-interactions": "^6.4.19",
+        "@storybook/addon-links": "^6.4.19",
+        "@storybook/builder-webpack5": "^6.4.19",
+        "@storybook/manager-webpack5": "^6.4.19",
+        "@storybook/react": "^6.4.19",
+        "@storybook/testing-library": "0.0.9",
         "@types/ace": "0.0.39",
         "@types/bootstrap": "3.3.33",
         "@types/d3": "3.5.34",

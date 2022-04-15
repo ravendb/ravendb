@@ -218,6 +218,7 @@ module.exports = (env, args) => {
             },
             alias: {
                 common: path.resolve(__dirname, 'typescript/common'),
+                external: path.resolve(__dirname, 'typescript/external'),
                 models: path.resolve(__dirname, 'typescript/models'),
                 commands: path.resolve(__dirname, 'typescript/commands'),
                 durandalPlugins: path.resolve(__dirname, 'typescript/durandalPlugins'),

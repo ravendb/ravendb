@@ -52,6 +52,7 @@
           "viewmodels/*":  ["typescript/viewmodels/*"],
           "models/*":  ["typescript/models/*"],
           "common/*": ["typescript/common/*"],
+          "external/*": ["typescript/external/*"],
           "widgets/*": ["typescript/widgets/*"],
           "commands/*": ["typescript/commands/*"],
           "knockout": ["node_modules/@types/knockout"],

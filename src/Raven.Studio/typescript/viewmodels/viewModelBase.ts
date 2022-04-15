@@ -48,7 +48,7 @@ abstract class viewModelBase {
     protected databasesManager = databasesManager.default;
 
     private keyboardShortcutDomContainers: string[] = [];
-    static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
+    static modelPollingHandle: ReturnType<typeof setTimeout>; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
     private disposableActions: Array<disposable> = [];
     appUrls: computedAppUrls;
