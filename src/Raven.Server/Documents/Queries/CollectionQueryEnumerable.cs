@@ -534,7 +534,7 @@ namespace Raven.Server.Documents.Queries
                             case MethodType.Id:
                                 if (value is ValueExpression ve)
                                 {
-                                    var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
+                                    var id = LuceneQueryBuilder.GetValue(_query, _metadata, parameters, ve);
 
                                     Debug.Assert(id.Type == ValueTokenType.String || id.Type == ValueTokenType.Null);
 
@@ -542,7 +542,7 @@ namespace Raven.Server.Documents.Queries
                                 }
                                 if (value is MethodExpression right)
                                 {
-                                    var id = QueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _context, right, ref parameters);
+                                    var id = LuceneQueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _context, right, ref parameters);
                                     if (id is ValueExpression v)
                                         AddId(v.Token.Value);
                                 }
@@ -571,7 +571,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (item is ValueExpression iv)
                             {
-                                foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv))
+                                foreach (var id in LuceneQueryBuilder.GetValues(_query, _metadata, parameters, iv))
                                 {
                                     AddId(id.Value?.ToString());
                                 }
@@ -600,7 +600,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (expression is ValueExpression iv)
                         {
-                            var prefix = QueryBuilder.GetValue(_query, _metadata, parameters, iv);
+                            var prefix = LuceneQueryBuilder.GetValue(_query, _metadata, parameters, iv);
                             StartsWith = prefix.Value?.ToString();
                         }
                     }

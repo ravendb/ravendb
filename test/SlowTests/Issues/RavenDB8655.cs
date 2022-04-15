@@ -20,6 +20,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
+                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {

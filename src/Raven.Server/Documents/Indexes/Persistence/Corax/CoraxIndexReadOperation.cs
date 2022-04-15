@@ -61,8 +61,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take: take)) is null)
-                yield break;
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
+                    null, fieldsToFetch)) is null)
+            yield break;
 
             var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
             Span<long> ids = longIds;
