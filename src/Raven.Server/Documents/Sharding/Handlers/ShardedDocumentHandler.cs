@@ -10,14 +10,13 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -28,17 +27,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "HEAD")]
         public async Task Head()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var processor = new ShardedDocumentHandlerProcessorForHead(this, ContextPool))
             {
-                var index = DatabaseContext.GetShardNumber(context, id);
-
-                var cmd = new ShardedHeadCommand(this, Headers.IfNoneMatch);
-
-                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(cmd, index);
-                HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-                HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Result;
+                await processor.ExecuteAsync();
             }
         }
 

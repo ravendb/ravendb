@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Http;
+using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
@@ -47,26 +48,11 @@ namespace Raven.Server.Documents.Handlers
     public class DocumentHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public Task Head()
+        public async Task Head()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var changeVector = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new DocumentHandlerProcessorForHead(this, ContextPool))
             {
-                var document = Database.DocumentsStorage.Get(context, id, DocumentFields.ChangeVector);
-                if (document == null)
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                else
-                {
-                    if (changeVector == document.ChangeVector)
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    else
-                        HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + document.ChangeVector + "\"";
-                }
-
-                return Task.CompletedTask;
+                await processor.ExecuteAsync();
             }
         }
 
