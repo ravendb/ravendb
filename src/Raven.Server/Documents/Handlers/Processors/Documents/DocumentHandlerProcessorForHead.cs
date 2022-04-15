@@ -13,7 +13,7 @@ internal class DocumentHandlerProcessorForHead : AbstractDocumentHandlerProcesso
     {
     }
 
-    protected override ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVector(string docId, DocumentsOperationContext context)
+    protected override ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVectorAsync(string docId, DocumentsOperationContext context)
     {
         var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
