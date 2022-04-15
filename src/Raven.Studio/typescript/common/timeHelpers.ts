@@ -7,7 +7,7 @@ class timeHelpers {
     // don't make this method public, instead create field for given time period
     private static createTimeBasedObservable(updatePeriodInMillis: number) {
         const now: KnockoutObservable<moment.Moment> = ko.observable<moment.Moment>();
-        let interval: number;
+        let interval: ReturnType<typeof setTimeout>;
 
         const computed = ko.pureComputed(() => now());
 

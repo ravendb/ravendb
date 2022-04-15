@@ -25,8 +25,8 @@ class copyFeature implements columnPreviewFeature {
 class columnPreviewPlugin<T> {
 
     private grid: virtualGrid<T>;
-    private previewTimeoutHandle: number;
-    private enterTooltipTimeoutHandle: number;
+    private previewTimeoutHandle: ReturnType<typeof setTimeout>;
+    private enterTooltipTimeoutHandle: ReturnType<typeof setTimeout>;
     private previewVisible = false;
     private $tooltip: JQuery;
     private currentValue: any;

@@ -5,11 +5,13 @@ class requestExecution {
     alertVisible = false;
     completed = false;
 
-    private spinnerTimeout: number;
-    private alertTimeout: number;
+    private spinnerTimeout: ReturnType<typeof setTimeout>;
+    private alertTimeout: ReturnType<typeof setTimeout>;
+    private readonly sync: Function;
 
-    constructor(private timeForSpinner: number, private timeToAlert: number = 0, private sync: Function) {
+    constructor(private timeForSpinner: number, private timeToAlert: number = 0, sync: Function) {
         this.setTimeouts();
+        this.sync = sync;
     }
 
     markCompleted() {

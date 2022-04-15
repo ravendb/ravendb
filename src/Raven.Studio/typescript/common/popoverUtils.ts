@@ -13,7 +13,7 @@ class popoverUtils {
         };
         
         let overElement = false;
-        let hideHandler: number = undefined;
+        let hideHandler: ReturnType<typeof setTimeout> = undefined;
         
         let lastHideTime: number = null;
 

@@ -78,7 +78,7 @@ class adminLogs extends viewModelBase {
 
     headerValuePlaceholder: KnockoutComputed<string>;
     
-    private appendTask: number;
+    private appendTask: ReturnType<typeof setTimeout>;
     private pendingMessages: string[] = [];
     private heightCalculator = new heightCalculator();
     

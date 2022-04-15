@@ -138,19 +138,19 @@ class backups extends viewModelBase {
                     .done(result => {
                         if (!result.OnGoingBackup) {
                             clearInterval(intervalId);
-                            intervalId = 0;
+                            intervalId = null;
                             this.watchedBackups.delete(task.taskId);
                         }
                     })
             }, 3000);
 
-            this.watchedBackups.set(task.taskId, intervalId);
+            this.watchedBackups.set(task.taskId, intervalId as unknown as number);
 
             this.registerDisposable({
                 dispose: () => {
                     if (intervalId) {
                         clearInterval(intervalId);
-                        intervalId = 0;
+                        intervalId = null;
                         this.watchedBackups.delete(task.taskId);
                     }
                 }

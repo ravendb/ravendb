@@ -174,7 +174,7 @@ class trafficWatch extends viewModelBase {
     filter = ko.observable<string>();
     isDataFiltered = ko.observable<boolean>(false);
     
-    private appendElementsTask: number;
+    private appendElementsTask: ReturnType<typeof setTimeout>;
 
     isBufferFull = ko.observable<boolean>();
     tailEnabled = ko.observable<boolean>(true);
