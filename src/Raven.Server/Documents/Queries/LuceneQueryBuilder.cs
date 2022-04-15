@@ -37,7 +37,7 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries
 {
-    public static class QueryBuilder
+    public class LuceneQueryBuilder
     {
         private static readonly KeywordAnalyzer KeywordAnalyzer = new KeywordAnalyzer();
 
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Queries
 
                         switch (fieldType)
                         {
-                            case LuceneFieldType.String:
+                            case IndexFieldType.String:
                                 if (exact && metadata.IsDynamic)
                                     luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
 
@@ -225,10 +225,10 @@ namespace Raven.Server.Documents.Queries
                                 }
                                 break;
                             
-                            case LuceneFieldType.Long:
+                            case IndexFieldType.Long:
                                 return TranslateOperationOnLong(index, luceneFieldName, (long)value, @where.Operator);
                             
-                            case LuceneFieldType.Double:
+                            case IndexFieldType.Double:
                                 var valueAsDouble = (double)value;
 
                                 switch (where.Operator)
@@ -516,7 +516,7 @@ namespace Raven.Server.Documents.Queries
             Lucene.Net.Search.Query betweenQuery;
             switch (fieldType)
             {
-                case LuceneFieldType.String:
+                case IndexFieldType.String:
                     exact = IsExact(index, exact, fieldName);
 
                     if (TryUseTime(index, fieldName, valueFirst, valueSecond, exact, out var ticksFirst, out var ticksSecond))
@@ -534,12 +534,12 @@ namespace Raven.Server.Documents.Queries
                             be.MaxInclusive, exact);
                     }
                     break;
-                case LuceneFieldType.Long:
+                case IndexFieldType.Long:
                     var valueFirstAsLong = (long)valueFirst;
                     var valueSecondAsLong = (long)valueSecond;
                     betweenQuery =  LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
                     break;
-                case LuceneFieldType.Double:
+                case IndexFieldType.Double:
                     var valueFirstAsDouble = (double)valueFirst;
                     var valueSecondAsDouble = (double)valueSecond;
                     betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
@@ -1467,22 +1467,22 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static (string LuceneFieldName, LuceneFieldType LuceneFieldType, LuceneTermType LuceneTermType) GetLuceneField(string fieldName, ValueTokenType valueType)
+        private static (string LuceneFieldName, IndexFieldType LuceneFieldType, LuceneTermType LuceneTermType) GetLuceneField(string fieldName, ValueTokenType valueType)
         {
             switch (valueType)
             {
                 case ValueTokenType.String:
-                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
+                    return (fieldName, IndexFieldType.String, LuceneTermType.String);
                 case ValueTokenType.Double:
-                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, LuceneFieldType.Double, LuceneTermType.Double);
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, IndexFieldType.Double, LuceneTermType.Double);
                 case ValueTokenType.Long:
-                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long);
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, IndexFieldType.Long, LuceneTermType.Long);
                 case ValueTokenType.True:
                 case ValueTokenType.False:
-                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
+                    return (fieldName, IndexFieldType.String, LuceneTermType.String);
                 case ValueTokenType.Null:
                 case ValueTokenType.Parameter:
-                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
+                    return (fieldName, IndexFieldType.String, LuceneTermType.String);
                 default:
                     ThrowUnhandledValueTokenType(valueType);
                     break;
@@ -1490,7 +1490,7 @@ namespace Raven.Server.Documents.Queries
 
             Debug.Assert(false);
 
-            return (null, LuceneFieldType.String, LuceneTermType.String);
+            return (null, IndexFieldType.String, LuceneTermType.String);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -61,13 +61,6 @@ public class AnalyzersIntegration : RavenTestBase
             WaitForUserToContinueTheTest(store);
             Assert.Equal(2, items.Count);
         }
-        {
-            using var session = store.OpenSession();
-            var raw = session.Advanced.RawQuery<Record>("from index 'Auto/Records/BySearch(Data)' where 'search(Data)' = 'testion'").ToList();
-            Assert.NotNull(raw);
-            Assert.NotEqual(0, raw.Count);
-            Assert.Equal(valuesToStore[1], raw.First().Data);
-        }
     }
 
     private class Record

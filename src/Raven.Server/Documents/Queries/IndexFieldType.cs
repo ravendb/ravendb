@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.Queries
 {
-    public enum LuceneFieldType
+    public enum IndexFieldType
     {
         String,
         Long,

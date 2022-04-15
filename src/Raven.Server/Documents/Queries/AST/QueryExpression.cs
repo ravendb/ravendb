@@ -303,7 +303,7 @@ namespace Raven.Server.Documents.Queries.AST
             switch (type)
             {
                 case ValueTokenType.Long:
-                    return QueryBuilder.ParseInt64WithSeparators(value);
+                    return LuceneQueryBuilder.ParseInt64WithSeparators(value);
                 case ValueTokenType.Double:
                     return double.Parse(value, CultureInfo.InvariantCulture);
                 case ValueTokenType.Parameter:

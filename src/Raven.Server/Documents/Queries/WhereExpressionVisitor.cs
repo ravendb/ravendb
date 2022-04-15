@@ -104,14 +104,14 @@ namespace Raven.Server.Documents.Queries
             {
                 if (parameters == null)
                 {
-                    QueryBuilder.ThrowParametersWereNotProvided(QueryText);
+                    LuceneQueryBuilder.ThrowParametersWereNotProvided(QueryText);
                     return ValueTokenType.Null; // never hit
                 }
 
                 if (parameters.TryGetMember(value.Token, out var parameterValue) == false)
-                    QueryBuilder.ThrowParameterValueWasNotProvided(value.Token.Value, QueryText, parameters);
+                    LuceneQueryBuilder.ThrowParameterValueWasNotProvided(value.Token.Value, QueryText, parameters);
 
-                return QueryBuilder.GetValueTokenType(parameterValue, QueryText, parameters, unwrapArrays);
+                return LuceneQueryBuilder.GetValueTokenType(parameterValue, QueryText, parameters, unwrapArrays);
             }
 
             return value.Value;

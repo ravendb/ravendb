@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (result.Metadata.Query.Offset != null)
                 {
-                    var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    var start = (int)LuceneQueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                     result.Offset = start;
                     result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
                         ? Math.Max(start, result.Start)
@@ -171,21 +171,21 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.Query.Limit != null)
                 {
-                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    var limit = (int)LuceneQueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
                     result.Limit = limit;
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
                 
                 if (result.Metadata.Query.Limit != null)
                 {
-                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    var limit = (int)LuceneQueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
                     result.Limit = limit;
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
                 
                 if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.FilterLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
+                    result.FilterLimit = (int)LuceneQueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
                 }
             }
         }
@@ -250,21 +250,21 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.Query.Offset != null)
                 {
-                    var offset = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    var offset = (int)LuceneQueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                     result.Offset = offset;
                     result.Start = start + offset;
                 }
 
                 if (result.Metadata.Query.Limit != null)
                 {
-                    pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    pageSize = (int)LuceneQueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
                     result.Limit = pageSize;
                     result.PageSize = Math.Min(result.PageSize, pageSize);
                 }
                 
                 if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.FilterLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
+                    result.FilterLimit = (int)LuceneQueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
                 }
 
                 if (tracker != null)
