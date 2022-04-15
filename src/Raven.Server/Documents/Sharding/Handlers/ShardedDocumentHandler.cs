@@ -36,18 +36,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs/size", "GET")]
         public async Task GetDocSize()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var processor = new ShardedDocumentHandlerProcessorForGetDocSize(this, ContextPool))
             {
-                var index = DatabaseContext.GetShardNumber(context, id);
-
-                var cmd = new ShardedCommand(this, Headers.None);
-                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
-                HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-
-                if (cmd.Result != null)
-                    await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
+                await processor.ExecuteAsync();
             }
         }
 

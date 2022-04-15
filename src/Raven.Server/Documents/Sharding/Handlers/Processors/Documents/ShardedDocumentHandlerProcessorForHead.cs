@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide.Context;
@@ -15,7 +14,7 @@ internal class ShardedDocumentHandlerProcessorForHead : AbstractDocumentHandlerP
     {
     }
 
-    protected override async ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVector(string docId, TransactionOperationContext context)
+    protected override async ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVectorAsync(string docId, TransactionOperationContext context)
     {
         var index = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
 

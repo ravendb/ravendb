@@ -15,7 +15,7 @@ internal abstract class AbstractDocumentHandlerProcessorForHead<TRequestHandler,
     {
     }
 
-    protected abstract ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVector(string docId, TOperationContext context);
+    protected abstract ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVectorAsync(string docId, TOperationContext context);
 
     public override async ValueTask ExecuteAsync()
     {
@@ -23,7 +23,7 @@ internal abstract class AbstractDocumentHandlerProcessorForHead<TRequestHandler,
 
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {
-            var result = await GetStatusCodeAndChangeVector(id, context);
+            var result = await GetStatusCodeAndChangeVectorAsync(id, context);
 
             HttpContext.Response.StatusCode = (int)result.StatusCode;
 

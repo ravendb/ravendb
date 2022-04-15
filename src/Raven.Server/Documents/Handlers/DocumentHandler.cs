@@ -59,33 +59,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs/size", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDocSize()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new DocumentHandlerProcessorForGetDocSize(this, ContextPool))
             {
-                var document = Database.DocumentsStorage.GetDocumentMetrics(context, id);
-                if (document == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                var documentSizeDetails = new DocumentSizeDetails
-                {
-                    DocId = id,
-                    ActualSize = document.Value.ActualSize,
-                    HumaneActualSize = Sizes.Humane(document.Value.ActualSize),
-                    AllocatedSize = document.Value.AllocatedSize,
-                    HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize)
-                };
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, documentSizeDetails.ToJson());
-                }
+                await processor.ExecuteAsync();
             }
         }
 
