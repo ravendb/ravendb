@@ -9,7 +9,7 @@ class deleteRevisionsForDocumentsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const payload: Raven.Server.Documents.Handlers.Admin.AdminRevisionsHandler.Parameters = {
+        const payload: Raven.Server.Documents.Revisions.DeleteRevisionsOperation.Parameters = {
             DocumentIds: this.ids
         };
 

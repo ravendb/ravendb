@@ -1,13 +1,10 @@
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import viewModelBase = require("viewmodels/viewModelBase");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsBinEntryCommand = require("commands/database/documents/getRevisionsBinEntryCommand");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
-
 import document = require("models/database/documents/document");
-
 import eventsCollector = require("common/eventsCollector");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
@@ -16,8 +13,10 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database = require("models/resources/database");
 
-class revisionsBin extends viewModelBase {
+class revisionsBin extends shardViewModelBase {
 
     view = require("views/database/documents/revisionsBin.html");
     
@@ -35,8 +34,11 @@ class revisionsBin extends viewModelBase {
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
 
-    constructor() {
-        super();
+    itemsSoFar = ko.observable<number>(0);
+    continuationToken: string;
+
+    constructor(db: database) {
+        super(db);
 
         this.initObservables();
     }
@@ -67,17 +69,31 @@ class revisionsBin extends viewModelBase {
         this.gridController().reset(true);
     }
 
-    fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResult<document>> {
-        const task = $.Deferred<pagedResult<document>>();
+    fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResultWithToken<document>> {
+        const task = $.Deferred<pagedResultWithToken<document>>();
 
-        new getRevisionsBinEntryCommand(this.activeDatabase(), this.revisionsBinEntryNextChangeVector, 101)
+        new getRevisionsBinEntryCommand(this.db, this.revisionsBinEntryNextChangeVector, 101, this.continuationToken)
             .execute()
             .done(result => {
-                const hasMore = result.items.length === 101;
-                const totalCount = skip + result.items.length;
-                if (hasMore) {
-                    const nextItem = result.items.pop();
-                    this.revisionsBinEntryNextChangeVector = nextItem.__metadata.changeVector();
+                let totalCount;
+                this.continuationToken = result.continuationToken;
+
+                if (result.continuationToken) {
+                    this.itemsSoFar(this.itemsSoFar() + result.items.length);
+
+                    if (this.itemsSoFar() === result.totalResultCount) {
+                        totalCount = this.itemsSoFar()
+                    } else {
+                        totalCount = this.itemsSoFar() + 1;
+                    }
+                } else {
+                    const hasMore = result.items.length === 101;
+                    totalCount = skip + result.items.length;
+
+                    if (hasMore) {
+                        const nextItem = result.items.pop();
+                        this.revisionsBinEntryNextChangeVector = nextItem.__metadata.changeVector();
+                    }
                 }
 
                 task.resolve({
@@ -90,7 +106,7 @@ class revisionsBin extends viewModelBase {
                     const errorType = result.responseJSON['Type'] || "";
                     
                     if (errorType.endsWith("RevisionsDisabledException")) {
-                        router.navigate(appUrl.forDocuments(null,  this.activeDatabase()));
+                        router.navigate(appUrl.forDocuments(null, this.db));
                     }
                 }
             });
@@ -106,7 +122,7 @@ class revisionsBin extends viewModelBase {
         grid.headerVisible(true);
         
         const checkColumn = new checkedColumn(false);
-        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px");
+        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), "Id", "300px");
         const changeVectorColumn = new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px");
         const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Deletion date", "300px");
 
@@ -146,7 +162,7 @@ class revisionsBin extends viewModelBase {
 
                     this.spinners.delete(true);
 
-                    new deleteRevisionsForDocumentsCommand(selectedIds, this.activeDatabase())
+                    new deleteRevisionsForDocumentsCommand(selectedIds, this.db)
                         .execute()
                         .always(() => {
                             this.spinners.delete(false);
@@ -155,8 +171,6 @@ class revisionsBin extends viewModelBase {
                 }
             });
     }
-
-
 }
 
 export = revisionsBin;

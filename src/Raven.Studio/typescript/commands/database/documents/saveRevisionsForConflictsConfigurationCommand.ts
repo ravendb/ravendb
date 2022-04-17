@@ -9,7 +9,7 @@ class saveRevisionsForConflictsConfigurationCommand extends commandBase {
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
 
-        const url = endpoint.databases.revisions.adminRevisionsConflictsConfig;
+        const url = endpoint.databases.adminRevisions.adminRevisionsConflictsConfig;
         const args = ko.toJSON(this.revisionsConfiguration);
         return this.post<updateDatabaseConfigurationsResult>(url, args, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to save revisions for conflicts configuration", response.responseText, response.statusText));

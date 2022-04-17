@@ -9,7 +9,7 @@ class enforceRevisionsConfigurationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const url = endpoints.databases.revisions.adminRevisionsConfigEnforce;
+        const url = endpoints.databases.adminRevisions.adminRevisionsConfigEnforce;
 
         return this.post<void>(url, null, this.db)
             .fail((response: JQueryXHR) => {
