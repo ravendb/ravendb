@@ -19,6 +19,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/documents/revisions/bin",
             moduleId: require("viewmodels/database/documents/revisionsBin"),
+            shardingMode: "both",
             title: "Revisions Bin",
             nav: false,
             css: "icon-revisions-bin",

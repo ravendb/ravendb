@@ -58,6 +58,9 @@ interface resultsWithTotalCountDto<T> extends resultsDto<T> {
 interface resultsWithCountAndToken<T> extends resultsWithTotalCountDto<T> {
     ContinuationToken?: string;
 }
+interface resultsWithCountAndAvailableColumns<T> extends resultsWithCountAndToken<T> {
+    AvailableColumns: string[];
+}
 
 interface resultsWithCountAndAvailableColumns<T> extends resultsWithCountAndToken<T> {
     AvailableColumns: string[];
