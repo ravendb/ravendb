@@ -19,11 +19,13 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
@@ -64,18 +66,7 @@ namespace Raven.Client.ServerWide
 
         public DatabaseTopology Topology;
 
-        public DatabaseTopology[] Shards;
-
-        public List<ShardBucketRange> ShardBucketRanges = new List<ShardBucketRange>();
-
-        public Dictionary<int, ShardBucketMigration> ShardBucketMigrations;
-
-        // change vectors with a MOVE element below this will be considered as permanent
-        // pointers with the migration index below this one will be purged
-        public long MigrationCutOffIndex;
-
-        // the dbid part with the MOVE tag upon migration
-        public string ShardedDatabaseId;
+        public ShardingRecord Sharding;
 
         // public OnGoingTasks tasks;  tasks for this node..
         // list backup.. list sub .. list etl.. list repl(watchers).. list sql
@@ -141,7 +132,7 @@ namespace Raven.Client.ServerWide
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
 
         [JsonIgnore]
-        public bool IsSharded => Shards?.Length > 0;
+        public bool IsSharded => Sharding?.Shards?.Length > 0;
 
         [JsonIgnore]
         internal IEnumerable<(string Name, DatabaseTopology Topology)> Topologies
@@ -150,9 +141,9 @@ namespace Raven.Client.ServerWide
             {
                 if (IsSharded)
                 {
-                    for (int i = 0; i < Shards.Length; i++)
+                    for (int i = 0; i < Sharding.Shards.Length; i++)
                     {
-                        yield return ($"{DatabaseName}${i}", Shards[i]);
+                        yield return ($"{DatabaseName}${i}", Sharding.Shards[i]);
                     }
                     yield break;
                 }
@@ -454,8 +445,8 @@ namespace Raven.Client.ServerWide
         {
             if (Topology != null && Topology.Count > 0)
                 return true;
-
-            return Shards != null && Shards.All(shard => shard?.Count > 0);
+            
+            return Sharding?.Shards != null  && Sharding.Shards.All(shard => shard?.Count > 0);
         }
 
         public IEnumerable<string> GetTopologyMembers(Func<DatabaseTopology, List<string>> get)
@@ -464,7 +455,7 @@ namespace Raven.Client.ServerWide
                 return get(Topology);
 
             var set = new HashSet<string>();
-            foreach (var shard in Shards)
+            foreach (var shard in Sharding.Shards)
             {
                 set.UnionWith(get(shard));
             }
@@ -474,8 +465,8 @@ namespace Raven.Client.ServerWide
 
         internal string GetClusterTransactionId()
         {
-            Debug.Assert(Shards.All(s => s.ClusterTransactionIdBase64.Equals(Shards[0].ClusterTransactionIdBase64)));
-            return Shards[0].ClusterTransactionIdBase64;
+            Debug.Assert(Sharding.Shards.All(s => s.ClusterTransactionIdBase64.Equals(Sharding.Shards[0].ClusterTransactionIdBase64)));
+            return Sharding.Shards[0].ClusterTransactionIdBase64;
         }
     }
 
@@ -573,5 +564,28 @@ namespace Raven.Client.ServerWide
                 [nameof(CompressRevisions)] = CompressRevisions
             };
         }
+    }
+
+    public class ShardingRecord 
+    {
+        public DatabaseTopology[] Shards;
+
+        public List<ShardBucketRange> ShardBucketRanges = new List<ShardBucketRange>();
+
+        /// <summary>
+        /// This is used to customize the distribution of data for specific shards on a particular document id prefix
+        /// </summary>
+        public Dictionary<string, List<ShardBucketRange>> Prefixed;
+
+        public Dictionary<int, ShardBucketMigration> ShardBucketMigrations;
+
+        // change vectors with a MOVE element below this will be considered as permanent
+        // pointers with the migration index below this one will be purged
+        public long MigrationCutOffIndex;
+
+        // the dbid part with the MOVE tag upon migration
+        public string ShardedDatabaseId;
+        public int NumberOfShards => Shards.Length;
+
     }
 }

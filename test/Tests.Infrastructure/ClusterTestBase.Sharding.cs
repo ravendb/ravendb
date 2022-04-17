@@ -33,7 +33,10 @@ public partial class ClusterTestBase
         {
             var record = new DatabaseRecord(databaseName)
             {
-                Shards = GetDatabaseTopologyForShards(replicationFactor, tuple.Nodes.Select(x => x.ServerStore.NodeTag).ToList(), shards)
+                Sharding = new ShardingRecord
+                {
+                    Shards = GetDatabaseTopologyForShards(replicationFactor, tuple.Nodes.Select(x => x.ServerStore.NodeTag).ToList(), shards)
+                }
             };
             return _parent.CreateDatabaseInCluster(record, replicationFactor, tuple.Leader.WebUrl, certificate);
         }
@@ -131,7 +134,7 @@ public partial class ClusterTestBase
         public async Task<DatabaseTopology[]> GetShards(DocumentStore store)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-            return record.Shards;
+            return record.Sharding.Shards;
         }
     }
 }

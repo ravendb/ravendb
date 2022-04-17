@@ -1253,7 +1253,7 @@ namespace Raven.Server.ServerWide
                         else
                         {
                             bool emptyShardTypology = true;
-                            foreach (var shardTopology in record.Shards)
+                            foreach (var shardTopology in record.Sharding.Shards)
                             {
                                 if (shardTopology.RelevantFor(removed))
                                 {
@@ -1673,11 +1673,11 @@ namespace Raven.Server.ServerWide
                         if (addDatabaseCommand.Record.IsSharded == false)
                             return addDatabaseCommand.Record.Topology.Members;
 
-                        if (addDatabaseCommand.Record.ShardBucketRanges == null || addDatabaseCommand.Record.ShardBucketRanges.Count == 0)
-                            throw new RachisInvalidOperationException($"Can't create a sharded database {addDatabaseCommand.Name} with an empty {nameof(DatabaseRecord.ShardBucketRanges)}");
+                        if (addDatabaseCommand.Record.Sharding?.ShardBucketRanges == null || addDatabaseCommand.Record.Sharding.ShardBucketRanges.Count == 0)
+                            throw new RachisInvalidOperationException($"Can't create a sharded database {addDatabaseCommand.Name} with an empty {nameof(DatabaseRecord.Sharding.ShardBucketRanges)}");
 
                         var set = new HashSet<string>();
-                        foreach (var shard in addDatabaseCommand.Record.Shards)
+                        foreach (var shard in addDatabaseCommand.Record.Sharding.Shards)
                         {
                             set.UnionWith(shard.Members);
                         }

@@ -360,11 +360,12 @@ namespace SlowTests.Cluster
             }
             else
             {
-                options.ModifyDatabaseRecord = r => r.Shards = new[]
+                options.ModifyDatabaseRecord = r => r.Sharding = new ShardingRecord
                 {
-                    new DatabaseTopology { Members = members }, 
-                    new DatabaseTopology { Members = members }, 
-                    new DatabaseTopology { Members = members }
+                    Shards = new[]
+                    {
+                        new DatabaseTopology { Members = members }, new DatabaseTopology { Members = members }, new DatabaseTopology { Members = members }
+                    }
                 };
             }
             using (var store = GetDocumentStore(options))

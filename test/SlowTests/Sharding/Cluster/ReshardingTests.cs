@@ -26,8 +26,8 @@ namespace SlowTests.Sharding.Cluster
 
                 var id = "foo/bar";
                 var bucket = ShardHelper.GetBucket(id);
-                var location = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
-                var newLocation = (location + 1) % record.Shards.Length;
+                var location = ShardHelper.FindBucketShard(record.Sharding.ShardBucketRanges, bucket);
+                var newLocation = (location + 1) % record.Sharding.Shards.Length;
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User
@@ -83,9 +83,8 @@ namespace SlowTests.Sharding.Cluster
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
                 var id = "foo/bar";
-                var bucket = ShardHelper.GetBucket(id);
-                var location = ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
-                var newLocation = (location + 1) % record.Shards.Length;
+                var location = ShardHelper.GetShardNumberFor(record.Sharding, id);
+                var newLocation = (location + 1) % record.Sharding.Shards.Length;
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User

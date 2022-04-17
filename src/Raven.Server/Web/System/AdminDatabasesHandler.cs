@@ -422,7 +422,7 @@ namespace Raven.Server.Web.System
             using (ctx.OpenReadTransaction())
             {
                 DatabaseTopology topology;
-                if (databaseRecord.IsSharded)
+                if (databaseRecord.Sharding?.Shards?.Length > 0)
                 {
                     topology = new DatabaseTopology
                     {
@@ -443,7 +443,7 @@ namespace Raven.Server.Web.System
 
             if (databaseRecord.IsSharded)
             {
-                foreach (var databaseTopology in databaseRecord.Shards)
+                foreach (var databaseTopology in databaseRecord.Sharding.Shards)
                 {
                     UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
                 }

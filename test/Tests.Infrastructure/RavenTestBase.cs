@@ -225,7 +225,7 @@ namespace FastTests
                         catch (ConcurrencyException)
                         {
                             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
-                            Assert.Equal(options.ReplicationFactor, record.IsSharded ? record.Shards[0].Count : record.Topology.ReplicationFactor);
+                            Assert.Equal(options.ReplicationFactor, record.IsSharded ? record.Sharding.Shards[0].Count : record.Topology.ReplicationFactor);
                             raftCommand = record.Etag;
                         }
 
@@ -722,11 +722,14 @@ namespace FastTests
                         options.ModifyDatabaseRecord = record =>
                         {
                             modifyRecord?.Invoke(record);
-                            record.Shards = new[]
+                            record.Sharding = new ShardingRecord
                             {
+                                Shards = new[]
+                                {
                                     new DatabaseTopology(),
                                     new DatabaseTopology(),
                                     new DatabaseTopology(),
+                                }
                             };
                         };
 

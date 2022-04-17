@@ -76,9 +76,9 @@ public class SessionTester
 
         if (_databaseRecord.IsSharded)
         {
-            for (var i = 0; i < _databaseRecord.Shards.Length; i++)
+            for (var i = 0; i < _databaseRecord.Sharding.Shards.Length; i++)
             {
-                var shardTopology = _databaseRecord.Shards[i];
+                var shardTopology = _databaseRecord.Sharding.Shards[i];
 
                 foreach (string member in shardTopology.Members)
                 {

@@ -137,10 +137,13 @@ namespace Raven.Server.ServerWide
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.ShardedDatabaseId;
+                    return _materializedRecord.Sharding.ShardedDatabaseId;
 
-                if (_shardedDatabaseId == null)
-                    _record.TryGet(nameof(DatabaseRecord.ShardedDatabaseId), out _shardedDatabaseId);
+                if (_shardedDatabaseId != null) 
+                    return _shardedDatabaseId;
+                
+                _record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject sharding);
+                sharding.TryGet(nameof(DatabaseRecord.Sharding.ShardedDatabaseId), out _shardedDatabaseId);
 
                 return _shardedDatabaseId;
             }
@@ -153,12 +156,13 @@ namespace Raven.Server.ServerWide
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.ShardBucketMigrations;
+                    return _materializedRecord.Sharding?.ShardBucketMigrations;
 
                 if (_bucketMigrations == null)
                 {
                     _bucketMigrations = new Dictionary<int, ShardBucketMigration>();
-                    if (_record.TryGet(nameof(DatabaseRecord.ShardBucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
+                    if (_record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject sharding) && sharding != null &&
+                        sharding.TryGet(nameof(DatabaseRecord.Sharding.ShardBucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < obj.Count; i++)
@@ -204,63 +208,60 @@ namespace Raven.Server.ServerWide
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.Shards;
+                    return _materializedRecord.Sharding?.Shards;
 
                 if (_shards != null)
                     return _shards;
 
-                if (_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false || array == null)
-                    return null;
-
-                _shards = new DatabaseTopology[array.Length];
-                for (var index = 0; index < array.Length; index++)
+                if (_record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject sharding) && sharding != null &&
+                    sharding.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderArray array) && array != null)
                 {
-                    var shard = (BlittableJsonReaderObject)array[index];
-                    _shards[index] = JsonDeserializationCluster.DatabaseTopology(shard);
+                    _shards = new DatabaseTopology[array.Length];
+                    for (var index = 0; index < array.Length; index++)
+                    {
+                        var shard = (BlittableJsonReaderObject)array[index];
+                        _shards[index] = JsonDeserializationCluster.DatabaseTopology(shard);
+                    }
                 }
 
                 return _shards;
             }
         }
         
-        private List<ShardBucketRange> _shardBucketRanges;
+        private ShardingRecord _sharding;
 
-        public List<ShardBucketRange> ShardBucketRanges
+        public ShardingRecord Sharding
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.ShardBucketRanges;
-
-                if (_shardBucketRanges != null)
-                    return _shardBucketRanges;
-
-                if (_record.TryGet(nameof(DatabaseRecord.ShardBucketRanges), out BlittableJsonReaderArray array) == false || array == null)
-                    return null;
-
-                _shardBucketRanges = new List<ShardBucketRange>(array.Length);
-                for (var index = 0; index < array.Length; index++)
+                    return _materializedRecord.Sharding;
+                
+                if (_sharding != null)
+                    return _sharding;
+                
+                if (_record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject sharding) && sharding != null)
                 {
-                    var shardAllocation = (BlittableJsonReaderObject)array[index];
-                    _shardBucketRanges.Add(JsonDeserializationCluster.ShardRangeAssignment(shardAllocation));
+                    _sharding = JsonDeserializationCluster.ShardingRecord(sharding);
                 }
-
-                return _shardBucketRanges;
+                return _sharding;
             }
         }
+
 
         public bool IsSharded()
         {
             if (_materializedRecord != null)
                 return _materializedRecord.IsSharded;
 
-            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
-            return array != null && array.Length > 0;
+            return _record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject sharding) && sharding != null &&
+                sharding.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderArray array) && array != null && array.Length > 0;
         }
 
         public RawDatabaseRecord GetShardedDatabaseRecord(int index)
         {
-            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
+            _record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject sharding);
+            sharding.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderArray array);
             var shardedTopology = (BlittableJsonReaderObject)array[index];
             var shardName = ShardHelper.ToShardName(DatabaseName, index);
 
@@ -276,12 +277,17 @@ namespace Raven.Server.ServerWide
                 settings["DataDir"] = Path.Combine(dir, shardName);
             }
 
+            sharding.Modifications = new DynamicJsonValue(sharding)
+            {
+                [nameof(DatabaseRecord.Sharding.ShardBucketRanges)] = null,
+                [nameof(DatabaseRecord.Sharding.Shards)] = null,
+            };
+            
             _record.Modifications = new DynamicJsonValue(_record)
             {
                 [nameof(DatabaseRecord.DatabaseName)] = shardName,
                 [nameof(DatabaseRecord.Topology)] = shardedTopology,
-                [nameof(DatabaseRecord.ShardBucketRanges)] = null,
-                [nameof(DatabaseRecord.Shards)] = null,
+                [nameof(DatabaseRecord.Sharding)] = sharding,
                 [nameof(DatabaseRecord.Settings)] = DynamicJsonValue.Convert(settings)
             };
 
@@ -298,13 +304,13 @@ namespace Raven.Server.ServerWide
         
         public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords()
         {
-            if(_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false 
-               || array == null)
-                yield break;
-
-            for (var index = 0; index < array.Length; index++)
+            if (_record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject sharding)  && sharding != null &&
+                sharding.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderArray array) && array != null)
             {
-                yield return GetShardedDatabaseRecord(index);
+                for (var index = 0; index < array.Length; index++)
+                {
+                    yield return GetShardedDatabaseRecord(index);
+                }                
             }
         }
 
@@ -1111,6 +1117,7 @@ namespace Raven.Server.ServerWide
                 return _materializedRecord;
             }
         }
+
 
         public static implicit operator DatabaseRecord(RawDatabaseRecord raw) => raw.MaterializedRecord;
         public static implicit operator RawDatabaseRecord(DatabaseRecord record) => new RawDatabaseRecord(record);

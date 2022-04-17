@@ -26,25 +26,22 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
-        public IDocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
+        public IDocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             var shardedOptions = options ?? new Options();
-            shardedOptions.ModifyDatabaseRecord += r =>
+            var old = shardedOptions.ModifyDatabaseRecord;
+            shardedOptions.ModifyDatabaseRecord = r =>
             {
-                if (shards == null)
+                r.Sharding = new ShardingRecord
                 {
-                    r.Shards = new[]
+                    Shards = new[]
                     {
                         new DatabaseTopology(),
+                        new DatabaseTopology(), 
                         new DatabaseTopology(),
-                        new DatabaseTopology(),
-                    };
-                }
-                else
-                {
-                    r.Shards = shards;
-                }
-
+                    }
+                };
+                old.Invoke(r);
             };
             shardedOptions.ModifyDocumentStore = s => s.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling;
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "remove above after changes api is working");
@@ -54,8 +51,7 @@ public partial class RavenTestBase
         public async Task<int> GetShardNumber(IDocumentStore store, string id)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-            var bucket = ShardHelper.GetBucket(id);
-            return ShardHelper.GetShardNumber(record.ShardBucketRanges, bucket);
+            return ShardHelper.GetShardNumberFor(record.Sharding, id);
         }
 
         public async Task<IEnumerable<DocumentDatabase>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, string database = null)

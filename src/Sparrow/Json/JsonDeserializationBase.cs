@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json
 {
@@ -369,6 +370,23 @@ namespace Sparrow.Json
             }
         }
 
+        private class RecursiveIndirection<T>
+        {
+            public static Func<BlittableJsonReaderObject, T> Inner;
+
+            public static T Forward(BlittableJsonReaderObject val)
+            {
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+                if (Inner == null)
+                {
+                    throw new InvalidOperationException("Could not handle recursive call for " + typeof(T) + ", this should never happen. BUG!");
+                }
+
+                return Inner(val);
+            }
+        }
+    
+
         private static object GetConverterFromCache(Type propertyType)
         {
             lock (DeserializedTypes)
@@ -376,11 +394,15 @@ namespace Sparrow.Json
                 object converter;
                 if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
                 {
-                    DeserializedTypes[propertyType] = null; // prevent recursive call
+                    var recursiveIndirectionType = typeof(RecursiveIndirection<>).MakeGenericType(propertyType);
+                    var methodInfo = recursiveIndirectionType.GetMethod(nameof(RecursiveIndirection<object>.Forward));
+                    DeserializedTypes[propertyType] =
+                        Delegate.CreateDelegate(typeof(Func<,>).MakeGenericType(typeof(BlittableJsonReaderObject), propertyType), methodInfo);
                     DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase)
                         .GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static)
                         .MakeGenericMethod(propertyType)
                         .Invoke(null, null);
+                    recursiveIndirectionType.GetField(nameof(RecursiveIndirection<object>.Inner)).SetValue(null, converter);
                 }
                 Debug.Assert(converter != null, "Convertor is null probably due to recursive call.");
                 return converter;

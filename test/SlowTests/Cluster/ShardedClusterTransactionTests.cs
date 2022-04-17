@@ -33,7 +33,7 @@ namespace SlowTests.Cluster
             options.Server = leader;
             options.ReplicationFactor = 2;
             options.ModifyDatabaseRecord = r =>
-                r.Shards = Enumerable.Range(0, numberOfShards).Select(_ => new DatabaseTopology()).ToArray();
+                r.Sharding = new ShardingRecord { Shards = Enumerable.Range(0, numberOfShards).Select(_ => new DatabaseTopology()).ToArray() };
 
             using var store = Sharding.GetDocumentStore(options);
             using (var session = store.OpenAsyncSession(new SessionOptions

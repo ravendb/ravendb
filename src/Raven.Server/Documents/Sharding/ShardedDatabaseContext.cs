@@ -14,7 +14,9 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -78,23 +80,24 @@ namespace Raven.Server.Documents.Sharding
 
         public string DatabaseName => _record.DatabaseName;
 
-        public int NumberOfShardNodes => _record.Shards.Length;
+        public int NumberOfShardNodes => _record.Sharding.Shards.Length;
 
         public char IdentityPartsSeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
         public bool Encrypted => _record.Encrypted;
 
-        public int ShardCount => _record.Shards.Length;
+        public int ShardCount => _record.Sharding.Shards.Length;
 
-        public DatabaseTopology[] ShardsTopology => _record.Shards;
+        public DatabaseTopology[] ShardsTopology => _record.Sharding.Shards;
 
-        public int GetShardNumber(int shardBucket) => ShardHelper.GetShardNumber(_record.ShardBucketRanges, shardBucket);
+        public int GetShardNumberFor(string id) => ShardHelper.GetShardNumberFor(_record.Sharding, id);
+        public int GetShardNumberFor(Slice id) => ShardHelper.GetShardNumberFor(_record.Sharding, id);
         
+        public int GetShardNumberFor(ByteStringContext allocator, LazyStringValue id) => ShardHelper.GetShardNumberFor(_record.Sharding, allocator, id);
+
         public int GetShardNumber(TransactionOperationContext context, string id)
         {
-            var bucket = ShardHelper.GetBucket(context, id);
-
-            return ShardHelper.GetShardNumber(_record.ShardBucketRanges, bucket);
+            return ShardHelper.GetShardNumberFor(_record.Sharding, context, id);
         }
 
         public bool HasTopologyChanged(long etag)

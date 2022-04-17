@@ -18,7 +18,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
             if (shards.Length < 1)
                 return false;
 
-            if (record.ShardBucketMigrations.Any(b => b.Value.Status < MigrationStatus.OwnershipTransferred))
+            if (record.Sharding.ShardBucketMigrations.Any(b => b.Value.Status < MigrationStatus.OwnershipTransferred))
                 return false; // other migration is ongoing
 
             return moveStrategy(record, shards, policy, ref result);
@@ -48,20 +48,20 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
                 var minSize = long.MaxValue;
 
                 // smallest edge bucket in the biggest shard
-                for (var index = 0; index < record.ShardBucketRanges.Count; index++)
+                for (var index = 0; index < record.Sharding.ShardBucketRanges.Count; index++)
                 {
-                    var range = record.ShardBucketRanges[index];
+                    var range = record.Sharding.ShardBucketRanges[index];
                     if (range.ShardNumber != biggest.Shard)
                         continue;
 
                     // lower
                     if (index != 0)
-                        CheckBucket(range.BucketRangeStart, record.ShardBucketRanges[index - 1].ShardNumber);
+                        CheckBucket(range.BucketRangeStart, record.Sharding.ShardBucketRanges[index - 1].ShardNumber);
 
                     // upper
-                    if (index != record.ShardBucketRanges.Count - 1)
+                    if (index != record.Sharding.ShardBucketRanges.Count - 1)
                     {
-                        var next = record.ShardBucketRanges[index + 1];
+                        var next = record.Sharding.ShardBucketRanges[index + 1];
                         CheckBucket(next.BucketRangeStart - 1, next.ShardNumber);
                     }
                 }
@@ -113,10 +113,10 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
                 var bucketToMove = biggest.ReportPerBucket.MinBy(b =>
                 {
                     // ensure this bucket belongs to this shard
-                    if (ShardHelper.GetShardNumber(record.ShardBucketRanges, b.Key) != biggest.Shard)
+                    if (ShardHelper.FindBucketShard(record.Sharding.ShardBucketRanges, b.Key) != biggest.Shard)
                         return long.MaxValue;
 
-                    if (record.ShardBucketMigrations.ContainsKey(b.Key))
+                    if (record.Sharding.ShardBucketMigrations.ContainsKey(b.Key))
                         return long.MaxValue;
 
                     return b.Value.Size;
