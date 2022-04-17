@@ -6,9 +6,13 @@ const jquery = require("jquery");
 global._ = lodash;
 global.ko = knockout;
 global.$ = jquery;
+global.jQuery = jquery;
+
+require("bootstrap/dist/js/bootstrap");
 
 require("../typescript/test/mocks");
 
+jest.mock("../typescript/components/hooks/useEventsCollector");
 
 jest.mock('plugins/router', () => ({
     activate: jest.fn()
