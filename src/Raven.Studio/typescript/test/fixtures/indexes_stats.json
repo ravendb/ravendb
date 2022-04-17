@@ -1,0 +1,487 @@
+{
+    "Results": [
+        {
+            "Name": "Companies/StockPrices/TradeVolumeByMonth",
+            "MapAttempts": 546,
+            "MapSuccesses": 546,
+            "MapErrors": 0,
+            "MapReferenceAttempts": 91,
+            "MapReferenceSuccesses": 91,
+            "MapReferenceErrors": 0,
+            "ReduceAttempts": 9100,
+            "ReduceSuccesses": 9100,
+            "ReduceErrors": 0,
+            "ReduceOutputCollection": null,
+            "ReduceOutputReferencePattern": null,
+            "PatternReferencesCollectionName": null,
+            "MappedPerSecondRate": 0.0,
+            "ReducedPerSecondRate": 0.0,
+            "MaxNumberOfOutputsPerDocument": 19,
+            "Collections": {
+                "Companies": {
+                    "LastProcessedDocumentEtag": 8402,
+                    "LastProcessedTombstoneEtag": 0,
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
+                }
+            },
+            "LastQueryingTime": "2022-04-16T20:10:51.0525709Z",
+            "State": "Normal",
+            "Priority": "Normal",
+            "CreatedTimestamp": "2022-04-16T19:19:18.6136291Z",
+            "LastIndexingTime": "2022-04-16T20:10:51.0543047Z",
+            "IsStale": false,
+            "LockMode": "Unlock",
+            "Type": "MapReduce",
+            "Status": "Running",
+            "EntriesCount": 141,
+            "ErrorsCount": 0,
+            "SourceType": "TimeSeries",
+            "IsInvalidIndex": false,
+            "Memory": {
+                "DiskSize": {
+                    "SizeInBytes": 8388608,
+                    "HumaneSize": "8 MBytes"
+                },
+                "ThreadAllocations": {
+                    "SizeInBytes": 69632,
+                    "HumaneSize": "68 KBytes"
+                },
+                "MemoryBudget": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                }
+            },
+            "LastBatchStats": {
+                "InputCount": 0,
+                "FailedCount": 0,
+                "OutputCount": 0,
+                "SuccessCount": 0,
+                "Started": "2022-04-16T20:10:51.0543047Z",
+                "DurationInMs": 4.36,
+                "AllocatedBytes": {
+                    "SizeInBytes": 39456,
+                    "HumaneSize": "38.53 KBytes"
+                },
+                "DocumentsSize": {
+                    "SizeInBytes": 0,
+                    "HumaneSize": "0 Bytes"
+                }
+            }
+        },
+        {
+            "Name": "Orders/ByCompany",
+            "MapAttempts": 830,
+            "MapSuccesses": 830,
+            "MapErrors": 0,
+            "MapReferenceAttempts": null,
+            "MapReferenceSuccesses": null,
+            "MapReferenceErrors": null,
+            "ReduceAttempts": 830,
+            "ReduceSuccesses": 830,
+            "ReduceErrors": 0,
+            "ReduceOutputCollection": null,
+            "ReduceOutputReferencePattern": null,
+            "PatternReferencesCollectionName": null,
+            "MappedPerSecondRate": 0.0,
+            "ReducedPerSecondRate": 0.0,
+            "MaxNumberOfOutputsPerDocument": 1,
+            "Collections": {
+                "Orders": {
+                    "LastProcessedDocumentEtag": 1740,
+                    "LastProcessedTombstoneEtag": 0,
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
+                }
+            },
+            "LastQueryingTime": "2022-04-16T20:10:50.9134184Z",
+            "State": "Normal",
+            "Priority": "Normal",
+            "CreatedTimestamp": "2022-04-16T19:19:18.1585473Z",
+            "LastIndexingTime": "2022-04-16T20:10:50.9138231Z",
+            "IsStale": false,
+            "LockMode": "Unlock",
+            "Type": "MapReduce",
+            "Status": "Running",
+            "EntriesCount": 89,
+            "ErrorsCount": 0,
+            "SourceType": "Documents",
+            "IsInvalidIndex": false,
+            "Memory": {
+                "DiskSize": {
+                    "SizeInBytes": 8388608,
+                    "HumaneSize": "8 MBytes"
+                },
+                "ThreadAllocations": {
+                    "SizeInBytes": 32768,
+                    "HumaneSize": "32 KBytes"
+                },
+                "MemoryBudget": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                }
+            },
+            "LastBatchStats": {
+                "InputCount": 0,
+                "FailedCount": 0,
+                "OutputCount": 0,
+                "SuccessCount": 0,
+                "Started": "2022-04-16T20:10:50.9138231Z",
+                "DurationInMs": 9.18,
+                "AllocatedBytes": {
+                    "SizeInBytes": 19616,
+                    "HumaneSize": "19.16 KBytes"
+                },
+                "DocumentsSize": {
+                    "SizeInBytes": 0,
+                    "HumaneSize": "0 Bytes"
+                }
+            }
+        },
+        {
+            "Name": "Orders/ByShipment/Location",
+            "MapAttempts": 830,
+            "MapSuccesses": 830,
+            "MapErrors": 0,
+            "MapReferenceAttempts": null,
+            "MapReferenceSuccesses": null,
+            "MapReferenceErrors": null,
+            "ReduceAttempts": null,
+            "ReduceSuccesses": null,
+            "ReduceErrors": null,
+            "ReduceOutputCollection": null,
+            "ReduceOutputReferencePattern": null,
+            "PatternReferencesCollectionName": null,
+            "MappedPerSecondRate": 0.0,
+            "ReducedPerSecondRate": 0.0,
+            "MaxNumberOfOutputsPerDocument": 1,
+            "Collections": {
+                "Orders": {
+                    "LastProcessedDocumentEtag": 1740,
+                    "LastProcessedTombstoneEtag": 0,
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
+                }
+            },
+            "LastQueryingTime": "2022-04-16T20:10:50.8845178Z",
+            "State": "Normal",
+            "Priority": "Normal",
+            "CreatedTimestamp": "2022-04-16T19:19:18.1112030Z",
+            "LastIndexingTime": "2022-04-16T20:10:50.8861813Z",
+            "IsStale": false,
+            "LockMode": "Unlock",
+            "Type": "Map",
+            "Status": "Running",
+            "EntriesCount": 597,
+            "ErrorsCount": 0,
+            "SourceType": "Documents",
+            "IsInvalidIndex": false,
+            "Memory": {
+                "DiskSize": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                },
+                "ThreadAllocations": {
+                    "SizeInBytes": 86016,
+                    "HumaneSize": "84 KBytes"
+                },
+                "MemoryBudget": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                }
+            },
+            "LastBatchStats": {
+                "InputCount": 0,
+                "FailedCount": 0,
+                "OutputCount": 0,
+                "SuccessCount": 0,
+                "Started": "2022-04-16T20:10:50.8861813Z",
+                "DurationInMs": 14.4,
+                "AllocatedBytes": {
+                    "SizeInBytes": 23296,
+                    "HumaneSize": "22.75 KBytes"
+                },
+                "DocumentsSize": {
+                    "SizeInBytes": 0,
+                    "HumaneSize": "0 Bytes"
+                }
+            }
+        },
+        {
+            "Name": "Orders/Totals",
+            "MapAttempts": 830,
+            "MapSuccesses": 830,
+            "MapErrors": 0,
+            "MapReferenceAttempts": null,
+            "MapReferenceSuccesses": null,
+            "MapReferenceErrors": null,
+            "ReduceAttempts": null,
+            "ReduceSuccesses": null,
+            "ReduceErrors": null,
+            "ReduceOutputCollection": null,
+            "ReduceOutputReferencePattern": null,
+            "PatternReferencesCollectionName": null,
+            "MappedPerSecondRate": 0.0,
+            "ReducedPerSecondRate": 0.0,
+            "MaxNumberOfOutputsPerDocument": 1,
+            "Collections": {
+                "Orders": {
+                    "LastProcessedDocumentEtag": 1740,
+                    "LastProcessedTombstoneEtag": 0,
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
+                }
+            },
+            "LastQueryingTime": "2022-04-16T20:10:51.0195766Z",
+            "State": "Normal",
+            "Priority": "Normal",
+            "CreatedTimestamp": "2022-04-16T19:19:18.5634391Z",
+            "LastIndexingTime": "2022-04-16T20:10:51.0221706Z",
+            "IsStale": false,
+            "LockMode": "Unlock",
+            "Type": "Map",
+            "Status": "Running",
+            "EntriesCount": 830,
+            "ErrorsCount": 0,
+            "SourceType": "Documents",
+            "IsInvalidIndex": false,
+            "Memory": {
+                "DiskSize": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                },
+                "ThreadAllocations": {
+                    "SizeInBytes": 86016,
+                    "HumaneSize": "84 KBytes"
+                },
+                "MemoryBudget": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                }
+            },
+            "LastBatchStats": {
+                "InputCount": 0,
+                "FailedCount": 0,
+                "OutputCount": 0,
+                "SuccessCount": 0,
+                "Started": "2022-04-16T20:10:51.0221706Z",
+                "DurationInMs": 10.28,
+                "AllocatedBytes": {
+                    "SizeInBytes": 23288,
+                    "HumaneSize": "22.74 KBytes"
+                },
+                "DocumentsSize": {
+                    "SizeInBytes": 0,
+                    "HumaneSize": "0 Bytes"
+                }
+            }
+        },
+        {
+            "Name": "Product/Rating",
+            "MapAttempts": 385,
+            "MapSuccesses": 385,
+            "MapErrors": 0,
+            "MapReferenceAttempts": 770,
+            "MapReferenceSuccesses": 770,
+            "MapReferenceErrors": 0,
+            "ReduceAttempts": 385,
+            "ReduceSuccesses": 385,
+            "ReduceErrors": 0,
+            "ReduceOutputCollection": null,
+            "ReduceOutputReferencePattern": null,
+            "PatternReferencesCollectionName": null,
+            "MappedPerSecondRate": 0.0,
+            "ReducedPerSecondRate": 0.0,
+            "MaxNumberOfOutputsPerDocument": 1,
+            "Collections": {
+                "Products": {
+                    "LastProcessedDocumentEtag": 7687,
+                    "LastProcessedTombstoneEtag": 0,
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
+                }
+            },
+            "LastQueryingTime": "2022-04-16T20:10:50.9836180Z",
+            "State": "Normal",
+            "Priority": "Normal",
+            "CreatedTimestamp": "2022-04-16T19:19:18.5098194Z",
+            "LastIndexingTime": "2022-04-16T20:10:50.9881132Z",
+            "IsStale": false,
+            "LockMode": "Unlock",
+            "Type": "MapReduce",
+            "Status": "Running",
+            "EntriesCount": 77,
+            "ErrorsCount": 0,
+            "SourceType": "Counters",
+            "IsInvalidIndex": false,
+            "Memory": {
+                "DiskSize": {
+                    "SizeInBytes": 8388608,
+                    "HumaneSize": "8 MBytes"
+                },
+                "ThreadAllocations": {
+                    "SizeInBytes": 32768,
+                    "HumaneSize": "32 KBytes"
+                },
+                "MemoryBudget": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                }
+            },
+            "LastBatchStats": {
+                "InputCount": 0,
+                "FailedCount": 0,
+                "OutputCount": 0,
+                "SuccessCount": 0,
+                "Started": "2022-04-16T20:10:50.9881132Z",
+                "DurationInMs": 7.76,
+                "AllocatedBytes": {
+                    "SizeInBytes": 35072,
+                    "HumaneSize": "34.25 KBytes"
+                },
+                "DocumentsSize": {
+                    "SizeInBytes": 0,
+                    "HumaneSize": "0 Bytes"
+                }
+            }
+        },
+        {
+            "Name": "Product/Search",
+            "MapAttempts": 231,
+            "MapSuccesses": 231,
+            "MapErrors": 0,
+            "MapReferenceAttempts": null,
+            "MapReferenceSuccesses": null,
+            "MapReferenceErrors": null,
+            "ReduceAttempts": null,
+            "ReduceSuccesses": null,
+            "ReduceErrors": null,
+            "ReduceOutputCollection": null,
+            "ReduceOutputReferencePattern": null,
+            "PatternReferencesCollectionName": null,
+            "MappedPerSecondRate": 0.0,
+            "ReducedPerSecondRate": 0.0,
+            "MaxNumberOfOutputsPerDocument": 1,
+            "Collections": {
+                "Products": {
+                    "LastProcessedDocumentEtag": 8802,
+                    "LastProcessedTombstoneEtag": 0,
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
+                }
+            },
+            "LastQueryingTime": "2022-04-16T20:10:50.8570933Z",
+            "State": "Normal",
+            "Priority": "Normal",
+            "CreatedTimestamp": "2022-04-16T19:19:18.0587512Z",
+            "LastIndexingTime": "2022-04-16T20:10:50.8579987Z",
+            "IsStale": false,
+            "LockMode": "Unlock",
+            "Type": "Map",
+            "Status": "Running",
+            "EntriesCount": 77,
+            "ErrorsCount": 0,
+            "SourceType": "Documents",
+            "IsInvalidIndex": false,
+            "Memory": {
+                "DiskSize": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                },
+                "ThreadAllocations": {
+                    "SizeInBytes": 85854,
+                    "HumaneSize": "83.84 KBytes"
+                },
+                "MemoryBudget": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                }
+            },
+            "LastBatchStats": {
+                "InputCount": 0,
+                "FailedCount": 0,
+                "OutputCount": 0,
+                "SuccessCount": 0,
+                "Started": "2022-04-16T20:10:50.8579987Z",
+                "DurationInMs": 8.87,
+                "AllocatedBytes": {
+                    "SizeInBytes": 23288,
+                    "HumaneSize": "22.74 KBytes"
+                },
+                "DocumentsSize": {
+                    "SizeInBytes": 0,
+                    "HumaneSize": "0 Bytes"
+                }
+            }
+        },
+        {
+            "Name": "Products/ByUnitOnStock",
+            "MapAttempts": 231,
+            "MapSuccesses": 231,
+            "MapErrors": 0,
+            "MapReferenceAttempts": null,
+            "MapReferenceSuccesses": null,
+            "MapReferenceErrors": null,
+            "ReduceAttempts": null,
+            "ReduceSuccesses": null,
+            "ReduceErrors": null,
+            "ReduceOutputCollection": null,
+            "ReduceOutputReferencePattern": null,
+            "PatternReferencesCollectionName": null,
+            "MappedPerSecondRate": 0.0,
+            "ReducedPerSecondRate": 0.0,
+            "MaxNumberOfOutputsPerDocument": 1,
+            "Collections": {
+                "Products": {
+                    "LastProcessedDocumentEtag": 8802,
+                    "LastProcessedTombstoneEtag": 0,
+                    "DocumentLag": 0,
+                    "TombstoneLag": 0
+                }
+            },
+            "LastQueryingTime": "2022-04-16T20:10:50.9505758Z",
+            "State": "Normal",
+            "Priority": "Normal",
+            "CreatedTimestamp": "2022-04-16T19:19:18.4592672Z",
+            "LastIndexingTime": "2022-04-16T20:10:50.9514076Z",
+            "IsStale": false,
+            "LockMode": "Unlock",
+            "Type": "Map",
+            "Status": "Running",
+            "EntriesCount": 77,
+            "ErrorsCount": 0,
+            "SourceType": "Documents",
+            "IsInvalidIndex": false,
+            "Memory": {
+                "DiskSize": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                },
+                "ThreadAllocations": {
+                    "SizeInBytes": 102400,
+                    "HumaneSize": "100 KBytes"
+                },
+                "MemoryBudget": {
+                    "SizeInBytes": 33554432,
+                    "HumaneSize": "32 MBytes"
+                }
+            },
+            "LastBatchStats": {
+                "InputCount": 0,
+                "FailedCount": 0,
+                "OutputCount": 0,
+                "SuccessCount": 0,
+                "Started": "2022-04-16T20:10:50.9514076Z",
+                "DurationInMs": 8.65,
+                "AllocatedBytes": {
+                    "SizeInBytes": 42640,
+                    "HumaneSize": "41.64 KBytes"
+                },
+                "DocumentsSize": {
+                    "SizeInBytes": 0,
+                    "HumaneSize": "0 Bytes"
+                }
+            }
+        }
+    ]
+}

@@ -1,11 +1,23 @@
 ﻿import "../wwwroot/Content/css/styles.less"
 
+import { overrideViews } from "../typescript/overrides/views";
+import { overrideComposition } from "../typescript/overrides/composition";
+import { overrideSystem } from "../typescript/overrides/system";
+
+overrideSystem();
+overrideComposition();
+overrideViews();
+
 const ko = require("knockout");
 require("knockout.validation");
-require("knockout-postbox");
+import "knockout-postbox";
 require("knockout-delegated-events");
 const { DirtyFlag } = require("external/dirtyFlag");
 ko.DirtyFlag = DirtyFlag;
+
+import extensions from "common/extensions";
+
+extensions.install();
 
 import "bootstrap/dist/js/bootstrap";
 import "jquery-fullscreen-plugin/jquery.fullscreen";
@@ -25,6 +37,23 @@ dialog.install({});
 
 import pluginWidget from "plugins/widget";
 pluginWidget.install({});
+
+
+import { ModuleMocker } from 'jest-mock';
+window.jest = new ModuleMocker(window);
+
+
+export const decorators = [
+    (Story) => {
+        jest.resetAllMocks();
+
+        return (
+            <div>
+                {Story()}
+            </div>
+        )
+    }
+]
 
 export const parameters = {
   actions: { argTypesRegex: "^on[A-Z].*" },

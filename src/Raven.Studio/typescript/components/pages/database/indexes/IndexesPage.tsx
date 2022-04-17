@@ -437,11 +437,10 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const loadMissing = async () => {
         const tasks = stats.indexes[0].nodesInfo.map(async nodeInfo => {
-            await fetchProgress(nodeInfo.location);
-
             if (nodeInfo.status === "notLoaded") {
                 await fetchStats(nodeInfo.location);
             }
+            await fetchProgress(nodeInfo.location);
         });
 
         await Promise.all(tasks);
