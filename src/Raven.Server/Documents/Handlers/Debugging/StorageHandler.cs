@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Processors.Debugging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -170,48 +171,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/storage/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Report()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName("BasePath");
-                    writer.WriteString(Database.Configuration.Core.DataDirectory.FullPath);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (var env in Database.GetAllStoragesEnvironment())
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-
-                        first = false;
-
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName("Name");
-                        writer.WriteString(env.Name);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName("Type");
-                        writer.WriteString(env.Type.ToString());
-                        writer.WriteComma();
-
-                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetReport(env));
-                        writer.WritePropertyName("Report");
-                        writer.WriteObject(context.ReadObject(djv, env.Name));
-
-                        writer.WriteEndObject();
-                    }
-
-                    writer.WriteEndArray();
-
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new StorageHandlerProcessorForGetReport(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
@@ -309,14 +270,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     writer.WriteEndObject();
                 }
-            }
-        }
-
-        private static StorageReport GetReport(StorageEnvironmentWithType environment)
-        {
-            using (var tx = environment.Environment.ReadTransaction())
-            {
-                return environment.Environment.GenerateReport(tx);
             }
         }
 
