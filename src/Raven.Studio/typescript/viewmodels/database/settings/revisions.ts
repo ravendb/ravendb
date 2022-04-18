@@ -13,8 +13,10 @@ import getRevisionsForConflictsConfigurationCommand = require("commands/database
 import enforceRevisionsConfigurationCommand = require("commands/database/settings/enforceRevisionsConfigurationCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 import popoverUtils = require("common/popoverUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import { shardingTodo } from "common/developmentHelper";
 
-class revisions extends viewModelBase {
+class revisions extends shardViewModelBase {
 
     view = require("views/database/settings/revisions.html");
 
@@ -38,8 +40,8 @@ class revisions extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
 
         this.bindToCurrentInstance("createDefaultConfiguration", "saveChanges",
             "deleteItem", "editItem", "applyChanges",
@@ -61,7 +63,7 @@ class revisions extends viewModelBase {
         });
         
         this.revertRevisionsUrl = ko.pureComputed(() => {
-            return appUrl.forRevertRevisions(this.activeDatabase());
+            return appUrl.forRevertRevisions(this.db);
         });
         
         this.enforceButtonTitle = ko.pureComputed(() => {
@@ -75,14 +77,14 @@ class revisions extends viewModelBase {
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
         return $.when<any>(super.canActivate(args))
             .then(() => {
-                const db = this.activeDatabase();
+                const db = this.db;
                 
                 const revisionsTask = this.fetchRevisionsConfiguration(db);
                 const conflictsTask = this.fetchRevisionsForConflictsConfiguration(db);
                 
                 return $.when<any>(revisionsTask, conflictsTask)
                     .then(() => ({ can: true }))
-                    .fail(() => ({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
+                    .fail(() => ({ redirect: appUrl.forDatabaseRecord(this.db) }));
             });
     }
 
@@ -244,7 +246,7 @@ class revisions extends viewModelBase {
 
         eventsCollector.default.reportEvent("revisions", "save");
 
-        const db = this.activeDatabase();
+        const db = this.db;
         
         const revisionsForConflictsDto = this.defaultConflictConfiguration().toDto();
         const conflictsTask = new saveRevisionsForConflictsConfigurationCommand(db, revisionsForConflictsDto)
@@ -263,7 +265,7 @@ class revisions extends viewModelBase {
             })
             .always(() => {
                 this.spinners.save(false);
-                const db = this.activeDatabase();
+                const db = this.db;
                 db.hasRevisionsConfiguration(true);
                 collectionsTracker.default.configureRevisions(db);
             });
@@ -352,7 +354,7 @@ class revisions extends viewModelBase {
     }
 
     enforceConfiguration() {
-        const db = this.activeDatabase();
+        const db = this.db;
         
         const collectionNameItems = this.perCollectionConfigurations()
             .map(x => `<li>${generalUtils.escapeHtml(x.collection())}</li>`)
@@ -393,8 +395,10 @@ class revisions extends viewModelBase {
                 if (result.can) {
                     new enforceRevisionsConfigurationCommand(db)
                         .execute()
-                        .done((operationIdDto: operationIdDto) => {
-                            const operationId = operationIdDto.OperationId;
+                        .done((operationIdDto: operationIdResults) => {
+                            shardingTodo("ANY", "when database is sharded we get operationIdDto per shard. For now - maybe open the popup dialog for the first one");
+                            
+                            const operationId = operationIdDto.Results[0].OperationId;
                             notificationCenter.instance.openDetailsForOperationById(db, operationId);
                         });
                 }

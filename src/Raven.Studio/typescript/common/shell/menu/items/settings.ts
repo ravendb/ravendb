@@ -56,6 +56,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: require('viewmodels/database/settings/revisions'),
+            shardingMode: "allShardsOnly",
             title: 'Document Revisions',
             nav: true,
             css: 'icon-revisions',
