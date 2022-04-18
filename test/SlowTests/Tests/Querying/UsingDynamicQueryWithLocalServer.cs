@@ -24,8 +24,8 @@ namespace SlowTests.Tests.Querying
         {
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection(Options options)
         {
             var blogOne = new Blog
@@ -77,8 +77,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryUsingClientLinqQuery(Options options)
         {
             var blogOne = new Blog
@@ -121,8 +121,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryForASpecificTypeDoesNotBringBackOtherTypes(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -143,7 +143,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanPerformDynamicQueryUsingClientLuceneQuery(Options options)
         {
@@ -189,7 +189,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery(Options options)
         {
             var blogOne = new Blog
@@ -250,7 +250,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryWithHighlighting(Options options)
         {
             var blogOne = new Blog
@@ -305,7 +305,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ExecutesQueryWithHighlightingsAgainstSimpleIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -374,7 +374,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -448,7 +448,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ExecutesQueryWithHighlightingsAndProjections(Options options)
         {
             using (var store = GetDocumentStore(options))
