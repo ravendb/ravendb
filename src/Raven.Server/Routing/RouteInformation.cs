@@ -238,7 +238,7 @@ namespace Raven.Server.Routing
                 if (_shardedRequest == null)
                 {
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Critical, "Remove this!");
-                    throw new InvalidOperationException($"Unable to run request {context.HttpContext.Request.GetFullUrl()}, the database is sharded, but no shared route is defined for this operation!");
+                    throw new InvalidOperationException($"Unable to run request {context.HttpContext.Request.GetFullUrl()}, the database is sharded, but no sharded route is defined for this operation!");
                 }
 
                 return Tuple.Create<HandleRequest, Task<HandleRequest>>(_shardedRequest, null);

@@ -228,6 +228,10 @@ interface saveDocumentResponseDto {
     Results: Array<changedOnlyMetadataFieldsDto>;
 }
 
+interface operationIdResults {
+    Results: operationIdDto[];
+}
+
 interface operationIdDto {
     OperationId: number;
 }
