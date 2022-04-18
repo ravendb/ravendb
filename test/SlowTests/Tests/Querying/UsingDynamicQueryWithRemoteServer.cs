@@ -24,8 +24,8 @@ namespace SlowTests.Tests.Querying
         {
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryUsingClientLinqQuery(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -57,8 +57,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryUsingClientLuceneQuery(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -92,8 +92,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformProjectionUsingClientLinqQuery(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -125,8 +125,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryForASpecificTypeDoesNotBringBackOtherTypes(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -145,8 +145,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformLinqOrderByOnNumericField(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -184,8 +184,8 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformLinqOrderByOnTextField(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -224,7 +224,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -283,7 +283,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformDynamicQueryWithHighlighting(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -335,7 +335,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ExecutesQueryWithHighlightingsAgainstSimpleIndex(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -400,7 +400,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ExecutesQueryWithHighlightingsAndProjections(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -462,7 +462,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

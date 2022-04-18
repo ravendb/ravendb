@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,15 +18,15 @@ namespace SlowTests.MailingList
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 
         [Theory]
-        [InlineData(Q, "con cur", "con cu")]
-        [InlineData(Q, "con ency", "con cy")]
-        [InlineData(Q, "curr ency", "curr enc")]
-        [InlineData(Q, "wo rds", "wor ds")]
-        [InlineData(Q, "asymp totic", "asymp tot")]
-        [InlineData(Q, "asymp totic", "asymp tic")]
-        public void ShouldReturnResultsWithHighlightsAndThrowException(string question, string goodSearchTerm, string badSearchTerm)
+        [RavenData(Q, "con cur", "con cu")]
+        [RavenData(Q, "con ency", "con cy")]
+        [RavenData(Q, "curr ency", "curr enc")]
+        [RavenData(Q, "wo rds", "wor ds")]
+        [RavenData(Q, "asymp totic", "asymp tot")]
+        [RavenData(Q, "asymp totic", "asymp tic")]
+        public void ShouldReturnResultsWithHighlightsAndThrowException(Options options, string question, string goodSearchTerm, string badSearchTerm)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new QuestionIndex().Execute(store);
 

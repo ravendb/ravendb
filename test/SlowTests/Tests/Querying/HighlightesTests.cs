@@ -9,6 +9,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -66,10 +67,10 @@ namespace SlowTests.Tests.Querying
         }
 
         [Theory]
-        [InlineData("session")]
-        public void SearchWithHighlightes(string q)
+        [RavenData("session", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void SearchWithHighlightes(Options options, string q)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -86,7 +87,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var session = store.OpenSession())
                 {
-                    var options = new HighlightingOptions
+                    var highlightingOptions = new HighlightingOptions
                     {
                         PreTags = new[] { "<span style='background: yellow'>" },
                         PostTags = new[] { "</span>" }
@@ -94,38 +95,33 @@ namespace SlowTests.Tests.Querying
 
                     var results = session.Advanced.DocumentQuery<ISearchable>("ContentSearchIndex")
                         .WaitForNonStaleResults()
-                        .Highlight("Title", 128, 2, options, out Highlightings titleHighlighting)
-                        .Highlight("Slug", 128, 2, options, out Highlightings slugHighlighting)
-                        .Highlight("Content", 128, 2, options, out Highlightings contentHighlighting)
+                        .Highlight("Title", 128, 2, highlightingOptions, out Highlightings titleHighlighting)
+                        .Highlight("Slug", 128, 2, highlightingOptions, out Highlightings slugHighlighting)
+                        .Highlight("Content", 128, 2, highlightingOptions, out Highlightings contentHighlighting)
                         .Search("Slug", q).Boost(15)
                         .Search("Title", q).Boost(12)
                         .Search("Content", q)
                         .ToArray();
 
-                    var orderedResults = new List<SearchResults>();
+                    Assert.Equal(1, results.Length);
 
-                    foreach (var searchable in results)
+                    var docId = session.Advanced.GetDocumentId(results.First());
+
+                    var highlights = new List<string>();
+                    string title = null;
+                    var titles = titleHighlighting.GetFragments(docId);
+                    if (titles.Count() == 1)
                     {
-
-                        var docId = session.Advanced.GetDocumentId(searchable);
-
-                        var highlights = new List<string>();
-                        string title = null;
-                        var titles = titleHighlighting.GetFragments(docId);
-                        if (titles.Count() == 1)
-                        {
-                            title = titles[0];
-                        }
-                        else
-                        {
-                            highlights.AddRange(titleHighlighting.GetFragments(docId));
-                        }
-                        highlights.AddRange(slugHighlighting.GetFragments(docId));
-                        highlights.AddRange(contentHighlighting.GetFragments(docId));
-
-
-                        orderedResults.Add(new SearchResults { Result = searchable, Highlights = highlights, Title = title });
+                        title = titles[0];
                     }
+                    else
+                    {
+                        highlights.AddRange(titleHighlighting.GetFragments(docId));
+                    }
+                    highlights.AddRange(slugHighlighting.GetFragments(docId));
+                    highlights.AddRange(contentHighlighting.GetFragments(docId));
+
+                    Assert.Equal(1, highlights.Count);                    
                 }
             }
         }
