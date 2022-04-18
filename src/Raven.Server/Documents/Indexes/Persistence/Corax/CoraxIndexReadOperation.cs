@@ -67,10 +67,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     ? queryTimings.For(nameof(QueryTimingsScope.Names.Highlightings), start: false)
                     : null;
             }
-
+            
             IQueryMatch queryMatch;
+            Dictionary<string, object> queryData = new();
             using (coraxScope?.Start())
-            {
+            {             
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
                     _fieldMappings, fieldsToFetch, take: take)) is null)
                 yield break;
@@ -153,35 +154,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             yield return qr;
                         }
                     }
-
-                    QueryResult CreateQueryResult(Document d)
-                    {
-                        Dictionary<string, Dictionary<string, string[]>> highlightings = null;
-                        if (hasHighlights)
-                        {
-                            using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
-                            {
-                                highlightings = new ();
-
-                                // If we have highlightings then we need to setup the Corax objects that will attach to the evaluator in order
-                                // to retrieve the fields and perform the transformations required by Highlightings. 
-                                foreach (var current in query.Metadata.Highlightings)
-                                {                                    
-                                    var fieldName = current.Field.Value;
-                                    if (fetchedDocument.Document.Data.TryGetMember(fieldName, out var element))
-                                    {
-                                        throw new NotImplementedException();
-                                    }
-                                }
-                            }
-                        }                        
-
-                        return new QueryResult
-                        {
-                            Result = d,
-                            Highlightings = highlightings,
-                        };
-                    }
                 }
 
                 if ((read = queryMatch.Fill(ids)) == 0)
@@ -208,10 +180,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return default;
                 }
 
+                Dictionary<string, Dictionary<string, string[]>> highlightings = null;
+
                 if (isDistinctCount == false)
                 {
                     if (query.Metadata.HasHighlightings)
                     {
+                        using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
+                        {
+                            highlightings = new();
+
+                            // If we have highlightings then we need to setup the Corax objects that will attach to the evaluator in order
+                            // to retrieve the fields and perform the transformations required by Highlightings. 
+                            foreach (var current in query.Metadata.Highlightings)
+                            {
+                                var fieldName = current.Field.Value;
+                                if (queryData.TryGetValue(fieldName, out var value) == false)
+                                    continue;
+
+                                //Highlight
+                            }
+                        }
+
                         throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Highlightings)} yet.");
                     }
 
@@ -220,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
                     }
 
-                    return new QueryResult {Result = document, Highlightings = null, Explanation = null};
+                    return new QueryResult {Result = document, Highlightings = highlightings, Explanation = null};
                 }
 
                 return default;
@@ -256,7 +246,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     ? throw new NotSupportedException("AutoIndex dynamic field is not supported yet.")
                     : highlighting.Field.Value;
                 
-                throw new NotImplementedException();
+                // TODO: get the terms.
+
                 var term = string.Empty;
 
                 _tagsPerField[fieldName] = (options.PreTags, options.PostTags, term);
