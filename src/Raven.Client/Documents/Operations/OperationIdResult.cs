@@ -4,11 +4,18 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
+
 namespace Raven.Client.Documents.Operations
 {
     public class OperationIdResult<TResult> : OperationIdResult
     {
         public TResult Result { get; set; }
+    }
+
+    public class OperationIdResults
+    {
+        public List<OperationIdResult> Results { get; set; }
     }
 
     /// <summary>
