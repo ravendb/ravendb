@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Identity;
@@ -113,6 +114,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, TimeSeriesStatistics> GetTimeSeriesStatisticsResult = GenerateJsonDeserializationRoutine<TimeSeriesStatistics>();
 
         public static readonly Func<BlittableJsonReaderObject, OperationIdResult> OperationIdResult = GenerateJsonDeserializationRoutine<OperationIdResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, OperationIdResults> OperationIdResults = GenerateJsonDeserializationRoutine<OperationIdResults>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplayTxOperationResult> GetReplayTrxOperationResult = GenerateJsonDeserializationRoutine<ReplayTxOperationResult>();
 

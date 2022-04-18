@@ -805,11 +805,11 @@ namespace Raven.Server.Web
             return new OperationCancelToken(ServerStore.ServerShutdown, HttpContext.RequestAborted);
         }
 
-        protected virtual OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        public virtual OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
         {
             return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
         }
-
+        
         public virtual Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             return Task.CompletedTask;

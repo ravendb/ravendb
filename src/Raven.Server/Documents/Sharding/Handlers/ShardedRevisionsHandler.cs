@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Revisions;
 using Raven.Server.Routing;
 
@@ -32,10 +31,24 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/revisions/config", "GET")]
+        public async Task GetRevisionsConfiguration()
+        {
+            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsConfiguration(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/revisions/bin", "GET")]
         public async Task GetRevisionsBin()
         {
             using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsBin(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/revisions/conflicts/config", "GET")]
+        public async Task GetConflictRevisionsConfig()
+        {
+            using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration(this))
                 await processor.ExecuteAsync();
         }
     }

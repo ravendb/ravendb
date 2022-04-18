@@ -12,5 +12,19 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             using (var processor = new ShardedAdminRevisionsHandlerProcessorForDeleteRevisions(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/revisions/conflicts/config", "POST")]
+        public async Task ConfigConflictedRevisions()
+        {
+            using (var processor = new ShardedAdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/revisions/config/enforce", "POST")]
+        public async Task EnforceConfigRevisions()
+        {
+            using (var processor = new ShardedAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

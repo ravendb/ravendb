@@ -5,21 +5,17 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -28,63 +24,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsConfiguration()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                RevisionsConfiguration revisionsConfig;
-                using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
-                {
-                    revisionsConfig = rawRecord?.RevisionsConfiguration;
-                }
-
-                if (revisionsConfig != null)
-                {
-                    var revisionsCollection = new DynamicJsonValue();
-                    foreach (var collection in revisionsConfig.Collections)
-                    {
-                        revisionsCollection[collection.Key] = collection.Value.ToJson();
-                    }
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(revisionsConfig.Default)] = revisionsConfig.Default?.ToJson(),
-                            [nameof(revisionsConfig.Collections)] = revisionsCollection
-                        });
-                    }
-                }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
-            }
+            using (var processor = new RevisionsHandlerProcessorForGetRevisionsConfiguration(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/revisions/conflicts/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetConflictRevisionsConfig()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                RevisionsCollectionConfiguration revisionsForConflictsConfig;
-                using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
-                {
-                    revisionsForConflictsConfig = rawRecord?.RevisionsForConflicts;
-                }
-
-                if (revisionsForConflictsConfig != null)
-                {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, revisionsForConflictsConfig.ToJson());
-                    }
-                }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
-            }
+            using (var processor = new RevisionsHandlerProcessorForGetRevisionsConflictsConfiguration(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
