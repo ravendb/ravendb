@@ -6,6 +6,7 @@ using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Xunit;
 using Xunit.Abstractions;
+using static Voron.Data.CompactTrees.CompactTree;
 
 namespace SlowTests.Voron
 {
@@ -16,10 +17,18 @@ namespace SlowTests.Voron
         {
         }
 
+        public enum SamplingMethod
+        {
+            FullRandom,
+            BranchRandom,
+            FullScan,
+        }
+
         [RavenTheory(RavenTestCategory.Voron)]
-        [InlineData(1337, true)]
-        [InlineData(1337, false)]
-        public void CanRecompressItemsWithDeletesAndInserts(int seed, bool doSampling)
+        [InlineData(1337, SamplingMethod.FullScan)]
+        [InlineData(1337, SamplingMethod.FullRandom)]
+        [InlineData(1337, SamplingMethod.BranchRandom)]
+        public void CanRecompressItemsWithDeletesAndInserts(int seed, SamplingMethod samplingMode)
         {
             static void Shuffle(string[] list, Random rng)
             {
@@ -59,10 +68,19 @@ namespace SlowTests.Voron
                         }
                     }
 
-                    if (doSampling)
-                        tree.TryImproveDictionaryByRandomlyScanning((int)tree.State.NextTrainAt / 4);
+                    int samples = (int)tree.State.NumberOfEntries / 10;
+                    if (samplingMode == SamplingMethod.FullRandom)
+                        tree.TryImproveDictionary(
+                            new RandomDictionaryKeyScanner(tree, samples, seed),
+                            new FullDictionaryKeyScanner(tree));
+                    else if (samplingMode == SamplingMethod.BranchRandom)
+                        tree.TryImproveDictionary(
+                            new RandomBranchDictionaryKeyScanner(tree, samples, seed),
+                            new FullDictionaryKeyScanner(tree));
                     else
-                        tree.TryImproveDictionaryByFullScanning();
+                        tree.TryImproveDictionary(
+                            new FullDictionaryKeyScanner(tree),
+                            new FullDictionaryKeyScanner(tree));
 
                     wtx.Commit();
                 }
