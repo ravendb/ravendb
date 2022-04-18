@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseDetailedStatsCommand = require("commands/resources/getDatabaseDetailedStatsCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import appUrl = require("common/appUrl");
@@ -7,8 +6,10 @@ import indexStalenessReasons = require("viewmodels/database/indexes/indexStalene
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import statsModel = require("models/database/stats/statistics");
 import popoverUtils = require("common/popoverUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database = require("models/resources/database");
 
-class statistics extends viewModelBase {
+class statistics extends shardViewModelBase {
 
     view = require("views/database/status/statistics.html");
 
@@ -20,13 +21,13 @@ class statistics extends viewModelBase {
 
     dataLocation = ko.observable<string>();
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         this.bindToCurrentInstance("showStaleReasons");
 
         this.rawJsonUrl = ko.pureComputed(() => {
-            const activeDatabase = this.activeDatabase();
+            const activeDatabase = this.db;
             return activeDatabase ? appUrl.forStatsRawData(activeDatabase) : null;
         });
     }
@@ -97,7 +98,7 @@ class statistics extends viewModelBase {
     }
    
     fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
-        const db = this.activeDatabase();
+        const db = this.db;
 
         const dbStatsTask = new getDatabaseDetailedStatsCommand(db)
             .execute();
@@ -128,11 +129,11 @@ class statistics extends viewModelBase {
     }
     
     urlForIndexPerformance(indexName: string) {
-        return appUrl.forIndexPerformance(this.activeDatabase(), indexName);
+        return appUrl.forIndexPerformance(this.db, indexName);
     }
 
     showStaleReasons(indexName: string) {
-        const view = new indexStalenessReasons(this.activeDatabase(), indexName);
+        const view = new indexStalenessReasons(this.db, indexName);
         app.showBootstrapDialog(view);
     }
 
