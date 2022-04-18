@@ -624,9 +624,18 @@ namespace FastTests
             {
             }
 
+            public static Options ForSearchEngine( RavenSearchEngineMode mode)
+            {
+                var config = new RavenTestParameters() {SearchEngine = mode};
+                return ForSearchEngine(config);
+            }
+
+
             public static Options ForSearchEngine(RavenTestParameters config)
             {
-                return new Options() { ModifyDatabaseRecord = d =>
+                return new Options()
+                {
+                    ModifyDatabaseRecord = d =>
                     {
                         d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
                         d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
