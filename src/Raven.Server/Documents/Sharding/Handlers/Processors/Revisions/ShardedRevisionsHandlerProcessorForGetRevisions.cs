@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Json;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
@@ -114,7 +112,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
                     writer.WriteInteger(totalResult.Value);
                 }
 
-                if (continuationToken != null)
+                if (continuationToken != null && array.Length != 0)
                 {
                     writer.WriteComma();
                     writer.WriteContinuationToken(context, continuationToken);
