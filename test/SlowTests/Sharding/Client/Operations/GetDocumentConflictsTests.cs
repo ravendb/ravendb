@@ -182,7 +182,7 @@ namespace SlowTests.Sharding.Client.Operations
                 {
                     var id = $"users/{i}${_suffix}";
                     var doc = context.ReadObject(new DynamicJsonValue(), id);
-                    storage.ConflictsStorage.AddConflict(context, id, DateTime.UtcNow.Ticks, doc, $"incoming-cv-{i}", "users", DocumentFlags.None);
+                    storage.ConflictsStorage.AddConflict(context, id, DateTime.UtcNow.Ticks, doc, $"A:{i}-A1B2C3D4E5F6G7H8I9", "users", DocumentFlags.None);
                 }
 
                 context.Transaction.Commit();

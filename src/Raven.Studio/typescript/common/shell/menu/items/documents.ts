@@ -88,6 +88,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/documents/conflicts",
             moduleId: require("viewmodels/database/conflicts/conflicts"),
+            shardingMode: "both",
             title: "Conflicts",
             nav: true,
             css: "icon-conflicts",

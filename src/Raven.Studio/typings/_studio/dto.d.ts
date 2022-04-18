@@ -55,9 +55,12 @@ interface resultsWithTotalCountDto<T> extends resultsDto<T> {
     TotalResults: number;
 }
 
-interface resultsWithCountAndAvailableColumns<T> extends resultsWithTotalCountDto<T> {
-    AvailableColumns: string[];
+interface resultsWithCountAndToken<T> extends resultsWithTotalCountDto<T> {
     ContinuationToken?: string;
+}
+
+interface resultsWithCountAndAvailableColumns<T> extends resultsWithCountAndToken<T> {
+    AvailableColumns: string[];
 }
 
 interface documentDto extends metadataAwareDto {
@@ -441,9 +444,12 @@ interface pagedResultExtended<T> extends pagedResult<T> {
     timings?: Raven.Client.Documents.Queries.Timings.QueryTimings;
 }
 
-interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
-    availableColumns: string[];
+interface pagedResultWithToken<T> extends pagedResult<T> {
     continuationToken?: string;
+}
+
+interface pagedResultWithAvailableColumns<T> extends pagedResultWithToken<T> {
+    availableColumns: string[];
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";

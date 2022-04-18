@@ -1,6 +1,5 @@
 import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
-import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
 import getConflictsCommand = require("commands/database/replication/getConflictsCommand");
 import getConflictsForDocumentCommand = require("commands/database/replication/getConflictsForDocumentCommand");
@@ -18,6 +17,10 @@ import generalUtils = require("common/generalUtils");
 import copyToClipboard = require("common/copyToClipboard");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database = require("models/resources/database");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 
 class conflictItem {
     
@@ -54,7 +57,7 @@ class conflictItem {
     }
 }
 
-class conflicts extends viewModelBase {
+class conflicts extends shardViewModelBase {
 
     view = require("views/database/conflicts/conflicts.html");
 
@@ -64,6 +67,7 @@ class conflicts extends viewModelBase {
     private isSaving = ko.observable<boolean>(false);
 
     private gridController = ko.observable<virtualGridController<replicationConflictListItemDto>>();
+    private columnPreview = new columnPreviewPlugin<replicationConflictListItemDto>();
 
     currentConflict = ko.observable<Raven.Client.Documents.Commands.GetConflictsResult>();
     conflictItems = ko.observableArray<conflictItem>([]);
@@ -74,8 +78,11 @@ class conflicts extends viewModelBase {
         suggestedResolution: this.suggestedResolution
     });
 
-    constructor() {
-        super();
+    itemsSoFar = ko.observable<number>(0);
+    continuationToken: string;
+
+    constructor(db: database) {
+        super(db);
         
         this.bindToCurrentInstance("useThis", "copyThis");
 
@@ -113,7 +120,7 @@ class conflicts extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchConflicts(s, t), () =>
             [
-                new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.activeDatabase(), x.Id), "Document", "50%",
+                new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), "Document", "50%",
                     {
                         handler: (item, event) => this.handleLoadAction(item, event)
                     }),
@@ -126,14 +133,42 @@ class conflicts extends viewModelBase {
         if (this.documentId()) {
             this.selectCurrentItem(this.documentId());
         }
+
+        this.columnPreview.install(".conflicts-grid", ".js-conflicts-grid-tooltip",
+            (item: replicationConflictListItemDto, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+                if (column instanceof textColumn) {
+                    if (column.header === "Date") {
+                        onValue(moment.utc(item.LastModified), item.LastModified);
+                    } else {
+                        const value = column.getCellValue(item);
+                        if (!_.isUndefined(value)) {
+                            const json = JSON.stringify(value, null, 4);
+                            const html = highlight(json, languages.javascript, "js");
+                            onValue(html, json);
+                        }
+                    }
+                }
+            });
     }
 
-    private fetchConflicts(start: number, pageSize: number) {
-        return new getConflictsCommand(this.activeDatabase(), start, pageSize)
+    private fetchConflicts(skip: number, take: number): JQueryPromise<pagedResultWithToken<replicationConflictListItemDto>> {
+        return new getConflictsCommand(this.db, skip, take, this.continuationToken)
             .execute()
-            .done((result) => {
-                this.syncSelection(result.items);
-            });
+            .done((results) => {
+                this.continuationToken = results.continuationToken;
+
+                if (results.continuationToken) {
+                    this.itemsSoFar(this.itemsSoFar() + results.items.length);
+
+                    if (this.itemsSoFar() === results.totalResultCount) {
+                        results.totalResultCount = this.itemsSoFar()
+                    } else {
+                        results.totalResultCount = this.itemsSoFar() + 1;
+                    }
+                }
+
+                this.syncSelection(results.items);
+            })
     }
 
     // id requested in url might not be available in first chunk
@@ -152,7 +187,7 @@ class conflicts extends viewModelBase {
         event.preventDefault();
 
         const documentId = conflictToLoad.Id;
-        this.updateUrl(appUrl.forConflicts(this.activeDatabase(), documentId));
+        this.updateUrl(appUrl.forConflicts(this.db, documentId));
 
         this.loadConflictForDocument(documentId);
     }
@@ -187,7 +222,7 @@ class conflicts extends viewModelBase {
     }
 
     private loadConflictItemsForDocument(documentId: string) {
-        return new getConflictsForDocumentCommand(this.activeDatabase(), documentId)
+        return new getConflictsForDocumentCommand(this.db, documentId)
             .execute()
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
@@ -199,13 +234,13 @@ class conflicts extends viewModelBase {
     }
 
     private loadSuggestedConflictResolution(documentId: string) {
-        return new getSuggestedConflictResolutionCommand(this.activeDatabase(), documentId)
+        return new getSuggestedConflictResolutionCommand(this.db, documentId)
             .execute();
     }
 
     deleteDocument() {
         eventsCollector.default.reportEvent("conflicts", "delete");
-        const viewModel = new deleteDocuments([this.documentId()], this.activeDatabase());
+        const viewModel = new deleteDocuments([this.documentId()], this.db);
         app.showBootstrapDialog(viewModel);
         viewModel.deletionTask.done(() => this.onResolved());
     }
@@ -229,7 +264,7 @@ class conflicts extends viewModelBase {
             delete meta['@change-vector'];
 
             const newDoc = new document(updatedDto);
-            const saveCommand = new saveDocumentCommand(this.documentId(), newDoc, this.activeDatabase());
+            const saveCommand = new saveDocumentCommand(this.documentId(), newDoc, this.db);
             this.isSaving(true);
             saveCommand
                 .execute()
