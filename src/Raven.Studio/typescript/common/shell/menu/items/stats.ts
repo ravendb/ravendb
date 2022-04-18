@@ -8,6 +8,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status',
             moduleId: require('viewmodels/database/status/statistics'),
+            shardingMode: "singleShardOnly",
             title: 'Stats',
             nav: true,
             css: 'icon-stats',
