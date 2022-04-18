@@ -14,6 +14,6 @@ internal class ShardedRevisionsHandlerProcessorForPostRevisionsConfiguration : A
 
     protected override ValueTask WaitForIndexNotificationAsync(long index)
     {
-        return RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnShardsAsync(index);
+        return RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index);
     }
 }
