@@ -552,7 +552,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CanQueryFromStaticIndexWithLoadFromSelectAndProject(Options options)
         {
             using (var store = GetDocumentStore(options))
