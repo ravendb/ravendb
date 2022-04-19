@@ -486,15 +486,17 @@ public static class QueryBuilderHelper
         {
             ThrowFieldIsNotIndexed();
         }
-        
-        return indexField?.Id ?? binding?.FieldId ?? throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
-        
-        
-        void ThrowFieldIsNotIndexed() => throw new InvalidQueryException($"Field {fieldName} is not indexed in Index {index.Name}. You can index it by changing `Indexing` option from `No`.");
-        
+
+        return indexField?.Id ?? binding?.FieldId ??
+            throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
+
+
+        void ThrowFieldIsNotIndexed() =>
+            throw new InvalidQueryException($"Field {fieldName} is not indexed in Index {index.Name}. You can index it by changing `Indexing` option from `No`.");
+
         void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index.Name}'.");
     }
-    
+
     internal static QueryFieldName ExtractIndexFieldName(ValueExpression field, QueryMetadata metadata, BlittableJsonReaderObject parameters)
     {
         return metadata.GetIndexFieldName(new QueryFieldName(field.Token.Value, field.Value == ValueTokenType.String), parameters);
@@ -509,7 +511,7 @@ public static class QueryBuilderHelper
         {
             return indexingOptions.Indexing == FieldIndexing.Exact;
         }
-        
+
         return false;
     }
 
@@ -539,23 +541,15 @@ public static class QueryBuilderHelper
         throw new ArgumentException($"Unknown method {method.Name}");
     }
 
-    internal static string GetValueAsString(object value)
+    internal static string CoraxGetValueAsString(object value) => value switch
     {
-        if (!(value is string valueAsString))
-        {
-            if (value is StringSegment s)
-            {
-                valueAsString = s.Value;
-            }
-            else
-            {
-                valueAsString = value?.ToString();
-            }
-        }
+        StringSegment s => s.Value,
+        null => Constants.Documents.Indexing.Fields.NullValue,
+        string {Length: 0} => Constants.Documents.Indexing.Fields.EmptyString,
+        string s => s,
+        _ => value?.ToString()
+    };
 
-        return valueAsString;
-    }
-    
     internal static MatchCompareFieldType TranslateOrderByForCorax(OrderByFieldType original) =>
         original switch
         {
@@ -564,7 +558,7 @@ public static class QueryBuilderHelper
             OrderByFieldType.AlphaNumeric => MatchCompareFieldType.Sequence,
             _ => MatchCompareFieldType.Sequence
         };
-    
+
     internal static ComparerType GetComparerType(bool ascending, OrderByFieldType original, int fieldId) => (ascending, original, fieldId) switch
     {
         (true, OrderByFieldType.AlphaNumeric, _) => ComparerType.AscendingAlphanumeric,
@@ -573,7 +567,7 @@ public static class QueryBuilderHelper
         (true, _, _) => ComparerType.Ascending,
         (false, _, _) => ComparerType.Descending,
     };
-    
+
     internal enum ComparerType
     {
         Ascending,
