@@ -34,7 +34,6 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                const string id = "user";
                 await store.Maintenance.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
                 {
                     DocumentIds = new[] { "non-existing-id" }
