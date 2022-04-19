@@ -25,7 +25,7 @@ public partial class IndexSearcher
         }
         else
         {
-            throw new NotSupportedException($"Boosting with the score function {nameof(TScoreFunction)} is not supported.");
+            throw new NotSupportedException($"Boosting with the score function {typeof(TScoreFunction)} is not supported.");
         }
     }
     

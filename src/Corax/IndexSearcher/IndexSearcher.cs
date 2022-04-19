@@ -121,7 +121,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal unsafe ReadOnlySpan<byte> ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId)
     {
         if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact
+            || binding.FieldIndexingMode is FieldIndexingMode.Exact or FieldIndexingMode.Search
             || binding.Analyzer is null)
         {
             return originalTerm;

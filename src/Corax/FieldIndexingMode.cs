@@ -13,6 +13,8 @@ public enum FieldIndexingMode
     /// </summary>
     Exact,
 
+    Search,
+    
     /// <summary>
     /// Use the attached analyzer from IndexFieldBinding
     /// </summary>

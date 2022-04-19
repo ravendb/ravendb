@@ -340,6 +340,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         FieldIndexing.No => FieldIndexingMode.No,
         FieldIndexing.Exact => FieldIndexingMode.Exact,
+        FieldIndexing.Search => FieldIndexingMode.Search,
         _ => FieldIndexingMode.Normal,
     };
     

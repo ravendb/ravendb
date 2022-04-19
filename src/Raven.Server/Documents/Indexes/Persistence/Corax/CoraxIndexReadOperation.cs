@@ -43,8 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         public override long EntriesCount() => _entriesCount;
-
-
+        
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<int> totalResults, Reference<int> skippedResults,
             Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
@@ -62,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
-                    null, fieldsToFetch)) is null)
+                    _fieldMappings, fieldsToFetch, take: take)) is null)
             yield break;
 
             var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
