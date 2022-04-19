@@ -710,6 +710,7 @@ interface confirmationDialogOptions {
     forceRejectWithResolve?: boolean;
     defaultOption?: string;
     html?: boolean;
+    wideDialog?: boolean;
 }
 
 interface getIndexEntriesFieldsCommandResult {

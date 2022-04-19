@@ -64,11 +64,11 @@ class backups extends viewModelBase {
             .watchClusterTopologyChanges(() => this.refresh()));
         
         this.addNotification(this.changesContext.serverNotifications()
-            .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
+            .watchDatabaseChange(this.activeDatabase()?.name, () => this.refresh()));
         
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
         
-        this.updateUrl(appUrl.forBackups(this.activeDatabase()));
+        //this.updateUrl(appUrl.forBackups(this.activeDatabase()));
     }
 
     compositionComplete(): void {
@@ -96,6 +96,9 @@ class backups extends viewModelBase {
     }
     
     private refresh() {
+        if (!this.activeDatabase()) {
+            return;
+        }
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks(), this.fetchManualBackup());
     }
     

@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers
                     return Task.CompletedTask;
                 }
 
-                var changeVector = GetStringFromHeaders("If-None-Match");
+                var changeVector = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
                 if (changeVector == attachment.ChangeVector)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;

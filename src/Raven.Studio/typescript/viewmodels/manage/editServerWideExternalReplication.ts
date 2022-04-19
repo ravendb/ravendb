@@ -15,6 +15,7 @@ import discoveryUrl = require("models/database/settings/discoveryUrl");
 class editServerWideExternalReplication extends viewModelBase {
     
     view = require("views/manage/editServerWideExternalReplication.html");
+    certificateUploadInfoForOngoingTasks = require("views/partial/certificateUploadInfoForOngoingTasks.html");
     
     editedTask = ko.observable<serverWideExternalReplicationEditModel>();
     isAddingNewExternalReplicationTask = ko.observable<boolean>(true);
@@ -27,6 +28,9 @@ class editServerWideExternalReplication extends viewModelBase {
 
     possibleMentors = ko.observableArray<string>([]);
 
+    usingHttps = location.protocol === "https:";
+    certificatesUrl = appUrl.forCertificates();
+    
     spinners = {
         test: ko.observable<boolean>(false),
         save: ko.observable<boolean>(false)

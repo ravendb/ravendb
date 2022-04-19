@@ -18,10 +18,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/revisions", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteRevisionsFor()
         {
-            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-            if (revisionsStorage.Configuration == null)
-                throw new RevisionsDisabledException();
-
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "admin/revisions/delete");

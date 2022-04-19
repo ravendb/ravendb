@@ -57,6 +57,57 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
+        [Fact]
+        public async Task ThrowOnTooLargeClusterTransactionRequest()
+        {
+            var (_, leader) = await CreateRaftCluster(3, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MaxSizeOfSingleRaftCommand)] = "1"
+            });
+            using (var leaderStore = GetDocumentStore(new Options
+                   {
+                       Server = leader,
+                       ReplicationFactor = 3,
+                       
+                   }))
+            {
+                var user1 = new User()
+                {
+                    Name = "Karmel"
+                };
+                var user3 = new User()
+                {
+                    Name = "Indych"
+                };
+
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions
+                       {
+                           TransactionMode = TransactionMode.ClusterWide
+                       }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", new byte[256 * 1024]);
+                    await session.StoreAsync(user3, "foo/bar");
+                    var ex = await Assert.ThrowsAsync<RavenException>(() => session.SaveChangesAsync());
+                    Assert.Contains("The command 'ClusterTransactionCommand' size of 1.5 MBytes exceed the max allowed size", ex.Message);
+                }
+
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions
+                       {
+                           TransactionMode = TransactionMode.ClusterWide
+                       }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
+                    await session.StoreAsync(user3, "foo/bar");
+                    await session.SaveChangesAsync();
+
+                    var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
+                    Assert.Equal(user1.Name, user.Name);
+                    user = await session.LoadAsync<User>("foo/bar");
+                    Assert.Equal(user3.Name, user.Name);
+                }
+            }
+        }
+
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanCreateClusterTransactionRequest(Options options)

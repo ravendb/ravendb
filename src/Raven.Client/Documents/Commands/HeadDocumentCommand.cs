@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Commands
             };
 
             if (_changeVector != null)
-                request.Headers.TryAddWithoutValidation("If-None-Match", _changeVector);
+                request.Headers.TryAddWithoutValidation(Constants.Headers.IfNoneMatch, _changeVector);
 
             return request;
         }
