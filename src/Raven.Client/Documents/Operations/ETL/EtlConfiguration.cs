@@ -121,7 +121,6 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(TaskId)] = TaskId,
                 [nameof(ConnectionStringName)] = ConnectionStringName,
                 [nameof(MentorNode)] = MentorNode,
-                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(AllowEtlOnNonEncryptedChannel)] = AllowEtlOnNonEncryptedChannel,
                 [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => x.ToJson()))
             };
