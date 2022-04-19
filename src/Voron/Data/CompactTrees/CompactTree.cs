@@ -339,6 +339,14 @@ namespace Voron.Data.CompactTrees
 
         public void PrepareForCommit()
         {
+            if (ShouldImproveDictionary())
+            {
+                if (_state.NumberOfEntries > 32 * 1_000_000)
+                    TryImproveDictionaryByRandomlyScanning(_state.NumberOfEntries / 100);
+                else
+                    TryImproveDictionaryByRandomlyScanning(_state.NumberOfEntries / 10);
+            }
+
             using var _ = _parent.DirectAdd(Name, sizeof(CompactTreeState), out var ptr);
             _state.CopyTo((CompactTreeState*)ptr);
         }
