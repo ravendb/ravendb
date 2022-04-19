@@ -122,5 +122,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Cluster.DisableAtomicDocumentWrites", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DisableAtomicDocumentWrites { get; set; }
+
+        [Description("EXPERT: The maximum allowed size allowed for a single raft command (in megabytes)")]
+        [DefaultValue(128)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Cluster.MaxSizeOfSingleRaftCommandInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? MaxSizeOfSingleRaftCommand { get; set; }
     }
 }

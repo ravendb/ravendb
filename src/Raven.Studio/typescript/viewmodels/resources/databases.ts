@@ -28,6 +28,7 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDialog");
 import notificationCenter = require("common/notifications/notificationCenter");
 import saveDatabaseLockModeCommand = require("commands/resources/saveDatabaseLockModeCommand");
+import databaseSettings = require("viewmodels/database/settings/databaseSettings");
 
 type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
 type filterState = databaseState | 'local' | 'all';
@@ -642,14 +643,32 @@ class databases extends viewModelBase {
 
     toggleDisableDatabaseIndexing(db: databaseInfo) {
         const enableIndexing = db.indexingDisabled();
-        const message = enableIndexing ? "Enable" : "Disable";
+
+        const message1 = enableIndexing ? "Enable" : "Disable";
+        const message2 = enableIndexing ? "Enabling" : "Disabling";
 
         eventsCollector.default.reportEvent("databases", "toggle-indexing");
 
-        this.confirmationMessage("Are you sure?", message + " indexing?")
+        this.confirmationMessage(`${message1} indexing?`,
+            `<div class="margin-top">You're ${message2.toLowerCase()} all indexes on this database.</div>
+             <div class="margin-top-lg flex-horizontal padding padding-sm bg-warning text-warning">
+                 <div class="flex-start"><i class="icon-warning"></i></div>
+                 <div class="margin-left margin-left-lg">
+                     After clicking <strong>${message1}</strong>, the database must be reloaded in order for this indexing configuration to be in effect.<br />
+                     Without reloading, the change will NOT apply (despite being written to the database record).
+                 </div>
+             </div>
+             <div class="padding padding-xs margin-top-sm bg-warning text-warning">
+                <div class="margin-left-lg">${databaseSettings.howToReloadDatabaseHtml}</div>
+             </div>`,
+            {
+                buttons: ["Cancel", message1],
+                html: true,
+                wideDialog: true
+            })
             .done(result => {
                 if (result.can) {
-                    db.inProgressAction(enableIndexing ? "Enabling..." : "Disabling...");
+                    db.inProgressAction(`${message2}...`);
 
                     new toggleDisableIndexingCommand(enableIndexing, db)
                         .execute()

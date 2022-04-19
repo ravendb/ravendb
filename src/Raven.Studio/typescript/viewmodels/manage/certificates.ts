@@ -28,6 +28,7 @@ interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefini
     expirationClass: string;
     expirationText: string;
     expirationIcon: string;
+    isExpired: boolean;
 }
 
 class certificates extends viewModelBase {
@@ -80,7 +81,7 @@ class certificates extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", 
+        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterReGenerateCertificateMode",
             "deletePermission", "addNewPermission", "fileSelected", "copyThumbprint",
             "useDatabase", "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed");
         
@@ -280,6 +281,21 @@ class certificates extends viewModelBase {
         eventsCollector.default.reportEvent("certificates", "generate");
         this.model(certificateModel.generate());
     }
+
+    enterReGenerateCertificateMode(itemToReGenerate: unifiedCertificateDefinition) {
+        eventsCollector.default.reportEvent("certificates", "re-generate");
+        this.model(certificateModel.generate());
+
+        this.model().name(itemToReGenerate.Name);
+        this.model().securityClearance(itemToReGenerate.SecurityClearance);
+
+        for (let dbItem in itemToReGenerate.Permissions) {
+            const permission = new certificatePermissionModel();
+            permission.databaseName(dbItem);
+            permission.accessLevel(itemToReGenerate.Permissions[dbItem]);
+            this.model().permissions.push(permission);
+        }
+    }
     
     enterUploadCertificateMode() {
         eventsCollector.default.reportEvent("certificates", "upload");
@@ -451,11 +467,13 @@ class certificates extends viewModelBase {
             const dateFormatted = date.format("YYYY-MM-DD");
             
             const nowPlusMonth = moment.utc().add(1, 'months');
+            cert.isExpired = false;
             
             if (date.isBefore()) {
                 cert.expirationText = 'Expired ' + dateFormatted;
                 cert.expirationIcon = "icon-danger";
-                cert.expirationClass = "text-danger"
+                cert.expirationClass = "text-danger";
+                cert.isExpired = true;
             } else if (date.isAfter(nowPlusMonth)) {
                 cert.expirationText = dateFormatted;
                 cert.expirationIcon = "icon-clock";

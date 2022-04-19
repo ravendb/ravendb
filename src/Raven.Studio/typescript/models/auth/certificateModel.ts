@@ -132,7 +132,8 @@ class certificateModel {
         });
 
         this.validityPeriod.extend({
-            digit: true
+            digit: true,
+            min: 1
         });
     }
 

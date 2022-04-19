@@ -32,12 +32,10 @@ class threadStackTrace extends dialogViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.dialogContainer = document.getElementById("threadStackTraceDialog");
+        
+        this.loadStackTrace(this.threadId());
     }
     
-    activate() {
-        return this.loadStackTrace(this.threadId());
-    }
-
     private loadStackTrace(threadId: number): JQueryPromise<threadStackTraceResponseDto> {
         this.spinners.loading(true);
         

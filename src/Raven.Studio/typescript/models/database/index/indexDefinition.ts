@@ -82,14 +82,15 @@ class indexDefinition {
         this.createReferencesToResultsCollection(!!dto.PatternForOutputReduceToCollectionReferences);
         this.patternForReferencesToReduceOutputCollection(dto.PatternForOutputReduceToCollectionReferences);
         this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
-        
-        this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
+
+        this.fields(_.map(dto.Fields, (fieldDto, indexName) =>
+            new indexFieldOptions(indexName, fieldDto, this.hasReduce, indexFieldOptions.defaultFieldOptions(this.hasReduce))));
         
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
             this.defaultFieldOptions(defaultFieldOptions);
             
-            defaultFieldOptions.parent(indexFieldOptions.globalDefaults());
+            defaultFieldOptions.parent(indexFieldOptions.globalDefaults(this.hasReduce));
             this.fields.remove(defaultFieldOptions);
 
             this.fields().forEach(field => {
@@ -316,7 +317,7 @@ class indexDefinition {
     }
 
     addField() {
-        const field = indexFieldOptions.empty();
+        const field = indexFieldOptions.empty(this.hasReduce);
         
         field.addCustomAnalyzers(this.customAnalyzers());
         
@@ -328,7 +329,7 @@ class indexDefinition {
     }
 
     addDefaultField() {
-        const fieldOptions = indexFieldOptions.defaultFieldOptions();
+        const fieldOptions = indexFieldOptions.defaultFieldOptions(this.hasReduce);
         fieldOptions.addCustomAnalyzers(this.customAnalyzers());
         this.defaultFieldOptions(fieldOptions);
 
@@ -351,7 +352,7 @@ class indexDefinition {
         this.defaultFieldOptions(null);
 
         this.fields().forEach(field => {
-            field.parent(indexFieldOptions.defaultFieldOptions());
+            field.parent(indexFieldOptions.defaultFieldOptions(this.hasReduce));
         });
     }
 
