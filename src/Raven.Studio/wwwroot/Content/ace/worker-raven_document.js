@@ -1429,10 +1429,29 @@ ace.define("ace/mode/json/checkNumber",["require","exports","module"], function(
 
 });
 
-ace.define("ace/mode/json/json_parse_with_number_check",["require","exports","module","ace/mode/json/checkNumber"], function(require, exports, module) {
+ace.define("ace/mode/json/checkNumericKey",["require","exports","module"], function(require, exports, module) {
+    "use strict";
+
+    var check = function(key, at, warnings) {
+        var isNumeric = x => !isNaN(x) && !isNaN(parseFloat(x));
+
+        if (isNumeric(key)) {
+            warnings.push({
+                text: "Object contains numeric keys. The order of these keys might change after saving the document.",
+                at: at
+            })
+        }
+    };
+    
+    exports.Check = check;
+
+});
+
+ace.define("ace/mode/json/json_parse_with_number_check",["require","exports","module","ace/mode/json/checkNumber","ace/mode/json/checkNumericKey"], function(require, exports, module) {
 "use strict";
 
-    var check = require("./checkNumber").Check;
+    var checkNumber = require("./checkNumber").Check;
+    var checkNumericKey = require("./checkNumericKey").Check;
     
     var at,     // The index of the current character
         ch,     // The current character
@@ -1503,7 +1522,7 @@ ace.define("ace/mode/json/json_parse_with_number_check",["require","exports","mo
             }
             number = +string;
             
-            check(number, at, warnings);
+            checkNumber(number, at, warnings);
             
             if (isNaN(number)) {
                 error("Bad number");
@@ -1623,6 +1642,7 @@ ace.define("ace/mode/json/json_parse_with_number_check",["require","exports","mo
                 }
                 while (ch) {
                     key = string();
+                    checkNumericKey(key, at, warnings);
                     white();
                     next(':');
                     if (Object.hasOwnProperty.call(object, key)) {

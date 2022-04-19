@@ -77,12 +77,16 @@ namespace SlowTests.Sharding.Client.Operations
 
         private class Company
         {
+#pragma warning disable CS0649
             public string Id;
+#pragma warning restore CS0649
             public string Name;
         }
         private class User
         {
+#pragma warning disable CS0649
             public string Id;
+#pragma warning restore CS0649
             public string Name;
         }
     }

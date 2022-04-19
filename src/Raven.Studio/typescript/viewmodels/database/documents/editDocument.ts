@@ -1084,7 +1084,7 @@ class editDocument extends shardViewModelBase {
 
                 this.displayDocumentChange(false);
                 
-                if (this.collapseDocsWhenOpening()) {
+                if (this.collapseDocsWhenOpening() || this.isDocumentCollapsed()) {
                     this.forceFold = true;
                 }
             });

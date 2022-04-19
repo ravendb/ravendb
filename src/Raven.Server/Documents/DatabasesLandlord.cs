@@ -44,14 +44,15 @@ namespace Raven.Server.Documents
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         private readonly ResourceCache<ShardedDatabaseContext> _shardedDatabases = new ResourceCache<ShardedDatabaseContext>();
 
-        private readonly TimeSpan _concurrentDatabaseLoadTimeout;
         private readonly Logger _logger;
-        private readonly SemaphoreSlim _databaseSemaphore;
         private readonly ServerStore _serverStore;
 
         // used in ServerWideBackupStress
         internal bool SkipShouldContinueDisposeCheck = false;
         internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
+        internal SemaphoreSlim _databaseSemaphore;
+        internal TimeSpan _concurrentDatabaseLoadTimeout;
+        internal int _dueTimeOnRetry = 60_000;
 
         public DatabasesLandlord(ServerStore serverStore)
         {
@@ -86,6 +87,7 @@ namespace Raven.Server.Documents
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
+            internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object _)
@@ -1190,8 +1192,21 @@ namespace Raven.Server.Documents
                     if (_serverStore.ServerShutdown.IsCancellationRequested)
                         return;
 
-                    TryGetOrCreateResourceStore(name, wakeup);
+                    _ = TryGetOrCreateResourceStore(name, wakeup).ContinueWith(t =>
+                          {
+                              var ex = t.Exception.ExtractSingleInnerException();
+                              if (ex is DatabaseConcurrentLoadTimeoutException e)
+                              {
+                                  // database failed to load, retry after 1 min
+                                  ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
+
+                                  if (_logger.IsInfoEnabled)
+                                      _logger.Info($"Failed to start database '{name}' on timer, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
+
+                                  RescheduleDatabaseWakeup(name, milliseconds: _dueTimeOnRetry, wakeup);
                 }
+                          }, TaskContinuationOptions.OnlyOnFaulted);
+            }
             }
             catch
             {

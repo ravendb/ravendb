@@ -15,7 +15,7 @@ class confirmationDialog extends dialogViewModelBase {
 
     public options: string[];
 
-    constructor(confirmationMessageAsHtml: string, title: string, options: string[]) {
+    constructor(private confirmationMessageAsHtml: string, private title: string, private buttonOptions: string[], private wideDialog: boolean) {
         super();
         this.options = options;
         this.title = title;

@@ -1,26 +1,21 @@
 import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
-
 import getConflictsCommand = require("commands/database/replication/getConflictsCommand");
 import getConflictsForDocumentCommand = require("commands/database/replication/getConflictsForDocumentCommand");
 import getSuggestedConflictResolutionCommand = require("commands/database/replication/getSuggestedConflictResolutionCommand");
-
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
-
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import messagePublisher = require("common/messagePublisher");
-
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
 import generalUtils = require("common/generalUtils");
+import copyToClipboard = require("common/copyToClipboard");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
 
@@ -82,7 +77,7 @@ class conflicts extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("useThis");
+        this.bindToCurrentInstance("useThis", "copyThis");
 
         aceEditorBindingHandler.install();
         this.initValidation();
@@ -258,6 +253,10 @@ class conflicts extends viewModelBase {
     useThis(itemToUse: conflictItem) {
         this.suggestedResolution(itemToUse.originalValue());
     }
+
+    copyThis(itemToCopy: conflictItem) {
+        copyToClipboard.copy(itemToCopy.originalValue(), "Document has been copied to clipboard");
+}
 }
 
 export = conflicts;

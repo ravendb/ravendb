@@ -1,4 +1,4 @@
-<div class="modal-dialog" role="document">
+<div class="modal-dialog" role="document" data-bind="css: { 'modal-lg': wideDialog }">
     <div class="modal-content">
         <div class="modal-header">
             <button type="button" class="close" data-bind="click: close, clickBubble: false" aria-hidden="true">
@@ -9,9 +9,9 @@
         <div class="modal-body">
             <p class="confirmationMessage" data-bind="html: confirmationMessageAsHtml"></p>
         </div>
-        <div class="modal-footer" data-bind="foreach: options">
+        <div class="modal-footer" data-bind="foreach: buttonOptions">
             <button type="button" class="btn" data-bind="text: $data, click: $root.onOptionClicked.bind($root), clickBubble: false, 
-                    css: { 'btn-default': $index() !== $root.options.length - 1, 'btn-primary': $index() === $root.options.length - 1 }">                
+                    css: { 'btn-default': $index() !== $root.buttonOptions.length - 1, 'btn-primary': $index() === $root.buttonOptions.length - 1 }">
             </button>
         </div>
     </div>

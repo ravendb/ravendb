@@ -61,7 +61,8 @@ define(function(require, exports, module) {
 // We are defining the function inside of another function to avoid creating
 // global variables.
 
-    var check = require("./checkNumber").Check;
+    var checkNumber = require("./checkNumber").Check;
+    var checkNumericKey = require("./checkNumericKey").Check;
     
     var at,     // The index of the current character
         ch,     // The current character
@@ -141,7 +142,7 @@ define(function(require, exports, module) {
             }
             number = +string;
             
-            check(number, at, warnings);
+            checkNumber(number, at, warnings);
             
             if (isNaN(number)) {
                 error("Bad number");
@@ -273,6 +274,7 @@ define(function(require, exports, module) {
                 }
                 while (ch) {
                     key = string();
+                    checkNumericKey(key, at, warnings);
                     white();
                     next(':');
                     if (Object.hasOwnProperty.call(object, key)) {

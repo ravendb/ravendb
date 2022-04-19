@@ -4,7 +4,7 @@
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
             <div data-bind="foreach: $data.constructor.samples">
                 <div class="margin-top" data-bind="text: title"></div>
-                <pre class="margin-bottom copy-area"><a href="#" class="copy-button-hidden pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+                <pre class="margin-bottom copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
             </div>
         </div>
         <div class="modal-footer margin-bottom">

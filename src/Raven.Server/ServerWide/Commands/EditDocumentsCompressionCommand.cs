@@ -1,4 +1,6 @@
-﻿using Raven.Client.ServerWide;
+﻿using System;
+using System.Linq;
+using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -24,6 +26,11 @@ namespace Raven.Server.ServerWide.Commands
         
         public EditDocumentsCompressionCommand(DocumentsCompressionConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
+            if (configuration?.Collections.Length > 0)
+            {
+                configuration.Collections = configuration.Collections.ToHashSet(StringComparer.OrdinalIgnoreCase).ToArray();
+            }
+
             Configuration = configuration;
         }
 

@@ -1093,7 +1093,7 @@ namespace Raven.Client.Http
         private void SetRequestHeaders(SessionInfo sessionInfo, string cachedChangeVector, HttpRequestMessage request)
         {
             if (cachedChangeVector != null)
-                request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
+                request.Headers.TryAddWithoutValidation(Constants.Headers.IfNoneMatch, $"\"{cachedChangeVector}\"");
 
             if (_disableClientConfigurationUpdates == false)
                 request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
