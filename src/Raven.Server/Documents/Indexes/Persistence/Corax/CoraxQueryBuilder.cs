@@ -1312,7 +1312,7 @@ public static class CoraxQueryBuilder
                 (false, SortingType.Normal) => new SortingMatch.DescendingMatchComparer(indexSearcher, fieldId, orderTypeField),
                 (true, SortingType.Alphanumerical) => new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, fieldId, orderTypeField),
                 (false, SortingType.Alphanumerical) => new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, fieldId, orderTypeField),
-                _ => throw new InvalidDataException($"Unknown {typeof(SortingMatch)}: {sortingType} at {nameof(CoraxQueryEvaluator)}")
+                _ => throw new InvalidDataException($"Unknown {typeof(SortingMatch)}: {sortingType} at {nameof(CoraxQueryBuilder)}")
             };
         }
 

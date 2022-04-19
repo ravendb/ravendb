@@ -28,7 +28,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     {
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
-        private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
         private readonly ByteStringContext _allocator;
         private long _entriesCount = 0;
         private const int BufferSize = 4096;
@@ -39,7 +38,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(_allocator, index);
             _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(_allocator, index, index.Definition, true));
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
-            _coraxQueryEvaluator = new CoraxQueryEvaluator(index, _indexSearcher);
         }
 
         public override long EntriesCount() => _entriesCount;
@@ -64,8 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _fieldMappings, fieldsToFetch, take: take)) is null)
             yield break;
 
-            var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
-            Span<long> ids = longIds;
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
             int docsToLoad = pageSize;
             int queryStart = query.Start;
 
@@ -76,18 +73,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             while (true)
             {
                 token.ThrowIfCancellationRequested();
-                int i = queryScope.RecordAlreadyPagedItemsInPreviousPage(longIds.AsSpan(), queryMatch, totalResults, out var read, ref queryStart, token);
+                int i = queryScope.RecordAlreadyPagedItemsInPreviousPage(ids.AsSpan(), queryMatch, totalResults, out var read, ref queryStart, token);
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (queryScope.WillProbablyIncludeInResults(_indexSearcher.GetRawIdentityFor(longIds[i])) == false)
+                    if (queryScope.WillProbablyIncludeInResults(_indexSearcher.GetRawIdentityFor(ids[i])) == false)
                     {
                         docsToLoad++;
                         skippedResults.Value++;
                         continue;
                     }
 
-                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var key), key);
+                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key);
                     
                     var filterResult = queryFilter?.Apply(ref retrieverInput, key);
                     if (filterResult is not null and not FilterResult.Accepted)
@@ -129,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
                 }
 
-                if ((read = queryMatch.Fill(longIds)) == 0)
+                if ((read = queryMatch.Fill(ids)) == 0)
                     break;
                 totalResults.Value += read;
             }
@@ -171,7 +168,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return default;
             }
 
-            ArrayPool<long>.Shared.Return(longIds);
+            ArrayPool<long>.Shared.Return(ids);
         }
 
         public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
@@ -230,10 +227,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            if ((queryMatch = _coraxQueryEvaluator.Search(query, indexFieldsMapping: _fieldMappings, take: take)) is null)
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
+                    _fieldMappings, null, take: take)) is null)
                 yield break;
 
-            var longIds = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
 
             List<string> itemList = new(32);
             var bufferSizes = GetMaximumSizeOfBuffer();
@@ -250,16 +248,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    var reader = _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var id);
+                    var reader = _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var id);
                     yield return documentsContext.ReadObject(GetRawDocument(reader), id);
                 }
 
-                if ((read = queryMatch.Fill(longIds)) == 0)
+                if ((read = queryMatch.Fill(ids)) == 0)
                     break;
                 totalResults.Value += read;
             }
 
-            ArrayPool<long>.Shared.Return(longIds);
+            ArrayPool<long>.Shared.Return(ids);
             ArrayPool<byte>.Shared.Return(encodedBuffer);
             ArrayPool<Token>.Shared.Return(tokensBuffer);
 
@@ -348,7 +346,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
-                    read = queryMatch.Fill(longIds);
+                    read = queryMatch.Fill(ids);
                     totalResults.Value += read;
 
                     if (position > read)
@@ -359,7 +357,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     if (position == read)
                     {
-                        read = queryMatch.Fill(longIds);
+                        read = queryMatch.Fill(ids);
                         totalResults.Value += read;
                         return 0;
                     }
