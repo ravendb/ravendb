@@ -113,19 +113,19 @@ public static class CoraxIndexingHelpers
                 case FieldIndexing.Exact:
                     var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
 
-                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer);
+                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer, fieldIndexingMode: FieldIndexingMode.Exact);
                     break;
 
                 case FieldIndexing.Search:
                     var analyzer = GetCoraxAnalyzer(fieldName, field.Value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
                     if (analyzer != null)
                     {
-                        perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, analyzer);
+                        perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, analyzer, fieldIndexingMode: FieldIndexingMode.Search);
                         continue;
                     }
 
                     var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
-                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, standardAnalyzer);
+                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, standardAnalyzer, fieldIndexingMode: FieldIndexingMode.Search);
 
                     break;
 

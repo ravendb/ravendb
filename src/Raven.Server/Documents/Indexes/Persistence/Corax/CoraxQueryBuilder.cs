@@ -74,20 +74,43 @@ public static class CoraxQueryBuilder
         if (expression is BinaryExpression where)
         {
             buildSteps?.Add($"Where: {expression.Type} - {expression} (operator: {where.Operator})");
-
             switch (where.Operator)
             {
                 case OperatorType.And:
                 {
-                    var left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                        factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
-                    var right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                        factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: true, buildSteps: buildSteps, take: take);
+                    IQueryMatch left = null;
+                    IQueryMatch right = null;
+                    switch (@where.Left, @where.Right)
+                    {
+                        case (NegatedExpression ne1, NegatedExpression ne2):
+                            left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne2.Expression, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            return indexSearcher.AndNot(indexSearcher.AllEntries(), indexSearcher.Or(left, right));
+                            break;
+                        case (NegatedExpression ne1, _):
+                            left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            return indexSearcher.AndNot(left, right);
+                        case (_, NegatedExpression ne1):
+                            left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            return indexSearcher.AndNot(left, right);
+                        default:
+                            left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
+                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
 
-
-                    return isNegated == false
-                        ? indexSearcher.And(left, right)
-                        : indexSearcher.Or(left, right);
+                            return isNegated == false
+                                ? indexSearcher.And(left, right)
+                                : indexSearcher.Or(left, right);
+                    }
                 }
                 case OperatorType.Or:
                 {
@@ -210,9 +233,13 @@ public static class CoraxQueryBuilder
                 matches.Add(tuple.Value);
             }
 
-            return isNegated == false
-                ? indexSearcher.InQuery(fieldName, matches, scoreFunction, fieldId)
-                : indexSearcher.NotInQuery(fieldName, indexSearcher.AllEntries(), matches, fieldId, scoreFunction);
+            return (isNegated, scoreFunction) switch
+            {
+                (false, NullScoreFunction) => indexSearcher.InQuery(fieldName, matches, fieldId),
+                (true, NullScoreFunction) => indexSearcher.NotInQuery(fieldName, indexSearcher.AllEntries(), matches, fieldId),
+                (false, _) => indexSearcher.InQuery(fieldName, matches, scoreFunction, fieldId),
+                (true, _) => indexSearcher.NotInQuery(fieldName, indexSearcher.AllEntries(), matches, fieldId, scoreFunction)
+            };
         }
 
         if (expression is TrueExpression)

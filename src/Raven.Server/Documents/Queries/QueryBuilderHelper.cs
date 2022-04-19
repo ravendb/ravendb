@@ -7,6 +7,7 @@ using Corax;
 using Corax.Queries;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Queries.AST;
@@ -473,29 +474,21 @@ public static class QueryBuilderHelper
                 return ScoreId;
         }
 
-        if (queryMapping is not null)
+        IndexField indexField = null;
+        IndexFieldBinding binding = null;
+        if (queryMapping?.IndexFields.TryGetValue(fieldName, out indexField) == false &&
+            indexMapping?.TryGetByFieldName(fieldName, out binding) == false)
         {
-            if (queryMapping.IndexFields.TryGetValue(fieldName, out var indexField) == false)
-                ThrowNotFoundInIndex();
-
-            if (indexField!.Indexing is FieldIndexing.No)
-                ThrowFieldIsNotIndexed();
-                
-            return indexField.Id;
+            ThrowNotFoundInIndex();
         }
 
-        if (indexMapping is not null)
+        if (indexField?.Indexing == FieldIndexing.No || binding?.FieldIndexingMode == FieldIndexingMode.No)
         {
-            if (indexMapping.TryGetByFieldName(fieldName, out var binding) == false)
-                ThrowNotFoundInIndex();
-
-            if (binding.FieldIndexingMode is FieldIndexingMode.No)
-                ThrowFieldIsNotIndexed();
-
-            return binding.FieldId;
+            ThrowFieldIsNotIndexed();
         }
-
-        throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
+        
+        return indexField?.Id ?? binding?.FieldId ?? throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
+        
         
         void ThrowFieldIsNotIndexed() => throw new InvalidQueryException($"Field {fieldName} is not indexed in Index {index.Name}. You can index it by changing `Indexing` option from `No`.");
         
