@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Documents.Revisions;
 using Raven.Client.Documents.Commands;
+using Raven.Server.Documents.Handlers.Admin;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,6 +26,19 @@ namespace SlowTests.Issues
                     await store.GetRequestExecutor().ExecuteAsync(command, context);
                     Assert.Equal(0, command.Result.Results.Length);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task Can_Delete_From_Revisions_Bin_When_Revisions_Are_Disabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id = "user";
+                await store.Maintenance.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                {
+                    DocumentIds = new[] { "non-existing-id" }
+                }));
             }
         }
     }
