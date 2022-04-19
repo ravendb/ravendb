@@ -59,6 +59,9 @@ class queryUtil {
     }
 
     static escapeName(name: string) {
+        if (name.includes("\\")) {
+            name = name.replace(/\\/g, "\\\\");
+        }
         return queryUtil.wrapWithSingleQuotes(name);
     }
 

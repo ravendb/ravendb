@@ -85,4 +85,26 @@ describe("queryUtil", function () {
                 .toBeFalse();
         });
     });
+
+    describe("escapeName", function () {
+        const act = (name: string) => queryUtil.escapeName(name);
+
+        it("adds quotes on simple names", () => {
+            const result = act("name");
+            expect(result)
+                .toEqual("'name'");
+        });
+
+        it("escapes single quotes", () => {
+            const result = act("it'squoted");
+            expect(result)
+                .toEqual("'it''squoted'");
+        });
+
+        it("escapes the escape char", () => {
+            const result = act("itcontains\\literal");
+            expect(result)
+                .toEqual("'itcontains\\\\literal'");
+        });
+    });
 });
