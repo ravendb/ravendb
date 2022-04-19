@@ -162,8 +162,13 @@
                             <div class="flex-grow"></div>
                             <div class="flex-horizontal">
                                 <div class="actions">
-                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data), visible: $root.canEdit($data)"><i class="icon-edit"></i></button>
-                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance, $data)">
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterReGenerateCertificateMode, $data), visible: $root.canEdit($data)() && isExpired" title="Re-generate certificate">
+                                        <i class="icon-magic-wand"></i>
+                                    </button>
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data), visible: $root.canEdit($data)() && !isExpired" title="Edit certificate">
+                                        <i class="icon-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance, $data)" title="Remove certificate">
                                         <i class="icon-trash"></i>
                                     </button>
                                 </div>
@@ -284,11 +289,11 @@
                                 </label>
                                 <input class="form-control" type="password" data-bind="textInput: certificatePassphrase">
                             </div>
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate'">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate', validationElement: validityPeriod">
                                 <label class="control-label">
                                     Expire in
                                 </label>
-                                <div class="input-group btn-block" data-bind="validationOptions: { insertMessages: false }">
+                                <div class="input-group btn-block">
                                     <input type="number" min="1" class="form-control" data-bind="numericInput: validityPeriod" placeholder="Validity period (Default: 60 months)" />
                                     <button class="btn btn-default dropdown-toggle input-group-addon" data-toggle="dropdown">
                                         <span data-bind="text: validityPeriodUnitsLabel"></span> <i class="caret"></i>

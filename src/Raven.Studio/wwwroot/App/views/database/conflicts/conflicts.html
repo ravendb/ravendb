@@ -10,7 +10,6 @@
         </div>
     </div>
     <div class="edit-conflict flex-vertical slidein-style" data-bind="visible: hasDetailsLoaded">
-        
         <div class="flex-horizontal flex-noshrink">
             <h3 class="on-base-background" data-bind="text: 'Resolving conflict for: ' + documentId()"></h3>
             <div class="flex-separator"></div>
@@ -21,8 +20,6 @@
                 </button>
             </div>
         </div>
-        
-
         <div class="scroll-horizontal">
             <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
                 <div class="conflicted-item flex-vertical">
@@ -34,10 +31,17 @@
                                 <i class="icon-database"></i><span class="source-database">ExampleDatabase</span> -->
                             </div>
                             <div>
-                                <button class="btn btn-sm btn-warning usethis" data-bind="click: _.partial($root.useThis, $data), style: { visibility: deletedMarker() ? 'hidden' : 'visible' }"><i class="icon-tick"></i><span>Use this</span></button>
+                                <button class="btn btn-sm btn-warning usethis" title="Click to resolve with this document"
+                                        data-bind="click: _.partial($root.useThis, $data), style: { visibility: deletedMarker() ? 'hidden' : 'visible' }">
+                                    <i class="icon-tick"></i><span>Use this</span>
+                                </button>
                             </div>
+                            <a href="#" class="copy-button margin-left-sm" title="Copy document"
+                               data-bind="click: _.partial($root.copyThis, $data), style: { visibility: deletedMarker() ? 'hidden' : 'visible' }">
+                                <i class="icon-copy"></i>
+                            </a>
                         </div>
-                        <div class="details " data-bind="collapse: $root.detailsVisible, visible: !deletedMarker()">
+                        <div class="details" data-bind="collapse: $root.detailsVisible, visible: !deletedMarker()">
                             <div class="flex-horizontal">
                                 <div>
                                     <div class="title"><small>Document size</small></div>
@@ -61,21 +65,17 @@
                 </div>
             </div>
         </div>
-
         <div class="margin-bottom margin-bottom-sm margin-top margin-top-sm">
             <button type="button" data-bind="click: deleteDocument" class="btn btn-danger">
                 <i class="icon-trash"></i>
                 <span>Delete</span>
             </button>
-
             <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Resolve and save</span></button>
         </div>
-
         <div class="result-file flex-grow">
             <pre id="docEditor" class="form-control absolute-fill"
                  data-bind="aceEditor: { code: suggestedResolution, fontSize:'16px', lang: 'ace/mode/raven_document' }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: suggestedResolution"></pre>
         </div>
-            
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: suggestedResolution">
             <div class="help-block" data-bind="validationMessage: suggestedResolution"></div>
         </div>

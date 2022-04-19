@@ -190,25 +190,22 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     foreach (var fieldToFetch in fields?.Values)
                     {
-                        switch (SearchEngineType)
-                        {
-                            case SearchEngineType.Corax:
-                                if (TryExtractValueFromIndexCorax(fieldToFetch, ref retrieverInput, result))
-                                    continue;
-                                break;
-                            case SearchEngineType.Lucene:
-                                if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
-                                    continue;
-                                break;
-                            default:
-                                throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
-                        }
+                        if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here
+                            TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
+                            continue;
 
                         if (FieldsToFetch.Projection.MustExtractFromIndex)
                         {
                             if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(fieldToFetch.Name
-                                    .Value);
+                            {
+                                if (TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result)) 
+                                    continue; // here we try again, for `id()` fields
+
+                                FieldsToFetch.Projection
+                                    .ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(
+                                        fieldToFetch.Name
+                                            .Value);
+                            }
 
                             continue;
                         }
@@ -280,6 +277,25 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return (ReturnProjection(result, doc, _context, retrieverInput.Score), null);
             }
+        }
+
+        private bool TryExtractValueFromIndex(ref RetrieverInput retrieverInput, FieldsToFetch.FieldToFetch fieldToFetch, DynamicJsonValue result)
+        {
+            switch (SearchEngineType)
+            {
+                case SearchEngineType.Corax:
+                    if (TryExtractValueFromIndexCorax(fieldToFetch, ref retrieverInput, result))
+                        return true;
+                    break;
+                case SearchEngineType.Lucene:
+                    if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
+                        return true;
+                    break;
+                default:
+                    throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
+            }
+
+            return false;
         }
 
         public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
@@ -480,9 +496,6 @@ namespace Raven.Server.Documents.Queries.Results
 
         private bool LuceneTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
         {
-            if (fieldToFetch.CanExtractFromIndex == false)
-                return false;
-
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
             DynamicJsonArray array = null;

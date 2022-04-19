@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
         public Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var changeVector = GetStringFromHeaders("If-None-Match");
+            var changeVector = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Handlers
             // everything here operates on all docs
             var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
-            if (GetStringFromHeaders("If-None-Match") == databaseChangeVector)
+            if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == databaseChangeVector)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (document == null && ids.Count == 1)
                     {
-                        HttpContext.Response.StatusCode = GetStringFromHeaders("If-None-Match") == HttpCache.NotFoundResponse
+                        HttpContext.Response.StatusCode = GetStringFromHeaders(Constants.Headers.IfNoneMatch) == HttpCache.NotFoundResponse
                         ?(int)HttpStatusCode.NotModified
                         :(int)HttpStatusCode.NotFound;
                         return;
@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
 
-                var etag = GetStringFromHeaders("If-None-Match");
+                var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
                 if (etag == actualEtag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;

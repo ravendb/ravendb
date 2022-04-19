@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 Query = $"?id={Uri.EscapeDataString(_id)}"
             };
 
-            request.Headers.Add("If-None-Match", '"' + _changeVector + '"');
+            request.Headers.Add(Constants.Headers.IfNoneMatch, '"' + _changeVector + '"');
             return request;
         }
 

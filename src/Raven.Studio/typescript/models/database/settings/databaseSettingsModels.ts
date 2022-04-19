@@ -311,7 +311,7 @@ export abstract class numberEntry extends databaseEntry<number | null> {
 
         const numberValue = this.customizedDatabaseValue();
         
-        if (numberValue >= 0) {
+        if (numberValue) {
             return numberValue >= this.minValue() ? numberValue.toString() : null;
         } else {
             return null;
@@ -404,14 +404,13 @@ export class sizeEntry extends numberEntry {
 
 export class timeEntry extends numberEntry {
     timeUnit = ko.observable<string>();
-    specialTimeEntry = "Indexing.MapTimeoutInSec"; // Not nullable and default value is -1
 
     initCustomizedValue(value: string) {
         const timeValue = value ? parseInt(value) : null;
         this.customizedDatabaseValue(timeValue);
 
         this.timeUnit(this.data.Metadata.TimeUnit);
-        this.minValue(this.keyName() === this.specialTimeEntry ? -1 : this.data.Metadata.MinValue || 0);
+        this.minValue(this.data.Metadata.MinValue || -1);
     }
 
     getTemplateType(): settingsTemplateType {
@@ -423,7 +422,7 @@ export class timeEntry extends numberEntry {
 
         this.customizedDatabaseValue.extend({
             digit: {
-                onlyIf: () => this.keyName() !== this.specialTimeEntry || this.customizedDatabaseValue() !== -1
+                onlyIf: () => this.customizedDatabaseValue() !== -1
             }
         });
     }

@@ -290,7 +290,7 @@ class editIndex extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.setupDisableReasons();
+        this.initFieldTooltips();
     }
     
     private initValidation() {
@@ -577,7 +577,7 @@ class editIndex extends viewModelBase {
     addField() {
         eventsCollector.default.reportEvent("index", "add-field");
         this.editedIndex().addField();
-        this.setupDisableReasons();
+        this.initFieldTooltips();
     }
 
     removeField(field: indexFieldOptions) {
@@ -592,7 +592,7 @@ class editIndex extends viewModelBase {
     addDefaultField() {
         eventsCollector.default.reportEvent("index", "add-field");
         this.editedIndex().addDefaultField();
-        this.setupDisableReasons();
+        this.initFieldTooltips();
     }
 
     addConfigurationOption() {
@@ -941,6 +941,40 @@ class editIndex extends viewModelBase {
         if (assemblyItemToUpdate.addNamespaceToUsings(namespaceToAdd)) {
             $(".usings .collection-list li").first().addClass("blink-style");
         }
+    }
+
+    private initFieldTooltips() {
+        this.setupDisableReasons();
+
+        popoverUtils.longWithHover($(".store-field-info"),
+            {
+                content: `
+                         <ul class="padding padding-xs margin-top-xs margin-left margin-bottom-xs">
+                             <li class="margin-bottom"><small>
+                                 <strong>Storing the field is Not necessary</strong> in order to filter by the field when querying the index.<br>
+                                 Full-text search is also available without storing the field.</small>
+                             </li>
+                             <li class="margin-bottom"><small>
+                                 <div class="margin-bottom"><strong>Only Store the field when</strong> you want to compute a value during indexing<br>
+                                 and use it in your projection at query time.</div>
+                                 Disadvantage:
+                                 <ul>
+                                     <li>Index size on disk will increase (the field value is stored in the index).</li>
+                                 </ul>
+                                 Advantage:
+                                 <ul>
+                                     <li>The value is fetched directly from the index (instead of from the document store).</li>
+                                 </ul></small>
+                             </li>
+                         </ul>
+                         <small class="margin-left">
+                             <a target="_blank" href="https://ravendb.net/l/GHX7NJ/${viewModelBase.clientVersion()}">
+                                 <i class="icon-link"></i><span>Store tutorial</span>
+                             </a>
+                         </small>
+                         `,
+                html: true
+            });
     }
 }
 

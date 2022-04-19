@@ -9,7 +9,7 @@ class confirmationDialog extends dialogViewModelBase {
 
     view = require("views/common/confirmationDialog.html");
     
-    constructor(private confirmationMessageAsHtml: string, private title: string, private options: string[]) {
+    constructor(private confirmationMessageAsHtml: string, private title: string, private buttonOptions: string[], private wideDialog: boolean) {
         super();
     }
 

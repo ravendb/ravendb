@@ -107,7 +107,7 @@ loadToOrders(partitionBy(key),
                 },
                 MentorNode = mentorTag
             };
-            var task = AddEtl(store,
+            var task = AddOlapEtl(store,
                 configuration,
                 new OlapConnectionString
                 {
@@ -174,7 +174,7 @@ loadToOrders(partitionBy(key),
             return mre;
         }
 
-        private static AddEtlOperationResult AddEtl(IDocumentStore src, OlapEtlConfiguration configuration, OlapConnectionString connectionString)
+        internal static AddEtlOperationResult AddOlapEtl(IDocumentStore src, OlapEtlConfiguration configuration, OlapConnectionString connectionString)
         {
             var putResult = src.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
             Assert.NotNull(putResult.RaftCommandIndex);

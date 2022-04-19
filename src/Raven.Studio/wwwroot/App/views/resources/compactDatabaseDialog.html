@@ -49,10 +49,13 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="text-left margin-left text-warning bg-warning padding padding-xs margin-right">
-                    <i class="icon-warning"></i>
-                    <span data-bind="visible: numberOfNodes() === 1">During compaction the database will be offline</span>
-                    <span data-bind="visible: numberOfNodes() > 1, text: 'During compaction the database will be offline on this node - ' + currentNodeTag()"></span>
+                <div class="text-left margin-left text-warning bg-warning padding padding-sm margin-right margin-top margin-bottom flex-horizontal">
+                    <div class="flex-start"><small><i class="icon-warning"></i></small></div>
+                    <div>
+                        <small data-bind="visible: numberOfNodes() > 1">During <strong>compaction</strong> the database will be offline.</small>
+                        <small data-bind="visible: numberOfNodes() === 1, html: 'During <strong>compaction</strong> the database will be offline on this node - ' + currentNodeTag()"></small>
+                        <div><small>Existing documents will be <strong>compressed</strong> only if 'Document Compression' is set for the related collection.</small></div>
+                    </div>
                 </div>
                 <div class="padding text-right">
                     <button data-dismiss="modal" class="btn btn-default">
