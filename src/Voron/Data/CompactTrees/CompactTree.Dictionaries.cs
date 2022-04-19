@@ -98,7 +98,7 @@ unsafe partial class CompactTree
 
     public struct RandomBranchDictionaryKeyScanner : IReadOnlySpanEnumerator
     {
-        private readonly int _samples;        
+        private readonly long _samples;        
         private readonly Random _generator;
         private readonly CompactTree _tree;
         private int _currentSample;
@@ -106,7 +106,7 @@ unsafe partial class CompactTree
         private IteratorCursorState _cursor;
         private HashSet<long> _pagesSeen;
 
-        public RandomBranchDictionaryKeyScanner(CompactTree tree, int samples, int seed = 0)
+        public RandomBranchDictionaryKeyScanner(CompactTree tree, long samples, int seed = 0)
         {
             _tree = tree;
             _samples = samples;
@@ -206,13 +206,24 @@ unsafe partial class CompactTree
         }
     }
 
+    public bool ShouldImproveDictionary()
+    {
+        if (_llt.Flags != TransactionFlags.ReadWrite)
+            return false;
+
+        if (_state.NextTrainAt > _state.NumberOfEntries)
+            return false;
+
+        return true;
+    }
+
     public bool TryImproveDictionary<TKeyScanner, TKeyVerifier>( TKeyScanner trainer, TKeyVerifier tester, bool force = false )
         where TKeyScanner : struct, IReadOnlySpanEnumerator
         where TKeyVerifier : struct, IReadOnlySpanEnumerator
     {
         Debug.Assert(_llt.Flags == TransactionFlags.ReadWrite);
 
-        if (force == false && _state.NextTrainAt > _state.NumberOfEntries)
+        if (force == false && !ShouldImproveDictionary())
             return false;
 
         // We will try to improve the dictionary by scanning the whole tree over a maximum budget.    
@@ -243,11 +254,11 @@ unsafe partial class CompactTree
     /// We will try to improve the dictionary by sampling from the tree. This may be less costly but at the same time
     /// it could be less effective. 
     /// </summary>
-    public bool TryImproveDictionaryByRandomlyScanning(int samples, int seed = 0, bool force = false)
+    public bool TryImproveDictionaryByRandomlyScanning(long samples, int seed = 0, bool force = false)
     {
         return TryImproveDictionary(
-            new RandomDictionaryKeyScanner(this, samples, seed), 
-            new RandomDictionaryKeyScanner(this, samples, seed), 
+            new RandomBranchDictionaryKeyScanner(this, samples, seed), 
+            new RandomBranchDictionaryKeyScanner(this, samples, seed), 
             force);
     }
 }
