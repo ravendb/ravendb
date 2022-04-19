@@ -229,7 +229,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenWriteTransaction())
             {
                 attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, stream, attachmentStream.Stream, Database.DatabaseShutdown);
                 await attachmentStream.Stream.FlushAsync();
