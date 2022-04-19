@@ -163,8 +163,8 @@ public static class CoraxQueryBuilder
 
                     IQueryMatch HandleStringUnaryMatch()
                     {
-                        var valueAsString = QueryBuilderHelper.GetValueAsString(value);
-
+                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+                        
                         if (exact && metadata.IsDynamic)
                         {
                             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
@@ -308,8 +308,8 @@ public static class CoraxQueryBuilder
         IQueryMatch HandleStringBetween()
         {
             exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
-            var valueFirstAsString = QueryBuilderHelper.GetValueAsString(valueFirst);
-            var valueSecondAsString = QueryBuilderHelper.GetValueAsString(valueSecond);
+            var valueFirstAsString = QueryBuilderHelper.CoraxGetValueAsString(valueFirst);
+            var valueSecondAsString = QueryBuilderHelper.CoraxGetValueAsString(valueSecond);
             return indexSearcher.Between(indexSearcher.AllEntries(), fieldId, valueFirstAsString, valueSecondAsString, isNegated, take);
         }
     }
@@ -335,7 +335,7 @@ public static class CoraxQueryBuilder
         if (valueType != ValueTokenType.String)
             QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
-        var valueAsString = QueryBuilderHelper.GetValueAsString(value);
+        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
 
         if (exact && metadata.IsDynamic)
@@ -357,7 +357,7 @@ public static class CoraxQueryBuilder
         if (valueType != ValueTokenType.String)
             QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
-        var valueAsString = QueryBuilderHelper.GetValueAsString(value);
+        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
 
         if (exact && metadata.IsDynamic)
@@ -452,7 +452,7 @@ public static class CoraxQueryBuilder
 
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
 
-        var valueAsString = QueryBuilderHelper.GetValueAsString(value);
+        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         if (proximity.HasValue)
         {
             throw new NotSupportedException($"{nameof(Corax)} doesn't support proximity over search() method");
