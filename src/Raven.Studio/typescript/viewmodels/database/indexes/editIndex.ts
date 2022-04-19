@@ -43,6 +43,7 @@ import IndexUtils from "../../../components/utils/IndexUtils";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import viewModelBase from "viewmodels/viewModelBase";
 
 class editIndex extends shardViewModelBase {
     

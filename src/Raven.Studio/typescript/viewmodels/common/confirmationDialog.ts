@@ -8,16 +8,19 @@ import dialog = require("plugins/dialog");
 class confirmationDialog extends dialogViewModelBase {
 
     view = require("views/common/confirmationDialog.html");
-    
-    public confirmationMessageAsHtml: string;
 
-    public title: string;
+    private confirmationMessageAsHtml: string;
 
-    public options: string[];
+    private title: string;
 
-    constructor(private confirmationMessageAsHtml: string, private title: string, private buttonOptions: string[], private wideDialog: boolean) {
+    private buttonOptions: string[];
+
+    private wideDialog: boolean;
+
+    constructor(confirmationMessageAsHtml: string, title: string, buttonOptions: string[], wideDialog: boolean) {
         super();
-        this.options = options;
+        this.wideDialog = wideDialog;
+        this.buttonOptions = buttonOptions;
         this.title = title;
         this.confirmationMessageAsHtml = confirmationMessageAsHtml;
     }
