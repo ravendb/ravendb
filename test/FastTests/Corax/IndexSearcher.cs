@@ -91,8 +91,8 @@ namespace FastTests.Corax
 
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
-        {        
-            const int bufferSize = 4096;                        
+        {
+            const int bufferSize = 4096;
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
 
             {
@@ -246,7 +246,7 @@ namespace FastTests.Corax
                 Assert.Equal(0, andMatch.Fill(ids));
             }
         }
-        
+
         [Fact]
         public void SingleAndNoDuplication()
         {
@@ -258,7 +258,7 @@ namespace FastTests.Corax
 
             {
                 using var searcher = new IndexSearcher(Env);
-                var match1 = searcher.InQuery("Content", new List<string>() {"road", "lake"});
+                var match1 = searcher.InQuery("Content", new List<string>() { "road", "lake" });
                 var match2 = searcher.ExistsQuery("Content");
                 var andMatch = searcher.And(in match1, in match2);
 
@@ -309,15 +309,15 @@ namespace FastTests.Corax
                 Assert.Equal(0, andMatch.Fill(ids));
             }
         }
-        
+
         [Fact]
         public void AllAndWithEmpty()
         {
-            var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry { Id = $"entry/{i}", Content = new string[] { "road", "lake", "mountain" }}).ToArray();
-            
+            var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry { Id = $"entry/{i}", Content = new string[] { "road", "lake", "mountain" } }).ToArray();
+
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, entries , CreateKnownFields(bsc));
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -586,7 +586,7 @@ namespace FastTests.Corax
                 Assert.Equal(3, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
             }
-        }        
+        }
 
         [Theory]
         [InlineData(new object[] { 300, 128 })]
@@ -914,8 +914,8 @@ namespace FastTests.Corax
 
                 int read = 0;
                 while ((read = match2.Fill(ids)) != 0)
-                while (--read >= 0)
-                    qids.Add(searcher.GetIdentityFor(ids[read]));
+                    while (--read >= 0)
+                        qids.Add(searcher.GetIdentityFor(ids[read]));
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
                 {
@@ -1069,7 +1069,7 @@ namespace FastTests.Corax
                 Assert.Equal(0, match.Fill(ids));
             }
         }
-        
+
         [Fact]
         public void SimpleWildcardStatement()
         {
@@ -1100,7 +1100,7 @@ namespace FastTests.Corax
                 Assert.Equal(1, match.Fill(ids));
                 Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
             }
-            
+
             {
                 var match = searcher.StartWithQuery("Content", "Run", true);
 
@@ -1108,7 +1108,7 @@ namespace FastTests.Corax
                 Assert.Equal(1, match.Fill(ids));
                 Assert.Equal("entry/1", searcher.GetIdentityFor(ids[0]));
             }
-            
+
             {
                 var match = searcher.EndsWithQuery("Content", "ing", false);
 
@@ -1116,11 +1116,10 @@ namespace FastTests.Corax
                 Assert.Equal(2, match.Fill(ids));
                 var results = new string[] { searcher.GetIdentityFor(ids[0]), searcher.GetIdentityFor(ids[1]) };
                 Array.Sort(results);
-                Assert.Equal("entry/1",results[0]);
-                Assert.Equal("entry/2",results[1]);
-
+                Assert.Equal("entry/1", results[0]);
+                Assert.Equal("entry/2", results[1]);
             }
-            
+
             {
                 var match = searcher.EndsWithQuery("Content", "ing", true);
 
@@ -1128,7 +1127,7 @@ namespace FastTests.Corax
                 Assert.Equal(1, match.Fill(ids));
                 Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
             }
-            
+
             {
                 var match = searcher.ContainsQuery("Content", "Run");
 
@@ -1211,6 +1210,64 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
+        [Fact]
+        public void BetweenWithCustomComparers()
+        {
+            var entries = Enumerable.Range(0, 100).Select(i => new IndexSingleEntryDouble() { Id = $"entry{i}", Content = Convert.ToDouble(i) }).ToList();
+            IndexEntriesDouble(entries);
+            int? read;
+            using var searcher = new IndexSearcher(Env);
+            {
+                Span<long> ids = stackalloc long[128];
+                var match = searcher.Between(searcher.AllEntries(), ContentIndex, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual);
+                Assert.Equal(entries.Count(i => i.Content is >= 20 and <= 30), read = match.Fill(ids));
+                for (int i = 0; i < read; ++i)
+                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual);
+            }
+
+            {
+                Span<long> ids = stackalloc long[128];
+                var match = searcher.Between(searcher.AllEntries(), ContentIndex, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual);
+                Assert.Equal(entries.Count(i => i.Content is > 20 and <= 30), read = match.Fill(ids));
+                for (int i = 0; i < read; ++i)
+                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual);
+            }
+
+            {
+                Span<long> ids = stackalloc long[128];
+                var match = searcher.Between(searcher.AllEntries(), ContentIndex, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan);
+                Assert.Equal(entries.Count(i => i.Content is >= 20 and < 30), read = match.Fill(ids));
+                for (int i = 0; i < read; ++i)
+                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan);
+            }
+
+            {
+                Span<long> ids = stackalloc long[128];
+                var match = searcher.Between(searcher.AllEntries(), ContentIndex, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan);
+                Assert.Equal(entries.Count(i => i.Content is > 20 and < 30), read = match.Fill(ids));
+                for (int i = 0; i < read; ++i)
+                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan);
+            }
+
+            void Check(long id, long left, long right, UnaryMatchOperation leftComparer, UnaryMatchOperation rightComparer)
+            {
+                var entry = searcher.GetReaderFor(id);
+                Assert.True(entry.Read(ContentIndex, out _, out long number));
+                Assert.True(PerformUnaryMatch(number));
+
+
+                bool PerformUnaryMatch(long value) =>
+                    (leftComparer, rightComparer) switch
+                    {
+                        (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => value >= left && right >= value,
+                        (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => value > left && right >= value,
+                        (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => value >= left && right > value,
+                        (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => value > left && right > value,
+                        _ => throw new NotSupportedException()
+                    };
             }
         }
 
@@ -1382,8 +1439,8 @@ namespace FastTests.Corax
 
             var analyzer = Analyzer.Create<WhitespaceTokenizer, LowerCaseTransformer>();
             var mapping = new IndexFieldsMapping(ctx)
-                                .AddBinding(IdIndex, idSlice, analyzer)
-                                .AddBinding(ContentIndex, contentSlice, analyzer);
+                .AddBinding(IdIndex, idSlice, analyzer)
+                .AddBinding(ContentIndex, contentSlice, analyzer);
 
             IndexEntries(ctx, entriesToIndex, mapping);
 
@@ -1487,13 +1544,13 @@ namespace FastTests.Corax
             finally
             {
                 ArrayPool<long>.Shared.Return(ids);
-            }        
+            }
         }
 
         [RavenFact(RavenTestCategory.Corax)]
         public void NotInTest()
         {
-            var listToIndex = Enumerable.Range(000000, 1000).Select(i => new IndexSingleEntry {Id = $"entry/{i}", Content = i.ToString("000000")}).ToList();
+            var listToIndex = Enumerable.Range(000000, 1000).Select(i => new IndexSingleEntry { Id = $"entry/{i}", Content = i.ToString("000000") }).ToList();
             var listForNotIn = listToIndex.Where(p => p.Content.EndsWith("1")).ToList();
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, listToIndex, CreateKnownFields(bsc));
@@ -1507,24 +1564,20 @@ namespace FastTests.Corax
                 var match = searcher.AndNot(searcher.AllEntries(), searcher.InQuery("Content", listForNotIn.Select(l => l.Content).ToList(), ContentIndex));
                 Assert.Equal(1000 - listForNotIn.Count(), match.Fill(ids));
             }
-            
-            
-            
         }
-        
+
         [RavenFact(RavenTestCategory.Corax)]
         public void SimpleAndNot()
         {
             var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "Testing" };
             var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "Running" };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "Runner" };
-            var list = new[] {entry1, entry2, entry3};
+            var list = new[] { entry1, entry2, entry3 };
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, list, CreateKnownFields(bsc));
-            
-            
-            
+
+
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
@@ -1539,7 +1592,6 @@ namespace FastTests.Corax
                 var item = searcher.GetReaderFor(ids[0]);
                 item.Read(IdIndex, out Span<byte> value);
                 Assert.Equal("entry/1", Encodings.Utf8.GetString(value));
-
             }
 
             {
@@ -1561,8 +1613,6 @@ namespace FastTests.Corax
                     Assert.False(uniqueList.Contains(ids[i]));
                     uniqueList.Add(ids[i]);
                 }
-                
-                
             }
         }
 
@@ -1590,7 +1640,6 @@ namespace FastTests.Corax
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
             using var searcher = new IndexSearcher(Env);
-
         }
 
         [RavenFact(RavenTestCategory.Corax)]
@@ -1632,8 +1681,7 @@ namespace FastTests.Corax
                 {
                     read = andNotMatch.Fill(ids);
                     counter += read;
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(0, counter);
             }
@@ -1648,8 +1696,7 @@ namespace FastTests.Corax
                 {
                     read = andNotMatch.Fill(ids);
                     counter += read;
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(entries.Count, counter);
             }
@@ -1671,9 +1718,7 @@ namespace FastTests.Corax
                         Assert.False(id.StartsWith("entry/00"));
                         entriesLookup.Add(id);
                     }
-
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(total - startWith, entriesLookup.Count);
             }
@@ -1696,8 +1741,7 @@ namespace FastTests.Corax
                         Assert.False(id.StartsWith("entry/00"));
                         entriesLookup.Add(id);
                     }
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(total - startWith, entriesLookup.Count);
             }
@@ -1717,7 +1761,7 @@ namespace FastTests.Corax
                 if (content.StartsWith("00"))
                     startWith++;
             }
-                
+
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entries, CreateKnownFields(bsc));
@@ -1739,8 +1783,7 @@ namespace FastTests.Corax
                 {
                     read = andNotMatch.Fill(ids);
                     counter += read;
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(0, counter);
             }
@@ -1755,8 +1798,7 @@ namespace FastTests.Corax
                 {
                     read = andNotMatch.Fill(ids);
                     counter += read;
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(entries.Count, counter);
             }
@@ -1778,9 +1820,7 @@ namespace FastTests.Corax
                         Assert.False(id.StartsWith("entry/00"));
                         entriesLookup.Add(id);
                     }
-
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(total - startWith, entriesLookup.Count);
             }
@@ -1803,8 +1843,7 @@ namespace FastTests.Corax
                         Assert.False(id.StartsWith("entry/00"));
                         entriesLookup.Add(id);
                     }
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(total - startWith, entriesLookup.Count);
             }
@@ -1878,7 +1917,8 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[256];
                 var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
                 Assert.Equal(7, orResult.Fill(ids));
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a).SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
+                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a)
+                    .SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
             }
 
             {
@@ -1886,7 +1926,8 @@ namespace FastTests.Corax
                 var startsWith = searcher.StartWithQuery("Id", "e");
                 Assert.Equal(7, startsWith.Fill(ids));
 
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a).SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
+                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a)
+                    .SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
             }
 
             {
@@ -1895,9 +1936,9 @@ namespace FastTests.Corax
                 var m2 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, three, UnaryMatchOperation.NotEquals);
                 var m3 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, five, UnaryMatchOperation.NotEquals);
                 var m4 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, seven, UnaryMatchOperation.NotEquals);
-                
+
                 var result = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0)))));
-                
+
                 Span<long> ids = stackalloc long[256];
                 var amount = result.Fill(ids.Slice(14));
                 var idsOfResult = ids.Slice(14, amount).ToArray().Select(x => searcher.GetIdentityFor(x)).ToList();
@@ -1921,17 +1962,11 @@ namespace FastTests.Corax
         {
             var words = new[]
             {
-                "torun", "pomorze", "maciej", "aszyk", "corax", "matt", "gracjan", "tomasz", "marcin", "tomtom",
-                "ravendb", "poland", "israel", "pattern", "seen", "macios", "tests", "are", "cool", "arent", "they",
-                "this", "should", "work", "every", "time"
+                "torun", "pomorze", "maciej", "aszyk", "corax", "matt", "gracjan", "tomasz", "marcin", "tomtom", "ravendb", "poland", "israel", "pattern", "seen",
+                "macios", "tests", "are", "cool", "arent", "they", "this", "should", "work", "every", "time"
             };
             var random = new Random(1000);
-            var entries = Enumerable.Range(0, setSize).Select(i => new IndexEntry()
-            {
-                Id = $"entry/{i}",
-                Content = GetContent()
-
-            }).ToList();
+            var entries = Enumerable.Range(0, setSize).Select(i => new IndexEntry() { Id = $"entry/{i}", Content = GetContent() }).ToList();
 
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
@@ -2008,16 +2043,17 @@ namespace FastTests.Corax
                 entries.Add(entry);
                 entriesToIndex[i] = entry;
             }
+
             IndexEntries(Allocator, entries.ToArray(), CreateKnownFields(Allocator));
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             Slice.From(bsc, "1", out var one);
             Slice.From(bsc, "2", out var two);
-            
+
             using var searcher = new IndexSearcher(Env);
             {
                 var notOne = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);
-              //  var notTwo = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
+                //  var notTwo = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("1") == false);
                 var result = notOne.Fill(ids);
@@ -2026,6 +2062,7 @@ namespace FastTests.Corax
                 {
                     xd.Add(searcher.GetIdentityFor(id));
                 }
+
                 Assert.Equal(3, result);
             }
             {
@@ -2038,11 +2075,10 @@ namespace FastTests.Corax
                 {
                     xd.Add(searcher.GetIdentityFor(id));
                 }
-                
-                
+
+
                 Assert.Equal(expected, result);
             }
-            
         }
     }
 }

@@ -11,10 +11,12 @@ namespace Corax.Queries
     unsafe partial struct UnaryMatch<TInner, TValueType>
     {
         [SkipLocalsInit]
-        private static int FillFuncBetweenSequence(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        private static int FillFuncBetweenSequence<TLeftSideComparer, TRightSideComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+            where TLeftSideComparer : IUnaryMatchComparer
+            where TRightSideComparer : IUnaryMatchComparer
         {
-            GreaterThanOrEqualMatchComparer greaterThan = default;
-            LessThanOrEqualMatchComparer lessThan = default;
+            TLeftSideComparer leftSideComparer = default;
+            TRightSideComparer rightSideComparer = default;
 
             var currentType1 = ((Slice)(object)match._value).AsReadOnlySpan();
             var currentType2 = ((Slice)(object)match._valueAux).AsReadOnlySpan();
@@ -36,7 +38,7 @@ namespace Corax.Queries
                 {
                     var reader = searcher.GetReaderFor(currentMatches[i]);
                     var read = reader.Read(match._fieldId, out var resultX);
-                    if (read && greaterThan.Compare(currentType1, resultX) && lessThan.Compare(currentType2, resultX))
+                    if (read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX))
                     {
                         // We found a match.
                         currentMatches[currentIdx] = currentMatches[storeIdx];
@@ -56,10 +58,12 @@ namespace Corax.Queries
         }
 
         [SkipLocalsInit]
-        private static int FillFuncBetweenNumerical(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        private static int FillFuncBetweenNumerical<TLeftSideComparer, TRightSideComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+            where TLeftSideComparer : IUnaryMatchComparer
+            where TRightSideComparer : IUnaryMatchComparer
         {
-            GreaterThanOrEqualMatchComparer greaterThan = default;
-            LessThanOrEqualMatchComparer lessThan = default;
+            TLeftSideComparer leftSideComparer = default;
+            TRightSideComparer rightSideComparer = default;
 
             var currentType1 = match._value;
             var currentType2 = match._valueAux;
@@ -85,13 +89,13 @@ namespace Corax.Queries
                     {
                         var read = reader.Read<long>(match._fieldId, out var rx);
                         if (read)
-                            isMatch = greaterThan.Compare((long)(object)currentType1, rx) && lessThan.Compare((long)(object)currentType2, rx);
+                            isMatch = leftSideComparer!.Compare((long)(object)currentType1, rx) && rightSideComparer!.Compare((long)(object)currentType2, rx);
                     }
                     else if (typeof(TValueType) == typeof(double))
                     {
                         var read = reader.Read<double>(match._fieldId, out var rx);
                         if (read)
-                            isMatch = greaterThan.Compare((double)(object)currentType1, rx) && lessThan.Compare((double)(object)currentType2, rx);
+                            isMatch = leftSideComparer!.Compare((double)(object)currentType1, rx) && rightSideComparer!.Compare((double)(object)currentType2, rx);
                     }
 
                     if (isMatch)
@@ -111,7 +115,9 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldBetweenMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value1, TValueType value2, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldBetweenMatch<TLeftSideComparer, TRightSideComparer>(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value1, TValueType value2, int take = -1)
+            where TLeftSideComparer : IUnaryMatchComparer
+            where TRightSideComparer : IUnaryMatchComparer
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -127,7 +133,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.Between, 
                     searcher, fieldId, value1, value2, 
-                    &FillFuncBetweenSequence, &AndWith, 
+                    &FillFuncBetweenSequence<TLeftSideComparer, TRightSideComparer>, &AndWith, 
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
             }
             else if (typeof(TValueType) == typeof(long))
@@ -144,7 +150,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.Between, 
                     searcher, fieldId, value1, value2, 
-                    &FillFuncBetweenNumerical, &AndWith, 
+                    &FillFuncBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
             }
             else
@@ -160,16 +166,19 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
-                    &FillFuncBetweenNumerical, &AndWith, 
+                    &FillFuncBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
             }
         }
 
         [SkipLocalsInit]
-        private static int FillFuncNotBetweenSequence(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        private static int FillFuncNotBetweenSequence<TLeftSideComparer, TRightSideComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        where TLeftSideComparer : IUnaryMatchComparer
+        where TRightSideComparer : IUnaryMatchComparer
+        
         {
-            GreaterThanOrEqualMatchComparer greaterThan = default;
-            LessThanOrEqualMatchComparer lessThan = default;
+            TLeftSideComparer leftSideComparer = default;
+            TRightSideComparer rightSideComparer = default;
 
             var currentType1 = ((Slice)(object)match._value).AsReadOnlySpan();
             var currentType2 = ((Slice)(object)match._valueAux).AsReadOnlySpan();
@@ -191,7 +200,7 @@ namespace Corax.Queries
                 {
                     var reader = searcher.GetReaderFor(currentMatches[i]);
                     var read = reader.Read(match._fieldId, out var resultX);
-                    if ((read && greaterThan.Compare(currentType1, resultX) && lessThan.Compare(currentType2, resultX)) == false)
+                    if ((read && leftSideComparer!.Compare(currentType1, resultX) && rightSideComparer!.Compare(currentType2, resultX)) == false)
                     {
                         // We found a match.
                         currentMatches[currentIdx] = currentMatches[storeIdx];
@@ -211,10 +220,12 @@ namespace Corax.Queries
         }
 
         [SkipLocalsInit]
-        private static int FillFuncNotBetweenNumerical(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        private static int FillFuncNotBetweenNumerical<TLeftSideComparer, TRightSideComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+            where TLeftSideComparer : IUnaryMatchComparer
+            where TRightSideComparer : IUnaryMatchComparer
         {
-            GreaterThanOrEqualMatchComparer greaterThan = default;
-            LessThanOrEqualMatchComparer lessThan = default;
+            TLeftSideComparer leftSideComparer = default;
+            TRightSideComparer rightSideComparer = default;
 
             var currentType1 = match._value;
             var currentType2 = match._valueAux;
@@ -240,13 +251,13 @@ namespace Corax.Queries
                     {
                         var read = reader.Read<long>(match._fieldId, out var rx);
                         if (read)
-                            isMatch = greaterThan.Compare((long)(object)currentType1, rx) && lessThan.Compare((long)(object)currentType2, rx);
+                            isMatch = leftSideComparer!.Compare((long)(object)currentType1, rx) && rightSideComparer!.Compare((long)(object)currentType2, rx);
                     }
                     else if (typeof(TValueType) == typeof(double))
                     {
                         var read = reader.Read<double>(match._fieldId, out var rx);
                         if (read)
-                            isMatch = greaterThan.Compare((double)(object)currentType1, rx) && lessThan.Compare((double)(object)currentType2, rx);
+                            isMatch = leftSideComparer!.Compare((double)(object)currentType1, rx) && rightSideComparer!.Compare((double)(object)currentType2, rx);
                     }
 
                     if (isMatch == false)
@@ -267,7 +278,9 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldNotBetweenMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value1, TValueType value2, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldNotBetweenMatch<TLeftSideComparer, TRightSideComparer>(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value1, TValueType value2, int take = -1)
+            where TLeftSideComparer : IUnaryMatchComparer
+            where TRightSideComparer : IUnaryMatchComparer
         {
             if (typeof(TValueType) == typeof(Slice))
             {
@@ -283,7 +296,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
-                    &FillFuncNotBetweenSequence, &AndWith, 
+                    &FillFuncNotBetweenSequence<TLeftSideComparer, TRightSideComparer>, &AndWith, 
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
             }
             else if (typeof(TValueType) == typeof(long))
@@ -300,7 +313,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
-                    &FillFuncNotBetweenNumerical, &AndWith, 
+                    &FillFuncNotBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
             }
             else
@@ -316,7 +329,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
-                    &FillFuncNotBetweenNumerical, &AndWith, 
+                    &FillFuncNotBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
             }
         }

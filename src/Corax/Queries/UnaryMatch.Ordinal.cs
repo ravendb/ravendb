@@ -9,7 +9,7 @@ namespace Corax.Queries
 {
     unsafe partial struct UnaryMatch<TInner, TValueType>
     {
-        private interface IUnaryMatchComparer
+        public interface IUnaryMatchComparer
         {
             bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy);
             bool Compare<T>(T sx, T sy) where T : unmanaged;
@@ -317,7 +317,7 @@ namespace Corax.Queries
             }
         }
 
-        private struct GreaterThanMatchComparer : IUnaryMatchComparer
+        internal struct GreaterThanMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -337,7 +337,7 @@ namespace Corax.Queries
             }
         }
 
-        private struct GreaterThanOrEqualMatchComparer : IUnaryMatchComparer
+        internal struct GreaterThanOrEqualMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -357,7 +357,7 @@ namespace Corax.Queries
             }
         }
 
-        private struct LessThanMatchComparer : IUnaryMatchComparer
+        internal struct LessThanMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -377,7 +377,7 @@ namespace Corax.Queries
             }
         }
 
-        private struct LessThanOrEqualMatchComparer : IUnaryMatchComparer
+        internal struct LessThanOrEqualMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -397,7 +397,7 @@ namespace Corax.Queries
             }
         }
 
-        private struct NotEqualsMatchComparer : IUnaryMatchComparer
+        internal struct NotEqualsMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
@@ -417,7 +417,7 @@ namespace Corax.Queries
             }
         }
 
-        private struct EqualsMatchComparer : IUnaryMatchComparer
+        internal struct EqualsMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
