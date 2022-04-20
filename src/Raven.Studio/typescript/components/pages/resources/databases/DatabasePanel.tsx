@@ -17,7 +17,6 @@ interface DatabasePanelProps {
     toggleSelection: () => void;
 }
 
-
 function badgeClass(db: DatabaseSharedInfo) {
     /* TODO
      if (this.hasLoadError()) {
@@ -52,17 +51,15 @@ function badgeText(db: DatabaseSharedInfo) {
             }
             return "Offline";
      */
-    
+
     return "Online";
 }
 
 function deleteDatabases(toDelete: databaseInfo[]) {
     const confirmDeleteViewModel = new deleteDatabaseConfirm(toDelete);
-    confirmDeleteViewModel
-        .result
-        .done((confirmResult: deleteDatabaseConfirmResult) => {
-            if (confirmResult.can) {
-                /* TODO:
+    confirmDeleteViewModel.result.done((confirmResult: deleteDatabaseConfirmResult) => {
+        if (confirmResult.can) {
+            /* TODO:
                 const dbsList = toDelete.map(x => {
                     //TODO: x.isBeingDeleted(true);
                     const asDatabase = x.asDatabase();
@@ -73,10 +70,12 @@ function deleteDatabases(toDelete: databaseInfo[]) {
                     return asDatabase;
                 });*/
 
-                new deleteDatabaseCommand(toDelete.map(x => x.name), !confirmResult.keepFiles)
-                    .execute();
-            }
-        });
+            new deleteDatabaseCommand(
+                toDelete.map((x) => x.name),
+                !confirmResult.keepFiles
+            ).execute();
+        }
+    });
 
     app.showBootstrapDialog(confirmDeleteViewModel);
 }
@@ -87,67 +86,92 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const { appUrl } = useAppUrls();
     const eventsCollector = useEventsCollector();
     const { databasesService } = useServices();
-    
+
     const [lockChanges, setLockChanges] = useState(false);
-    
+
     const documentsUrl = appUrl.forDocuments(null, db.name);
     const manageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
-    
-    //TODO: 
-    const deleteDatabase = useCallback(() => deleteDatabases([{
-        name: db.name,
-        isEncrypted: () => db.encrypted
-    } as any]), [db]);
-    
-    const updateDatabaseLockMode = useCallback(async (db: DatabaseSharedInfo, lockMode: DatabaseLockMode) => {
-        if (db.lockMode === lockMode) {
-            return;
-        }
-        
-        setLockChanges(true);
-        try {
-            await databasesService.setLockMode(db, lockMode);
-        } finally {
-            setLockChanges(false);
-        }
-    }, [db]);
-    
-    const allowDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(async (e) => {
-        e.preventDefault();
 
-        eventsCollector.reportEvent("databases", "set-lock-mode", "Unlock");
-        await updateDatabaseLockMode(db, "Unlock");
-    }, [db]);
-    
-    const preventDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(async (e) => {
-        e.preventDefault();
+    //TODO:
+    const deleteDatabase = useCallback(
+        () =>
+            deleteDatabases([
+                {
+                    name: db.name,
+                    isEncrypted: () => db.encrypted,
+                } as any,
+            ]),
+        [db]
+    );
 
-        eventsCollector.reportEvent("databases", "set-lock-mode", "LockedIgnore");
-        await updateDatabaseLockMode(db, "PreventDeletesIgnore");
-    }, [db]);
-    
-    const preventDatabaseDeleteWithError: MouseEventHandler<HTMLElement> = useCallback(async (e) => {
-        e.preventDefault();
+    const updateDatabaseLockMode = useCallback(
+        async (db: DatabaseSharedInfo, lockMode: DatabaseLockMode) => {
+            if (db.lockMode === lockMode) {
+                return;
+            }
 
-        eventsCollector.reportEvent("databases", "set-lock-mode", "LockedError");
-        await updateDatabaseLockMode(db, "PreventDeletesError");
-    }, [db]);
-    
-    
+            setLockChanges(true);
+            try {
+                await databasesService.setLockMode(db, lockMode);
+            } finally {
+                setLockChanges(false);
+            }
+        },
+        [db]
+    );
+
+    const allowDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(
+        async (e) => {
+            e.preventDefault();
+
+            eventsCollector.reportEvent("databases", "set-lock-mode", "Unlock");
+            await updateDatabaseLockMode(db, "Unlock");
+        },
+        [db]
+    );
+
+    const preventDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(
+        async (e) => {
+            e.preventDefault();
+
+            eventsCollector.reportEvent("databases", "set-lock-mode", "LockedIgnore");
+            await updateDatabaseLockMode(db, "PreventDeletesIgnore");
+        },
+        [db]
+    );
+
+    const preventDatabaseDeleteWithError: MouseEventHandler<HTMLElement> = useCallback(
+        async (e) => {
+            e.preventDefault();
+
+            eventsCollector.reportEvent("databases", "set-lock-mode", "LockedError");
+            await updateDatabaseLockMode(db, "PreventDeletesError");
+        },
+        [db]
+    );
+
     //TODO: createIsLocalDatabaseObservable -> relevant
     return (
-        <div className={classNames("panel panel-hover panel-state database-item", badgeClass(db), { active: activeDatabase?.name === db.name, relevant: true })} 
-             data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), 
-                           ) }">
-            <div className={classNames("state", badgeClass(db))} data-state-text={badgeText(db)}
-    data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', 
-    class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"/>
+        <div
+            className={classNames("panel panel-hover panel-state database-item", badgeClass(db), {
+                active: activeDatabase?.name === db.name,
+                relevant: true,
+            })}
+            data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), 
+                           ) }"
+        >
+            <div
+                className={classNames("state", badgeClass(db))}
+                data-state-text={badgeText(db)}
+                data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', 
+    class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"
+            />
             <div className="padding">
                 <div className="database-header">
                     <div className="info-container flex-horizontal">
                         <div className="checkbox">
                             <input type="checkbox" className="styled" checked={selected} onChange={toggleSelection} />
-                            <label/>
+                            <label />
                         </div>
                         <div className="name">
                             {/* TODO <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
@@ -155,59 +179,72 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }" /></small>
                                 <span>{db.name}</span>
                             </span>*/}
-                            <a data-bind="attr: {  target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' },
+                            <a
+                                data-bind="attr: {  target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' },
                                               css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()"
-                               href={documentsUrl} title={db.name}>
-                                <small><i className="icon-database-home"
-                                    data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }" /></small>
+                                href={documentsUrl}
+                                title={db.name}
+                            >
+                                <small>
+                                    <i
+                                        className="icon-database-home"
+                                        data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"
+                                    />
+                                </small>
                                 <span>{db.name}</span>
                             </a>
-                            { db.sharded && (
-                                <span className="text-muted margin-left margin-left-sm">(sharded)</span>
-                            )}
+                            {db.sharded && <span className="text-muted margin-left margin-left-sm">(sharded)</span>}
                         </div>
                         <div className="member">
-                            { /* ko foreach: _.slice(nodes(), 0, 5) */ }
-                            <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank',
+                            {/* ko foreach: _.slice(nodes(), 0, 5) */}
+                            <a
+                                data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank',
                                                       title: 'Click to navigate to this database on node ' + tag() },
-                                              css: { 'link-disabled': $parent.isBeingDeleted }">
-                                <small><i data-bind="attr: { class: cssIcon }" /><span
-                                    data-bind="text: 'Node ' + tag()" /></small>
+                                              css: { 'link-disabled': $parent.isBeingDeleted }"
+                            >
+                                <small>
+                                    <i data-bind="attr: { class: cssIcon }" />
+                                    <span data-bind="text: 'Node ' + tag()" />
+                                </small>
                             </a>
-                            { /* /ko --> */ }
-                            
-                            { /* TODO: <!-- ko foreach: deletionInProgress -->
+                            {/* /ko --> */}
+
+                            {/* TODO: <!-- ko foreach: deletionInProgress -->
                             <div>
                                 <div title="Deletion in progress" className="text-warning pulse">
                                     <small><i className="icon-trash" /><span data-bind="text: 'Node ' + $data" /></small>
                                 </div>
                             </div>
-                            <!-- /ko -->*/ }
+                            <!-- /ko -->*/}
 
-                            { /* TODO
+                            {/* TODO
                             <div data-bind="visible: nodes().length > 5">
                                 <a href="#" data-bind="attr: { href: $root.createManageDbGroupUrlObsevable($data) }"
                                    data-toggle="more-nodes-tooltip">
                                     <small><i className="icon-dbgroup"/><span>+<span
     data-bind="text: nodes().length - 5"/> more</span></small>
                                 </a>
-                            </div> */ }
+                            </div> */}
                         </div>
                     </div>
                     <div className="actions-container flex-grow">
-                        { /* TODO
+                        {/* TODO
                         <span data-bind="visible: isLoading">
                             <span className="global-spinner spinner-sm"/>&nbsp;&nbsp;&nbsp;&nbsp;
                         </span>
                         */}
                         <div className="actions">
-                            <a className="btn btn-default" href={manageGroupUrl} title="Manage the Database Group"
-                               data-bind="css: { 'disabled': !canNavigateToDatabase() || isBeingDeleted() }, 
-                                              attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }">
-                                <i className="icon-manage-dbgroup"/>
+                            <a
+                                className="btn btn-default"
+                                href={manageGroupUrl}
+                                title="Manage the Database Group"
+                                data-bind="css: { 'disabled': !canNavigateToDatabase() || isBeingDeleted() }, 
+                                              attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }"
+                            >
+                                <i className="icon-manage-dbgroup" />
                                 <span>Manage group</span>
                             </a>
-                            
+
                             {/* TODO <div className="btn-group">
                                 <button className="btn btn-default" data-bind="click: $root.toggleDatabase, visible: $root.accessManager.canDisableEnableDatabase,
                                                                     css: { 'btn-spinner': inProgressAction },
@@ -267,48 +304,67 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 <i className="icon-refresh-stats"/>
                             </button>*/}
                             <div className="btn-group" data-bind="visible: $root.accessManager.canDelete">
-                                <button type="button" onClick={deleteDatabase} 
-                                        title={db.lockMode === "Unlock" ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }
-                                        className={classNames("btn", { "btn-danger": db.lockMode === "Unlock", "btn-default": db.lockMode !== "Unlock", "btn-spinner": lockChanges })}
-                                        disabled={db.lockMode !== "Unlock"}
-                                        data-bind=" disable: isBeingDeleted() || lockMode() !== 'Unlock',
-                                                                   css: { 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }">
-                                    { db.lockMode === "Unlock" && (
-                                        <i className="icon-trash" />
-                                    )}
-                                    { db.lockMode === "PreventDeletesIgnore" && (
+                                <button
+                                    type="button"
+                                    onClick={deleteDatabase}
+                                    title={
+                                        db.lockMode === "Unlock"
+                                            ? "Remove database"
+                                            : "Database cannot be deleted because of the set lock mode"
+                                    }
+                                    className={classNames("btn", {
+                                        "btn-danger": db.lockMode === "Unlock",
+                                        "btn-default": db.lockMode !== "Unlock",
+                                        "btn-spinner": lockChanges,
+                                    })}
+                                    disabled={db.lockMode !== "Unlock"}
+                                    data-bind=" disable: isBeingDeleted() || lockMode() !== 'Unlock',
+                                                                   css: { 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }"
+                                >
+                                    {db.lockMode === "Unlock" && <i className="icon-trash" />}
+                                    {db.lockMode === "PreventDeletesIgnore" && (
                                         <i className="icon-trash-cutout icon-addon-cancel" />
                                     )}
-                                    { db.lockMode === "PreventDeletesError" && (
+                                    {db.lockMode === "PreventDeletesError" && (
                                         <i className="icon-trash-cutout icon-addon-exclamation" />
                                     )}
                                 </button>
-                                <button type="button" 
-                                        className={classNames("btn dropdown-toggle", { "btn-danger": db.lockMode === "Unlock", "btn-default": db.lockMode !== "Unlock" })} 
-                                        data-toggle="dropdown"
-                                        aria-haspopup="true">
-                                    <span className="caret"/>
+                                <button
+                                    type="button"
+                                    className={classNames("btn dropdown-toggle", {
+                                        "btn-danger": db.lockMode === "Unlock",
+                                        "btn-default": db.lockMode !== "Unlock",
+                                    })}
+                                    data-toggle="dropdown"
+                                    aria-haspopup="true"
+                                >
+                                    <span className="caret" />
                                     <span className="sr-only">Toggle Dropdown</span>
                                 </button>
                                 <ul className="dropdown-menu dropdown-menu-right">
                                     <li>
-                                        <a href="#" onClick={allowDatabaseDelete}
-                                           title="Allow to delete database">
-                                            <i className="icon-trash-cutout icon-addon-check"/> Allow database delete
+                                        <a href="#" onClick={allowDatabaseDelete} title="Allow to delete database">
+                                            <i className="icon-trash-cutout icon-addon-check" /> Allow database delete
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="#" onClick={preventDatabaseDelete}
-                                           title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database.">
+                                        <a
+                                            href="#"
+                                            onClick={preventDatabaseDelete}
+                                            title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
+                                        >
                                             <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database
                                             delete
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="#" onClick={preventDatabaseDeleteWithError}
-                                           title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database.">
-                                            <i className="icon-trash-cutout icon-addon-exclamation"/> Prevent
-                                            database delete (Error)
+                                        <a
+                                            href="#"
+                                            onClick={preventDatabaseDeleteWithError}
+                                            title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
+                                        >
+                                            <i className="icon-trash-cutout icon-addon-exclamation" /> Prevent database
+                                            delete (Error)
                                         </a>
                                     </li>
                                 </ul>
@@ -318,9 +374,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
                 </div>
             </div>
             <ValidDatabasePropertiesPanel db={db} />
-            
         </div>
-    )
+    );
 }
 
 interface ValidDatabasePropertiesPanelProps {
@@ -329,22 +384,24 @@ interface ValidDatabasePropertiesPanelProps {
 
 function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) {
     const { db } = props;
-    
+
     return (
-        <div className="panel-addon"
-             data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
+        <div
+            className="panel-addon"
+            data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)"
+        >
             <div className="padding">
                 <div className="addons-container flex-wrap">
                     <div className="database-properties">
                         <div className="encryption">
-                            { db.encrypted && (
+                            {db.encrypted && (
                                 <small title="This database is encrypted">
-                                    <i className="icon-key text-success"/>
+                                    <i className="icon-key text-success" />
                                 </small>
                             )}
-                            { !db.encrypted && (
+                            {!db.encrypted && (
                                 <small title="This database is not encrypted">
-                                    <i className="icon-unencrypted text-muted"/>
+                                    <i className="icon-unencrypted text-muted" />
                                 </small>
                             )}
                         </div>
@@ -456,7 +513,7 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
                 </div>
             </div>
         </div>
-    )
+    );
 }
 
 /* TODO

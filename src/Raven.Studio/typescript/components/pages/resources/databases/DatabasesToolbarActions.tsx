@@ -3,19 +3,18 @@ import { useAccessManager } from "../../../hooks/useAccessManager";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
 
-
 export function DatabasesToolbarActions() {
     const { isOperatorOrAbove } = useAccessManager();
     const canCreateNewDatabase = isOperatorOrAbove();
-    
+
     const newDatabase = useCallback(() => {
         const createDbView = new createDatabase("newDatabase");
         app.showBootstrapDialog(createDbView);
     }, []);
-    
+
     return (
         <div className="databasesToolbar-actions">
-            { /*
+            {/*
             <div className="btn-group-label"
                  data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete"
                  data-label="Selection" role="group">
@@ -83,13 +82,13 @@ export function DatabasesToolbarActions() {
                 </div>
             </div>
             */}
-            { canCreateNewDatabase && (
+            {canCreateNewDatabase && (
                 <div className="btn-group">
                     <button type="button" className="btn btn-primary" onClick={newDatabase}>
                         <i className="icon-new-database" />
                         <span>New database</span>
                     </button>
-                    { /* TODO
+                    {/* TODO
                 <button type="button" className="btn btn-primary dropdown-toggle" data-toggle="dropdown"
                         aria-haspopup="true" aria-expanded="false">
                     <span className="caret" />
@@ -107,10 +106,9 @@ export function DatabasesToolbarActions() {
                         </a>
                     </li>
                 </ul>
-                */ }
+                */}
                 </div>
             )}
-            
         </div>
-    )
+    );
 }

@@ -6,14 +6,11 @@ import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { DatabaseSharedInfo } from "../models/databases";
 
 export default class DatabasesService {
-    
     async getDatabases() {
-        return new getDatabasesCommand()
-            .execute();
+        return new getDatabasesCommand().execute();
     }
-    
+
     async setLockMode(db: DatabaseSharedInfo, newLockMode: DatabaseLockMode) {
-        return new saveDatabaseLockModeCommand([db], newLockMode)
-            .execute();
+        return new saveDatabaseLockModeCommand([db], newLockMode).execute();
     }
 }

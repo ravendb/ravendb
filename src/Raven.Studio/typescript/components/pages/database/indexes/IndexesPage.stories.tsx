@@ -10,26 +10,26 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 export default {
     title: "Indexes page",
     component: IndexesPage,
-    decorators: [withStorybookContexts]
+    decorators: [withStorybookContexts],
 } as ComponentMeta<typeof IndexesPage>;
 
 export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
-    
+
     accessManager.default.securityClearance("ClusterAdmin");
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
     const { indexesService } = mockServices;
-    
+
     indexesService.withGetSampleStats();
     indexesService.withGetProgress();
-    
+
     return (
         <div className="indexes content-margin no-transition absolute-fill">
-            <IndexesPage database={db}/>
+            <IndexesPage database={db} />
         </div>
     );
-}
+};
 
 export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedClusterDatabase();
@@ -44,10 +44,10 @@ export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
 
     return (
         <div className="indexes content-margin no-transition absolute-fill">
-            <IndexesPage database={db}/>
+            <IndexesPage database={db} />
         </div>
     );
-}
+};
 
 export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.shardedDatabase();
@@ -62,8 +62,7 @@ export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
 
     return (
         <div className="indexes content-margin no-transition absolute-fill">
-            <IndexesPage database={db}/>
+            <IndexesPage database={db} />
         </div>
     );
-}
-
+};

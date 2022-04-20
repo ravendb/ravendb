@@ -1,11 +1,13 @@
 import React from "react";
 import {
-    act, fireEvent,
+    act,
+    fireEvent,
     getQueriesForElement,
-    queries, render,
+    queries,
+    render,
     RenderOptions,
     screen,
-    cleanup
+    cleanup,
 } from "@testing-library/react";
 import { mockServices } from "./mocks/MockServices";
 import { Screen } from "@testing-library/dom/types/screen";
@@ -13,18 +15,21 @@ import { ServiceProvider } from "../components/hooks/useServices";
 import * as byNameQueries from "./byNameQueries";
 import * as byClassNameQueries from "./byClassNameQueries";
 
-function genericRtlRender(providers: () =>
-    (props: { children: any }) => JSX.Element, ui: React.ReactElement, options?: { disableWrappers?: boolean; } & Omit<RenderOptions, "queries">) {
-
+function genericRtlRender(
+    providers: () => (props: { children: any }) => JSX.Element,
+    ui: React.ReactElement,
+    options?: { disableWrappers?: boolean } & Omit<RenderOptions, "queries">
+) {
     const { disableWrappers, ...restOptions } = options || {};
     const allQueries = { ...queries, ...byNameQueries, ...byClassNameQueries };
     const container = render(ui, {
         wrapper: disableWrappers ? undefined : providers(),
-        queries: allQueries, ...restOptions
+        queries: allQueries,
+        ...restOptions,
     });
 
-    const getQueriesForElementFunc = (element: any) => getQueriesForElement(element, 
-        { ...queries, ...byNameQueries, ...byClassNameQueries });
+    const getQueriesForElementFunc = (element: any) =>
+        getQueriesForElement(element, { ...queries, ...byNameQueries, ...byClassNameQueries });
     const localScreen = getQueriesForElementFunc(document.body) as Screen<typeof allQueries>;
     localScreen.logTestingPlaygroundURL = screen.logTestingPlaygroundURL;
 
@@ -34,7 +39,7 @@ function genericRtlRender(providers: () =>
         fillInput,
         fireClick,
         cleanup,
-        getQueriesForElement: getQueriesForElementFunc
+        getQueriesForElement: getQueriesForElementFunc,
     };
 }
 
@@ -51,15 +56,16 @@ async function fillInput(element: HTMLElement, value: string) {
     });
 }
 
-const AllProviders = () => ({ children }: any) => {
-    return (
-        <ServiceProvider services={mockServices.context}>
-            {children}
-        </ServiceProvider>
-    );
-};
+const AllProviders =
+    () =>
+    ({ children }: any) => {
+        return <ServiceProvider services={mockServices.context}>{children}</ServiceProvider>;
+    };
 
-export function rtlRender(ui: React.ReactElement, options?: { disableWrappers?: boolean; initialUrl?: string } & Omit<RenderOptions, "queries">) {
+export function rtlRender(
+    ui: React.ReactElement,
+    options?: { disableWrappers?: boolean; initialUrl?: string } & Omit<RenderOptions, "queries">
+) {
     return genericRtlRender(AllProviders, ui, options);
 }
 

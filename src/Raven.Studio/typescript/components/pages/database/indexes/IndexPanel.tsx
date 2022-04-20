@@ -38,17 +38,17 @@ export const IndexPanel = forwardRef(IndexPanelInternal);
 
 export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTMLDivElement>) {
     const { index, selected, toggleSelection, database, hasReplacement, globalIndexingStatus } = props;
-    
+
     const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
-    
+
     const isReplacement = IndexUtils.isSideBySide(index);
-    
+
     const eventsCollector = useEventsCollector();
 
     const [updatingLocalPriority, setUpdatingLocalPriority] = useState(false);
     const [updatingLockMode, setUpdatingLockMode] = useState(false);
     const [updatingState, setUpdatingState] = useState(false); //TODO: bind me!
-    
+
     const setPriority = async (e: MouseEvent, priority: IndexPriority) => {
         e.preventDefault();
         if (priority !== index.priority) {
@@ -59,8 +59,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 setUpdatingLocalPriority(false);
             }
         }
-    }
-    
+    };
+
     const setLockMode = async (e: MouseEvent, lockMode: IndexLockMode) => {
         e.preventDefault();
         if (lockMode !== index.lockMode) {
@@ -71,8 +71,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 setUpdatingLockMode(false);
             }
         }
-    }
-    
+    };
+
     const enableIndexing = async (e: MouseEvent) => {
         e.preventDefault();
         eventsCollector.reportEvent("indexes", "set-state", "enabled");
@@ -82,8 +82,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
         } finally {
             setUpdatingState(false);
         }
-    }
-    
+    };
+
     const disableIndexing = async (e: MouseEvent) => {
         e.preventDefault();
         eventsCollector.reportEvent("indexes", "set-state", "disabled");
@@ -93,7 +93,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
         } finally {
             setUpdatingState(false);
         }
-    }
+    };
 
     const pauseIndexing = async (e: MouseEvent) => {
         e.preventDefault();
@@ -104,7 +104,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
         } finally {
             setUpdatingState(false);
         }
-    }
+    };
 
     const resumeIndexing = async (e: MouseEvent) => {
         e.preventDefault();
@@ -115,91 +115,109 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
         } finally {
             setUpdatingState(false);
         }
-    }
-    
+    };
+
     const deleteIndex = async (e: MouseEvent) => {
         e.preventDefault();
         return props.deleteIndex();
-    }
-    
+    };
+
     const showStaleReasons = (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
         const view = new indexStalenessReasons(database, index.name, location);
         eventsCollector.reportEvent("indexes", "show-stale-reasons");
         app.showBootstrapDialog(view);
-    }
-    
+    };
+
     const openFaulty = async (location: databaseLocationSpecifier) => {
         await props.openFaulty(location);
-    }
-    
+    };
+
     const resetIndex = () => props.resetIndex();
-    
+
     const { forCurrentDatabase: urls } = useAppUrls();
     const queryUrl = urls.query(index.name)();
     const termsUrl = urls.terms(index.name)();
     const editUrl = urls.editIndex(index.name)();
-    
-    const [ reduceOutputId ] = useState(() => _.uniqueId("reduce-output-id"));
-    
+
+    const [reduceOutputId] = useState(() => _.uniqueId("reduce-output-id"));
+
     return (
         <div className={classNames({ "sidebyside-indexes": hasReplacement })}>
-            <div className={classNames("panel panel-state panel-hover index", { "has-replacement": hasReplacement })} ref={ref}>
+            <div
+                className={classNames("panel panel-state panel-hover index", { "has-replacement": hasReplacement })}
+                ref={ref}
+            >
                 <div className="padding padding-sm js-index-template" id={indexUniqueId(index)}>
                     <div className="row">
                         <div className="col-xs-12 col-sm-6 col-xl-4 info-container">
                             <div className="flex-horizontal">
-                                { canReadWriteDatabase(database) && (
+                                {canReadWriteDatabase(database) && (
                                     <div className="checkbox">
-                                        <input type="checkbox" className="styled" checked={selected} onChange={toggleSelection} />
-                                        <label/>
+                                        <input
+                                            type="checkbox"
+                                            className="styled"
+                                            checked={selected}
+                                            onChange={toggleSelection}
+                                        />
+                                        <label />
                                     </div>
                                 )}
-                                
+
                                 <h3 className="index-name flex-grow">
-                                    <a href={editUrl} title={index.name}>{index.name}</a>
+                                    <a href={editUrl} title={index.name}>
+                                        {index.name}
+                                    </a>
                                 </h3>
-                                { index.sourceType === "Counters" && (
+                                {index.sourceType === "Counters" && (
                                     <i className="icon-new-counter" title="Index source: Counters" />
                                 )}
-                                { index.sourceType === "TimeSeries" && (
+                                {index.sourceType === "TimeSeries" && (
                                     <i className="icon-timeseries" title="Index source: Time Series" />
                                 )}
-                                { index.sourceType === "Documents" && (
+                                {index.sourceType === "Documents" && (
                                     <i className="icon-documents" title="Index source: Documents" />
                                 )}
                             </div>
                             <div className="flex-horizontal clear-left index-info nospacing">
                                 <div className="index-type-icon" id={reduceOutputId}>
-                                    { index.reduceOutputCollectionName && !index.patternForReferencesToReduceOutputCollection && (
+                                    {index.reduceOutputCollectionName &&
+                                        !index.patternForReferencesToReduceOutputCollection && (
+                                            <span>
+                                                <i className="icon-output-collection" />
+                                            </span>
+                                        )}
+                                    {index.patternForReferencesToReduceOutputCollection && (
                                         <span>
-                                            <i className="icon-output-collection" />
+                                            <i className="icon-reference-pattern" />
                                         </span>
-                                    )}
-                                    { index.patternForReferencesToReduceOutputCollection && (
-                                        <span><i className="icon-reference-pattern"/></span>
                                     )}
                                 </div>
                                 <UncontrolledTooltip target={reduceOutputId} animation placement="right">
                                     <>
                                         {index.reduceOutputCollectionName && (
                                             <span>
-                                                Reduce Results are saved in Collection:<br />
+                                                Reduce Results are saved in Collection:
+                                                <br />
                                                 <strong>{index.reduceOutputCollectionName}</strong>
                                             </span>
                                         )}
                                         {index.collectionNameForReferenceDocuments && (
                                             <span>
-                                                <br />Referencing Documents are saved in Collection:
+                                                <br />
+                                                Referencing Documents are saved in Collection:
                                                 <br />
                                                 <strong>{index.collectionNameForReferenceDocuments}</strong>
                                             </span>
                                         )}
-                                        {!index.collectionNameForReferenceDocuments && index.patternForReferencesToReduceOutputCollection && (
-                                            <span>
-                                                <br />Referencing Documents are saved in Collection:<br />
-                                                <strong>{index.reduceOutputCollectionName}/References</strong>    
-                                            </span>
-                                        )}
+                                        {!index.collectionNameForReferenceDocuments &&
+                                            index.patternForReferencesToReduceOutputCollection && (
+                                                <span>
+                                                    <br />
+                                                    Referencing Documents are saved in Collection:
+                                                    <br />
+                                                    <strong>{index.reduceOutputCollectionName}/References</strong>
+                                                </span>
+                                            )}
                                     </>
                                 </UncontrolledTooltip>
                                 <div className="index-type">
@@ -217,49 +235,62 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </div>
                             </div>
                         </div>
-                        { !IndexUtils.isFaulty(index) && (
+                        {!IndexUtils.isFaulty(index) && (
                             <div className="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container">
-                                { !IndexUtils.isSideBySide(index) && (
+                                {!IndexUtils.isSideBySide(index) && (
                                     <div className="properties-item priority">
                                         <span className="properties-label">Priority:</span>
                                         <div className="btn-group properties-value">
-                                            <button type="button" className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLocalPriority, "enable": !updatingLocalPriority })}
-                                                    data-toggle="dropdown"
-                                                    disabled={!canReadWriteDatabase(database)}>
-                                                { index.priority === "Normal" && (
+                                            <button
+                                                type="button"
+                                                className={classNames("btn set-size dropdown-toggle", {
+                                                    "btn-spinner": updatingLocalPriority,
+                                                    enable: !updatingLocalPriority,
+                                                })}
+                                                data-toggle="dropdown"
+                                                disabled={!canReadWriteDatabase(database)}
+                                            >
+                                                {index.priority === "Normal" && (
                                                     <span>
-                                                <i className="icon-check"/>
-                                                <span>Normal</span>
-                                            </span>
+                                                        <i className="icon-check" />
+                                                        <span>Normal</span>
+                                                    </span>
                                                 )}
-                                                { index.priority === "Low" && (
+                                                {index.priority === "Low" && (
                                                     <span>
-                                                <i className="icon-coffee"/>
-                                                <span>Low</span>
-                                            </span>
+                                                        <i className="icon-coffee" />
+                                                        <span>Low</span>
+                                                    </span>
                                                 )}
-                                                { index.priority === "High" && (
+                                                {index.priority === "High" && (
                                                     <span>
-                                                <i className="icon-force"/>
-                                                <span>High</span>
-                                            </span>
+                                                        <i className="icon-force" />
+                                                        <span>High</span>
+                                                    </span>
                                                 )}
-                                                <span className="caret"/>
+                                                <span className="caret" />
                                             </button>
                                             <ul className="dropdown-menu">
                                                 <li>
-                                                    <a href="#" onClick={e => setPriority(e, "Low")} title="Low">
-                                                        <i className="icon-coffee"/><span>Low</span>
+                                                    <a href="#" onClick={(e) => setPriority(e, "Low")} title="Low">
+                                                        <i className="icon-coffee" />
+                                                        <span>Low</span>
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a href="#" onClick={e => setPriority(e, "Normal")} title="Normal">
-                                                        <i className="icon-check"/><span>Normal</span>
+                                                    <a
+                                                        href="#"
+                                                        onClick={(e) => setPriority(e, "Normal")}
+                                                        title="Normal"
+                                                    >
+                                                        <i className="icon-check" />
+                                                        <span>Normal</span>
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a href="#" onClick={e => setPriority(e, "High")} title="High">
-                                                        <i className="icon-force"/><span>High</span>
+                                                    <a href="#" onClick={(e) => setPriority(e, "High")} title="High">
+                                                        <i className="icon-force" />
+                                                        <span>High</span>
                                                     </a>
                                                 </li>
                                             </ul>
@@ -267,138 +298,198 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     </div>
                                 )}
 
-                                { index.type !== "AutoMap" && index.type !== "AutoMapReduce" && !IndexUtils.isSideBySide(index) && (
-                                    <div className="properties-item mode">
-                                        <span className="properties-label">Mode:</span>
-                                        <div className="btn-group properties-value">
-                                            <button type="button"
-                                                    className={classNames("btn set-size dropdown-toggle", { "btn-spinner": updatingLockMode, enable: !updatingLockMode })}
+                                {index.type !== "AutoMap" &&
+                                    index.type !== "AutoMapReduce" &&
+                                    !IndexUtils.isSideBySide(index) && (
+                                        <div className="properties-item mode">
+                                            <span className="properties-label">Mode:</span>
+                                            <div className="btn-group properties-value">
+                                                <button
+                                                    type="button"
+                                                    className={classNames("btn set-size dropdown-toggle", {
+                                                        "btn-spinner": updatingLockMode,
+                                                        enable: !updatingLockMode,
+                                                    })}
                                                     data-toggle="dropdown"
-                                                    disabled={!canReadWriteDatabase(database)}>
-                                                {index.lockMode === "Unlock" && (
-                                                    <span>
-                                                <i className="icon-unlock"/><span>Unlocked</span>
-                                            </span>
-                                                )}
-                                                {index.lockMode === "LockedIgnore" && (
-                                                    <span>
-                                                <i className="icon-lock"/><span>Locked</span>
-                                            </span>
-                                                )}
-                                                {index.lockMode === "LockedError" && (
-                                                    <span>
-                                                <i className="icon-lock-error"/><span>Locked (Error)</span>
-                                            </span>
-                                                )}
-                                                <span className="caret"/>
-                                            </button>
-                                            <ul className="dropdown-menu">
-                                                <li>
-                                                    <a href="#" onClick={e => setLockMode(e, "Unlock")} title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
-                                                        <i className="icon-unlock"/>
-                                                        <span>Unlock</span>
-                                                    </a>
-                                                </li>
-                                                <li className="divider"/>
-                                                <li>
-                                                    <a href="#" onClick={e => setLockMode(e, "LockedIgnore")}
-                                                       title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
-                                                        <i className="icon-lock"/>
-                                                        <span>Lock</span>
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a href="#" onClick={e => setLockMode(e, "LockedError")}
-                                                       title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
-                                                        <i className="icon-lock-error"/>
-                                                        <span>Lock (Error)</span>
-                                                    </a>
-                                                </li>
-                                            </ul>
+                                                    disabled={!canReadWriteDatabase(database)}
+                                                >
+                                                    {index.lockMode === "Unlock" && (
+                                                        <span>
+                                                            <i className="icon-unlock" />
+                                                            <span>Unlocked</span>
+                                                        </span>
+                                                    )}
+                                                    {index.lockMode === "LockedIgnore" && (
+                                                        <span>
+                                                            <i className="icon-lock" />
+                                                            <span>Locked</span>
+                                                        </span>
+                                                    )}
+                                                    {index.lockMode === "LockedError" && (
+                                                        <span>
+                                                            <i className="icon-lock-error" />
+                                                            <span>Locked (Error)</span>
+                                                        </span>
+                                                    )}
+                                                    <span className="caret" />
+                                                </button>
+                                                <ul className="dropdown-menu">
+                                                    <li>
+                                                        <a
+                                                            href="#"
+                                                            onClick={(e) => setLockMode(e, "Unlock")}
+                                                            title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes()."
+                                                        >
+                                                            <i className="icon-unlock" />
+                                                            <span>Unlock</span>
+                                                        </a>
+                                                    </li>
+                                                    <li className="divider" />
+                                                    <li>
+                                                        <a
+                                                            href="#"
+                                                            onClick={(e) => setLockMode(e, "LockedIgnore")}
+                                                            title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored."
+                                                        >
+                                                            <i className="icon-lock" />
+                                                            <span>Lock</span>
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a
+                                                            href="#"
+                                                            onClick={(e) => setLockMode(e, "LockedError")}
+                                                            title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it."
+                                                        >
+                                                            <i className="icon-lock-error" />
+                                                            <span>Lock (Error)</span>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                
+                                    )}
                             </div>
                         )}
-                        
+
                         <div className="col-xs-12 col-sm-6 col-xl-3 actions-container">
                             <div className="actions">
                                 <div className="btn-toolbar pull-right-sm" role="toolbar">
                                     <div className="btn-group properties-value">
-                                        <button type="button" className="btn btn-default" data-toggle="dropdown"
-                                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
+                                        <button
+                                            type="button"
+                                            className="btn btn-default"
+                                            data-toggle="dropdown"
+                                            data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
-                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }"
+                                        >
                                             Set State
-                                            <span className="caret"/>
+                                            <span className="caret" />
                                         </button>
                                         <ul className="dropdown-menu">
                                             <li data-bind="visible: canBeEnabled()">
-                                                <a href="#" onClick={enableIndexing} title="Enable indexing on ALL cluster nodes">
+                                                <a
+                                                    href="#"
+                                                    onClick={enableIndexing}
+                                                    title="Enable indexing on ALL cluster nodes"
+                                                >
                                                     <i className="icon-play" />
                                                     <span>Enable indexing</span>
                                                 </a>
                                             </li>
                                             <li data-bind="visible: canBeDisabled()">
-                                                <a href="#" onClick={disableIndexing} title="Disable indexing on ALL cluster nodes">
-                                                    <i className="icon-cancel"/>
+                                                <a
+                                                    href="#"
+                                                    onClick={disableIndexing}
+                                                    title="Disable indexing on ALL cluster nodes"
+                                                >
+                                                    <i className="icon-cancel" />
                                                     <span>Disable indexing</span>
                                                 </a>
                                             </li>
                                             <li data-bind="visible: canBePaused()">
-                                                <a href="#" onClick={pauseIndexing} className="text-warning" title="Pause until restart">
-                                                    <i className="icon-pause"/>
+                                                <a
+                                                    href="#"
+                                                    onClick={pauseIndexing}
+                                                    className="text-warning"
+                                                    title="Pause until restart"
+                                                >
+                                                    <i className="icon-pause" />
                                                     <span>Pause indexing until restart</span>
                                                 </a>
                                             </li>
                                             <li data-bind="visible: canBeResumed()">
-                                                <a href="#" onClick={resumeIndexing} className="text-success" title="Resume indexing">
-                                                    <i className="icon-play"/>
+                                                <a
+                                                    href="#"
+                                                    onClick={resumeIndexing}
+                                                    className="text-success"
+                                                    title="Resume indexing"
+                                                >
+                                                    <i className="icon-play" />
                                                     <span>Resume indexing</span>
                                                 </a>
                                             </li>
                                         </ul>
                                     </div>
-                                    
-                                    
-                                    { !IndexUtils.isFaulty(index) && (
+
+                                    {!IndexUtils.isFaulty(index) && (
                                         <div className="btn-group" role="group">
                                             <a className="btn btn-default" href={queryUrl}>
-                                                <i className="icon-search"/><span>Query</span></a>
-                                            <button type="button" className="btn btn-default dropdown-toggle"
-                                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                <span className="caret"/>
+                                                <i className="icon-search" />
+                                                <span>Query</span>
+                                            </a>
+                                            <button
+                                                type="button"
+                                                className="btn btn-default dropdown-toggle"
+                                                data-toggle="dropdown"
+                                                aria-haspopup="true"
+                                                aria-expanded="false"
+                                            >
+                                                <span className="caret" />
                                                 <span className="sr-only">Toggle Dropdown</span>
                                             </button>
                                             <ul className="dropdown-menu">
                                                 <li>
                                                     <a href={termsUrl}>
-                                                        <i className="icon-terms"/> Terms
+                                                        <i className="icon-terms" /> Terms
                                                     </a>
                                                 </li>
                                             </ul>
                                         </div>
                                     )}
-                                    
+
                                     <div className="btn-group" role="group">
-                                        { !IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
-                                            <a className="btn btn-default" href={editUrl}
-                                               title="Edit index"><i className="icon-edit"/></a>
+                                        {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
+                                            <a className="btn btn-default" href={editUrl} title="Edit index">
+                                                <i className="icon-edit" />
+                                            </a>
                                         )}
-                                        { (IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
-                                            <a className="btn btn-default" href={editUrl}
-                                               title="View index"><i className="icon-preview"/></a>
+                                        {(IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
+                                            <a className="btn btn-default" href={editUrl} title="View index">
+                                                <i className="icon-preview" />
+                                            </a>
                                         )}
                                     </div>
-                                    { canReadWriteDatabase(database) && (
+                                    {canReadWriteDatabase(database) && (
                                         <div className="btn-group" role="group">
-                                            <button className="btn btn-warning" type="button" onClick={resetIndex}
-                                                    title="Reset index (rebuild)"><i className="icon-reset-index"/></button>
-                                            <button className="btn btn-danger" onClick={deleteIndex}
-                                                    title="Delete the index"><i className="icon-trash"/></button>
+                                            <button
+                                                className="btn btn-warning"
+                                                type="button"
+                                                onClick={resetIndex}
+                                                title="Reset index (rebuild)"
+                                            >
+                                                <i className="icon-reset-index" />
+                                            </button>
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={deleteIndex}
+                                                title="Delete the index"
+                                            >
+                                                <i className="icon-trash" />
+                                            </button>
                                         </div>
-                                    )} 
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -407,45 +498,62 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
             </div>
             <div>
                 <div className="panel panel-state panel-info">
-                    {index.nodesInfo.map(nodeInfo => (
+                    {index.nodesInfo.map((nodeInfo) => (
                         <div key={indexNodeInfoKey(nodeInfo)}>
                             <span className="margin-right">Shard #{nodeInfo.location.shardNumber}</span>
                             <span className="margin-right">Node Tag: {nodeInfo.location.nodeTag}</span>
-                            { nodeInfo.status === "loaded" && (
+                            {nodeInfo.status === "loaded" && (
                                 <>
                                     <span className="margin-right">Errors: {nodeInfo.details.errorCount}</span>
                                     <span className="margin-right">Entries: {nodeInfo.details.entriesCount}</span>
-                                    <span className={classNames("badge margin-right", badgeClass(index, nodeInfo.details, globalIndexingStatus))}>
+                                    <span
+                                        className={classNames(
+                                            "badge margin-right",
+                                            badgeClass(index, nodeInfo.details, globalIndexingStatus)
+                                        )}
+                                    >
                                         {badgeText(index, nodeInfo.details, globalIndexingStatus)}
                                     </span>
                                     {nodeInfo.details.stale ? (
                                         <span className="set-size">
-                                            <a title="Show stale reason" href="#" className="text-warning" onClick={withPreventDefault(() => showStaleReasons(index, nodeInfo.location))}>
-                                                <span>Stale</span>&nbsp;&nbsp;<i className="icon-help" />
+                                            <a
+                                                title="Show stale reason"
+                                                href="#"
+                                                className="text-warning"
+                                                onClick={withPreventDefault(() =>
+                                                    showStaleReasons(index, nodeInfo.location)
+                                                )}
+                                            >
+                                                <span>Stale</span>&nbsp;&nbsp;
+                                                <i className="icon-help" />
                                             </a>
                                         </span>
                                     ) : (
                                         <span className="set-size">
-                                            <i className="icon-check" /><span>Up to date</span>
+                                            <i className="icon-check" />
+                                            <span>Up to date</span>
                                         </span>
                                     )}
-                                    {
-                                        nodeInfo.details.faulty ? (
-                                            <button type="button" className="btn btn-default" onClick={() => openFaulty(nodeInfo.location)}
-                                                    title="Open index"><i className="icon-arrow-filled-up"/></button>
-                                        ) : (
-                                            <IndexProgress progress={nodeInfo.progress} nodeDetails={nodeInfo.details}/>
-                                        )
-                                    }
+                                    {nodeInfo.details.faulty ? (
+                                        <button
+                                            type="button"
+                                            className="btn btn-default"
+                                            onClick={() => openFaulty(nodeInfo.location)}
+                                            title="Open index"
+                                        >
+                                            <i className="icon-arrow-filled-up" />
+                                        </button>
+                                    ) : (
+                                        <IndexProgress progress={nodeInfo.progress} nodeDetails={nodeInfo.details} />
+                                    )}
                                 </>
                             )}
-                            
                         </div>
                     ))}
                 </div>
             </div>
         </div>
-    )
+    );
 }
 
 function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
@@ -502,5 +610,5 @@ function badgeText(index: IndexSharedInfo, details: IndexNodeInfoDetails, global
 
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;
 
-const indexNodeInfoKey = (nodeInfo: IndexNodeInfo) => "$" + nodeInfo.location.shardNumber + "@" + nodeInfo.location.nodeTag;
-
+const indexNodeInfoKey = (nodeInfo: IndexNodeInfo) =>
+    "$" + nodeInfo.location.shardNumber + "@" + nodeInfo.location.nodeTag;

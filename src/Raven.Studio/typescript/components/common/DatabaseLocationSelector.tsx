@@ -10,16 +10,16 @@ interface DatabaseLocationSelectorProps {
 export function DatabaseLocationSelector(props: DatabaseLocationSelectorProps) {
     const { locations, selectedLocations, setSelectedLocations } = props;
 
-    const [ uniqId ] = useState(() => _.uniqueId("location-selector-"));
-    
+    const [uniqId] = useState(() => _.uniqueId("location-selector-"));
+
     const toggleSelection = (location: databaseLocationSpecifier) => {
         const selected = selectedLocations.includes(location);
         if (selected) {
-            setSelectedLocations(selectedLocations.filter(x => x !== location));
+            setSelectedLocations(selectedLocations.filter((x) => x !== location));
         } else {
             setSelectedLocations([...selectedLocations, location]);
         }
-    }
+    };
 
     return (
         <div>
@@ -30,11 +30,14 @@ export function DatabaseLocationSelector(props: DatabaseLocationSelectorProps) {
                     return (
                         <li className="flex-horizontal" key={locationId}>
                             <div className="checkbox">
-                                <input type="checkbox" id={locationId} className="styled" checked={selected}
-                                       onChange={() => toggleSelection(l)}/>
-                                <label htmlFor={locationId}>
-                                    {genUtils.formatLocation(l)}
-                                </label>
+                                <input
+                                    type="checkbox"
+                                    id={locationId}
+                                    className="styled"
+                                    checked={selected}
+                                    onChange={() => toggleSelection(l)}
+                                />
+                                <label htmlFor={locationId}>{genUtils.formatLocation(l)}</label>
                             </div>
                         </li>
                     );

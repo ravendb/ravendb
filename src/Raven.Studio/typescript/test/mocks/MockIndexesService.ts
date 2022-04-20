@@ -5,7 +5,6 @@ import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 
 export default class MockIndexesService extends AutoMockService<IndexesService> {
-
     constructor() {
         super(new IndexesService());
     }
