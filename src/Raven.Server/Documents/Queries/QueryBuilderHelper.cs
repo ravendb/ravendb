@@ -420,6 +420,15 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected in argument to be value, but was: " + val, query.QueryText, parameters);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static QueryFieldName ExtractIndexFieldNameForOrderBy(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
+    {
+        if (field is MethodExpression me && me.Name.Value is "score")
+            return new QueryFieldName("score()", false);
+
+        return ExtractIndexFieldName(query, parameters, field, metadata);
+    }
+    
     internal static QueryFieldName ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
     {
         if (field is FieldExpression fe)
@@ -462,10 +471,19 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
     }
 
+    internal static int GetFieldIdForOrderBy(string fieldName, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+        bool isForQuery = true)
+    {
+        if (fieldName is "score()")
+            return ScoreId;
+        
+        return GetFieldId(fieldName, index, indexMapping, queryMapping, isForQuery);
+    }
+    
     internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, bool isForQuery = true)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
-        if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase))
+        if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) || fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
             return 0;
 
         if (isForQuery == false)
@@ -544,9 +562,11 @@ public static class QueryBuilderHelper
     internal static string CoraxGetValueAsString(object value) => value switch
     {
         StringSegment s => s.Value,
-        null => Constants.Documents.Indexing.Fields.NullValue,
         string {Length: 0} => Constants.Documents.Indexing.Fields.EmptyString,
         string s => s,
+        long l => l.ToString(CultureInfo.InvariantCulture),
+        double d => d.ToString(CultureInfo.InvariantCulture),
+        null => Constants.Documents.Indexing.Fields.NullValue,
         _ => value?.ToString()
     };
 
