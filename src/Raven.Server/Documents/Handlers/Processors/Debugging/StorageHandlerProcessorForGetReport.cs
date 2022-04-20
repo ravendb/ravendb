@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
             await GetStorageReport();
         }
 
-        protected async ValueTask GetStorageReport()
+        private async ValueTask GetStorageReport()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
