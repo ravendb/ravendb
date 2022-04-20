@@ -639,6 +639,13 @@ namespace Raven.Server.Json
                     (w, c, spatialShape) => w.WriteSpatialShapeResult(c, spatialShape));
             }
 
+            if (result.RaftCommandIndex.HasValue)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.RaftCommandIndex));
+                writer.WriteInteger(result.RaftCommandIndex.Value);
+            }
+
             writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();

@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         {
             using (var database = CreateDocumentDatabase())
             {
-                var autoIndex = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
+                var autoIndex = (await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
                 {
                     new AutoIndexField
                     {
@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                     {
                         Name = "LastName",
                     }
-                }), Guid.NewGuid().ToString());
+                }), Guid.NewGuid().ToString())).Instance;
 
                 autoIndex.SetState(IndexState.Idle);
 
@@ -60,13 +60,13 @@ namespace SlowTests.Issues
             {
                 var matcher = new DynamicQueryToIndexMatcher(database.IndexStore);
 
-                var autoIndex = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
+                var autoIndex = (await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
                 {
                     new AutoIndexField
                     {
                         Name = "FirstName",
                     }
-                }), Guid.NewGuid().ToString());
+                }), Guid.NewGuid().ToString())).Instance;
 
                 autoIndex.SetState(IndexState.Idle);
 
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
             {
                 var matcher = new DynamicQueryToIndexMatcher(database.IndexStore);
 
-                var autoIndex = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[]
+                var autoIndex = (await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[]
                 {
                     new AutoIndexField
                     {
@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                     {
                         Name = "Location",
                     }
-                }), Guid.NewGuid().ToString());
+                }), Guid.NewGuid().ToString())).Instance;
 
                 autoIndex.SetState(IndexState.Idle);
 

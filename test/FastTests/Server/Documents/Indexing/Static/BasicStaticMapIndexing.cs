@@ -112,7 +112,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     }
                 };
 
-                var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
+                var index = (await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString())).Instance;
                 Assert.NotNull(index);
 
                 Assert.Equal(33, (int)index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);

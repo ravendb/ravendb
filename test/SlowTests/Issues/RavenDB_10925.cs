@@ -24,27 +24,27 @@ namespace SlowTests.Issues
             {
                 var database = await GetDatabase(store.Database);
 
-                var i0 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
+                var i0 = (await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
                     "Orders",
                     new[]
                     {
                         AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions())
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
-                var i1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
+                var i1 = (await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
                     "Companies",
                     new[]
                     {
                         AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions())
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
-                var i2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
+                var i2 = (await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
                     "Companies",
                     new[]
                     {
                         AutoIndexField.Create("Name", new AutoIndexDefinition.AutoIndexFieldOptions()),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
                 database.IndexStore.RunIdleOperations();
 
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
                 Assert.Contains(i0, indexes);
                 Assert.Contains(i2, indexes);
 
-                var i3 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
+                var i3 = (await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
                     "Companies",
                     new[]
                     {
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                             Indexing = AutoFieldIndexing.Search
                         }),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
                 database.IndexStore.RunIdleOperations();
 
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
                 Assert.Contains(i0, indexes);
                 Assert.Contains(i3, indexes);
 
-                var i4 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
+                var i4 = (await database.IndexStore.CreateIndex(new AutoMapIndexDefinition(
                     "Companies",
                     new[]
                     {
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                             Indexing = AutoFieldIndexing.Highlighting | AutoFieldIndexing.Search
                         }),
                         AutoIndexField.Create("City", new AutoIndexDefinition.AutoIndexFieldOptions()),
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
                 database.IndexStore.RunIdleOperations();
 
@@ -141,7 +141,7 @@ namespace SlowTests.Issues
             {
                 var database = await GetDatabase(store.Database);
 
-                var i0 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
+                var i0 = (await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
                     "Orders",
                     new[]
                     {
@@ -153,9 +153,9 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
-                var i1 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
+                var i1 = (await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
                     "Companies",
                     new[]
                     {
@@ -167,9 +167,9 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
-                var i2 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
+                var i2 = (await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
                     "Companies",
                     new[]
                     {
@@ -182,9 +182,9 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByIndividualValues
                         })
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
-                var i3 = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
+                var i3 = (await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(
                     "Companies",
                     new[]
                     {
@@ -201,7 +201,7 @@ namespace SlowTests.Issues
                         {
                             GroupByArrayBehavior = GroupByArrayBehavior.ByContent
                         })
-                    }), Guid.NewGuid().ToString());
+                    }), Guid.NewGuid().ToString())).Instance;
 
                 Assert.Equal("Auto/Companies/ByCityAndCountAndExact(State)ReducedByArray(Name)", i3.Name);
 

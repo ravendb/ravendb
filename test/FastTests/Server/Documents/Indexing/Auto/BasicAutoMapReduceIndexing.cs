@@ -260,7 +260,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Aggregation = AggregationOperation.Sum
                 };
 
-                var index = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }), Guid.NewGuid().ToString());
+                var index = (await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }), Guid.NewGuid().ToString())).Instance;
                 Assert.NotNull(index);
 
                 var task1 = database.IndexStore.LockMode.SetLockAsync(index.Name, IndexLockMode.LockedError, Guid.NewGuid().ToString());
