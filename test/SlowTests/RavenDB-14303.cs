@@ -57,7 +57,7 @@ namespace SlowTests
                     };
                     var node = nodes.First(n => n.ServerStore.DatabasesLandlord.IsDatabaseLoaded(store.Database));
                     var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var index = await db.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { age }), Guid.NewGuid().ToString());
+                    var index = (await db.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { age }), Guid.NewGuid().ToString())).Instance;
 
                     await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Idle, db.Name, Guid.NewGuid().ToString()));
                     db.ServerStore.ForTestingPurposesOnly().StopIndex = true;

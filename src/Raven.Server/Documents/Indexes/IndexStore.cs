@@ -899,11 +899,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<Index> CreateIndex(IndexDefinition definition, string raftRequestId, string source = null)
+        public async Task<(long Index, Index Instance)> CreateIndex(IndexDefinition definition, string raftRequestId, string source = null)
         {
-            await Create.CreateIndexAsync(definition, raftRequestId, source);
+            var index = await Create.CreateIndexAsync(definition, raftRequestId, source);
 
-            return GetIndex(definition.Name);
+            return (index, GetIndex(definition.Name));
         }
 
         public bool CanUseIndexBatch()
@@ -916,7 +916,7 @@ namespace Raven.Server.Documents.Indexes
             return new IndexBatchScope(this, GetNumberOfUtilizedCores());
         }
 
-        public async Task<Index> CreateIndex(IndexDefinitionBaseServerSide definition, string raftRequestId)
+        public async Task<(long? Index, Index Instance)> CreateIndex(IndexDefinitionBaseServerSide definition, string raftRequestId)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -952,7 +952,7 @@ namespace Raven.Server.Documents.Indexes
 
             ForTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
 
-            return GetIndex(definition.Name);
+            return (index, GetIndex(definition.Name));
         }
 
         private void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)

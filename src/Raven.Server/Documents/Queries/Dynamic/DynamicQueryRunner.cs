@@ -32,7 +32,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, customStalenessWaitTimeout: TimeSpan.FromSeconds(60), token.Token);
+            var result = await MatchIndex(query, true, customStalenessWaitTimeout: TimeSpan.FromSeconds(60), token.Token);
+            var index = result.Instance;
 
             queryContext.WithIndex(index);
 
@@ -44,10 +45,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
-            Index index;
+            (long? Index, Index Instance) result;
             using (query.Timings?.For(nameof(QueryTimingsScope.Names.Optimizer)))
-                index = await MatchIndex(query, true, null, token.Token);
+                result = await MatchIndex(query, true, null, token.Token);
 
+            var index = result.Instance;
             queryContext.WithIndex(index);
 
             if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
@@ -59,14 +61,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                return await index.Query(query, queryContext, token);
+                var queryResult = await index.Query(query, queryContext, token);
+                queryResult.RaftCommandIndex = result.Index;
+
+                return queryResult;
             }
         }
 
         public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, long? existingResultEtag, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, false, null, token.Token);
+            var result = await MatchIndex(query, false, null, token.Token);
 
+            var index = result.Instance;
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(query.Metadata.CollectionName);
 
@@ -93,8 +99,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, null, token.Token);
+            var result = await MatchIndex(query, true, null, token.Token);
 
+            var index = result.Instance;
             queryContext.WithIndex(index);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
@@ -105,8 +112,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, null, token.Token);
+            var result = await MatchIndex(query, true, null, token.Token);
 
+            var index = result.Instance;
             queryContext.WithIndex(index);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
@@ -117,8 +125,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, null, token.Token);
+            var result = await MatchIndex(query, true, null, token.Token);
 
+            var index = result.Instance;
             queryContext.WithIndex(index);
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
@@ -127,30 +136,26 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        public async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
+        public async Task<(long? Index, Index Instance)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
         {
-            Index index;
             if (query.Metadata.AutoIndexName != null)
             {
-                index = GetIndex(query.Metadata.AutoIndexName, throwIfNotExists: false);
+                var index = GetIndex(query.Metadata.AutoIndexName, throwIfNotExists: false);
 
                 if (index != null)
-                    return index;
+                    return (null, index);
             }
 
-            (index, _) = await CreateAutoIndexIfNeeded(query, createAutoIndexIfNoMatchIsFound, customStalenessWaitTimeout, token);
-
-            return index;
+            return await CreateAutoIndexIfNeeded(query, createAutoIndexIfNoMatchIsFound, customStalenessWaitTimeout, token);
         }
 
-        public async Task<(Index Index, bool HasCreatedAutoIndex)> CreateAutoIndexIfNeeded(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
+        private async Task<(long? Index, Index Instance)> CreateAutoIndexIfNeeded(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
         {
             var map = DynamicQueryMapping.Create(query);
-            bool hasCreatedAutoIndex = false;
 
-            Index index;
+            (long? Index, Index Instance) result = default;
 
-            while (TryMatchExistingIndexToQuery(map, out index) == false)
+            while (TryMatchExistingIndexToQuery(map, out result.Instance) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
                     throw new IndexDoesNotExistException("No Auto Index matching the given query was found.");
@@ -159,14 +164,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     throw new InvalidOperationException("Creation of Auto Indexes was disabled and no Auto Index matching the given query was found.");
 
                 var definition = map.CreateAutoIndexDefinition();
-                index = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId());
+                result = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId());
+                var index = result.Instance;
                 if (index == null)
                 {
                     // the index was deleted, we'll try to find a better match (replaced by a wider index)
                     continue;
                 }
-
-                hasCreatedAutoIndex = true;
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                 {
@@ -196,7 +200,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 break;
             }
 
-            return (index, hasCreatedAutoIndex);
+            return result;
         }
 
         private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, string raftRequestId, CancellationToken token)

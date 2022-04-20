@@ -244,9 +244,23 @@ public class ShardedQueryProcessor : IDisposable
 
         await Task.WhenAll(tasks);
 
+        long? index = null;
         foreach (var (_, cmd) in _commands)
         {
             _result.ResultEtag = Hashing.Combine(_result.ResultEtag, cmd.Result.ResultEtag);
+
+            if (cmd.Result.RaftCommandIndex.HasValue)
+            {
+                if (index == null || cmd.Result.RaftCommandIndex > index)
+                    index = cmd.Result.RaftCommandIndex;
+            }
+        }
+
+        if (index.HasValue)
+        {
+            // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
+            // so further queries would not throw index does not exist in case of a failover
+            await _parent.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index.Value);
         }
     }
 

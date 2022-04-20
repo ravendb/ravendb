@@ -25,26 +25,26 @@ namespace FastTests.Issues
                 var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
                 Assert.NotNull(index);
 
-                var options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexInformationHolder(), database.Configuration, out var _);
+                var options = IndexStore.GetIndexCreationOptions(indexDefinition, index.Instance.ToIndexInformationHolder(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.Noop, options);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexInformationHolder(), database.Configuration, out var _);
+                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.Instance.ToIndexInformationHolder(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle)] = "10";
 
-                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexInformationHolder(), database.Configuration, out var _);
+                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.Instance.ToIndexInformationHolder(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle)] = "20";
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.ToIndexInformationHolder(), database.Configuration, out var _);
+                options = IndexStore.GetIndexCreationOptions(indexDefinition, index.Instance.ToIndexInformationHolder(), database.Configuration, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
             }
         }
@@ -57,14 +57,14 @@ namespace FastTests.Issues
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
+                var index = (await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString())).Instance;
                 Assert.NotNull(index);
                 Assert.Equal(33, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
+                index = (await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString())).Instance;
                 Assert.NotNull(index);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 

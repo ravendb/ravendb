@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     },
                 });
                 
-                var index = await database.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString());
+                var index = (await database.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString())).Instance;
 
                 index.SetState(IndexState.Error); // will also stop the indexing thread
 
@@ -53,7 +53,7 @@ namespace SlowTests.Issues
                     },
                 });
                 
-                var index = await database.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString());
+                var index = (await database.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString())).Instance;
 
                 index.Disable();
                 index.Enable();

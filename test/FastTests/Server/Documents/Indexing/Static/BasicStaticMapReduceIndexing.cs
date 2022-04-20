@@ -131,7 +131,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                 };
 
-                var index = await database.IndexStore.CreateIndex(defOne, Guid.NewGuid().ToString());
+                var index = (await database.IndexStore.CreateIndex(defOne, Guid.NewGuid().ToString())).Instance;
 
                 defTwo = new IndexDefinition()
                 {

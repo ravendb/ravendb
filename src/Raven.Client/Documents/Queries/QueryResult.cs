@@ -58,6 +58,8 @@ namespace Raven.Client.Documents.Queries
         /// The duration of actually executing the query server side
         /// </summary>
         public long DurationInMs { get; set; }
+
+        public long? RaftCommandIndex { get; set; }
     }
 
     public class QueryResult : QueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>

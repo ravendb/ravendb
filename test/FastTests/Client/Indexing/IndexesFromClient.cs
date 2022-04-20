@@ -41,7 +41,7 @@ namespace FastTests.Client.Indexing
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
 
-                await store.Maintenance.SendAsync(new ResetIndexOperation(index.Name));
+                await store.Maintenance.SendAsync(new ResetIndexOperation(index.Instance.Name));
 
                 indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
@@ -60,7 +60,7 @@ namespace FastTests.Client.Indexing
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
 
-                await store.Maintenance.SendAsync(new DeleteIndexOperation(index.Name));
+                await store.Maintenance.SendAsync(new DeleteIndexOperation(index.Instance.Name));
 
                 indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(0, indexes.Count);
