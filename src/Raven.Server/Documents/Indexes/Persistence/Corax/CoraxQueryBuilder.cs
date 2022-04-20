@@ -91,10 +91,10 @@ public static class CoraxQueryBuilder
                             break;
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, !isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
-                            return indexSearcher.AndNot(left, right);
+                            return indexSearcher.AndNot(right, left);
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
@@ -129,6 +129,7 @@ public static class CoraxQueryBuilder
                 default:
                 {
                     var operation = QueryBuilderHelper.TranslateUnaryMatchOperation(where.Operator);
+                    
                     QueryExpression right = where.Right;
 
                     if (where.Right is MethodExpression rme)
@@ -144,6 +145,17 @@ public static class CoraxQueryBuilder
 
                     var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
 
+                    if (operation is UnaryMatchOperation.Equals)
+                    {
+                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+                        var rawMatch = indexSearcher.TermQuery(fieldName, valueAsString, fieldId);
+                        // This is TermMatch case
+                        if (scoreFunction is not NullScoreFunction)
+                            return indexSearcher.Boost(rawMatch, scoreFunction);
+                        return rawMatch;
+
+                    }
+                    
                     var match = valueType switch
                     {
                         ValueTokenType.Double => indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, (double)value, operation, take),
@@ -236,9 +248,9 @@ public static class CoraxQueryBuilder
             return (isNegated, scoreFunction) switch
             {
                 (false, NullScoreFunction) => indexSearcher.InQuery(fieldName, matches, fieldId),
-                (true, NullScoreFunction) => indexSearcher.NotInQuery(fieldName, indexSearcher.AllEntries(), matches, fieldId),
+                (true, NullScoreFunction) => indexSearcher.InQuery(fieldName, matches, fieldId),
                 (false, _) => indexSearcher.InQuery(fieldName, matches, scoreFunction, fieldId),
-                (true, _) => indexSearcher.NotInQuery(fieldName, indexSearcher.AllEntries(), matches, fieldId, scoreFunction)
+                (true, _) => indexSearcher.InQuery(fieldName, matches, fieldId)
             };
         }
 
@@ -246,7 +258,7 @@ public static class CoraxQueryBuilder
         {
             buildSteps?.Add($"True: {expression.Type} - {expression}");
 
-            return new AllEntriesMatch();
+            return indexSearcher.AllEntries();
         }
 
         if (expression is MethodExpression me)
@@ -489,8 +501,8 @@ public static class CoraxQueryBuilder
             //Note: we want to use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
             case 1:
             {
-                var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, orders[0].Expression, metadata);
-                var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, false);
+                var fieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
+                var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(fieldName, index, indexMapping, queryMapping, false);
                 var orderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
                 var sortingType = orders[0].FieldType == OrderByFieldType.AlphaNumeric ? SortingType.Alphanumerical : SortingType.Normal;
                 match = (fieldId) switch
@@ -508,12 +520,12 @@ public static class CoraxQueryBuilder
 
             case 2:
             {
-                var firstFieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, orders[0].Expression, metadata);
-                var firstFieldId = QueryBuilderHelper.GetFieldId(firstFieldName, index, indexMapping, queryMapping, false);
+                var firstFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
+                var firstFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(firstFieldName, index, indexMapping, queryMapping, false);
                 var firstOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
 
-                var secondFieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, orders[1].Expression, metadata);
-                var secondFieldId = QueryBuilderHelper.GetFieldId(secondFieldName, index, indexMapping, queryMapping, false);
+                var secondFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[1].Expression, metadata);
+                var secondFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(secondFieldName, index, indexMapping, queryMapping, false);
                 var secondOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[1].FieldType);
 
 
@@ -616,16 +628,16 @@ public static class CoraxQueryBuilder
             }
             case 3:
             {
-                var firstFieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, orders[0].Expression, metadata);
-                var firstFieldId = QueryBuilderHelper.GetFieldId(firstFieldName, index, indexMapping, queryMapping, false);
+                var firstFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
+                var firstFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(firstFieldName, index, indexMapping, queryMapping, false);
                 var firstOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
 
-                var secondFieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, orders[1].Expression, metadata);
-                var secondFieldId = QueryBuilderHelper.GetFieldId(secondFieldName, index, indexMapping, queryMapping, false);
+                var secondFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[1].Expression, metadata);
+                var secondFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(secondFieldName, index, indexMapping, queryMapping, false);
                 var secondOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[1].FieldType);
 
-                var thirdFieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, orders[2].Expression, metadata);
-                var thirdFieldId = QueryBuilderHelper.GetFieldId(secondFieldName, index, indexMapping, queryMapping, false);
+                var thirdFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[2].Expression, metadata);
+                var thirdFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(secondFieldName, index, indexMapping, queryMapping, false);
                 var thirdOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[2].FieldType);
 
 
@@ -1300,8 +1312,8 @@ public static class CoraxQueryBuilder
         var comparers = new IMatchComparer[orders.Count];
         for (int i = 0; i < orders.Count; ++i)
         {
-            var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, orders[0].Expression, metadata);
-            var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, false);
+            var fieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
+            var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(fieldName, index, indexMapping, queryMapping, false);
             var orderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
             var sortingType = orders[0].FieldType == OrderByFieldType.AlphaNumeric ? SortingType.Alphanumerical : SortingType.Normal;
 
