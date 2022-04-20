@@ -1,1 +1,1 @@
-export const ajaxMock = $.ajax = jest.fn();
+export const ajaxMock = ($.ajax = jest.fn());

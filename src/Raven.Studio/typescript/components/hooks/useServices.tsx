@@ -10,16 +10,11 @@ export interface ServicesContextDto {
 
 const servicesContext = createContext<ServicesContextDto>({
     indexesService: new IndexesService(),
-    databasesService: new DatabasesService()
+    databasesService: new DatabasesService(),
 });
 
-export function ServiceProvider(props: { services: ServicesContextDto, children: JSX.Element }) {
-    return (
-        <servicesContext.Provider value={props.services}>
-            {props.children}
-        </servicesContext.Provider>
-    );
+export function ServiceProvider(props: { services: ServicesContextDto; children: JSX.Element }) {
+    return <servicesContext.Provider value={props.services}>{props.children}</servicesContext.Provider>;
 }
 
 export const useServices = () => useContext(servicesContext);
-

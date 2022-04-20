@@ -11,24 +11,30 @@ interface DatabasesFilterProps {
 
 export function DatabasesFilter(props: DatabasesFilterProps) {
     const { filter, toggleSelectAll, selectionState } = props;
-    
+
     const onSearchTextChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-        props.setFilter(f => ({
+        props.setFilter((f) => ({
             ...f,
-            searchText: e.target.value
+            searchText: e.target.value,
         }));
     }, []);
-    
+
     return (
         <div className="databasesToolbar-filter">
-            <div className="checkbox checkbox-primary checkbox-inline align-checkboxes"
-                 title="Select all or none">
+            <div className="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none">
                 <CheckboxTriple onChanged={toggleSelectAll} state={selectionState} />
-                <label/>
+                <label />
             </div>
             <div className="input-group">
-                <input type="text" className="form-control" placeholder="Filter" accessKey="/"
-                       title="Filter databases (Alt+/)" value={filter.searchText} onChange={onSearchTextChange} />
+                <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Filter"
+                    accessKey="/"
+                    title="Filter databases (Alt+/)"
+                    value={filter.searchText}
+                    onChange={onSearchTextChange}
+                />
             </div>
             {/* TODO <div className="btn-group">
                 <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown"
@@ -89,5 +95,5 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
                 </ul>
             </div>*/}
         </div>
-    )
+    );
 }

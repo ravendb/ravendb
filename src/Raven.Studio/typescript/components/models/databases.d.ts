@@ -7,7 +7,6 @@ export interface DatabaseSharedInfo {
     encrypted: boolean;
 }
 
-
 export interface DatabaseFilterCriteria {
     searchText: string;
 }

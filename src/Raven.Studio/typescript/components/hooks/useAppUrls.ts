@@ -3,6 +3,6 @@
 export function useAppUrls() {
     return {
         forCurrentDatabase: appUrl.forCurrentDatabase(),
-        appUrl
+        appUrl,
     };
 }

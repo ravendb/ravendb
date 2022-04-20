@@ -1,9 +1,8 @@
 ﻿import React from "react";
 
 export function DatabasesCounter(): JSX.Element {
-    
     return null; //TODO:
-    
+
     /* TODO:
     return (
         <div className="database-counter on-base-background">

@@ -18,61 +18,49 @@ import openFaultyIndexCommand from "commands/database/index/openFaultyIndexComma
 import forceIndexReplace from "commands/database/index/forceIndexReplace";
 
 export default class IndexesService {
-    
     async getProgress(db: database, location: databaseLocationSpecifier) {
-        return new getIndexesProgressCommand(db, location)
-            .execute();
+        return new getIndexesProgressCommand(db, location).execute();
     }
-    
+
     async setLockMode(indexes: IndexSharedInfo[], lockMode: IndexLockMode, db: database) {
-        await new saveIndexLockModeCommand(indexes, lockMode, db)
-            .execute();
+        await new saveIndexLockModeCommand(indexes, lockMode, db).execute();
     }
-    
+
     async setPriority(index: IndexSharedInfo, priority: IndexPriority, db: database) {
-        await new saveIndexPriorityCommand(index.name, priority, db)
-            .execute();
+        await new saveIndexPriorityCommand(index.name, priority, db).execute();
     }
-    
+
     async getStats(db: database, location: databaseLocationSpecifier): Promise<IndexStats[]> {
-        const stats = await new getIndexesStatsCommand(db, location)
-            .execute();
-        
+        const stats = await new getIndexesStatsCommand(db, location).execute();
+
         return stats;
     }
-    
+
     async resetIndex(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new resetIndexCommand(index.name, db, location)
-            .execute();
-    } 
-    
+        await new resetIndexCommand(index.name, db, location).execute();
+    }
+
     async enable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new enableIndexCommand(index.name, db, location)
-            .execute();
+        await new enableIndexCommand(index.name, db, location).execute();
     }
 
     async disable(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new disableIndexCommand(index.name, db, location)
-            .execute();
+        await new disableIndexCommand(index.name, db, location).execute();
     }
 
     async pause(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(false, db, { name: index.name }, location)
-            .execute();
+        await new togglePauseIndexingCommand(false, db, { name: index.name }, location).execute();
     }
 
     async resume(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new togglePauseIndexingCommand(true, db, { name: index.name }, location)
-            .execute();
+        await new togglePauseIndexingCommand(true, db, { name: index.name }, location).execute();
     }
-    
+
     async openFaulty(index: IndexSharedInfo, db: database, location: databaseLocationSpecifier) {
-        await new openFaultyIndexCommand(index.name, db, location)
-            .execute();
+        await new openFaultyIndexCommand(index.name, db, location).execute();
     }
 
     async forceReplace(name: string, database: database) {
-        await new forceIndexReplace(name, database)
-            .execute();
+        await new forceIndexReplace(name, database).execute();
     }
 }

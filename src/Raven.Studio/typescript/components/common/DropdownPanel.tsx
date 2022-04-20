@@ -8,9 +8,9 @@ interface DropdownPanelProps {
 
 export function DropdownPanel(props: DropdownPanelProps) {
     const { className, children } = props;
-    
+
     const element = useRef<HTMLDivElement>();
-    
+
     const onClick = useCallback((event: MouseEvent<HTMLElement>) => {
         const $target = $(event.target);
 
@@ -19,7 +19,7 @@ export function DropdownPanel(props: DropdownPanelProps) {
         if (clickedOnClose) {
             if (!closestClosePanel.is(":disabled")) {
                 const $dropdownParent = $target.closest(".dropdown-menu").parent();
-                $dropdownParent.removeClass('open');
+                $dropdownParent.removeClass("open");
             } else {
                 event.stopPropagation();
             }
@@ -29,22 +29,22 @@ export function DropdownPanel(props: DropdownPanelProps) {
             if ($dropdown.length && $dropdown[0] !== element.current) {
                 if (!$button.is(":disabled")) {
                     const $parent = $dropdown.parent();
-                    $parent.toggleClass('open');
+                    $parent.toggleClass("open");
                 }
             } else {
                 // close any child dropdown
                 $(".dropdown", element.current).each((idx, elem) => {
-                    $(elem).removeClass('open');
+                    $(elem).removeClass("open");
                 });
             }
 
             event.stopPropagation();
         }
     }, []);
-    
+
     return (
         <div className={classNames("dropdown-menu", className)} onClick={onClick} ref={element}>
             {children}
         </div>
-    )
+    );
 }

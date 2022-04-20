@@ -9,7 +9,7 @@ interface UncontrolledTooltipProps extends Exclude<TooltipOptions, "title" | "ht
 
 export function UncontrolledTooltip(props: UncontrolledTooltipProps) {
     const { target, children, ...rest } = props;
-    
+
     useEffect(() => {
         const container = document.createElement("div");
         ReactDOM.render(children, container, () => {
@@ -19,11 +19,11 @@ export function UncontrolledTooltip(props: UncontrolledTooltipProps) {
                 ...rest,
             });
         });
-        
+
         return () => {
             ReactDOM.unmountComponentAtNode(container);
-        }
+        };
     }, [target]);
-    
+
     return null as JSX.Element;
 }

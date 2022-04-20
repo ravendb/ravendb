@@ -1,6 +1,5 @@
-﻿import { useLayoutEffect } from 'react'
+﻿import { useLayoutEffect } from "react";
 
 const useIsomorphicLayoutEffect = useLayoutEffect;
 
-export default useIsomorphicLayoutEffect
-
+export default useIsomorphicLayoutEffect;

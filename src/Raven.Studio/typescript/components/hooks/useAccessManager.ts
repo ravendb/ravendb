@@ -1,7 +1,6 @@
 ﻿import accessManager from "common/shell/accessManager";
 import database from "models/resources/database";
 
-
 function canHandleOperation(requiredAccess: accessLevel, dbName: string = null) {
     return accessManager.canHandleOperation(requiredAccess, dbName);
 }
@@ -23,6 +22,6 @@ export function useAccessManager() {
         canHandleOperation,
         canReadWriteDatabase,
         canReadOnlyDatabase,
-        isOperatorOrAbove
-    }
+        isOperatorOrAbove,
+    };
 }

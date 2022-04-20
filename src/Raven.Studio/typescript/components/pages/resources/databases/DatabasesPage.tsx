@@ -9,32 +9,29 @@ import { NoDatabases } from "./NoDatabases";
 import changesContext from "common/changesContext";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 
-interface DatabasesPageProps {
-}
-
+interface DatabasesPageProps {}
 
 function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCriteria) {
     if (criteria.searchText) {
-        return stats.databases.filter(x => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
+        return stats.databases.filter((x) => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
     }
-    
+
     return stats.databases;
 }
 
 export function DatabasesPage(props: DatabasesPageProps) {
+    const [stats, dispatch] = useReducer(databasesStatsReducer, null, databasesStatsReducerInitializer);
 
-    const [ stats, dispatch ] = useReducer(databasesStatsReducer, null, databasesStatsReducerInitializer);
-    
     const [filter, setFilter] = useState<DatabaseFilterCriteria>(() => ({
-        searchText: ""
+        searchText: "",
     }));
-    
+
     const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
-    
+
     const { databasesService } = useServices();
 
     const filteredDatabases = useMemo(() => {
-        //TODO: filter and sort databases 
+        //TODO: filter and sort databases
         //TODO: update selection if needed
         return filterDatabases(stats, filter);
     }, [filter, stats]);
@@ -44,17 +41,17 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
         dispatch({
             type: "StatsLoaded",
-            stats
+            stats,
         });
     }, []);
-    
+
     const toggleSelectAll = useCallback(() => {
         const selectedCount = selectedDatabases.length;
 
         if (selectedCount > 0) {
             setSelectedDatabases([]);
         } else {
-            setSelectedDatabases(filteredDatabases.map(x => x.name));
+            setSelectedDatabases(filteredDatabases.map((x) => x.name));
         }
     }, [selectedDatabases, filteredDatabases]);
 
@@ -68,55 +65,59 @@ export function DatabasesPage(props: DatabasesPageProps) {
         if (selectedCount > 0) {
             return "some_checked";
         }
-        
+
         return "unchecked";
-    },[filteredDatabases, selectedDatabases]);
-    
+    }, [filteredDatabases, selectedDatabases]);
+
     const toggleSelection = (db: DatabaseSharedInfo) => {
         if (selectedDatabases.includes(db.name)) {
-            setSelectedDatabases(s => s.filter(x => x !== db.name));
+            setSelectedDatabases((s) => s.filter((x) => x !== db.name));
         } else {
-            setSelectedDatabases(s => s.concat(db.name));
+            setSelectedDatabases((s) => s.concat(db.name));
         }
     };
-    
+
     useEffect(() => {
         fetchDatabases();
     }, []);
-    
+
     useEffect(() => {
         const sub = changesContext.default.serverNotifications().watchAllDatabaseChanges(() => fetchDatabases());
-        
+
         return () => sub.off();
     }, []);
-    
+
     return (
         <div>
             <div className="flex-header">
                 <div className="databasesToolbar">
                     <DatabasesToolbarActions />
-                    <DatabasesFilter filter={filter} setFilter={setFilter} selectionState={databasesSelectionState} toggleSelectAll={toggleSelectAll} />
+                    <DatabasesFilter
+                        filter={filter}
+                        setFilter={setFilter}
+                        selectionState={databasesSelectionState}
+                        toggleSelectAll={toggleSelectAll}
+                    />
                 </div>
             </div>
-            <div className="flex-grow scroll js-scroll-container"
-                 data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
+            <div
+                className="flex-grow scroll js-scroll-container"
+                data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length"
+            >
                 <DatabasesCounter />
                 <div>
-                    { filteredDatabases.map(db => (
-                        <DatabasePanel 
+                    {filteredDatabases.map((db) => (
+                        <DatabasePanel
                             key={db.name}
                             selected={selectedDatabases.includes(db.name)}
                             toggleSelection={() => toggleSelection(db)}
-                            db={db} 
+                            db={db}
                         />
                     ))}
 
-                    { !stats.databases.length && (
-                        <NoDatabases />
-                    )}
+                    {!stats.databases.length && <NoDatabases />}
                 </div>
             </div>
-            
         </div>
-    )
+    );
 }

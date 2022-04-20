@@ -6,14 +6,12 @@ import { DatabaseSharedInfo } from "../../../models/databases";
 import DatabaseUtils from "../../../utils/DatabaseUtils";
 import { data } from "jquery";
 
-
 interface ActionStatsLoaded {
     stats: DatabasesInfo;
     type: "StatsLoaded";
 }
 
-type DatabasesStatsReducerAction =
-    | ActionStatsLoaded;
+type DatabasesStatsReducerAction = ActionStatsLoaded;
 
 export interface DatabasesStatsState {
     databases: DatabaseSharedInfo[];
@@ -25,17 +23,20 @@ function mapToDatabaseShardedInfo(stats: DatabaseInfo): DatabaseSharedInfo {
         name: DatabaseUtils.shardGroupKey(stats.Name),
         sharded,
         lockMode: stats.LockMode,
-        encrypted: stats.IsEncrypted
-    }
+        encrypted: stats.IsEncrypted,
+    };
 }
 
-export const databasesStatsReducer: Reducer<DatabasesStatsState, DatabasesStatsReducerAction> = (state: DatabasesStatsState, action: DatabasesStatsReducerAction): DatabasesStatsState => {
+export const databasesStatsReducer: Reducer<DatabasesStatsState, DatabasesStatsReducerAction> = (
+    state: DatabasesStatsState,
+    action: DatabasesStatsReducerAction
+): DatabasesStatsState => {
     switch (action.type) {
         case "StatsLoaded":
-            return produce(state, draft => {
+            return produce(state, (draft) => {
                 const result: DatabaseSharedInfo[] = [];
 
-                action.stats.Databases.forEach(incomingDb => {
+                action.stats.Databases.forEach((incomingDb) => {
                     const isSharded = DatabaseUtils.isSharded(incomingDb.Name);
                     //TODO: this is temp impl!
 
@@ -48,18 +49,17 @@ export const databasesStatsReducer: Reducer<DatabasesStatsState, DatabasesStatsR
                         result.push(mapToDatabaseShardedInfo(incomingDb));
                     }
                 });
-                
+
                 draft.databases = result;
             });
         default:
-            console.warn("Unhandled action: ", action)
+            console.warn("Unhandled action: ", action);
             return state;
     }
-}
-
+};
 
 export const databasesStatsReducerInitializer = (): DatabasesStatsState => {
     return {
-        databases: []
-    }
-}
+        databases: [],
+    };
+};

@@ -9,8 +9,8 @@ class MockServicesContainer {
     get context(): ServicesContextDto {
         return {
             indexesService: this.indexesService.mock,
-            databasesService: this.databasesService.mock
-        }
+            databasesService: this.databasesService.mock,
+        };
     }
 }
 
