@@ -90,7 +90,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
 
                     using (var reader = GetCommandsReader(context, requestBodyStream, buffer, _cts.Token))
                     {
-                        await reader.Init();
+                        await reader.InitAsync();
 
                         var array = new TCommandData[8];
                         var numberOfCommands = 0;

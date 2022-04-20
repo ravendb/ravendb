@@ -17,6 +17,7 @@ using Raven.Server.Smuggler;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Batches;
 
@@ -84,9 +85,9 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         }
     }
 
-    public abstract Task SaveStream(JsonOperationContext context, Stream input);
+    public abstract ValueTask SaveStreamAsync(JsonOperationContext context, Stream input);
 
-    public virtual Task<BatchRequestParser.CommandData> ReadCommand(
+    public virtual Task<BatchRequestParser.CommandData> ReadCommandAsync(
         JsonOperationContext ctx,
         Stream stream,
         JsonParserState state,
@@ -142,11 +143,12 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                     _commands = BatchRequestParser.IncreaseSizeOfCommandsBuffer(_index, _commands);
                 }
 
-                var commandData = await ReadCommand(context, stream, state, parser, buffer, modifier, Handler.AbortRequestToken);
+                var commandData = await ReadCommandAsync(context, stream, state, parser, buffer, modifier, Handler.AbortRequestToken);
 
                 if (commandData.Type == CommandType.PATCH)
                 {
-                    //TODO sharding: make it nicer
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make it nicer");
+
                     commandData.PatchCommand =
                         new PatchDocumentCommand(
                             context,
@@ -175,7 +177,8 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
 
                 if (commandData.Type == CommandType.BatchPATCH)
                 {
-                    //TODO sharding: make it nicer
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make it nicer");
+
                     commandData.PatchCommand =
                         new BatchPatchDocumentCommand(
                             context,
@@ -228,7 +231,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                 continue;
             }
 
-            await SaveStream(context, bodyStream);
+            await SaveStreamAsync(context, bodyStream);
         }
     }
 

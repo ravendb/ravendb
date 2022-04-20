@@ -23,7 +23,7 @@ public class ShardedBulkInsertCommandsReader : AbstractBulkInsertBatchCommandsRe
 
         using (_commandStreamCopier.UseStream(command.Stream))
         {
-            var moveNext = MoveNext(ctx, modifier);
+            var moveNext = MoveNextAsync(ctx, modifier);
 
             if (moveNext == null)
                 return null;

@@ -19,7 +19,7 @@ public class DatabaseBatchCommandsReader : AbstractBatchCommandsReader<MergedBat
         _database = database;
     }
 
-    public override async Task SaveStream(JsonOperationContext context, Stream input)
+    public override async ValueTask SaveStreamAsync(JsonOperationContext context, Stream input)
     {
         if (AttachmentStreams == null)
         {
