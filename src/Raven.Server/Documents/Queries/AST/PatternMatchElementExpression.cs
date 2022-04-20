@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Queries.AST
                 case 0:
                     break;
                 case 1:
-                    value = LuceneQueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
+                    value = QueryBuilderHelper.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
                     switch (value.Type)
                     {
                         case ValueTokenType.Long:
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Queries.AST
                     }
                     break;
                 case 2:
-                    value = LuceneQueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
+                    value = QueryBuilderHelper.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
                     switch (value.Type)
                     {
                         case ValueTokenType.Long:
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Queries.AST
                           default:
                             throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + ", but expected min numeric value for " + this);
                     }
-                    value = LuceneQueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[1]);
+                    value = QueryBuilderHelper.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[1]);
                     switch (value.Type)
                     {
                         case ValueTokenType.Long:
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Queries.AST
                     break;
 
                 case 3:
-                    value = LuceneQueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
+                    value = QueryBuilderHelper.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
                     switch (value.Type)
                     {
                         case ValueTokenType.Long:
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Queries.AST
                         default:
                             throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + ", but expected min numeric value for " + this);
                     }
-                    value = LuceneQueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[1]);
+                    value = QueryBuilderHelper.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[1]);
                     switch (value.Type)
                     {
                         case ValueTokenType.Long:
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Queries.AST
                         default:
                             throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + ", but expected max numeric value for " + this);
                     }
-                    value = LuceneQueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[2]);
+                    value = QueryBuilderHelper.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[2]);
                     switch (value.Type)
                     {
                         case ValueTokenType.Long:

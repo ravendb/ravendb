@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Queries
             switch (type)
             {
                 case AST.ValueTokenType.Long:
-                    finalVal = LuceneQueryBuilder.ParseInt64WithSeparators(val);
+                    finalVal = QueryBuilderHelper.ParseInt64WithSeparators(val);
                     break;
                 case AST.ValueTokenType.Double:
                     finalVal = double.Parse(val, CultureInfo.InvariantCulture);

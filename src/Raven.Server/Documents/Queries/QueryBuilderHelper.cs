@@ -174,34 +174,7 @@ public static class QueryBuilderHelper
                 throw new ArgumentOutOfRangeException(nameof(value.Type), value.Type, null);
         }
     }
-
-    internal static (string IndexFieldName, IndexFieldType LuceneFieldType, LuceneTermType LuceneTermType) GetCoraxField(string fieldName,
-        ValueTokenType valueType)
-    {
-        switch (valueType)
-        {
-            case ValueTokenType.String:
-                return (fieldName, IndexFieldType.String, LuceneTermType.String);
-            case ValueTokenType.Double:
-                return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, IndexFieldType.Double, LuceneTermType.Double);
-            case ValueTokenType.Long:
-                return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, IndexFieldType.Long, LuceneTermType.Long);
-            case ValueTokenType.True:
-            case ValueTokenType.False:
-                return (fieldName, IndexFieldType.String, LuceneTermType.String);
-            case ValueTokenType.Null:
-            case ValueTokenType.Parameter:
-                return (fieldName, IndexFieldType.String, LuceneTermType.String);
-            default:
-                ThrowUnhandledValueTokenType(valueType);
-                break;
-        }
-
-        Debug.Assert(false);
-
-        return (null, IndexFieldType.String, LuceneTermType.String);
-    }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static object UnwrapParameter(object parameterValue, ValueTokenType parameterType)
     {
@@ -428,7 +401,7 @@ public static class QueryBuilderHelper
 
         return ExtractIndexFieldName(query, parameters, field, metadata);
     }
-    
+
     internal static QueryFieldName ExtractIndexFieldName(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
     {
         if (field is FieldExpression fe)
@@ -476,14 +449,15 @@ public static class QueryBuilderHelper
     {
         if (fieldName is "score()")
             return ScoreId;
-        
+
         return GetFieldId(fieldName, index, indexMapping, queryMapping, isForQuery);
     }
-    
+
     internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, bool isForQuery = true)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
-        if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) || fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+        if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) ||
+            fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
             return 0;
 
         if (isForQuery == false)

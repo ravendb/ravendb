@@ -87,20 +87,25 @@ public static class CoraxQueryBuilder
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne2.Expression, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            
                             return indexSearcher.AndNot(indexSearcher.AllEntries(), indexSearcher.Or(left, right));
-                            break;
+                        
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
                                 factories, scoreFunction, !isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            
                             return indexSearcher.AndNot(right, left);
+                        
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                            
                             return indexSearcher.AndNot(left, right);
+                        
                         default:
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
