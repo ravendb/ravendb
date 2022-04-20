@@ -256,7 +256,7 @@ public class ShardedQueryProcessor : IDisposable
             }
         }
 
-        if (index.HasValue)
+        if (_isAutoMapReduceQuery && index.HasValue)
         {
             // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
             // so further queries would not throw index does not exist in case of a failover
