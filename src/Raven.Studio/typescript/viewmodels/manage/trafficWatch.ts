@@ -13,6 +13,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryCriteria = require("models/database/query/queryCriteria");
 import databasesManager = require("common/shell/databasesManager");
+import accessManager = require("common/shell/accessManager");
 
 type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes; 
 
@@ -66,7 +67,7 @@ type certificateInfo = {
 
 class trafficWatch extends viewModelBase {
     
-    static readonly usingHttps = location.protocol === "https:";
+    static readonly usingHttps = accessManager.default.secureServer();
     
     static maxBufferSize = 200000;
     

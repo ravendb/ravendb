@@ -15,7 +15,7 @@ interface serverCertificateInfo {
 class licenseWidget extends widget {
 
     refreshIntervalId: number = -1;
-    usingHttps = location.protocol === "https:";
+    usingHttps = accessManager.default.secureServer();
     
     spinners = {
         serverCertificate: ko.observable<boolean>()

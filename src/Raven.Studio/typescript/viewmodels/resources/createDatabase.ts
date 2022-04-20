@@ -24,6 +24,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import studioSettings = require("common/settings/studioSettings");
 import licenseModel = require("models/auth/licenseModel");
 import generalUtils = require("common/generalUtils");
+import accessManager = require("common/shell/accessManager");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -43,7 +44,7 @@ class createDatabase extends dialogViewModelBase {
     clusterNodes: clusterNode[] = [];
     
     encryptionSection: setupEncryptionKey;
-    usingHttps = location.protocol === "https:"; 
+    usingHttps = accessManager.default.secureServer();
     operationNotSupported: boolean;
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
