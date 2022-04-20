@@ -1,22 +1,23 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import dbLiveIOStatsWebSocketClient = require("common/dbLiveIOStatsWebSocketClient");
 import ioStatsGraph = require("models/database/status/ioStatsGraph");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
-class ioStats extends viewModelBase {
+class ioStats extends shardViewModelBase {
     
     view = require("views/database/status/ioStats.html");
     graphView = require("views/partial/ioStatsGraph.html");
     
     private readonly graph: ioStatsGraph;
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
 
         this.graph = new ioStatsGraph(
-            () => `database-${this.activeDatabase().name}`,
+            () => `database-${this.db.name}`,
             ["Documents", "Index", "Configuration"],
             true,
-            (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.activeDatabase(), onUpdate, cutOff));
+            (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.db, onUpdate, cutOff));
     }
 
     compositionComplete() {
