@@ -4,13 +4,14 @@ import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexE
 import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
-import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import copyToClipboard = require("common/copyToClipboard");
 import app = require("durandal/app");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type termsForField = {
     name: string;
@@ -24,7 +25,7 @@ type termsForField = {
 
 type fieldType = "static" | "dynamic";
 
-class indexTerms extends viewModelBase {
+class indexTerms extends shardViewModelBase {
     
     view = require("views/database/indexes/indexTerms.html");
 
@@ -35,8 +36,8 @@ class indexTerms extends viewModelBase {
 
     static readonly termsPageLimit = 500; 
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
 
         this.bindToCurrentInstance("navigateToQuery");
     }
@@ -50,7 +51,7 @@ class indexTerms extends viewModelBase {
     }
 
     fetchIndexEntriesFields(indexName: string) {
-        return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
+        return new getIndexEntriesFieldsCommand(indexName, this.db)
             .execute()
             .done((fields) => this.processFields(fields));
     }
@@ -64,7 +65,7 @@ class indexTerms extends viewModelBase {
         query.recentQuery(true);
 
         const queryDto = query.toStorageDto();
-        recentQueriesStorage.saveAndNavigate(this.activeDatabase(), queryDto);
+        recentQueriesStorage.saveAndNavigate(this.db, queryDto);
     }
 
     static createTermsForField(fieldName: string, type: fieldType): termsForField {
@@ -90,7 +91,7 @@ class indexTerms extends viewModelBase {
     }
     
     private loadTerms(indexName: string, termsForField: termsForField): JQueryPromise<Raven.Client.Documents.Queries.TermsQueryResult> {  // fetch one more to find out if we have more
-        return new getIndexTermsCommand(indexName, null, termsForField.name, this.activeDatabase(), indexTerms.termsPageLimit + 1, termsForField.fromValue)  
+        return new getIndexTermsCommand(indexName, null, termsForField.name, this.db, indexTerms.termsPageLimit + 1, termsForField.fromValue)  
             .execute()
             .done((loadedTermsResponse: Raven.Client.Documents.Queries.TermsQueryResult) => {
                 let loadedTerms = loadedTermsResponse.Terms;
