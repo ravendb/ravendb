@@ -1258,8 +1258,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
 
-                var index1 = await database.IndexStore.CreateIndex(definition1, Guid.NewGuid().ToString());
-                var index2 = await database.IndexStore.CreateIndex(definition2, Guid.NewGuid().ToString());
+                var index1 = (await database.IndexStore.CreateIndex(definition1, Guid.NewGuid().ToString())).Instance;
+                var index2 = (await database.IndexStore.CreateIndex(definition2, Guid.NewGuid().ToString())).Instance;
 
                 Assert.Equal(index1, index2);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
