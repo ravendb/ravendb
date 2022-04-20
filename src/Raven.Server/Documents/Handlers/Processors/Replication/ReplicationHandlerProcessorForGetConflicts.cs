@@ -15,11 +15,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override Task<GetConflictsPreviewResult> GetConflictsPreviewAsync(DocumentsOperationContext context, long start, int pageSize)
+        protected override ValueTask<GetConflictsPreviewResult> GetConflictsPreviewAsync(DocumentsOperationContext context, long start, int pageSize)
         {
             using (context.OpenReadTransaction())
             {
-                return Task.FromResult(RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetConflictsPreviewResult(context, start));
+                return ValueTask.FromResult(RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetConflictsPreviewResult(context, start));
             }
         }
 

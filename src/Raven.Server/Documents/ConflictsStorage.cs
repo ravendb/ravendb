@@ -105,7 +105,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public GetConflictsPreviewResult GetConflictsPreviewResult(DocumentsOperationContext context, long skip = 0)
+        internal GetConflictsPreviewResult GetConflictsPreviewResult(DocumentsOperationContext context, long skip = 0)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 

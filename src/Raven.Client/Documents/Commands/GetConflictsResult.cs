@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Commands
         }
     }
 
-    public class GetConflictsPreviewResult
+    internal class GetConflictsPreviewResult
     {
         public ConflictPreview[] Results { get; internal set; }
 

@@ -22,11 +22,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 return token;
             }
 
-            public ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context, int etag, int pageSize)
+            public ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context, int start, int pageSize)
             {
                 var qToken = _handler.GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
                 var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ??
-                            new ShardedPagingContinuation(_handler.DatabaseContext, start: etag, pageSize);
+                            new ShardedPagingContinuation(_handler.DatabaseContext, start: start, pageSize: pageSize);
                 return token;
             }
         }
