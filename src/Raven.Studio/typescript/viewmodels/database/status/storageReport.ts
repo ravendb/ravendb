@@ -1,6 +1,5 @@
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import accessManager = require("common/shell/accessManager");
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import getEnvironmentStorageReportCommand = require("commands/database/debug/getEnvironmentStorageReportCommand");
@@ -8,6 +7,8 @@ import protractedCommandsDetector = require("common/notifications/protractedComm
 import generalUtils = require("common/generalUtils");
 import storageReportItem = require("models/database/status/storageReportItem");
 import d3 = require("d3");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type positionAndSizes = {
     dx: number,
@@ -16,7 +17,7 @@ type positionAndSizes = {
     y: number
 }
 
-class storageReport extends viewModelBase {
+class storageReport extends shardViewModelBase {
 
     view = require("views/database/status/storageReport.html");
     
@@ -51,8 +52,8 @@ class storageReport extends viewModelBase {
 
     documentsCompressionUrl: KnockoutComputed<string>;
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("onClick");
     }
 
@@ -61,7 +62,7 @@ class storageReport extends viewModelBase {
 
         this.initObservables();
 
-        return new getStorageReportCommand(this.activeDatabase())
+        return new getStorageReportCommand(this.db)
             .execute()
             .done(result => {
                 this.basePath = result.BasePath;
@@ -106,7 +107,7 @@ class storageReport extends viewModelBase {
             return this.node() == this.root;
         })
 
-        this.documentsCompressionUrl = ko.pureComputed(() => appUrl.forDocumentsCompression(this.activeDatabase()));
+        this.documentsCompressionUrl = ko.pureComputed(() => appUrl.forDocumentsCompression(this.db));
     }
 
     private processData() {
@@ -518,7 +519,7 @@ class storageReport extends viewModelBase {
             this.showLoader(true);
         }, 100);
 
-        return new getEnvironmentStorageReportCommand(this.activeDatabase(), env.name, _.capitalize(env.type), full)
+        return new getEnvironmentStorageReportCommand(this.db, env.name, _.capitalize(env.type), full)
             .execute()
             .done((envReport) => {
                 this.mapDetailedReport(envReport.Report, datafile);
@@ -678,7 +679,7 @@ class storageReport extends viewModelBase {
     }
 
     compactDatabase() {
-        router.navigate(appUrl.forDatabases("compact", this.activeDatabase().name));
+        router.navigate(appUrl.forDatabases("compact", this.db.name));
     }
 }
 
