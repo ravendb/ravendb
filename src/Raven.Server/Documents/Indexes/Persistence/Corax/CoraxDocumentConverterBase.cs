@@ -69,7 +69,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         //todo maciej: perf
         Slice.From(allocator, index.Type.IsMapReduce()
             ? RavenConstants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-            : RavenConstants.Documents.Indexing.Fields.DocumentIdMethodName, ByteStringType.Immutable, out var value);
+            : RavenConstants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
 
         knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Exact);
         foreach (var field in index.Definition.IndexFields.Values)
