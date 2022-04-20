@@ -479,6 +479,9 @@ public static class QueryBuilderHelper
             ThrowFieldIsNotIndexed();
         }
 
+        if (indexField?.Indexing is FieldIndexing.No || binding?.FieldIndexingMode is FieldIndexingMode.No)
+            CoraxDocumentConverterBase.ThrowIndexingComplexObjectNotSupported((object)indexField ?? binding);
+        
         return indexField?.Id ?? binding?.FieldId ??
             throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
 
