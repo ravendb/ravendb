@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Client;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
@@ -39,59 +40,59 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
         {
             case OrderByFieldType.Implicit:
             case OrderByFieldType.String:
-            {
-                var xVal = GetString(x, order.Name, index);
-                var yVal = GetString(y, order.Name, index);
-                return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
-            }
+                {
+                    var xVal = GetString(x, order.Name, index);
+                    var yVal = GetString(y, order.Name, index);
+                    return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
+                }
             case OrderByFieldType.Long:
-            {
-                var hasX = TryGetLongValue(x, order.Name, index, out long xLng);
-                var hasY = TryGetLongValue(y, order.Name, index, out long yLng);
-                if (hasX == false && hasY == false)
-                    return 0;
-                if (hasX == false)
-                    return 1;
-                if (hasY == false)
-                    return -1;
-                return xLng.CompareTo(yLng);
-            }
+                {
+                    var hasX = TryGetLongValue(x, order.Name, index, out long xLng);
+                    var hasY = TryGetLongValue(y, order.Name, index, out long yLng);
+                    if (hasX == false && hasY == false)
+                        return 0;
+                    if (hasX == false)
+                        return 1;
+                    if (hasY == false)
+                        return -1;
+                    return xLng.CompareTo(yLng);
+                }
             case OrderByFieldType.Double:
-            {
-                var hasX = TryGetDoubleValue(x, order.Name, index, out double xDbl);
-                var hasY = TryGetDoubleValue(y, order.Name, index, out double yDbl);
-                if (hasX == false && hasY == false)
-                    return 0;
-                if (hasX == false)
-                    return 1;
-                if (hasY == false)
-                    return -1;
-                return xDbl.CompareTo(yDbl);
-            }
+                {
+                    var hasX = TryGetDoubleValue(x, order.Name, index, out double xDbl);
+                    var hasY = TryGetDoubleValue(y, order.Name, index, out double yDbl);
+                    if (hasX == false && hasY == false)
+                        return 0;
+                    if (hasX == false)
+                        return 1;
+                    if (hasY == false)
+                        return -1;
+                    return xDbl.CompareTo(yDbl);
+                }
             case OrderByFieldType.AlphaNumeric:
-            {
-                var xVal = GetString(x, order.Name, index);
-                var yVal = GetString(y, order.Name, index);
-                if (xVal == null && yVal == null)
-                    return 0;
-                if (xVal == null)
-                    return 1;
-                if (yVal == null)
-                    return -1;
-                return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
-            }
+                {
+                    var xVal = GetString(x, order.Name, index);
+                    var yVal = GetString(y, order.Name, index);
+                    if (xVal == null && yVal == null)
+                        return 0;
+                    if (xVal == null)
+                        return 1;
+                    if (yVal == null)
+                        return -1;
+                    return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
+                }
             case OrderByFieldType.Random:
                 return Random.Shared.Next(0, int.MaxValue);
 
             case OrderByFieldType.Custom:
-                throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
+                throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
             case OrderByFieldType.Score:
             case OrderByFieldType.Distance:
             default:
                 throw new ArgumentException("Unknown OrderingType: " + order.OrderingType);
         }
 
-            
+
     }
 
     private string GetString(BlittableJsonReaderObject blittable, string fieldName, int index)
