@@ -16,6 +16,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status/ioStats',
             moduleId: require('viewmodels/database/status/ioStats'),
+            shardingMode: "singleShardOnly",
             title: 'IO Stats',
             tooltip: "Displays IO metrics status",
             nav: true,
