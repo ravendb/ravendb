@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
@@ -8,7 +9,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Sharding.Encryption
+namespace SlowTests.Sharding.Encryption
 {
     public class ShardedEncryption : RavenTestBase
     {
