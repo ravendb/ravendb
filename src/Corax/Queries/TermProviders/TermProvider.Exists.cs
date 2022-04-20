@@ -45,10 +45,15 @@ namespace Corax.Queries
         {
             while (_iterator.MoveNext(out Span<byte> termSlice, out var _))
             {
-                if (termSlice.Length <= 1)
-                    term = Span<byte>.Empty;
-                
-                term = termSlice.Slice(0, termSlice.Length - 1);
+                // This shouldnt happen.
+                if (termSlice.Length < 1)
+                    continue;
+
+                int termSize = termSlice.Length;
+                if (termSlice[^1] == 0)
+                    termSize--;
+
+                term = termSlice.Slice(0, termSize);
                 return true;
             }
 
