@@ -15,6 +15,6 @@ public class BulkInsertBatchCommandsReader : AbstractBulkInsertBatchCommandsRead
 
     public override Task<BatchRequestParser.CommandData> GetCommandAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier)
     {
-        return MoveNext(ctx, modifier);
+        return MoveNextAsync(ctx, modifier);
     }
 }

@@ -25,7 +25,7 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
         BatchRequestParser.CommandParsingObserver = _bufferedCommandCopier = new BufferedCommandCopier();
     }
 
-    public override async Task SaveStream(JsonOperationContext context, Stream input)
+    public override async ValueTask SaveStreamAsync(JsonOperationContext context, Stream input)
     {
         Streams ??= new List<Stream>();
         var attachment = ServerStore.GetTempFile($"{_databaseContext.DatabaseName}.attachment", "sharded", _databaseContext.Encrypted).StartNewStream();
@@ -34,7 +34,7 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
         Streams.Add(attachment);
     }
 
-    public override async Task<BatchRequestParser.CommandData> ReadCommand(
+    public override async Task<BatchRequestParser.CommandData> ReadCommandAsync(
         JsonOperationContext ctx,
         Stream stream, JsonParserState state,
         UnmanagedJsonParser parser,

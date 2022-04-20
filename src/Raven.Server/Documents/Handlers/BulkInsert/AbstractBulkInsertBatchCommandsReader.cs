@@ -32,7 +32,7 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
         _parser = new UnmanagedJsonParser(ctx, _state, "bulk_docs");
     }
 
-    public async Task Init()
+    public async Task InitAsync()
     {
         while (_parser.Read() == false)
             await BatchRequestParser.RefillParserBuffer(_stream, _buffer, _parser, _token);
@@ -45,7 +45,7 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
 
     public abstract Task<TCommandData> GetCommandAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier);
 
-    protected Task<BatchRequestParser.CommandData> MoveNext(JsonOperationContext ctx, BlittableMetadataModifier modifier)
+    protected Task<BatchRequestParser.CommandData> MoveNextAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier)
     {
         if (_parser.Read())
         {
