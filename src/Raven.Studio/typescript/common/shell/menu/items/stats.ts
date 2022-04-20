@@ -42,6 +42,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status/ongoingTasksStats',
             moduleId: require('viewmodels/database/status/ongoingTasksStats'),
+            shardingMode: "singleShardOnly",
             title: 'Ongoing Tasks Stats',
             nav: true,
             css: 'icon-replication-stats',
