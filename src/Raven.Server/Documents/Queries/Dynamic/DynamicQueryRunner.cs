@@ -132,7 +132,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                return await ExecuteSuggestion(query, index, queryContext, existingResultEtag, token);
+                var queryResult = await ExecuteSuggestion(query, index, queryContext, existingResultEtag, token);
+                queryResult.RaftCommandIndex = result.Index;
+
+                return queryResult;
             }
         }
 

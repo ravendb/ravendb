@@ -245,6 +245,13 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
+            if (result.RaftCommandIndex.HasValue)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.RaftCommandIndex));
+                writer.WriteInteger(result.RaftCommandIndex.Value);
+            }
+
             var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
 
             writer.WriteEndObject();
