@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
         {
         }
 
-        protected override async Task<GetConflictsPreviewResult> GetConflictsPreviewAsync(TransactionOperationContext context, long start, int pageSize)
+        protected override async ValueTask<GetConflictsPreviewResult> GetConflictsPreviewAsync(TransactionOperationContext context, long start, int pageSize)
         {
             _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, (int)start, pageSize);
 

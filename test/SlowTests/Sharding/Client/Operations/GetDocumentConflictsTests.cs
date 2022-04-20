@@ -63,6 +63,9 @@ namespace SlowTests.Sharding.Client.Operations
 
                     documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 12));
                     Assert.Equal(8, documentsConflict.Results.Length);
+
+                    documentsConflict = await store.Maintenance.SendAsync(new GetConflictsOperation(start: 0, pageSize: 10));
+                    Assert.Equal(10, documentsConflict.Results.Length);
                 }
             }
         }

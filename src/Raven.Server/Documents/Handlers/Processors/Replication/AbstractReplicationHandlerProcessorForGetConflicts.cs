@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected abstract Task<GetConflictsPreviewResult> GetConflictsPreviewAsync(TOperationContext context, long etag, int pageSize);
+        protected abstract ValueTask<GetConflictsPreviewResult> GetConflictsPreviewAsync(TOperationContext context, long start, int pageSize);
 
         protected abstract Task GetConflictsForDocumentAsync(TOperationContext context, string documentId);
 
@@ -32,14 +32,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                 if (string.IsNullOrWhiteSpace(docId))
                 {
                     var result = await GetConflictsPreviewAsync(context, start, pageSize);
-                    await WriteResultsAsync(context, result);
+                    await WriteResultsAsync(context, result, pageSize);
                 }
                 else
                     await GetConflictsForDocumentAsync(context, docId);
             }
         }
 
-        protected async ValueTask WriteResultsAsync(JsonOperationContext context, GetConflictsPreviewResult previewResult)
+        protected async ValueTask WriteResultsAsync(JsonOperationContext context, GetConflictsPreviewResult previewResult, int pageSize)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
@@ -47,6 +47,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
                 foreach (var conflict in previewResult.Results)
                 {
+                    if (pageSize-- <= 0)
+                        break;
+
                     array.Add(new DynamicJsonValue
                     {
                         [nameof(GetConflictsPreviewResult.ConflictPreview.Id)] = conflict.Id,
@@ -64,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
     }
 
-    public class ConflictsPreviewComparer : Comparer<GetConflictsPreviewResult.ConflictPreview>
+    internal class ConflictsPreviewComparer : Comparer<GetConflictsPreviewResult.ConflictPreview>
     {
         public override int Compare(GetConflictsPreviewResult.ConflictPreview x, GetConflictsPreviewResult.ConflictPreview y)
         {

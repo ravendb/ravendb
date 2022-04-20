@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Operations
                 {
                     sb.Append($"?start={_start}");
 
-                    if (_pageSize.HasValue)
+                    if (_pageSize.HasValue && _pageSize != default)
                         sb.Append($"&pageSize={_pageSize}");
                 }
 
