@@ -25,6 +25,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status/storage/report',
             moduleId: require('viewmodels/database/status/storageReport'),
+            shardingMode: "singleShardOnly",
             title: 'Storage Report',
             tooltip: "Storage Report",
             nav: true,
