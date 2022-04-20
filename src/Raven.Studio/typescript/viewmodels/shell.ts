@@ -233,7 +233,7 @@ class shell extends viewModelBase {
                 // "http"
                 if (location.protocol === "http:") {
                     this.accessManager.securityClearance("ClusterAdmin");
-                    this.accessManager.unsecureServer(true);
+                    this.accessManager.secureServer(false);
                 } else {
                     // "https"
                     if (certificate) {
@@ -249,6 +249,7 @@ class shell extends viewModelBase {
                         
                     } else {
                         this.accessManager.securityClearance("ValidUser");
+                        this.accessManager.secureServer(false);
                     }
                 }
             })

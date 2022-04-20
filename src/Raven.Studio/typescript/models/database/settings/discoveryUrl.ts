@@ -1,11 +1,12 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import jsonUtil = require("common/jsonUtil");
+import accessManager = require("common/shell/accessManager");
 
 class discoveryUrl {
     discoveryUrlName = ko.observable<string>();
     validationGroup: KnockoutValidationGroup;
 
-    static usingHttps = location.protocol === "https:";
+    static usingHttps = accessManager.default.secureServer();
     
     hasTestError = ko.observable<boolean>(false);
     
