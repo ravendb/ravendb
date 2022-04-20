@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import fileDownloader = require("common/fileDownloader");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import d3 = require("d3");
@@ -16,6 +15,8 @@ import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefini
 import subscriptionQueryDefinitionCache = require("models/database/stats/subscriptionQueryDefinitionCache");
 import fileImporter = require("common/fileImporter");
 import moment = require("moment");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |
                       "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
@@ -255,7 +256,7 @@ class hitTest {
     }
 }
 
-class ongoingTasksStats extends viewModelBase {
+class ongoingTasksStats extends shardViewModelBase {
 
     view = require("views/database/status/ongoingTasksStats.html");
 
@@ -434,8 +435,8 @@ class ongoingTasksStats extends viewModelBase {
         }
     };
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
 
         this.bindToCurrentInstance("clearGraphWithConfirm");
         
@@ -503,7 +504,7 @@ class ongoingTasksStats extends viewModelBase {
 
         this.initCanvases();
 
-        const activeDatabase = this.activeDatabase();
+        const activeDatabase = this.db;
         this.etlDefinitionsCache = new etlScriptDefinitionCache(activeDatabase);
         this.subscriptionDefinitionCache = new subscriptionQueryDefinitionCache(activeDatabase);
 
@@ -687,15 +688,15 @@ class ongoingTasksStats extends viewModelBase {
             }
         }, 1000, { maxWait: 3000 });
 
-        this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), d => {
+        this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.db, d => {
             this.replicationData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
-        this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.activeDatabase(), d => {
+        this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.db, d => {
             this.etlData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
-        this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.activeDatabase(), d => {
+        this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.db, d => {
             this.subscriptionData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
@@ -2277,7 +2278,7 @@ class ongoingTasksStats extends viewModelBase {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `OngoingTasksStats of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`;
+            exportFileName = `OngoingTasksStats of ${this.db.name} ${moment().format("YYYY-MM-DD HH-mm")}`;
         }
 
         const keysToIgnore: Array<keyof performanceBaseWithCache> = ["StartedAsDate", "CompletedAsDate"];
