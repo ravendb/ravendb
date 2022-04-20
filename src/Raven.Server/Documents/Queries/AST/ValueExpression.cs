@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Queries.AST
                     queryParameters.TryGetMember(Token, out var r);
                     return r;
                 case ValueTokenType.Long:
-                    return LuceneQueryBuilder.ParseInt64WithSeparators(Token.Value);
+                    return QueryBuilderHelper.ParseInt64WithSeparators(Token.Value);
                 case ValueTokenType.Double:
                     return double.Parse(Token.AsSpan(), NumberStyles.AllowThousands | NumberStyles.Float, CultureInfo.InvariantCulture);
                 case ValueTokenType.String:

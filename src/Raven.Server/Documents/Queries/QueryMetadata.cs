@@ -644,7 +644,7 @@ function execute(doc, args){
                         break;
 
                     case ValueExpression ve:
-                        foreach ((object value, _) in LuceneQueryBuilder.GetValues(Query, this, parameters, ve))
+                        foreach ((object value, _) in QueryBuilderHelper.GetValues(Query, this, parameters, ve))
                         {
                             string path = value.ToString();
                             if (string.IsNullOrEmpty(path))
@@ -824,7 +824,7 @@ function execute(doc, args){
 
                 if (vt.Value == ValueTokenType.Parameter)
                 {
-                    foreach (var v in LuceneQueryBuilder.GetValues(Query, this, parameters, vt))
+                    foreach (var v in QueryBuilderHelper.GetValues(Query, this, parameters, vt))
                     {
                         AddCounterToInclude(counterIncludes, parameters, v, sourcePath);
                     }
@@ -832,7 +832,7 @@ function execute(doc, args){
                     continue;
                 }
 
-                var value = LuceneQueryBuilder.GetValue(Query, this, parameters, vt);
+                var value = QueryBuilderHelper.GetValue(Query, this, parameters, vt);
 
                 AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
             }
@@ -899,7 +899,7 @@ function execute(doc, args){
                             if (!(expression.Arguments[index] is ValueExpression vt))
                                 continue;
                             var argIndex = index - start;
-                            var arg = LuceneQueryBuilder.GetValue(Query, this, parameters, vt);
+                            var arg = QueryBuilderHelper.GetValue(Query, this, parameters, vt);
 
                             // name arg
                             if (argIndex == 0)
@@ -2203,7 +2203,7 @@ function execute(doc, args){
                 var valueType1 = GetValueTokenType(parameters, fv, unwrapArrays: false);
                 var valueType2 = GetValueTokenType(parameters, sv, unwrapArrays: false);
 
-                if (LuceneQueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
+                if (QueryBuilderHelper.AreValueTokenTypesValid(valueType1, valueType2) == false)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
             }
 
@@ -2225,12 +2225,12 @@ function execute(doc, args){
                     {
                         var previousValue = (ValueExpression)values[i - 1];
 
-                        if (LuceneQueryBuilder.AreValueTokenTypesValid(previousValue.Value, value.Value) == false)
+                        if (QueryBuilderHelper.AreValueTokenTypesValid(previousValue.Value, value.Value) == false)
                             ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
                     }
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
-                    if (i > 0 && LuceneQueryBuilder.AreValueTokenTypesValid(previousType, valueType) == false)
+                    if (i > 0 && QueryBuilderHelper.AreValueTokenTypesValid(previousType, valueType) == false)
                         ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, values.ToArray());
 
                     if (valueType != ValueTokenType.Null)
@@ -2396,7 +2396,7 @@ function execute(doc, args){
                 if (secondArgument is ValueExpression == false)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a value", QueryText, parameters);
 
-                var value = LuceneQueryBuilder.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
+                var value = QueryBuilderHelper.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
                 if (value.Type != ValueTokenType.Long)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a number", QueryText, parameters);
 
@@ -2419,7 +2419,7 @@ function execute(doc, args){
                 if (secondArgument is ValueExpression == false)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a value", QueryText, parameters);
 
-                var value = LuceneQueryBuilder.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
+                var value = QueryBuilderHelper.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
                 if (value.Type != ValueTokenType.Long && value.Type != ValueTokenType.Double)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a number", QueryText, parameters);
 
