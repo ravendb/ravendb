@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Xml.Xsl;
 using Corax.Queries;
 using Voron;
 
@@ -31,20 +33,85 @@ public partial class IndexSearcher
             var leftValueSlice = EncodeAndApplyAnalyzer((string)(object)leftValue, fieldId);
             var rightValueSlice = EncodeAndApplyAnalyzer((string)(object)rightValue, fieldId);
 
-            return BuildBetween(in set, fieldId, leftValueSlice, rightValueSlice, isNegated, take);
+            return BuildBetween(in set, fieldId, leftValueSlice, rightValueSlice, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual, isNegated, take);
         }
 
-        return BuildBetween(in set, fieldId, leftValue, rightValue, isNegated, take);
+        return BuildBetween(in set, fieldId, leftValue, rightValue, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual, isNegated, take);
     }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private UnaryMatch BuildBetween<TInner, TValueType>(in TInner set, int fieldId, TValueType leftValue, TValueType rightValue, bool isNegated = false,
+    public UnaryMatch Between<TInner, TValueType>(in TInner set, int fieldId, TValueType leftValue, TValueType rightValue, UnaryMatchOperation leftSide, UnaryMatchOperation rightSide, bool isNegated = false,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
     {
-        return isNegated
-            ? UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotBetweenMatch(set, this, fieldId, leftValue, rightValue, take))
-            : UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldBetweenMatch(set, this, fieldId, leftValue, rightValue, take));
+        if (typeof(TValueType) == typeof(string))
+        {
+            var leftValueSlice = EncodeAndApplyAnalyzer((string)(object)leftValue, fieldId);
+            var rightValueSlice = EncodeAndApplyAnalyzer((string)(object)rightValue, fieldId);
+
+            return BuildBetween(in set, fieldId, leftValueSlice, rightValueSlice, leftSide, rightSide, isNegated, take);
+        }
+
+        return BuildBetween(in set, fieldId, leftValue, rightValue, leftSide, rightSide, isNegated, take);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private UnaryMatch BuildBetween<TInner, TValueType>(in TInner set, int fieldId, TValueType leftValue, TValueType rightValue, UnaryMatchOperation leftSide, UnaryMatchOperation rightSide, bool isNegated = false,
+        int take = Constants.IndexSearcher.TakeAll)
+        where TInner : IQueryMatch
+    {
+        return (isNegated, leftSide, rightSide) switch
+        {
+            // $const <= X <= $const
+            (false, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanOrEqualMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanOrEqualMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+            (true, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanOrEqualMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanOrEqualMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+
+            // $const < X <= $const
+            (false, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanOrEqualMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+            (true, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanOrEqualMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+
+            // $const <= X < $const
+            (false, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanOrEqualMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+            (true, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanOrEqualMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+
+            // $const < X < $const
+            (false, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+            (true, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) =>
+                UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotBetweenMatch<
+                    UnaryMatch<TInner, TValueType>.GreaterThanMatchComparer,
+                    UnaryMatch<TInner, TValueType>.LessThanMatchComparer
+                >(set, this, fieldId, leftValue, rightValue, take)),
+
+            _ => throw new InvalidDataException($"Invalid parameter for between match.")
+        };
     }
 
     private UnaryMatch BuildUnaryMatch<TInner, TValueType>(in TInner set, int fieldId, TValueType term, UnaryMatchOperation @operation,
