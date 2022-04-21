@@ -247,9 +247,9 @@ namespace Raven.Server.Json
 
             if (result.RaftCommandIndex.HasValue)
             {
-                writer.WriteComma();
                 writer.WritePropertyName(nameof(result.RaftCommandIndex));
                 writer.WriteInteger(result.RaftCommandIndex.Value);
+                writer.WriteComma();
             }
 
             var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
