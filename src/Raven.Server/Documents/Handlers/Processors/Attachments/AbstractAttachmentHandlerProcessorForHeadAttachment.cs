@@ -17,12 +17,12 @@ internal abstract class AbstractAttachmentHandlerProcessorForHeadAttachment<TReq
 
     protected abstract ValueTask HandleHeadAttachmentAsync(string documentId, string name, string changeVector);
 
-    public override async ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync()
     {
         var documentId = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
         var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
         var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-        await HandleHeadAttachmentAsync(documentId, name, changeVector);
+        return HandleHeadAttachmentAsync(documentId, name, changeVector);
     }
 }

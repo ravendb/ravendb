@@ -7,9 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
@@ -154,23 +152,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public async Task GetDocumentsAttachmentMetadataWithCounts()
+        public async Task GetAttachmentMetadataWithCounts()
         {
-            var id = GetStringQueryString("id", false);
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var array = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumentWithCounts(context, id.ToLowerInvariant());
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Id");
-                    writer.WriteString(id);
-                    writer.WriteComma();
-                    writer.WriteArray("Attachments", array, context);
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new AttachmentHandlerProcessorForGetAttachmentMetadataWithCounts(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/attachments", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
