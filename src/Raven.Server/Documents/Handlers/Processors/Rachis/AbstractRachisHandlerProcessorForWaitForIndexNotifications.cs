@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.Rachis
 {
     internal abstract class AbstractRachisHandlerProcessorForWaitForIndexNotifications<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
