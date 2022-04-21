@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -67,14 +68,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     ? queryTimings.For(nameof(QueryTimingsScope.Names.Highlightings), start: false)
                     : null;
             }
-            
+
             IQueryMatch queryMatch;
-            Dictionary<string, object> queryData = new();
+            Dictionary<string, object> highlightingTerms = query.Metadata.HasHighlightings ? new() : null;
             using (coraxScope?.Start())
-            {             
+            {
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
-                    _fieldMappings, fieldsToFetch, take: take)) is null)
-                yield break;
+                        indexMapping: _fieldMappings,
+                        highlightingTerms: highlightingTerms, 
+                        queryMapping: fieldsToFetch)) is null)
+                    yield break;
             }
 
             var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
@@ -84,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (hasHighlights)
             {
                 using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
-                    SetupHighlighter(query, documentsContext);
+                    SetupHighlighter(query, documentsContext, highlightingTerms);
             }
 
 
@@ -115,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
 
                     var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key);
-                    
+
                     var filterResult = queryFilter?.Apply(ref retrieverInput, key);
                     if (filterResult is not null and not FilterResult.Accepted)
                     {
@@ -128,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     bool markedAsSkipped = false;
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
-                    
+
                     if (fetchedDocument.Document != null)
                     {
                         var qr = GetQueryResult(fetchedDocument.Document, ref markedAsSkipped);
@@ -195,7 +198,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             foreach (var current in query.Metadata.Highlightings)
                             {
                                 var fieldName = current.Field.Value;
-                                if (queryData.TryGetValue(fieldName, out var value) == false)
+                                if (highlightingTerms.TryGetValue(fieldName, out var value) == false)
                                     continue;
 
                                 //Highlight
@@ -218,10 +221,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             ArrayPool<long>.Shared.Return(ids);
         }
-        
+
         private Dictionary<string, (string[] PreTags, string[] PostTags, string Term)> _tagsPerField;
 
-        private void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context)
+        private void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context, Dictionary<string, object> highlightingTerms)
         {
             _tagsPerField = null;
             foreach (var highlighting in query.Metadata.Highlightings)
@@ -242,15 +245,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 if (_tagsPerField == null)
                     _tagsPerField = new();
 
-                var fieldName = query.Metadata.IsDynamic
-                    ? throw new NotSupportedException("AutoIndex dynamic field is not supported yet.")
-                    : highlighting.Field.Value;
-                
+                var fieldName = 
+                    query.Metadata.IsDynamic 
+                        ? AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value)
+                        : highlighting.Field.Value;
+
                 // TODO: get the terms.
-
-                var term = string.Empty;
-
-                _tagsPerField[fieldName] = (options.PreTags, options.PostTags, term);
+                highlightingTerms.TryGetValue(fieldName, out var term);
+                if (term is not string)
+                    throw new Exception("Term is null or list. Please change your query");
+                _tagsPerField[fieldName] = (options.PreTags, options.PostTags, term.ToString());
             }
         }
 
