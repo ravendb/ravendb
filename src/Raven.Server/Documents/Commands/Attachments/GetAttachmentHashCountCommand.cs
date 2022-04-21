@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Attachments
 {
-    internal class AttachmentExistsCommand : RavenCommand<AttachmentExistsCommand.Response>
+    internal class GetAttachmentHashCountCommand : RavenCommand<GetAttachmentHashCountCommand.Response>
     {
         private readonly string _hash;
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Commands.Attachments
             public long Count { get; set; }
         }
 
-        public AttachmentExistsCommand([NotNull] string hash)
+        public GetAttachmentHashCountCommand([NotNull] string hash)
         {
             _hash = hash ?? throw new ArgumentNullException(nameof(hash));
         }

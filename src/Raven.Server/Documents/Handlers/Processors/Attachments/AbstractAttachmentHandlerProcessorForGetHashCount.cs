@@ -6,16 +6,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal abstract class AbstractAttachmentHandlerProcessorForExists<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractAttachmentHandlerProcessorForGetHashCount<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractAttachmentHandlerProcessorForExists([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+    protected AbstractAttachmentHandlerProcessorForGetHashCount([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
         : base(requestHandler, contextPool)
     {
     }
 
-    protected abstract ValueTask<AttachmentExistsCommand.Response> GetResponseAsync(TOperationContext context, string hash);
+    protected abstract ValueTask<GetAttachmentHashCountCommand.Response> GetResponseAsync(TOperationContext context, string hash);
 
     public override async ValueTask ExecuteAsync()
     {
@@ -29,15 +29,15 @@ internal abstract class AbstractAttachmentHandlerProcessorForExists<TRequestHand
         }
     }
 
-    private async ValueTask WriteResponseAsync(TOperationContext context, AttachmentExistsCommand.Response response)
+    private async ValueTask WriteResponseAsync(TOperationContext context, GetAttachmentHashCountCommand.Response response)
     {
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
-            writer.WritePropertyName(nameof(AttachmentExistsCommand.Response.Hash));
+            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.Hash));
             writer.WriteString(response.Hash);
             writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentExistsCommand.Response.Count));
+            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.Count));
             writer.WriteInteger(response.Count);
             writer.WriteEndObject();
         }
