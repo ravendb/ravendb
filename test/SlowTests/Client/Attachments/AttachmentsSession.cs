@@ -11,6 +11,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -495,10 +496,11 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Fact]
-        public void AttachmentExists()
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void AttachmentExists(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
