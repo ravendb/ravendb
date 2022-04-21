@@ -131,24 +131,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Exists()
         {
-            var hash = GetStringQueryString("hash");
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            using (Slice.From(context.Allocator, hash, out var hashSlice))
-            {
-                var count = AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice);
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Hash");
-                    writer.WriteString(hash);
-                    writer.WriteComma();
-                    writer.WritePropertyName("Count");
-                    writer.WriteInteger(count);
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new AttachmentHandlerProcessorForExists(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
