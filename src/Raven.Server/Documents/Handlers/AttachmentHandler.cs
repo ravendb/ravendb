@@ -129,9 +129,9 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public async Task Exists()
+        public async Task GetHashCount()
         {
-            using (var processor = new AttachmentHandlerProcessorForExists(this))
+            using (var processor = new AttachmentHandlerProcessorForGetHashCount(this))
                 await processor.ExecuteAsync();
         }
 

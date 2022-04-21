@@ -10,19 +10,19 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 
-internal class ShardedAttachmentHandlerProcessorForExists : AbstractAttachmentHandlerProcessorForExists<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedAttachmentHandlerProcessorForGetHashCount : AbstractAttachmentHandlerProcessorForGetHashCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAttachmentHandlerProcessorForExists([NotNull] ShardedDatabaseRequestHandler requestHandler)
+    public ShardedAttachmentHandlerProcessorForGetHashCount([NotNull] ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }
 
-    protected override async ValueTask<AttachmentExistsCommand.Response> GetResponseAsync(TransactionOperationContext context, string hash)
+    protected override async ValueTask<GetAttachmentHashCountCommand.Response> GetResponseAsync(TransactionOperationContext context, string hash)
     {
         return await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedAttachmentExistsOperation(HttpContext.Request, hash));
     }
 
-    internal readonly struct ShardedAttachmentExistsOperation : IShardedOperation<AttachmentExistsCommand.Response>
+    internal readonly struct ShardedAttachmentExistsOperation : IShardedOperation<GetAttachmentHashCountCommand.Response>
     {
         private readonly string _hash;
 
@@ -34,9 +34,9 @@ internal class ShardedAttachmentHandlerProcessorForExists : AbstractAttachmentHa
             HttpRequest = httpRequest ?? throw new ArgumentNullException(nameof(httpRequest));
         }
 
-        public AttachmentExistsCommand.Response Combine(Memory<AttachmentExistsCommand.Response> results)
+        public GetAttachmentHashCountCommand.Response Combine(Memory<GetAttachmentHashCountCommand.Response> results)
         {
-            var response = new AttachmentExistsCommand.Response
+            var response = new GetAttachmentHashCountCommand.Response
             {
                 Hash = _hash
             };
@@ -48,6 +48,6 @@ internal class ShardedAttachmentHandlerProcessorForExists : AbstractAttachmentHa
             return response;
         }
 
-        public RavenCommand<AttachmentExistsCommand.Response> CreateCommandForShard(int shard) => new AttachmentExistsCommand(_hash);
+        public RavenCommand<GetAttachmentHashCountCommand.Response> CreateCommandForShard(int shard) => new GetAttachmentHashCountCommand(_hash);
     }
 }
