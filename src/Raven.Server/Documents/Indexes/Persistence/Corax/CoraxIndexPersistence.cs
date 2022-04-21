@@ -63,7 +63,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
     {
-        throw new NotImplementedException();
+        throw new NotImplementedException($"Facet is not supported by {nameof(Corax)} yet.");
     }
 
     public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)

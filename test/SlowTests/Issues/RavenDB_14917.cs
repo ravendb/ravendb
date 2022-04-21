@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseSegmentSummaryInIndex()
+        [RavenTheory(RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseSegmentSummaryInIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new TimeSeriesIndex().Execute(store);
                 new TimeSeriesIndex_Complex().Execute(store);

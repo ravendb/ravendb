@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+using System.Linq;
 using System.Threading;
 using Corax;
 using Corax.Pipeline;
@@ -181,8 +181,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             HashSet<string> results = new();
-            var terms = _indexSearcher.GetTermsOfField(field);
-
+            
+            if (_indexSearcher.TryGetTermsOfField(field, out var terms) == false)
+                return results;
+            
             if (fromValue is not null)
             {
                 Span<byte> fromValueBytes = Encodings.Utf8.GetBytes(fromValue);
@@ -233,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
 
-            List<string> itemList = new(32);
+            HashSet<string> itemList = new(32);
             var bufferSizes = GetMaximumSizeOfBuffer();
             var tokensBuffer = ArrayPool<Token>.Shared.Rent(bufferSizes.TokenSize);
             var encodedBuffer = ArrayPool<byte>.Shared.Rent(bufferSizes.OutputSize);
@@ -316,7 +318,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 return itemList.Count switch
                 {
-                    1 => itemList[0],
+                    1 => itemList.First(),
                     > 1 => itemList.ToArray(),
                     _ => string.Empty
                 };

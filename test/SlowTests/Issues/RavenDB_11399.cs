@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +21,11 @@ namespace SlowTests.Issues
             public string Title { get; set; }
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -44,12 +46,12 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var names = session.Advanced.RawQuery<Employee>("from Employees where Title != null and (boost(search(FirstName, 'andrew*'), 1000) or boost(search(FirstName, 'ann*'), 800)) select FirstName")
+                    var names = session.Advanced.RawQuery<Employee>("from Employees where Title != null and (boost(search(FirstName, 'andrew*'), 1000) or boost(search(FirstName, 'ann*'), 800)) order by score() select FirstName")
                         .NoCaching()
                         .ToArray()
                         .Select(x => x.FirstName)
                         .ToArray();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal("Andrew", names[0]);
                     Assert.Equal("Anne", names[1]);
                 }
@@ -64,7 +66,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var names = session.Advanced.RawQuery<Employee>("from Employees where Title != null and (boost(search(FirstName, 'andrew*'), 1000) or boost(search(FirstName, 'ann*'), 800)) select FirstName")
+                    var names = session.Advanced.RawQuery<Employee>("from Employees where Title != null and (boost(search(FirstName, 'andrew*'), 1000) or boost(search(FirstName, 'ann*'), 800)) order by score() select FirstName")
                         .NoCaching()
                         .ToArray()
                         .Select(x => x.FirstName)

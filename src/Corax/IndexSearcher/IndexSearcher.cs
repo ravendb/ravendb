@@ -148,17 +148,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new AllEntriesMatch(_transaction);
     }
     
-    public ExistsTermProvider GetTermsOfField(string field)
+    public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields?.CompactTreeFor(field);
         
         if (terms == null)
         {
-            return default;
+            existsTermProvider = default;
+            return false;
         }
         
-        return new ExistsTermProvider(this, _transaction.Allocator, terms, field);
+        existsTermProvider = new ExistsTermProvider(this, _transaction.Allocator, terms, field);
+        return true;
     }
 
     public void Dispose()

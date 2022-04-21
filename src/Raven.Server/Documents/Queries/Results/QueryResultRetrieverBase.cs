@@ -193,6 +193,20 @@ namespace Raven.Server.Documents.Queries.Results
                         if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here
                             TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
                             continue;
+                            
+                        switch (SearchEngineType)
+                        {
+                            case SearchEngineType.Corax:
+                                if (CoraxTryExtractValueFromIndex(fieldToFetch, ref retrieverInput, result))
+                                    continue;
+                                break;
+                            case SearchEngineType.Lucene:
+                                if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
+                                    continue;
+                                break;
+                            default:
+                                throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
+                        }
 
                         if (FieldsToFetch.Projection.MustExtractFromIndex)
                         {
@@ -284,7 +298,7 @@ namespace Raven.Server.Documents.Queries.Results
             switch (SearchEngineType)
             {
                 case SearchEngineType.Corax:
-                    if (TryExtractValueFromIndexCorax(fieldToFetch, ref retrieverInput, result))
+                    if (CoraxTryExtractValueFromIndex(fieldToFetch, ref retrieverInput, result))
                         return true;
                     break;
                 case SearchEngineType.Lucene:
@@ -528,7 +542,7 @@ namespace Raven.Server.Documents.Queries.Results
             return anyExtracted;
         }
 
-        private bool TryExtractValueFromIndexCorax(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
+        private bool CoraxTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
         {
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;

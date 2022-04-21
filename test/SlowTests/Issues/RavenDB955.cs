@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanQueryWithNullComparison()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithNullComparison(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -27,17 +29,20 @@ namespace SlowTests.Issues
                 using (var s = store.OpenSession())
                 {
 
+                    
                     Assert.Equal(1, s.Query<WithNullableField>().Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue)).Count(x => x.TheNullableField == null));
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, s.Query<WithNullableField>().Customize(x => x.WaitForNonStaleResults(TimeSpan.MaxValue)).Count(x => x.TheNullableField != null));
                 }
             }
 
         }
 
-        [Fact]
-        public void CanQueryWithHasValue()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithHasValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

@@ -76,8 +76,7 @@ public partial class IndexSearcher
                 mode = Constants.Search.SearchMatchOptions.Contains;
 
             Slice.From(_transaction.Allocator, encoded.Slice(tokens[0].Offset, (int)tokens[0].Length), ByteStringType.Immutable, out var encodedString);
-            if (typeof(TScoreFunction) == typeof(NullScoreFunction))
-                BuildExpression(mode, encodedString);
+            BuildExpression(mode, encodedString);
         }
 
         QueryContext.MatchesRawPool.Return(buffer);

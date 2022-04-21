@@ -1417,7 +1417,7 @@ namespace SlowTests.Client.Indexing.Counters
         
         private async Task CounterIndexProgress_WhenMapMultipleCounterGroups_ShouldDisplayNumberOfCounterGroups1(Options options, AbstractCountersIndexCreationTask index)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             await index.ExecuteAsync(store);
 

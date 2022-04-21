@@ -31,7 +31,7 @@ namespace FastTests.Client.Indexing
         public void CanCompileIndexWithExtensions(Options options)
         {
             CopyNodaTimeIfNeeded();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleByEmail());
                 using (var session = store.OpenSession())
