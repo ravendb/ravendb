@@ -1,5 +1,7 @@
 /// <reference path="../typings/tsd.d.ts" />
 
+require('../wwwroot/Content/css/fonts/icomoon.font');
+
 import { overrideViews } from "./overrides/views";
 import { overrideComposition } from "./overrides/composition";
 import { overrideSystem } from "./overrides/system";
