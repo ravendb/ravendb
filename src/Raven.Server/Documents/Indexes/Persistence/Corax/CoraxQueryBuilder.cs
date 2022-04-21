@@ -247,7 +247,7 @@ public static class CoraxQueryBuilder
             var matches = new List<string>();
             foreach (var tuple in QueryBuilderHelper.GetValuesForIn(query, ie, metadata, parameters))
             {
-                matches.Add(tuple.Value);
+                matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
             }
 
             return (isNegated, scoreFunction) switch
