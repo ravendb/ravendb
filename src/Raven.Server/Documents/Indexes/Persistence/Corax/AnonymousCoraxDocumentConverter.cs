@@ -82,7 +82,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
             InsertRegularField(field, value, indexContext, ref entryWriter, scope);
         }
 
-        if (_indexEmptyEntries == false && entryWriter.IsEmpty())
+        if (entryWriter.IsEmpty())
             return Span<byte>.Empty;
 
         if (storedValue is not null)

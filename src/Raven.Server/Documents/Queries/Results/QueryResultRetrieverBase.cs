@@ -193,21 +193,7 @@ namespace Raven.Server.Documents.Queries.Results
                         if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here
                             TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
                             continue;
-                            
-                        switch (SearchEngineType)
-                        {
-                            case SearchEngineType.Corax:
-                                if (CoraxTryExtractValueFromIndex(fieldToFetch, ref retrieverInput, result))
-                                    continue;
-                                break;
-                            case SearchEngineType.Lucene:
-                                if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
-                                    continue;
-                                break;
-                            default:
-                                throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
-                        }
-
+                        
                         if (FieldsToFetch.Projection.MustExtractFromIndex)
                         {
                             if (FieldsToFetch.Projection.MustExtractOrThrow)
