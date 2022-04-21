@@ -12,23 +12,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/identity/next", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task NextIdentityFor()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            if (name[name.Length - 1] != '|')
-                name += '|';
-
-            var (_, _, newIdentityValue) = await Database.ServerStore.GenerateClusterIdentityAsync(name, Database.IdentityPartsSeparator, Database.Name, GetRaftRequestIdFromQuery());
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName("NewIdentityValue");
-                writer.WriteInteger(newIdentityValue);
-
-                writer.WriteEndObject();
-            }
+            using (var processor = new IdentityHandlerProcessorForNextIdentityFor(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/identity/seed", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]

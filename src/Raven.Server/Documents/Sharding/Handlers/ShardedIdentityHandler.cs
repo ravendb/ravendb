@@ -6,6 +6,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedIdentityHandler : ShardedDatabaseRequestHandler
     {
+        [RavenShardedAction("/databases/*/identity/next", "POST")]
+        public async Task NextIdentityFor()
+        {
+            using (var processor = new ShardedIdentityHandlerProcessorForNextIdentityFor(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/identity/seed", "POST")]
         public async Task SeedIdentityFor()
         {

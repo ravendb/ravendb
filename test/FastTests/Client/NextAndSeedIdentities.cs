@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.Identities;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void NextIdentityFor()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void NextIdentityFor(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -58,10 +60,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void SeedIdentityFor()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void SeedIdentityFor(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -115,8 +118,9 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void NextIdentityForOperationShouldCreateANewIdentityIfThereIsNone()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void NextIdentityForOperationShouldCreateANewIdentityIfThereIsNone(Options options)
         {
             using (var store = GetDocumentStore())
             {
