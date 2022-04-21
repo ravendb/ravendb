@@ -68,19 +68,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            var ids = GetStringValuesQueryString("id", required: false);
-            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new DocumentHandlerProcessorForGet(this, ContextPool))
             {
-                if (ids.Count > 0)
-                    await GetDocumentsByIdAsync(context, ids, metadataOnly);
-                else
-                    await GetDocumentsAsync(context, metadataOnly);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
+                await processor.ExecuteAsync();
             }
         }
 
@@ -113,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task GetDocumentsAsync(DocumentsOperationContext context, bool metadataOnly)
+        internal async Task GetDocumentsAsync(DocumentsOperationContext context, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
 
@@ -168,7 +158,7 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
-        private async Task GetDocumentsByIdAsync(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues ids, bool metadataOnly)
+        internal async Task GetDocumentsByIdAsync(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues ids, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
 

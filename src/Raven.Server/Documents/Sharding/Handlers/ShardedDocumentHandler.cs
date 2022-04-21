@@ -42,6 +42,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
+        [RavenShardedAction("/databases/*/docs", "GET")]
+        public async Task Get()
+        {
+            using (var processor = new ShardedDocumentHandlerProcessorForGet(this, ContextPool))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
+
         [RavenShardedAction("/databases/*/docs", "PUT")]
         public async Task Put()
         {
@@ -87,30 +96,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
-            }
-        }
-
-        [RavenShardedAction("/databases/*/docs", "GET")]
-        public async Task Get()
-        {
-            var ids = GetStringValuesQueryString("id", required: false);
-            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
-            var includePaths = GetStringValuesQueryString("include", required: false);
-            var etag = GetStringFromHeaders("If-None-Match");
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                if (TrafficWatchManager.HasRegisteredClients) //TODO - sharding: do we need that here?
-                    AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
-
-                if (ids.Count > 0)
-                {
-                    await GetDocumentsByIdAsync(ids, includePaths, etag, metadataOnly, context);
-                }
-                else
-                {
-                    await GetDocumentsAsync(context, metadataOnly);
-                }
             }
         }
 
@@ -202,7 +187,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        private async Task GetDocumentsAsync(TransactionOperationContext context, bool metadataOnly)
+        internal async Task GetDocumentsAsync(TransactionOperationContext context, bool metadataOnly)
         {
             var token = ContinuationTokens.GetOrCreateContinuationToken(context);
 
@@ -263,7 +248,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             //AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
-        private async Task GetDocumentsByIdAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
+        internal async Task GetDocumentsByIdAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make sure we maintain the order of returned results");
             var idsByShard = ShardLocator.GetDocumentIdsByShards(context, DatabaseContext, ids);
