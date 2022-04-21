@@ -6,6 +6,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedAttachmentHandler : ShardedDatabaseRequestHandler
     {
+        [RavenShardedAction("/databases/*/attachments", "HEAD")]
+        public async Task Head()
+        {
+            using (var processor = new ShardedAttachmentHandlerProcessorForHeadAttachment(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/attachments", "DELETE")]
         public async Task Delete()
         {
