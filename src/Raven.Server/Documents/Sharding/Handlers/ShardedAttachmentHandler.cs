@@ -22,6 +22,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
+        [RavenShardedAction("/databases/*/debug/attachments/hash", "GET")]
+        public async Task Exists()
+        {
+            using (var processor = new ShardedAttachmentHandlerProcessorForExists(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/debug/attachments/metadata", "GET")]
         public async Task GetAttachmentMetadataWithCounts()
         {
