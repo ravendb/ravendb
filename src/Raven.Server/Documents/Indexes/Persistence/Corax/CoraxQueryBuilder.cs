@@ -294,7 +294,7 @@ public static class CoraxQueryBuilder
                 case MethodType.Exists:
                     return HandleExists(indexSearcher, query, parameters, me, metadata, scoreFunction);
                 case MethodType.Exact:
-                    return HandleExact(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, scoreFunction, isNegated, indexMapping, queryMapping, proximity, secondary, buildSteps, take);
+                    return HandleExact(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, scoreFunction, isNegated, indexMapping, queryMapping, proximity, secondary, buildSteps, highlightingTerms, take);
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                     return null; // never hit
@@ -310,11 +310,11 @@ public static class CoraxQueryBuilder
         MethodExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping,
         FieldsToFetch queryMapping, int? proximity = null, bool secondary = false,
-        List<string> buildSteps = null, int take = TakeAll)
+        List<string> buildSteps = null, Dictionary<string, object> highlightingTerms = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
-            isNegated, indexMapping, queryMapping, true, proximity, secondary, buildSteps, take);
+            isNegated, indexMapping, queryMapping, true, proximity, secondary, buildSteps, highlightingTerms, take);
     }
 
     private static IQueryMatch TranslateBetweenQuery<TScoreFunction>(IndexSearcher indexSearcher, Query query, QueryMetadata metadata, Index index,
