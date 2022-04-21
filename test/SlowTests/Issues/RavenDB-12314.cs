@@ -61,6 +61,7 @@ namespace SlowTests.Issues
                     };
 
                 StoreAllFields(FieldStorage.Yes);
+                Index(f => f.Roles, FieldIndexing.No);
             }
 
             public class Entry

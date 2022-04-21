@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace FastTests.Client.Queries
         {
         }
 
-        [Fact]
-        public void QueriesWithRegexShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void QueriesWithRegexShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -35,10 +37,11 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [Fact]
-        public async Task QueriesWithRegexFromDocumentQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task QueriesWithRegexFromDocumentQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -81,10 +84,11 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void QueriesWithRegexFromLinqProvider()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void QueriesWithRegexFromLinqProvider(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -106,10 +110,11 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void QueriesWithRegexFromLinqProvider_QueryExpressionSyntax()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void QueriesWithRegexFromLinqProvider_QueryExpressionSyntax(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -131,10 +136,11 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void QueriesWithRegexAndEscapedCharsShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void QueriesWithRegexAndEscapedCharsShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

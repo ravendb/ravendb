@@ -36,7 +36,6 @@ namespace SlowTests.Issues
 
                 session.SaveChanges();
             }
-            WaitForUserToContinueTheTest(store);
             Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenSession())

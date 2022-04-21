@@ -87,25 +87,25 @@ public static class CoraxQueryBuilder
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne2.Expression, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
-                            
+
                             return indexSearcher.AndNot(indexSearcher.AllEntries(), indexSearcher.Or(left, right));
-                        
+
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
                                 factories, scoreFunction, !isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
-                            
+
                             return indexSearcher.AndNot(right, left);
-                        
+
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
-                            
+
                             return indexSearcher.AndNot(left, right);
-                        
+
                         default:
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
                                 factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
@@ -134,7 +134,7 @@ public static class CoraxQueryBuilder
                 default:
                 {
                     var operation = QueryBuilderHelper.TranslateUnaryMatchOperation(where.Operator);
-                    
+
                     QueryExpression right = where.Right;
 
                     if (where.Right is MethodExpression rme)
@@ -148,7 +148,7 @@ public static class CoraxQueryBuilder
 
                     var (value, valueType) = QueryBuilderHelper.GetValue(query, metadata, parameters, right, true);
 
-                    var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+                    var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
 
                     if (operation is UnaryMatchOperation.Equals)
                     {
@@ -181,11 +181,11 @@ public static class CoraxQueryBuilder
                     IQueryMatch HandleStringUnaryMatch()
                     {
                         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-                        
+
                         if (exact && metadata.IsDynamic)
                         {
                             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
-                            fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+                            fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
                         }
 
                         return indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, valueAsString, operation, take);
@@ -236,7 +236,7 @@ public static class CoraxQueryBuilder
                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
             }
 
-            var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+            var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
 
 
             if (ie.All)
@@ -286,7 +286,8 @@ public static class CoraxQueryBuilder
                     return HandleEndsWith(indexSearcher, query, me, metadata, index, parameters, exact, isNegated, scoreFunction, indexMapping, queryMapping, take);
                 case MethodType.Exists:
                     return HandleExists(indexSearcher, query, parameters, me, metadata, scoreFunction);
-
+                case MethodType.Exact:
+                    return HandleExact(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, scoreFunction, isNegated, indexMapping, queryMapping, proximity, secondary, buildSteps, take);
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                     return null; // never hit
@@ -294,6 +295,19 @@ public static class CoraxQueryBuilder
         }
 
         throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
+    }
+
+    private static IQueryMatch HandleExact<TScoreFunction>(IndexSearcher indexSearcher, TransactionOperationContext serverContext,
+        DocumentsOperationContext documentsContext,
+        Query query,
+        MethodExpression expression, QueryMetadata metadata, Index index,
+        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping,
+        FieldsToFetch queryMapping, int? proximity = null, bool secondary = false,
+        List<string> buildSteps = null, int take = TakeAll)
+        where TScoreFunction : IQueryScoreFunction
+    {
+        return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
+            isNegated, indexMapping, queryMapping, true, proximity, secondary, buildSteps, take);
     }
 
     private static IQueryMatch TranslateBetweenQuery<TScoreFunction>(IndexSearcher indexSearcher, Query query, QueryMetadata metadata, Index index,
@@ -306,7 +320,7 @@ public static class CoraxQueryBuilder
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, be.Source, metadata);
         var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Min);
         var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
 
         var match = (valueFirstType, valueSecondType) switch
         {
@@ -358,7 +372,7 @@ public static class CoraxQueryBuilder
         if (exact && metadata.IsDynamic)
             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
 
         return indexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction, isNegated, fieldId);
     }
@@ -380,7 +394,7 @@ public static class CoraxQueryBuilder
         if (exact && metadata.IsDynamic)
             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
 
         return indexSearcher.EndsWithQuery(fieldName, valueAsString, scoreFunction, isNegated, fieldId);
     }

@@ -1962,7 +1962,7 @@ namespace SlowTests.Client.TimeSeries.Session
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanFilterByCmpXchgAndIncludeTimeSeriesAndCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
