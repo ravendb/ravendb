@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Commands;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.Rachis
 {
     internal class RachisHandlerProcessorForWaitForIndexNotifications : AbstractRachisHandlerProcessorForWaitForIndexNotifications<DatabaseRequestHandler, DocumentsOperationContext>
     {

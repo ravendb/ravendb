@@ -1,10 +1,10 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Commands;
-using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Handlers.Processors.Rachis;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Sharding.Handlers.Processors
+namespace Raven.Server.Documents.Sharding.Handlers.Processors.Rachis
 {
     internal class ShardedRachisHandlerProcessorForWaitForIndexNotifications : AbstractRachisHandlerProcessorForWaitForIndexNotifications<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
