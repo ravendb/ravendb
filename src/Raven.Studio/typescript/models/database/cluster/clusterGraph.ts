@@ -3,6 +3,7 @@
 import d3 = require("d3");
 import clusterNode = require("models/database/cluster/clusterNode");
 import graphHelper = require("common/helpers/graph/graphHelper");
+import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 
 interface clusterNodeWithLayout extends clusterNode {
     x: number;
@@ -218,7 +219,7 @@ class clusterGraph {
 
         const nodeIcon = (node: clusterNodeWithLayout) => {
             if (node.tag() === leaderTag) {
-                return "&#xe9d5;";
+                return icomoonHelpers.getCodePointForCanvas("node-leader");
             }
 
             switch (node.type()) {
