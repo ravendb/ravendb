@@ -9,7 +9,7 @@ namespace Tests.Infrastructure.ConnectionString
         private static MongoDBConnectionString _instance;
         public static MongoDBConnectionString Instance => _instance ?? (_instance = new MongoDBConnectionString());
 
-        private Lazy<string> ConnectionString { get; }
+        public Lazy<string> ConnectionString { get; }
 
         private MongoDBConnectionString()
         {

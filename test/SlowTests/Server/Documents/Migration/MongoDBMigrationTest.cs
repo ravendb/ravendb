@@ -10,6 +10,7 @@ using Raven.Client.Documents.Smuggler;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,51 +52,58 @@ namespace SlowTests.Server.Documents.Migration
 
             var databaseName = $"Test{Guid.NewGuid().ToString()}";
 
-            var connectionString = Environment.GetEnvironmentVariable("RAVEN_MONGODB_CONNECTION_STRING");
+            var connectionString = MongoDBConnectionString.Instance.ConnectionString.Value;
             var client = new MongoClient(connectionString);
             var db = client.GetDatabase(databaseName);
 
-            var booksCollection = db.GetCollection<Book>("Books");
-            await booksCollection.InsertManyAsync(expectedBooks);
-
-            var moviesCollection = db.GetCollection<Movie>("Movies");
-            await moviesCollection.InsertManyAsync(expectedMovies);
-
-
-            var path = NewDataPath();
-            if (Directory.Exists(path))
+            try
             {
-                Directory.Delete(path, true);
-            }
-            Directory.CreateDirectory(path);
+                var booksCollection = db.GetCollection<Book>("Books");
+                await booksCollection.InsertManyAsync(expectedBooks);
 
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var inputConfiguration = new DynamicJsonValue
+                var moviesCollection = db.GetCollection<Movie>("Movies");
+                await moviesCollection.InsertManyAsync(expectedMovies);
+
+
+                var path = NewDataPath();
+                if (Directory.Exists(path))
                 {
-                    ["DatabaseName"] = databaseName,
-                    ["Command"] = "export",
-                    ["ExportFilePath"] = path,
-                    ["ConnectionString"] = connectionString
-                };
-                var inputConfigurationStr = context.ReadObject(inputConfiguration, "InputConfiguration").ToString();
-
-                Raven.Migrator.Program.Main(new[] { "mongodb", "-j", inputConfigurationStr });
-            }
-
-            using (var store = GetDocumentStore())
-            {
-                var databaseDumpFilePath = Directory.GetFiles(path).FirstOrDefault();
-                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), databaseDumpFilePath);
-                operation.WaitForCompletion();
-                using (var session = store.OpenAsyncSession())
-                {
-                    var actualBooks = await session.Query<Book>().ToListAsync();
-                    var actualMovies = await session.Query<Movie>().ToListAsync();
-
-                    AssertEquivalent(expectedBooks, actualBooks, new Book.Comparer());
-                    AssertEquivalent(expectedMovies, actualMovies, new Movie.Comparer());
+                    Directory.Delete(path, true);
                 }
+                Directory.CreateDirectory(path);
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var inputConfiguration = new DynamicJsonValue
+                    {
+                        ["DatabaseName"] = databaseName,
+                        ["Command"] = "export",
+                        ["ExportFilePath"] = path,
+                        ["ConnectionString"] = connectionString
+                    };
+                    var inputConfigurationStr = context.ReadObject(inputConfiguration, "InputConfiguration").ToString();
+
+                    Raven.Migrator.Program.Main(new[] { "mongodb", "-j", inputConfigurationStr });
+                }
+
+                using (var store = GetDocumentStore())
+                {
+                    var databaseDumpFilePath = Directory.GetFiles(path).FirstOrDefault();
+                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), databaseDumpFilePath);
+                    operation.WaitForCompletion();
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var actualBooks = await session.Query<Book>().ToListAsync();
+                        var actualMovies = await session.Query<Movie>().ToListAsync();
+
+                        AssertEquivalent(expectedBooks, actualBooks, new Book.Comparer());
+                        AssertEquivalent(expectedMovies, actualMovies, new Movie.Comparer());
+                    }
+                }
+            }
+            finally
+            {
+                client.DropDatabase(databaseName);
             }
         }
 
