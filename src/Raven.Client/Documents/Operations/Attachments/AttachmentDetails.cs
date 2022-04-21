@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
@@ -8,12 +9,36 @@ namespace Raven.Client.Documents.Operations.Attachments
         public string DocumentId;
     }
 
+    internal class AttachmentNameWithCount : AttachmentName
+    {
+        public long Count { get; set; }
+
+        internal override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Count)] = Count;
+
+            return json;
+        }
+    }
+
     public class AttachmentName
     {
         public string Name;
         public string Hash;
         public string ContentType;
         public long Size;
+
+        internal virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(Hash)] = Hash,
+                [nameof(ContentType)] = ContentType,
+                [nameof(Size)] = Size
+            };
+        }
     }
 
     public class AttachmentRequest

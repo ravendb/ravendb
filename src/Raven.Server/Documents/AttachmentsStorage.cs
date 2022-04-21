@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -106,20 +107,20 @@ namespace Raven.Server.Documents
             return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
         }
 
-        public IEnumerable<DynamicJsonValue> GetAttachmentsMetadataForDocumentWithCounts(DocumentsOperationContext context, string lowerDocumentId)
+        internal IEnumerable<AttachmentNameWithCount> GetAttachmentsMetadataForDocumentWithCounts(DocumentsOperationContext context, string lowerDocumentId)
         {
             using (Slice.From(context.Allocator, lowerDocumentId, out Slice lowerDocumentIdSlice))
             using (GetAttachmentPrefix(context, lowerDocumentIdSlice, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
-                    yield return new DynamicJsonValue
+                    yield return new AttachmentNameWithCount
                     {
-                        [nameof(AttachmentName.Name)] = attachment.Name,
-                        [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(),
-                        [nameof(AttachmentName.ContentType)] = attachment.ContentType,
-                        [nameof(AttachmentName.Size)] = attachment.Size,
-                        ["Count"] = GetCountOfAttachmentsForHash(context, attachment.Base64Hash)
+                        Name = attachment.Name,
+                        Hash = attachment.Base64Hash.ToString(),
+                        ContentType = attachment.ContentType,
+                        Size = attachment.Size,
+                        Count = GetCountOfAttachmentsForHash(context, attachment.Base64Hash)
                     };
                 }
             }

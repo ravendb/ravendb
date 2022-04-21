@@ -22,6 +22,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
+        [RavenShardedAction("/databases/*/debug/attachments/metadata", "GET")]
+        public async Task GetAttachmentMetadataWithCounts()
+        {
+            using (var processor = new ShardedAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/attachments", "PUT")]
         public async Task Put()
         {
