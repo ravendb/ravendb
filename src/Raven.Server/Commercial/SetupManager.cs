@@ -936,7 +936,7 @@ namespace Raven.Server.Commercial
                     continue;
                 }
 
-                foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp, token))
                 {
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
                 }
@@ -1156,7 +1156,7 @@ namespace Raven.Server.Commercial
             var node = setupInfo.NodeSetupInfos[nodeTag];
 
             var cn = cert.GetNameInfo(X509NameType.SimpleName, false);
-            if (cn[0] == '*')
+            if (cn?.StartsWith("*", StringComparison.OrdinalIgnoreCase) == true) // Subject can be empty (and maybe null?)
             {
                 var parts = cn.Split("*.");
                 if (parts.Length != 2)
@@ -1178,13 +1178,32 @@ namespace Raven.Server.Commercial
 
             domain = cn; //default for one node case
 
+            string expectedDnsName = null;
+            if (Uri.TryCreate(setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag].PublicServerUrl, UriKind.Absolute, out Uri serverUrl))
+            {
+                // relevant for "provide your own cert" scenarios
+                // if the user is specifying dns names such as: orange.ravendb.company.local, blue.ravendb.company.local - we can't
+                // rely on the node tags, we do a full match on the host the user provided
+                expectedDnsName = serverUrl.Host;
+            }
+
             foreach (var value in GetCertificateAlternativeNames(cert))
             {
-                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
+                if (string.IsNullOrEmpty(domain))
+                    domain = value; // if the Subject is null or empty, set the first one
+                
+                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false &&
+                    value.Equals(expectedDnsName, StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
                 domain = value;
                 break;
+            }
+
+            if (string.IsNullOrEmpty(domain))
+            {
+                throw new InvalidOperationException("The certificate does not contain a Subject or Subject Alternative Names fields that match the node: " + nodeTag +" " +
+                                                    $"The certificate SimpleName is '{cn}' and the Subject Alternative Names is: [{string.Join(", ", GetCertificateAlternativeNames(cert))}]");
             }
 
             var url = $"https://{domain}";
