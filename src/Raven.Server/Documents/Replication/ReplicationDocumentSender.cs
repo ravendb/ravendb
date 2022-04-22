@@ -20,6 +20,8 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -37,6 +39,11 @@ namespace Raven.Server.Documents.Replication
         private OutgoingReplicationStatsScope _statsInstance;
         internal readonly ReplicationStats _stats = new ReplicationStats();
         public bool MissingAttachmentsInLastBatch { get; private set; }
+        private HashSet<Slice> _deduplicatedAttachmentHashes = new(SliceComparer.Instance);
+        private Queue<Slice> _deduplicatedAttachmentHashesLru = new();
+        private int _deduplicateAttachmentBufferSize;
+        private ByteStringContext _context; // required to clone the hashes 
+
 
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log, string[] pathsToSend, string[] destinationAcceptablePaths)
         {
@@ -51,6 +58,10 @@ namespace Raven.Server.Documents.Replication
             _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub &&
                                            parent._outgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                            _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
+            
+            _deduplicateAttachmentBufferSize = parent._database.Configuration.Replication.AttachmentDeduplicationBufferSize;
+            _context = new ByteStringContext(SharedMultipleUseFlag.None);
+
         }
 
         public class MergedReplicationBatchEnumerator : IEnumerator<ReplicationBatchItem>
@@ -680,10 +691,30 @@ namespace Raven.Server.Documents.Replication
 
                     break;
 
-                case AttachmentReplicationItem _:
+                case AttachmentReplicationItem attachment:
                     if (MissingAttachmentsInLastBatch)
                     {
+                        // we intentionally not trying to de-duplicate in this scenario
+                        // we may have _sent_ the attachment already, but it was deleted at 
+                        // destination, so we need to send it again
                         return false;
+                    }
+                    
+                    // RavenDB does de-duplication of attachments on storage, but not over the wire
+                    // Here we implement the same idea, if (in the current connection), we already sent
+                    // an attachment, we will skip sending it to the other side since we _know_ it is 
+                    // already there.
+                    if (_deduplicatedAttachmentHashes.Contains(attachment.Base64Hash))
+                        return true; // we already sent it over during the current run
+                    
+                    var clone = attachment.Base64Hash.Clone(_context);
+                    _deduplicatedAttachmentHashes.Add(clone);
+                    _deduplicatedAttachmentHashesLru.Enqueue(clone);
+                    while (_deduplicatedAttachmentHashesLru.Count > _deduplicateAttachmentBufferSize)
+                    {
+                        var cur = _deduplicatedAttachmentHashesLru.Dequeue();
+                        _deduplicatedAttachmentHashes.Remove(cur);
+                        _context.Release(ref cur.Content);
                     }
                     break;
             }
@@ -806,6 +837,7 @@ namespace Raven.Server.Documents.Replication
         {
             _pathsToSend?.Dispose();
             _destinationAcceptablePaths?.Dispose();
+            _context.Dispose();
         }
         private class ReplicationState
         {
