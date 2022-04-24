@@ -33,50 +33,89 @@ namespace SlowTests.Issues
 
         [Fact]
         public async Task CreatingARevisionManuallyAfterEnablingRevisionsForAnyCollection()
-        { 
-            var store = GetDocumentStore();
-
-            // Define revision settings on Orders collection
-            var configuration = new RevisionsConfiguration
+        {
+            using (var store = GetDocumentStore())
             {
-                Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                // Define revision settings on Orders collection
+                var configuration = new RevisionsConfiguration
                 {
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        "Orders", new RevisionsCollectionConfiguration
                         {
-                            PurgeOnDelete = true,
-                            MinimumRevisionsToKeep = 5
+                            "Orders", new RevisionsCollectionConfiguration
+                            {
+                                PurgeOnDelete = true,
+                                MinimumRevisionsToKeep = 5
+                            }
                         }
                     }
+                };
+                var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                string companyId;
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Name = "HR" };
+                    session.Store(company);
+                    companyId = company.Id;
+                    session.SaveChanges();
                 }
-            };
-            var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
 
-            string companyId;
-            using (var session = store.OpenSession())
-            {
-                var company = new Company { Name = "HR" };
-                session.Store(company);
-                companyId = company.Id;
-                session.SaveChanges();
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>(companyId);
+
+                    var revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
+                    Assert.Equal(0, revisionsCount);
+
+                    // Force revisions on a Company document
+                    session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
+                    session.SaveChanges();
+
+                    revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
+                    Assert.Equal(1, revisionsCount);
+                }
             }
+        }
 
-            using (var session = store.OpenSession())
+        [Fact]
+        public async Task CreatingARevisionManuallyAfterEnablingRevisionsForAnyCollectionSameSession()
+        {
+            using (var store = GetDocumentStore())
             {
-                var company = session.Load<Company>(companyId);
+                // Define revision settings on Orders collection
+                var configuration = new RevisionsConfiguration
+                {
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        {
+                            "Orders", new RevisionsCollectionConfiguration
+                            {
+                                PurgeOnDelete = true,
+                                MinimumRevisionsToKeep = 5
+                            }
+                        }
+                    }
+                };
+                var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
 
-                var revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
-                Assert.Equal(0, revisionsCount);
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Name = "HR" };
+                    session.Store(company);
+                    session.SaveChanges();
 
-                // Force revisions on a Company document
-                session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
-                session.SaveChanges();
+                    var revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
+                    Assert.Equal(0, revisionsCount);
 
-                revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
-                Assert.Equal(1, revisionsCount); //=> this fails - should be 1 - but it is 0
+                    // Force revisions on a Company document
+                    session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
+                    session.SaveChanges();
+
+                    revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
+                    Assert.Equal(1, revisionsCount);
+                }
             }
-
-            store.Dispose();
         }
 
     }
