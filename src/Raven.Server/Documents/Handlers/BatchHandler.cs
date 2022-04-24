@@ -1092,7 +1092,7 @@ namespace Raven.Server.Documents.Handlers
                             revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id,
                                                                                          clonedDocData,
                                                                                          existingDoc.Flags,
-                                                                                         nonPersistentFlags: NonPersistentDocumentFlags.None,
+                                                                                         nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
                                                                                          existingDoc.ChangeVector,
                                                                                          existingDoc.LastModified.Ticks);
                             if (revisionCreated)
