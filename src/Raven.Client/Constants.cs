@@ -120,7 +120,7 @@ namespace Raven.Client
             public const int MaxNumberOfCertsWithSameHash = 5;
         }
         
-        public class Network
+        internal class Network
         {
             public const string AnyIp = "0.0.0.0";
             public const int ZeroValue = 0;
