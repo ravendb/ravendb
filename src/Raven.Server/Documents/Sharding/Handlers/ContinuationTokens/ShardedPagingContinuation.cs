@@ -12,7 +12,7 @@ public class ShardedPagingContinuation : ContinuationToken
 
     }
 
-    public ShardedPagingContinuation(ShardedDatabaseContext databaseContext, long start, int pageSize)
+    public ShardedPagingContinuation(ShardedDatabaseContext databaseContext, int start, int pageSize)
     {
         var shards = databaseContext.ShardCount;
         var startPortion = start / shards;
@@ -43,7 +43,7 @@ public class ShardedPagingContinuation : ContinuationToken
     public struct ShardPaging : IDynamicJson
     {
         public int ShardNumber;
-        public long Start;
+        public int Start;
 
         public DynamicJsonValue ToJson()
         {

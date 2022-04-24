@@ -185,21 +185,35 @@ namespace FastTests
                 return new DynamicBlittableJson(json);
             }
 
-            public DynamicArray GetRevisionsBinEntries(long etag, int? pageSize = null)
+            public DynamicArray GetRevisionsBinEntries(int etag, int? pageSize = null)
             {
                 return AsyncHelpers.RunSync(() => GetRevisionsBinEntriesAsync(etag, pageSize));
             }
 
-            public async Task<DynamicArray> GetRevisionsBinEntriesAsync(long etag, int? pageSize = null)
+            public async Task<DynamicArray> GetRevisionsBinEntriesAsync(int etag, int? pageSize = null)
             {
                 var command = new GetRevisionsBinEntryCommand(etag, pageSize);
                 await RequestExecutor.ExecuteAsync(command, Context);
                 return new DynamicArray(command.Result.Results);
             }
 
-            public async Task<(BlittableJsonReaderObject[] Results, string ContinuationToken)> GetRevisionsBinEntriesAndContinuationTokenAsync(JsonOperationContext context, long etag, int? pageSize = null, string continuationToken = null)
+            public async Task<(BlittableJsonReaderObject[] Results, string ContinuationToken)> GetRevisionsBinEntriesAndContinuationTokenAsync(JsonOperationContext context, int etag, int? pageSize = null)
             {
-                var command = new GetRevisionsBinEntryCommand(etag, pageSize, continuationToken);
+                var command = new GetRevisionsBinEntryCommand(etag, pageSize);
+                await RequestExecutor.ExecuteAsync(command, Context);
+                var list = new BlittableJsonReaderObject[command.Result.Results.Length];
+                int i = 0;
+                foreach (BlittableJsonReaderObject item in command.Result.Results)
+                {
+                    list[i] = item.Clone(context);
+                    i++;
+                }
+                return (list, command.Result.ContinuationToken);
+            }
+
+            public async Task<(BlittableJsonReaderObject[] Results, string ContinuationToken)> GetRevisionsBinEntriesAndContinuationTokenAsync(JsonOperationContext context, string continuationToken)
+            {
+                var command = new GetRevisionsBinEntryCommand(continuationToken);
                 await RequestExecutor.ExecuteAsync(command, Context);
 
                 var list = new BlittableJsonReaderObject[command.Result.Results.Length];

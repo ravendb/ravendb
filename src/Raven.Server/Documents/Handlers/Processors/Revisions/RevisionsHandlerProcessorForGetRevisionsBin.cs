@@ -16,13 +16,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected override async ValueTask GetAndWriteRevisionsBinAsync(DocumentsOperationContext context, long etag, int pageSize)
+        protected override async ValueTask GetAndWriteRevisionsBinAsync(DocumentsOperationContext context, int start, int pageSize)
         {
             using (context.OpenReadTransaction())
             {
                 var sw = Stopwatch.StartNew();
                 var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
-                revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out var actualChangeVector);
+                revisionsStorage.GetLatestRevisionsBinEntry(context, start, out var actualChangeVector);
                 if (actualChangeVector != null)
                 {
                     if (RequestHandler.GetStringFromHeaders("If-None-Match") == actualChangeVector)
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
                     HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
                 }
-                var revisions = revisionsStorage.GetRevisionsBinEntries(context, etag, pageSize).ToAsyncEnumerable();
+                var revisions = revisionsStorage.GetRevisionsBinEntries(context, start, pageSize).ToAsyncEnumerable();
 
                 long count;
                 long totalDocumentsSizeInBytes;
@@ -50,13 +50,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
         }
-
-        protected override bool IsRevisionsConfigured()
-        {
-            var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
-            return revisionsStorage.Configuration != null;
-        }
-
+        
         protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
             long totalDocumentsSizeInBytes)
         {

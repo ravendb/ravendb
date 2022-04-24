@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Streaming;
@@ -164,14 +165,17 @@ namespace Raven.Server.Documents.Sharding
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
                     if (x?.Item == null)
-                        return -1;
+                        return 1;
                     if (y?.Item == null)
-                        return -1;
-
-                    if (x.Item.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject md1) && md1.TryGet(Constants.Documents.Metadata.LastModified, out DateTime lm1) &&
-                        y.Item.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject md2) && md2.TryGet(Constants.Documents.Metadata.LastModified, out DateTime lm2))
-                        return lm1 < lm2 ? -1 : 1;
-                    return -1;
+                        return 1;
+                    try
+                    {
+                        return x.Item.GetMetadata().GetLastModified() < y.Item.GetMetadata().GetLastModified() ? 1 : -1;
+                    }
+                    catch
+                    {
+                        return 1;
+                    }
                 }
 
                 public static DocumentLastModifiedComparer Instance = new ();
@@ -185,57 +189,8 @@ namespace Raven.Server.Documents.Sharding
                 return PagedShardedItem(
                     results,
                     selector,
-                    o => o,
                     DocumentLastModifiedComparer.Instance,
                     pagingContinuation);
-            }
-
-            public IEnumerable<T> PagedShardedItem<T, TInput>(
-                Memory<TInput> results,
-                Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
-                Func<BlittableJsonReaderObject, T> converter,
-                Comparer<ShardStreamItem<T>> comparer,
-                ShardedPagingContinuation pagingContinuation)
-            {
-                var pageSize = pagingContinuation.PageSize;
-                foreach (var result in CombinedResults(results, selector, converter, comparer))
-                {
-                    if (pageSize-- <= 0)
-                        yield break;
-
-                    var shard = result.Shard;
-                    pagingContinuation.Pages[shard].Start++;
-
-                    yield return result.Item;
-                }
-            }
-
-            public IEnumerable<ShardStreamItem<T>> CombinedResults<T, TInput>(
-                Memory<TInput> results,
-                Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
-                Func<BlittableJsonReaderObject, T> converter,
-                Comparer<ShardStreamItem<T>> comparer)
-            {
-                var shards = results.Span.Length;
-                using (var merged = new MergedEnumerator<ShardStreamItem<T>>(comparer))
-                {
-                    for (int i = 0; i < shards; i++)
-                    {
-                        var shardNumber = i;
-                        var r = selector(results.Span[i]);
-                        var it = r.Select(item => new ShardStreamItem<T>
-                        {
-                            Item = converter(item),
-                            Shard = shardNumber
-                        });
-                        merged.AddEnumerator(it.GetEnumerator());
-                    }
-
-                    while (merged.MoveNext())
-                    {
-                        yield return merged.Current;
-                    }
-                }
             }
 
             public async IAsyncEnumerable<Document> GetDocumentsAsync(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results")
@@ -245,27 +200,7 @@ namespace Raven.Server.Documents.Sharding
                     yield return result.Item;
                 }
             }
-
-            public IEnumerable<T> PagedShardedItem<T, TInput>(
-                Memory<TInput> results,
-                Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
-                Func<BlittableJsonReaderObject, T> converter,
-                Comparer<ShardStreamItem<T>> comparer,
-                ShardedPagingContinuation pagingContinuation)
-            {
-                var pageSize = pagingContinuation.PageSize;
-                foreach (var result in CombinedResults(results, selector, converter, comparer))
-                {
-                    if (pageSize-- <= 0)
-                        yield break;
-
-                    var shard = result.Shard;
-                    pagingContinuation.Pages[shard].Start++;
-
-                    yield return result.Item;
-                }
-            }
-
+            
             public IEnumerable<T> PagedShardedItem<T, TInput>(
                 Memory<TInput> results,
                 Func<TInput, IEnumerable<T>> selector,
@@ -300,34 +235,6 @@ namespace Raven.Server.Documents.Sharding
                         var it = r.Select(item => new ShardStreamItem<T>
                         {
                             Item = item,
-                            Shard = shardNumber
-                        });
-                        merged.AddEnumerator(it.GetEnumerator());
-                    }
-
-                    while (merged.MoveNext())
-                    {
-                        yield return merged.Current;
-                    }
-                }
-            }
-
-            public IEnumerable<ShardStreamItem<T>> CombinedResults<T, TInput>(
-                Memory<TInput> results,
-                Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
-                Func<BlittableJsonReaderObject, T> converter,
-                Comparer<ShardStreamItem<T>> comparer)
-            {
-                var shards = results.Span.Length;
-                using (var merged = new MergedEnumerator<ShardStreamItem<T>>(comparer))
-                {
-                    for (int i = 0; i < shards; i++)
-                    {
-                        var shardNumber = i;
-                        var r = selector(results.Span[i]);
-                        var it = r.Select(item => new ShardStreamItem<T>
-                        {
-                            Item = converter(item),
                             Shard = shardNumber
                         });
                         merged.AddEnumerator(it.GetEnumerator());

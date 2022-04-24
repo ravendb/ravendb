@@ -1,8 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
 using Raven.Client.Documents.Commands;
-using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,7 +21,7 @@ namespace SlowTests.Issues
             {
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetRevisionsBinEntryCommand(long.MaxValue, int.MaxValue);
+                    var command = new GetRevisionsBinEntryCommand(0, int.MaxValue);
                     await store.GetRequestExecutor().ExecuteAsync(command, context);
                     Assert.Equal(0, command.Result.Results.Length);
                 }
@@ -34,7 +33,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await store.Maintenance.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
                 {
                     DocumentIds = new[] { "non-existing-id" }
                 }));

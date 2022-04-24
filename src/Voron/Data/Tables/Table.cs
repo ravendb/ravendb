@@ -1244,7 +1244,7 @@ namespace Voron.Data.Tables
             return null;
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last, long skip)
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice? prefix, Slice last, long skip)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1255,11 +1255,15 @@ namespace Voron.Data.Tables
                 if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
                     yield break;
 
-                it.SetRequiredPrefix(prefix);
-                if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
+                if (prefix != null)
                 {
-                    if (it.MovePrev() == false)
-                        yield break;
+                    it.SetRequiredPrefix(prefix.Value);
+
+                    if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
+                    {
+                        if (it.MovePrev() == false)
+                            yield break;
+                    }
                 }
 
                 do
@@ -1617,38 +1621,7 @@ namespace Voron.Data.Tables
                 return result;
             }
         }
-
-        public IEnumerable<SeekResult> SeekBackwardFromLast(TableSchema.AbstractTreeIndexDef index, long skip = 0)
-        {
-            var tree = GetTree(index);
-            if (tree == null)
-                yield break;
-
-            using (var it = tree.Iterate(prefetch: true))
-            {
-                if (it.Seek(Slices.AfterAllKeys) == false)
-                    yield break;
-
-                do
-                {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        if (skip > 0)
-                        {
-                            skip--;
-                            continue;
-                        }
-
-                        yield return new SeekResult
-                        {
-                            Key = it.CurrentKey,
-                            Result = result
-                        };
-                    }
-                } while (it.MovePrev());
-            }
-        }
-
+        
         public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeKeyIndexDef index, long skip = 0)
         {
             var fst = GetFixedSizeTree(index);

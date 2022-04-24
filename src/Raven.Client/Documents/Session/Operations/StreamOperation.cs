@@ -117,7 +117,7 @@ namespace Raven.Client.Documents.Session.Operations
             return CreateStreamCommand(startsWith, matches, start, pageSize, exclude, startAfter);
         }
 
-        internal static StreamCommand CreateStreamCommand(string startsWith, string matches, long start, int pageSize, string exclude, string startAfter = null)
+        internal static StreamCommand CreateStreamCommand(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null)
         {
             var sb = new StringBuilder("streams/docs?");
 

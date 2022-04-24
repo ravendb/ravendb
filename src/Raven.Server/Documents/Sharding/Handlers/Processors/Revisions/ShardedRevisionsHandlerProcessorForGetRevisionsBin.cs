@@ -24,23 +24,18 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         {
         }
 
-        protected override async ValueTask GetAndWriteRevisionsBinAsync(TransactionOperationContext context, long etag, int pageSize)
+        protected override async ValueTask GetAndWriteRevisionsBinAsync(TransactionOperationContext context, int start, int pageSize)
         {
             var sw = Stopwatch.StartNew();
 
-            var continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, etag, pageSize);
+            var continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context, start, pageSize);
             var op = new ShardedGetRevisionsBinOperation(context, RequestHandler, continuationToken);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
             await ShardedRevisionsHandlerProcessorForGetRevisions.WriteRevisionsResultAsync(context, RequestHandler, result, totalResult: null, continuationToken);
 
             AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, 0, pageSize, sw.ElapsedMilliseconds, 0);
         }
-
-        protected override bool IsRevisionsConfigured()
-        {
-            return RequestHandler.DatabaseContext.DatabaseRecord.Revisions != null;
-        }
-
+        
         protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
             long totalDocumentsSizeInBytes)
         {
