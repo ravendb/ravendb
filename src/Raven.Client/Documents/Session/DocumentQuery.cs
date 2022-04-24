@@ -1214,7 +1214,6 @@ namespace Raven.Client.Documents.Session
 
             var queryStatistics = new QueryStatistics();
             var highlightings = new LinqQueryHighlightings();
-            QueryTimings = new QueryTimings();
 
             var ravenQueryInspector = new RavenQueryInspector<T>();
             var ravenQueryProvider = new RavenQueryProvider<T>(

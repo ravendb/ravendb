@@ -47,6 +47,25 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task ToQueryableTimingsOutTimings()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    QueryTimings timings = null;
+                    newSession.Advanced.DocumentQuery<User>()
+                        .Timings(out var timings2)
+                        .ToQueryable()
+                        .Customize(x => x.Timings(out timings)).ToList();
+
+                    Assert.NotNull(timings.Timings);
+                    Assert.Same(timings, timings2);
+                }
+            }
+        }
+
     }
 
 }
