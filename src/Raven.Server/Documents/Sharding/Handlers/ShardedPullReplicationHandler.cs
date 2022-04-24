@@ -12,5 +12,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode(this))
                 await processor.ExecuteAsync();
         }
+
+ [RavenShardedAction("/databases/*/admin/tasks/pull-replication/hub", "PUT")]
+        public async Task DefineHub()
+        {
+            using (var processor = new ShardedPullReplicationHandlerProcessorForDefineHub(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

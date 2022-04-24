@@ -22,28 +22,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task DefineHub()
         {
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-
-            PullReplicationDefinition pullReplication = null;
-            await DatabaseConfigurations((_, databaseName, blittableJson, guid) =>
-                {
-                    pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
-
-                    pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
-                    var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName, guid)
-                    {
-                        Definition = pullReplication
-                    };
-                    return ServerStore.SendToLeaderAsync(updatePullReplication);
-                }, "update-hub-pull-replication",
-                GetRaftRequestIdFromQuery(),
-                fillJson: (json, _, index) =>
-                {
-                    json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
-                }, statusCode: HttpStatusCode.Created);
+            using (var processor = new PullReplicationHandlerProcessorForDefineHub(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "PUT", AuthorizationStatus.DatabaseAdmin)]
