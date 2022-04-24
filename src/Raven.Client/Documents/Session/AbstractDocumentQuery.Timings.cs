@@ -4,19 +4,14 @@ namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        protected QueryTimings QueryTimings;
+        protected QueryTimings QueryTimings = new QueryTimings();
 
         protected FlagHolder ShouldIncludeTimings = new FlagHolder { Value = false };
 
         public void IncludeTimings(out QueryTimings timings)
         {
-            if (QueryTimings == null)
-            {
-                QueryTimings = new QueryTimings();
-            }
-            timings = QueryTimings;
-
             ShouldIncludeTimings.Value = true;
+            timings = QueryTimings;
         }
     }
 
