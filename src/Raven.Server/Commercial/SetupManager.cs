@@ -829,7 +829,8 @@ namespace Raven.Server.Commercial
 
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
         }
-            public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string currentNodeTag, JsonOperationContext context,
+
+        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string currentNodeTag, JsonOperationContext context,
             out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out string firstNodeTag,
             out Dictionary<string, string> otherNodesUrls, out License license)
         {
