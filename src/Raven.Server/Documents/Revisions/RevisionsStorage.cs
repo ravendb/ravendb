@@ -399,7 +399,8 @@ namespace Raven.Server.Documents.Revisions
                 configuration = GetRevisionsConfiguration(collectionName.Name);
 
             if (configuration.Disabled &&
-                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                flags.Contain(DocumentFlags.HasRevisions) == false)
                 return false;
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
