@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -40,11 +36,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
 
                 var result = RequestHandler.Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, RequestHandler.GetPageSize(), context, _token, out var index);
 
-                if (result.NotModified)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                }
-                else
+                if (result.NotModified == false)
                 {
                     HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
                     if (field.EndsWith("__minX") ||
@@ -71,6 +63,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                         }
                     }
                 }
+
                 return ValueTask.FromResult(result);
             }
         }

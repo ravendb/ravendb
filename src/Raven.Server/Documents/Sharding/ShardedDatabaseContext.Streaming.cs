@@ -202,34 +202,6 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            public IEnumerable<ShardStreamItem<T>> CombinedResults<T, TInput>(
-                Memory<TInput> results,
-                Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
-                Func<BlittableJsonReaderObject, T> converter,
-                Comparer<ShardStreamItem<T>> comparer)
-            {
-                var shards = results.Span.Length;
-                using (var merged = new MergedEnumerator<ShardStreamItem<T>>(comparer))
-                {
-                    for (int i = 0; i < shards; i++)
-                    {
-                        var shardNumber = i;
-                        var r = selector(results.Span[i]);
-                        var it = r.Select(item => new ShardStreamItem<T>
-                        {
-                            Item = converter(item),
-                            Shard = shardNumber
-                        });
-                        merged.AddEnumerator(it.GetEnumerator());
-                    }
-
-                    while (merged.MoveNext())
-                    {
-                        yield return merged.Current;
-                    }
-                }
-            }
-
             public async IAsyncEnumerable<Document> GetDocumentsAsync(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results")
             public class DocumentLastModifiedComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
             {

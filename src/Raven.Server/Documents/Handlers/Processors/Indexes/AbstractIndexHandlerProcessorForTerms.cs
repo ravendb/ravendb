@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -34,9 +35,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 var terms = await GetTerms(context, indexName, field, fromValue, pageSize);
 
                 if (terms.NotModified)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return;
-
-
+                }
+                
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteTermsQueryResult(context, terms);
