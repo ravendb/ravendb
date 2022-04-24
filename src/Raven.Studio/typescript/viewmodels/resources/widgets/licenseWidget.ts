@@ -15,7 +15,7 @@ interface serverCertificateInfo {
 class licenseWidget extends widget {
 
     refreshIntervalId: number = -1;
-    usingHttps = accessManager.default.secureServer();
+    isSecureServer = accessManager.default.secureServer();
     
     spinners = {
         serverCertificate: ko.observable<boolean>()
@@ -35,7 +35,7 @@ class licenseWidget extends widget {
     }
 
     private canLoadCertificateInfo() {
-        return this.usingHttps && accessManager.default.isOperatorOrAbove();
+        return this.isSecureServer && accessManager.default.isOperatorOrAbove();
     }
 
     compositionComplete() {

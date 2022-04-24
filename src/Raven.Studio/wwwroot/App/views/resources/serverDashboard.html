@@ -13,7 +13,7 @@
                         <div data-bind="attr: { title: 'Server start time: ' + formattedStartTime() }">
                             <i class="icon-clock"></i><span>Up for <strong data-bind="text: formattedUpTime" class="text-success"></strong></span>
                         </div>
-                        <div data-bind="visible: usingHttps">
+                        <div data-bind="visible: isSecureServer">
                             <i class="icon-lock"></i><span>Secured <small><a href="#" data-bind="attr: { href: certificatesUrl }, visible: showCertificatesLink">Manage certificates</a></small></span>
                         </div>
                         <div class="flex-horizontal" data-bind="with: clusterManager.topology">
@@ -26,6 +26,13 @@
                             </div>
                             <div title="Watchers count" data-bind="visible: watchersCount">
                                 <i class="icon-cluster-watcher"></i> <span data-bind="text: watchersCount"></span>
+                            </div>
+                        </div>
+                        <div data-bind="visible: !isSecureServer && usingHttps" class="text-warning bg-warning flex-horizontal margin-top-xs">
+                            <div class="flex-start"><i class="icon-unsecure"></i></div>
+                            <div class="small">
+                                <span>Protocol used is HTTPS but no authentication is set.</span><br />
+                                <span>The server is running in an Unsecure Mode.</span>
                             </div>
                         </div>
                     </div>

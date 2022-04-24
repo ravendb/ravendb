@@ -44,7 +44,7 @@ class createDatabase extends dialogViewModelBase {
     clusterNodes: clusterNode[] = [];
     
     encryptionSection: setupEncryptionKey;
-    usingHttps = accessManager.default.secureServer();
+    isSecureServer = accessManager.default.secureServer();
     operationNotSupported: boolean;
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
@@ -90,7 +90,7 @@ class createDatabase extends dialogViewModelBase {
 
         this.operationNotSupported = mode === "legacyMigration" && clusterTopologyManager.default.nodeInfo().OsInfo.Type !== "Windows";
         
-        const canCreateEncryptedDatabases = ko.pureComputed(() => this.usingHttps && licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
+        const canCreateEncryptedDatabases = ko.pureComputed(() => this.isSecureServer && licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
         this.databaseModel = new databaseCreationModel(mode, canCreateEncryptedDatabases);
         this.recentPathsAutocomplete = new lastUsedAutocomplete("createDatabasePath", this.databaseModel.path.dataPath);
         this.dataExporterAutocomplete = new lastUsedAutocomplete("dataExporterPath", this.databaseModel.legacyMigration.dataExporterFullPath);
