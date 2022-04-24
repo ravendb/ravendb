@@ -3,9 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents.Replication;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication;
 using Xunit;
 using Xunit.Abstractions;
 
