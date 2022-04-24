@@ -59,7 +59,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetTermsForIndex(Options options)
         {

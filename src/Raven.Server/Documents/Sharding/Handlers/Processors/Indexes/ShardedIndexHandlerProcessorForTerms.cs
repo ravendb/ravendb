@@ -53,16 +53,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
                     results,
                     selector: r => r.Terms,
                     comparer: TermsComparer.Instance,
-                    _pageSize).ToArray();
+                    _pageSize).ToHashSet();
 
-                var readableTerms = new HashSet<string>();
-
-                foreach (var item in terms)
-                {
-                    readableTerms.Add(item);
-                }
-
-                return new TermsQueryResultServerSide { IndexName = results.Span[0].IndexName, ResultEtag = results.Span[0].ResultEtag, Terms = readableTerms };
+                return new TermsQueryResultServerSide { IndexName = results.Span[0].IndexName, ResultEtag = results.Span[0].ResultEtag, Terms = terms };
             }
 
             public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shard) => new GetTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
