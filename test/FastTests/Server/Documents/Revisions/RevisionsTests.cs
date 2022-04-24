@@ -1675,11 +1675,12 @@ namespace FastTests.Server.Documents.Revisions
                     var pageSize = 100;
                     int amount = 200;
                     int countId = amount;
-                    for (int i = 0; i < amount; i += pageSize)
+
+                    (revisions, continuationToken) =
+                        await store.Commands().GetRevisionsBinEntriesAndContinuationTokenAsync(context, etag: 0, pageSize: 100);
+
+                    for (int i = pageSize; i < amount; i += pageSize)
                     {
-                        (revisions, continuationToken) =
-                            await store.Commands().GetRevisionsBinEntriesAndContinuationTokenAsync(context, etag: 0, pageSize: 100, continuationToken);
-                        
                         Assert.Equal(100, revisions.Count());
 
                         string id;
@@ -1689,6 +1690,9 @@ namespace FastTests.Server.Documents.Revisions
                             id = metadata.GetId();
                             Assert.Equal("users/" + (--countId), id);
                         }
+
+                        (revisions, continuationToken) =
+                            await store.Commands().GetRevisionsBinEntriesAndContinuationTokenAsync(context, continuationToken);
                     }
                 }
             }
@@ -1700,9 +1704,6 @@ namespace FastTests.Server.Documents.Revisions
         {
             using (var store = GetDocumentStore(options))
             {
-                var error = await Assert.ThrowsAsync<RevisionsDisabledException>( async () => await store.Commands().GetRevisionsBinEntriesAsync(0));
-                Assert.Contains("Revisions are disabled", error.Message);
-
                 await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
                 var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(0);

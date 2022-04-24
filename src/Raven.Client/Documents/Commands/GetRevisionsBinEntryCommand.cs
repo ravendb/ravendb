@@ -10,20 +10,18 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetRevisionsBinEntryCommand : RavenCommand<BlittableArrayResult>
     {
-        private readonly long _etag;
+        private readonly int _start;
         private readonly int? _pageSize;
         private readonly string _continuationToken;
 
-        public GetRevisionsBinEntryCommand(long etag, int? pageSize)
+        public GetRevisionsBinEntryCommand(int start, int? pageSize)
         {
-            _etag = etag;
+            _start = start;
             _pageSize = pageSize;
         }
 
-        public GetRevisionsBinEntryCommand(long etag, int? pageSize, string continuationToken)
+        public GetRevisionsBinEntryCommand(string continuationToken)
         {
-            _etag = etag;
-            _pageSize = pageSize;
             _continuationToken = continuationToken;
         }
 
@@ -37,8 +35,8 @@ namespace Raven.Client.Documents.Commands
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
                 .Append(node.Database)
-                .Append("/revisions/bin?&etag=")
-                .Append(_etag);
+                .Append("/revisions/bin?&start=")
+                .Append(_start);
 
             if (_pageSize.HasValue)
                 pathBuilder.Append("&pageSize=").Append(_pageSize);

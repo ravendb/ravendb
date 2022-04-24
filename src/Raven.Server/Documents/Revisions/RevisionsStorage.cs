@@ -1592,7 +1592,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public void GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag, out string latestChangeVector)
+        public void GetLatestRevisionsBinEntry(DocumentsOperationContext context, long startEtag, out string latestChangeVector)
         {
             latestChangeVector = null;
             foreach (var entry in GetRevisionsBinEntries(context, startEtag, 1))
@@ -1604,7 +1604,8 @@ namespace Raven.Server.Documents.Revisions
         public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, long skip, long take)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-            foreach (var tvr in table.SeekBackwardFromLast(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], skip: skip))
+
+            foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], null, Slices.AfterAllKeys, skip))
             {
                 if (take-- <= 0)
                     yield break;

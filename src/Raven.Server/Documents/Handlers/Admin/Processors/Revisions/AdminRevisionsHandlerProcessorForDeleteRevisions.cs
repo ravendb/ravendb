@@ -10,13 +10,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         public AdminRevisionsHandlerProcessorForDeleteRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
-
-        protected override bool IsRevisionsConfigured()
-        {
-            var revisionsStorage = RequestHandler.Database.DocumentsStorage.RevisionsStorage;
-            return revisionsStorage.Configuration != null;
-        }
-
+        
         protected override async ValueTask DeleteRevisionsAsync(DocumentsOperationContext _, string[] documentIds)
         {
             var cmd = new DeleteRevisionsCommand(documentIds, RequestHandler.Database);

@@ -634,7 +634,7 @@ namespace SlowTests.Smuggler
                     Assert.Equal(10, stats.CountOfRevisionDocuments);
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                        var command = new GetRevisionsBinEntryCommand(long.MaxValue, 5);
+                        var command = new GetRevisionsBinEntryCommand(0, 5);
                         await store2.GetRequestExecutor().ExecuteAsync(command, context);
                         Assert.Equal(3, command.Result.Results.Length);
                     }

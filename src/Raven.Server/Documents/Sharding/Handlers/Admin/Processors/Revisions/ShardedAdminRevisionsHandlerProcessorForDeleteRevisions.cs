@@ -18,11 +18,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected override bool IsRevisionsConfigured()
-        {
-            return RequestHandler.DatabaseContext.DatabaseRecord.Revisions != null;
-        }
-
         protected override async ValueTask DeleteRevisionsAsync(TransactionOperationContext context, string[] documentIds)
         {
             var shardsToDocs = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, documentIds);
