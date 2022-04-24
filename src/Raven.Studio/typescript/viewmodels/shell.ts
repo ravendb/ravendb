@@ -246,6 +246,7 @@ class shell extends viewModelBase {
                             databasesAccess[`${key}`] = `Database${access}` as databaseAccessLevel;
                         }
                         accessManager.databasesAccess = databasesAccess;
+                        this.accessManager.secureServer(true);
                         
                     } else {
                         this.accessManager.securityClearance("ValidUser");

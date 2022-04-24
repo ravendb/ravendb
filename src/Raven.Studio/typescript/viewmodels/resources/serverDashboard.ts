@@ -752,7 +752,8 @@ class serverDashboard extends viewModelBase {
     node: KnockoutComputed<clusterNode>;
     sizeFormatter = generalUtils.formatBytesToSize;
 
-    usingHttps = accessManager.default.secureServer();
+    isSecureServer = accessManager.default.secureServer();
+    usingHttps = location.protocol === "https:";
 
     certificatesUrl = appUrl.forCertificates();
     showCertificatesLink = this.accessManager.showCertificatesLink;

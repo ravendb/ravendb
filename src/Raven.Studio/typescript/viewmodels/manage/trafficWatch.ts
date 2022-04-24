@@ -67,7 +67,7 @@ type certificateInfo = {
 
 class trafficWatch extends viewModelBase {
     
-    static readonly usingHttps = accessManager.default.secureServer();
+    static readonly isSecureServer = accessManager.default.secureServer();
     
     static maxBufferSize = 200000;
     
@@ -145,7 +145,7 @@ class trafficWatch extends viewModelBase {
         }
         this.updateHelpLink('EVEP6I');
 
-        if (trafficWatch.usingHttps) {
+        if (trafficWatch.isSecureServer) {
             return this.loadCertificates();
         }
     }
@@ -429,7 +429,7 @@ class trafficWatch extends viewModelBase {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
-                    x => trafficWatch.usingHttps ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${x.ClientIP}` : x.ClientIP,
+                    x => trafficWatch.isSecureServer ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${x.ClientIP}` : x.ClientIP,
                     "Source", "8%", {
                     extraClass: rowHighlightRules,
                     useRawValue: () => true

@@ -6,7 +6,7 @@ class discoveryUrl {
     discoveryUrlName = ko.observable<string>();
     validationGroup: KnockoutValidationGroup;
 
-    static usingHttps = accessManager.default.secureServer();
+    static isSecureServer = accessManager.default.secureServer();
     
     hasTestError = ko.observable<boolean>(false);
     
@@ -27,7 +27,7 @@ class discoveryUrl {
             validUrl: true
         });
         
-        if (!discoveryUrl.usingHttps) {
+        if (!discoveryUrl.isSecureServer) {
             this.discoveryUrlName.extend({
                 validation: [
                     {

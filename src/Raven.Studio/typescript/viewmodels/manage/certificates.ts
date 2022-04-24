@@ -55,7 +55,7 @@ class certificates extends viewModelBase {
     
     domainsForServerCertificate = ko.observableArray<string>([]);
     
-    usingHttps = accessManager.default.secureServer();
+    isSecureServer = accessManager.default.secureServer();
     
     accessManager = accessManager.default.certificatesView;
 
