@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new GetPullReplicationTasksInfoCommand(_taskId);
         }
 
-        private class GetPullReplicationTasksInfoCommand : RavenCommand<PullReplicationDefinitionAndCurrentConnections>
+        internal class GetPullReplicationTasksInfoCommand : RavenCommand<PullReplicationDefinitionAndCurrentConnections>
         {
             private readonly long _taskId;
 

@@ -41,7 +41,7 @@ namespace Raven.Server.Web.System
                 await processor.ExecuteAsync();
         }
 
-        private OngoingTaskPullReplicationAsHub GetPullReplicationAsHubTaskInfo(ClusterTopology clusterTopology, ExternalReplication ex)
+        internal OngoingTaskPullReplicationAsHub GetPullReplicationAsHubTaskInfo(ClusterTopology clusterTopology, ExternalReplication ex)
         {
             var connectionResult = Database.ReplicationLoader.GetPullReplicationDestination(ex.TaskId, ex.Database);
             var tag = Server.ServerStore.NodeTag; // we can't know about pull replication tasks on other nodes.
@@ -301,47 +301,11 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/tasks/pull-replication/hub", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetHubTasksInfo()
         {
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            var key = GetLongQueryString("key");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                using (context.OpenReadTransaction())
-                {
-                    var clusterTopology = ServerStore.GetClusterTopology(context);
-                    PullReplicationDefinition def;
-                    using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
-                    {
-                        if (rawRecord == null)
-                            throw new DatabaseDoesNotExistException(Database.Name);
-
-                        def = rawRecord.GetHubPullReplicationById(key);
-                    }
-
-                    if (def == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    var currentHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
-                        .Select(x => GetPullReplicationAsHubTaskInfo(clusterTopology, x.Destination as ExternalReplication))
-                        .ToList();
-
-                    var response = new PullReplicationDefinitionAndCurrentConnections
-                    {
-                        Definition = def,
-                        OngoingTasks = currentHandlers
-                    };
-
-                    await WriteResult(context, response.ToJson());
-                }
-            }
+            using (var processor = new OngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo(this))
+                await processor.ExecuteAsync();
         }
 
-        private async Task WriteResult(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
+        internal async Task WriteResult(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
