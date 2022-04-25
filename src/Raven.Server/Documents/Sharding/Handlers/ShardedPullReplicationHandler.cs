@@ -28,5 +28,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new PullReplicationHandlerProcessorForGenerateCertificate<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/tasks/pull-replication/hub/access", "PUT")]
+        public async Task RegisterHubAccess()
+        {
+            using (var processor = new ShardedPullReplicationHandlerProcessorForRegisterHubAccess(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
