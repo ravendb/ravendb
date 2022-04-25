@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         {
         }
 
-        protected override RevisionsConfiguration GetRevisionsConfiguration(TransactionOperationContext context)
+        protected override RevisionsConfiguration GetRevisionsConfiguration()
         {
             return RequestHandler.DatabaseContext.DatabaseRecord.Revisions;
         }

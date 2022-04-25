@@ -10,8 +10,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected override RevisionsConfiguration GetRevisionsConfiguration(DocumentsOperationContext context)
+        protected override RevisionsConfiguration GetRevisionsConfiguration()
         {
+            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.Database.Name))
             {

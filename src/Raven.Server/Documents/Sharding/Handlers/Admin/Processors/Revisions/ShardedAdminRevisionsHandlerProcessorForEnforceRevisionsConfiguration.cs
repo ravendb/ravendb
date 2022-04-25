@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
@@ -22,9 +18,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected override async ValueTask<OperationIdResults> AddOperation(long operationId, OperationCancelToken token)
+        protected override async ValueTask AddOperationAsync(long operationId, OperationCancelToken token)
         {
-            return await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedEnforceRevisionsConfigurationOperation(HttpContext));
+            //send negative operationId to avoid collisions
+            await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedEnforceRevisionsConfigurationOperation(HttpContext, operationId));
         }
 
         protected override OperationCancelToken CreateTimeLimitedOperationToken()
@@ -33,55 +30,23 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
         }
     }
 
-    internal readonly struct ShardedEnforceRevisionsConfigurationOperation : IShardedOperation<OperationIdResults>
+    internal readonly struct ShardedEnforceRevisionsConfigurationOperation : IShardedOperation<OperationIdResult>
     {
         private readonly HttpContext _httpContext;
+        private readonly long _operationId;
 
-        public ShardedEnforceRevisionsConfigurationOperation(HttpContext httpContext)
+        public ShardedEnforceRevisionsConfigurationOperation(HttpContext httpContext, long operationId)
         {
             _httpContext = httpContext;
+            _operationId = operationId;
         }
 
         public HttpRequest HttpRequest => _httpContext.Request;
-
-        public OperationIdResults Combine(Memory<OperationIdResults> results)
+        public OperationIdResult Combine(Memory<OperationIdResult> results)
         {
-            var span = results.Span;
-            var combined = new OperationIdResults() { Results = new List<OperationIdResult>(span.Length) };
-            foreach (var operationResult in span)
-            {
-                combined.Results.Add(operationResult.Results[0]);
-            }
-
-            return combined;
+            return new OperationIdResult();
         }
 
-        public RavenCommand<OperationIdResults> CreateCommandForShard(int shard) => new EnforceRevisionsConfigurationCommand();
-    }
-
-    internal class EnforceRevisionsConfigurationCommand : RavenCommand<OperationIdResults>
-    {
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Post
-            };
-
-            var pathBuilder = new StringBuilder(node.Url)
-                .Append("/databases/")
-                .Append(node.Database)
-                .Append("/admin/revisions/config/enforce");
-
-            url = pathBuilder.ToString();
-            return request;
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            Result = JsonDeserializationClient.OperationIdResults(response);
-        }
-
-        public override bool IsReadRequest => false;
+        public RavenCommand<OperationIdResult> CreateCommandForShard(int shard) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(_operationId);
     }
 }
