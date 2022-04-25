@@ -1,31 +1,32 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Documents;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
-internal class ShardedDocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<BlittableJsonReaderObject, ShardedDocumentHandler, TransactionOperationContext>
+internal class ShardedDocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<ShardedDocumentHandler, TransactionOperationContext>
 {
     public ShardedDocumentHandlerProcessorForGetDocSize([NotNull] ShardedDocumentHandler requestHandler, [NotNull] JsonContextPoolBase<TransactionOperationContext> contextPool) : base(requestHandler, contextPool)
     {
     }
 
-    protected override void WriteDocSize(BlittableJsonReaderObject size, TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
+    protected override async ValueTask HandleDocSize(string docId)
     {
-        context.Write(writer, size);
-    }
+        var command = new GetDocumentSizeCommand(docId);
 
-    protected override async ValueTask<(HttpStatusCode StatusCode, BlittableJsonReaderObject SizeResult)> GetResultAndStatusCodeAsync(string docId, TransactionOperationContext context)
-    {
-        var index = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+        int shardNumber;
+        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
 
-        var cmd = new ShardedCommand(RequestHandler, Headers.None);
-        await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
-
-        return (cmd.StatusCode, cmd.Result);
+        using (var token = RequestHandler.CreateOperationToken())
+        {
+            var proxyCommand = new ProxyCommand<DocumentSizeDetails>(command, HttpContext.Response);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
+        }
     }
 }

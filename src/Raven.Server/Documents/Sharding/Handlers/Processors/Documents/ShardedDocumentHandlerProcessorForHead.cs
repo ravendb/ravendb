@@ -1,9 +1,12 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Commands;
+using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
@@ -14,14 +17,18 @@ internal class ShardedDocumentHandlerProcessorForHead : AbstractDocumentHandlerP
     {
     }
 
-    protected override async ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVectorAsync(string docId, TransactionOperationContext context)
+    protected override async ValueTask HandleHeadRequest(string docId, string changeVector)
     {
-        var index = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+        var command = new HeadDocumentCommand(docId, changeVector);
 
-        var cmd = new ShardedHeadCommand(RequestHandler, Headers.IfNoneMatch);
+        int shardNumber;
+        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
 
-        await RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(cmd, index);
-
-        return (cmd.StatusCode, cmd.Result);
+        using (var token = RequestHandler.CreateOperationToken())
+        {
+            var proxyCommand = new ProxyCommand<string>(command, HttpContext.Response);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber, token.Token);
+        }
     }
 }

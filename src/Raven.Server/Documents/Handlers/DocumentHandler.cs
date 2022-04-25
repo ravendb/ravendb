@@ -641,27 +641,6 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class DocumentSizeDetails : IDynamicJson
-    {
-        public string DocId { get; set; }
-        public int ActualSize { get; set; }
-        public string HumaneActualSize { get; set; }
-        public int AllocatedSize { get; set; }
-        public string HumaneAllocatedSize { get; set; }
-
-        public virtual DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(DocId)] = DocId,
-                [nameof(ActualSize)] = ActualSize,
-                [nameof(HumaneActualSize)] = HumaneActualSize,
-                [nameof(AllocatedSize)] = AllocatedSize,
-                [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize
-            };
-        }
-    }
-
     public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private string _id;

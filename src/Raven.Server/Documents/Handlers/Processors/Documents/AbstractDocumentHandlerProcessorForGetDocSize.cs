@@ -1,12 +1,11 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal abstract class AbstractDocumentHandlerProcessorForGetDocSize<TDocSize, TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractDocumentHandlerProcessorForGetDocSize<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
@@ -14,27 +13,12 @@ internal abstract class AbstractDocumentHandlerProcessorForGetDocSize<TDocSize, 
     {
     }
 
-    protected abstract void WriteDocSize(TDocSize size, TOperationContext context, AsyncBlittableJsonTextWriter writer);
-
-    protected abstract ValueTask<(HttpStatusCode StatusCode, TDocSize SizeResult)> GetResultAndStatusCodeAsync(string docId, TOperationContext context);
+    protected abstract ValueTask HandleDocSize(string docId);
 
     public override async ValueTask ExecuteAsync()
     {
         var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-        using (ContextPool.AllocateOperationContext(out TOperationContext context))
-        {
-            var result = await GetResultAndStatusCodeAsync(id, context);
-
-            HttpContext.Response.StatusCode = (int)result.StatusCode;
-
-            if (result.SizeResult != null)
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                {
-                    WriteDocSize(result.SizeResult, context, writer);
-                }
-            }
-        }
+        await HandleDocSize(id);
     }
 }

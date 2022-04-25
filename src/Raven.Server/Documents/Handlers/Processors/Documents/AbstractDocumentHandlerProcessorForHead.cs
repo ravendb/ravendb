@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.Web;
@@ -15,21 +14,13 @@ internal abstract class AbstractDocumentHandlerProcessorForHead<TRequestHandler,
     {
     }
 
-    protected abstract ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVectorAsync(string docId, TOperationContext context);
+    protected abstract ValueTask HandleHeadRequest(string docId, string changeVector);
 
     public override async ValueTask ExecuteAsync()
     {
         var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+        var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-        using (ContextPool.AllocateOperationContext(out TOperationContext context))
-        {
-            var result = await GetStatusCodeAndChangeVectorAsync(id, context);
-
-            HttpContext.Response.StatusCode = (int)result.StatusCode;
-
-            if (result.ChangeVector != null)
-                HttpContext.Response.Headers[Constants.Headers.Etag] = result.ChangeVector;
-        }
-
+        await HandleHeadRequest(id, changeVector);
     }
 }
