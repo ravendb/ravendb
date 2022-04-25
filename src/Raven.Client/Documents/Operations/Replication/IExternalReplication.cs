@@ -12,6 +12,8 @@ namespace Raven.Client.Documents.Operations.Replication
         string Name { get; set; }
 
         string MentorNode { get; set; }
+        
+        bool PinToMentorNode { get; set; }
 
         TimeSpan DelayReplicationFor { get; set; }
 
