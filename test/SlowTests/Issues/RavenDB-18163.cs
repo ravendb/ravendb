@@ -58,6 +58,15 @@ namespace SlowTests.Issues
                     revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
                     Assert.Equal(1, revisionsCount);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    // Assert that HasRevisions flag was created on both documents
+                    var company = session.Load<Company>(companyId);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata.TryGetValue("@flags", out var flagsContent);
+                    Assert.Equal("HasRevisions", flagsContent);
+                }
             }
         }
 
@@ -107,6 +116,15 @@ namespace SlowTests.Issues
 
                     var revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
                     Assert.Equal(1, revisionsCount);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    // Assert that HasRevisions flag was created on both documents
+                    var company = session.Load<Company>(companyId);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata.TryGetValue("@flags", out var flagsContent);
+                    Assert.Equal("HasRevisions", flagsContent);
                 }
             }
         }
