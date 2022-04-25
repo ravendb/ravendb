@@ -1,33 +1,32 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<DocumentSizeDetails, DocumentHandler, DocumentsOperationContext>
+internal class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<DocumentHandler, DocumentsOperationContext>
 {
     public DocumentHandlerProcessorForGetDocSize([NotNull] DocumentHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(requestHandler, contextPool)
     {
     }
 
-    protected override void WriteDocSize(DocumentSizeDetails size, DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
+    protected override async ValueTask HandleDocSize(string docId)
     {
-        context.Write(writer, size.ToJson());
-    }
-
-    protected override ValueTask<(HttpStatusCode StatusCode, DocumentSizeDetails SizeResult)> GetResultAndStatusCodeAsync(string docId, DocumentsOperationContext context)
-    {
+        using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
             var document = RequestHandler.Database.DocumentsStorage.GetDocumentMetrics(context, docId);
-            
             if (document == null)
             {
-                return new ValueTask<(HttpStatusCode, DocumentSizeDetails)>((HttpStatusCode.NotFound, null));
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
             }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
             var documentSizeDetails = new DocumentSizeDetails
             {
@@ -38,7 +37,10 @@ internal class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerPr
                 HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize)
             };
 
-            return new ValueTask<(HttpStatusCode, DocumentSizeDetails)>((HttpStatusCode.OK, documentSizeDetails));
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            {
+                context.Write(writer, documentSizeDetails.ToJson());
+            }
         }
     }
 }

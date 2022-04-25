@@ -13,26 +13,23 @@ internal class DocumentHandlerProcessorForHead : AbstractDocumentHandlerProcesso
     {
     }
 
-    protected override ValueTask<(HttpStatusCode StatusCode, string ChangeVector)> GetStatusCodeAndChangeVectorAsync(string docId, DocumentsOperationContext context)
+    protected override ValueTask HandleHeadRequest(string docId, string changeVector)
     {
-        var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-
+        using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
             var document = RequestHandler.Database.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector);
             if (document == null)
-                return new ValueTask<(HttpStatusCode StatusCode, string ChangeVector)>((HttpStatusCode.NotFound, null));
-            
-            var statusCode = HttpStatusCode.OK;
-            string changeVectorToReturn = null;
-
-            if (changeVector == document.ChangeVector)
-                statusCode = HttpStatusCode.NotModified;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             else
-                changeVectorToReturn = "\"" + document.ChangeVector + "\"";
-
-            return new ValueTask<(HttpStatusCode StatusCode, string ChangeVector)>((statusCode, changeVectorToReturn));
-
+            {
+                if (changeVector == document.ChangeVector)
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                else
+                    HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + document.ChangeVector + "\"";
+            }
         }
+
+        return ValueTask.CompletedTask;
     }
 }

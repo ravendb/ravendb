@@ -2,6 +2,7 @@
 using FastTests;
 using FastTests.Server.Documents;
 using Orders;
+using Raven.Client.Documents.Commands;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
                 var executor = store.GetRequestExecutor();
                 using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
                 {
-                    var cmd = new DocCompression.GetDocumentSize("Employee/322");
+                    var cmd = new GetDocumentSizeCommand("Employee/322");
                     executor.Execute(cmd, ctx);
                     Assert.True(cmd.Result.ActualSize <= cmd.Result.AllocatedSize);
                 }

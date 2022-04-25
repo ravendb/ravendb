@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -56,7 +57,7 @@ namespace FastTests.Server.Documents
             var executor = store.GetRequestExecutor();
             using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
             {
-                var cmd = new GetDocumentSize("orders/830-A");
+                var cmd = new GetDocumentSizeCommand("orders/830-A");
                 executor.Execute(cmd, ctx);
                 Assert.True(cmd.Result.ActualSize <= cmd.Result.AllocatedSize);
             }
@@ -81,7 +82,7 @@ namespace FastTests.Server.Documents
 
             using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
             {
-                var cmd = new GetDocumentSize("orders/830-A");
+                var cmd = new GetDocumentSizeCommand("orders/830-A");
                 executor.Execute(cmd, ctx);
                 Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
             }
@@ -105,7 +106,7 @@ namespace FastTests.Server.Documents
             var executor = store.GetRequestExecutor();
             using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
             {
-                var cmd = new GetDocumentSize("orders/830-A");
+                var cmd = new GetDocumentSizeCommand("orders/830-A");
                 executor.Execute(cmd, ctx);
                 Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
             }
@@ -130,7 +131,7 @@ namespace FastTests.Server.Documents
 
             using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
             {
-                var cmd = new GetDocumentSize("orders/830-A");
+                var cmd = new GetDocumentSizeCommand("orders/830-A");
                 executor.Execute(cmd, ctx);
                 Assert.True(cmd.Result.ActualSize <= cmd.Result.AllocatedSize);
             }
@@ -246,45 +247,10 @@ namespace FastTests.Server.Documents
 
             var executor = store.GetRequestExecutor();
             using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
-            var cmd = new GetDocumentSize("users/1000");
+            var cmd = new GetDocumentSizeCommand("users/1000");
             executor.Execute(cmd, ctx);
 
             Assert.True(cmd.Result.ActualSize > cmd.Result.AllocatedSize);
-        }
-
-        public class DocumentSize
-        {
-            public int ActualSize { get; set; }
-            public int AllocatedSize { get; set; }
-            public string DocId { get; set; }
-            public string HumaneActualSize { get; set; }
-            public string HumaneAllocatedSize { get; set; }
-        }
-
-        internal class GetDocumentSize : RavenCommand<DocumentSize>
-        {
-            private readonly string _id;
-            public override bool IsReadRequest => true;
-
-            public GetDocumentSize(string id)
-            {
-                _id = id;
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/docs/size?id={Uri.EscapeDataString(_id)}";
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get,
-                };
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                // quick and dirty for the tests
-                Result = JsonConvert.DeserializeObject<DocumentSize>(response.ToString());
-            }
         }
 
         [LicenseRequiredFact]

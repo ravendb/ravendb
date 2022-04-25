@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Server.Documents.Commands.DocumentsCompression;
@@ -42,11 +43,11 @@ namespace SlowTests.Sharding.Client.Operations
                 long originalCompanySize, originalUserSize;
                 using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
                 {
-                    var companySize = new DocCompression.GetDocumentSize("companies/1");
+                    var companySize = new GetDocumentSizeCommand("companies/1");
                     await executor.ExecuteAsync(companySize, ctx);
                     originalCompanySize = companySize.Result.AllocatedSize;
 
-                    var userSize = new DocCompression.GetDocumentSize("users/1");
+                    var userSize = new GetDocumentSizeCommand("users/1");
                     await executor.ExecuteAsync(userSize, ctx);
                     originalUserSize = userSize.Result.AllocatedSize;
                 }
