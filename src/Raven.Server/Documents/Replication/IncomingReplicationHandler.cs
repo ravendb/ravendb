@@ -56,6 +56,8 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler, Exception> Failed;
 
         public event Action<IncomingReplicationHandler> DocumentsReceived;
+        
+        public event Action<IncomingReplicationHandler,int> AttachmentStreamsReceived;
 
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
@@ -465,6 +467,8 @@ namespace Raven.Server.Documents.Replication
                                                $"but had no numeric field of this value, this is likely a bug");
 
             ReceiveSingleDocumentsBatch(documentsContext, itemsCount, attachmentStreamCount, lastDocumentEtag, stats);
+
+            AttachmentStreamsReceived?.Invoke(this, attachmentStreamCount);
 
             OnDocumentsReceived(this);
         }
@@ -1139,7 +1143,7 @@ namespace Raven.Server.Documents.Replication
                             case AttachmentReplicationItem attachment:
 
                                 var localAttachment = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, attachment.Key);
-                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentStream))
+                                if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {

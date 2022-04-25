@@ -350,6 +350,7 @@ namespace SlowTests.Client.Attachments
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", stream2, "image/png"));
 
                 await SetupAttachmentReplicationAsync(store1, store2);
+                WaitForUserToContinueTheTest(store2);
                 AssertAttachmentCount(store2, 2, 4);
 
                 using (var session = store2.OpenSession())

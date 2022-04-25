@@ -648,13 +648,44 @@ namespace Raven.Server.Documents.Replication
 
             if (item is AttachmentReplicationItem attachment)
             {
-                _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
+                if(ShouldSendAttachmentStream(attachment)) 
+                    _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
 
                 if (MissingAttachmentsInLastBatch)
                     state.MissingAttachmentBase64Hashes?.Remove(attachment.Base64Hash);
             }
 
             _orderedReplicaItems.Add(item.Etag, item);
+            return true;
+        }
+
+        private bool ShouldSendAttachmentStream(AttachmentReplicationItem attachment)
+        {
+            if (MissingAttachmentsInLastBatch)
+            {
+                // we intentionally not trying to de-duplicate in this scenario
+                // we may have _sent_ the attachment already, but it was deleted at 
+                // destination, so we need to send it again
+                return true;
+            }
+                    
+            // RavenDB does de-duplication of attachments on storage, but not over the wire
+            // Here we implement the same idea, if (in the current connection), we already sent
+            // an attachment, we will skip sending it to the other side since we _know_ it is 
+            // already there.
+            if (_deduplicatedAttachmentHashes.Contains(attachment.Base64Hash))
+                return false; // we already sent it over during the current run
+                    
+            var clone = attachment.Base64Hash.Clone(_context);
+            _deduplicatedAttachmentHashes.Add(clone);
+            _deduplicatedAttachmentHashesLru.Enqueue(clone);
+            while (_deduplicatedAttachmentHashesLru.Count > _deduplicateAttachmentBufferSize)
+            {
+                var cur = _deduplicatedAttachmentHashesLru.Dequeue();
+                _deduplicatedAttachmentHashes.Remove(cur);
+                _context.Release(ref cur.Content);
+            }
+
             return true;
         }
 
@@ -691,31 +722,9 @@ namespace Raven.Server.Documents.Replication
 
                     break;
 
-                case AttachmentReplicationItem attachment:
+                case AttachmentReplicationItem _:
                     if (MissingAttachmentsInLastBatch)
-                    {
-                        // we intentionally not trying to de-duplicate in this scenario
-                        // we may have _sent_ the attachment already, but it was deleted at 
-                        // destination, so we need to send it again
                         return false;
-                    }
-                    
-                    // RavenDB does de-duplication of attachments on storage, but not over the wire
-                    // Here we implement the same idea, if (in the current connection), we already sent
-                    // an attachment, we will skip sending it to the other side since we _know_ it is 
-                    // already there.
-                    if (_deduplicatedAttachmentHashes.Contains(attachment.Base64Hash))
-                        return true; // we already sent it over during the current run
-                    
-                    var clone = attachment.Base64Hash.Clone(_context);
-                    _deduplicatedAttachmentHashes.Add(clone);
-                    _deduplicatedAttachmentHashesLru.Enqueue(clone);
-                    while (_deduplicatedAttachmentHashesLru.Count > _deduplicateAttachmentBufferSize)
-                    {
-                        var cur = _deduplicatedAttachmentHashesLru.Dequeue();
-                        _deduplicatedAttachmentHashes.Remove(cur);
-                        _context.Release(ref cur.Content);
-                    }
                     break;
             }
 
