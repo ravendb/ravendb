@@ -1,11 +1,8 @@
-﻿using System;
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
-using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Routing;
@@ -27,54 +24,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task RegisterHubAccess()
         {
-            var hubTaskName = GetStringQueryString("name", true);
-
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                PullReplicationDefinition hubDefinition;
-
-                using (context.OpenReadTransaction())
-                {
-                    hubDefinition = Server.ServerStore.Cluster.ReadPullReplicationDefinition(Database.Name, hubTaskName, context);
-                    if (hubDefinition == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-                }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-                if (hubDefinition.Certificates != null && hubDefinition.Certificates.Count > 0)
-#pragma warning restore CS0618 // Type or member is obsolete
-                {
-                    // handle backward compatibility
-                    throw new InvalidOperationException("Cannot register hub access to a replication hub that already has inline certificates: " + hubTaskName +
-                                                        ". Create a new replication hub and try again");
-                }
-
-                var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "register-hub-access");
-                var access = JsonDeserializationClient.ReplicationHubAccess(blittableJson);
-                access.Validate(hubDefinition.WithFiltering);
-
-                using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
-
-                var command = new RegisterReplicationHubAccessCommand(Database.Name, hubTaskName, access, cert, GetRaftRequestIdFromQuery());
-                var result = await Server.ServerStore.SendToLeaderAsync(command);
-                await WaitForIndexToBeAppliedAsync(context, result.Index);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(ReplicationHubAccessResponse.RaftCommandIndex));
-                    writer.WriteInteger(result.Index);
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new PullReplicationHandlerProcessorForRegisterHubAccess(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE", AuthorizationStatus.DatabaseAdmin)]
