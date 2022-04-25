@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -49,16 +48,21 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 
             public TermsQueryResultServerSide Combine(Memory<TermsQueryResultServerSide> results)
             {
-                var terms = _handler.DatabaseContext.Streaming.PagedShardedItem(
-                    results,
-                    selector: r => r.Terms,
-                    comparer: TermsComparer.Instance,
-                    _pageSize).ToHashSet();
+                var pageSize = _pageSize;
+                var terms = new HashSet<string>();
+                foreach (var res in _handler.DatabaseContext.Streaming.CombinedResults(results, r => r.Terms, TermsComparer.Instance))
+                {
+                    if (terms.Add(res.Item))
+                        pageSize--;
+
+                    if (pageSize <= 0)
+                        break;
+                }
 
                 return new TermsQueryResultServerSide { IndexName = results.Span[0].IndexName, ResultEtag = results.Span[0].ResultEtag, Terms = terms };
             }
 
-            public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shard) => new GetTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
+            public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shard) => new GetIndexTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
         }
 
         public class TermsComparer : Comparer<ShardStreamItem<string>>

@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetTermsCommand(_indexName, _field, _fromValue, _pageSize);
         }
 
-        private class GetTermsCommand : RavenCommand<string[]>
+        internal class GetTermsCommand : RavenCommand<string[]>
         {
             private readonly string _indexName;
             private readonly string _field;

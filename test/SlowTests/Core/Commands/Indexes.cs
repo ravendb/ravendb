@@ -96,10 +96,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanGetTermsForIndex_WithPaging()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetTermsForIndex_WithPaging(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

@@ -160,21 +160,6 @@ namespace Raven.Server.Documents.Sharding
                     pagingContinuation);
             }
 
-            public IEnumerable<T> PagedShardedItem<T, TInput>(
-                Memory<TInput> results,
-                Func<TInput, IEnumerable<T>> selector,
-                Comparer<ShardStreamItem<T>> comparer,
-                int pageSize = int.MaxValue)
-            {
-                foreach (var result in CombinedResults(results, selector, comparer))
-                {
-                    if (pageSize-- <= 0)
-                        yield break;
-
-                    yield return result.Item;
-                }
-            }
-
             public IEnumerable<ShardStreamItem<T>> CombinedResults<T, TInput>(
                 Memory<TInput> results,
                 Func<TInput, IEnumerable<T>> selector,
