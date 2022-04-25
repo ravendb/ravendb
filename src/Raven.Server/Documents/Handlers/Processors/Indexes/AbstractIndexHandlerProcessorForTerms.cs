@@ -1,8 +1,8 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return;
                 }
-                
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteTermsQueryResult(context, terms);
@@ -47,34 +47,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
             }
         }
 
-        public class GetTermsCommand : RavenCommand<TermsQueryResultServerSide>
+        internal class GetIndexTermsCommand : RavenCommand<TermsQueryResultServerSide>
         {
-            private readonly string _indexName;
-            private readonly string _field;
-            [CanBeNull]
-            private readonly string _fromValue;
-            private readonly int? _pageSize;
+            private GetTermsOperation.GetTermsCommand _cmd;
 
-            public GetTermsCommand(string indexName, string field, string fromValue, int? pageSize)
+            public GetIndexTermsCommand(string indexName, string field, string fromValue, int? pageSize)
             {
-                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
-                _field = field ?? throw new ArgumentNullException(nameof(field));
-                _fromValue = fromValue;
-                _pageSize = pageSize;
+                _cmd = new GetTermsOperation.GetTermsCommand(indexName, field, fromValue, pageSize);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                var fromValue = _fromValue != null ? Uri.EscapeDataString(_fromValue) : "";
-                url = $"{node.Url}/databases/{node.Database}/indexes/terms?name={Uri.EscapeDataString(_indexName)}&field={Uri.EscapeDataString(_field)}&fromValue={fromValue}";
-
-                if (_pageSize.HasValue)
-                    url += $"&pageSize={_pageSize}";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
+                return _cmd.CreateRequest(ctx, node, out url);
             }
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
