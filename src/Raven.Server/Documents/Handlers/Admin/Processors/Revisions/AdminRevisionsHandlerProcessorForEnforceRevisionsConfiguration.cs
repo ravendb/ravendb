@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -15,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected override ValueTask<OperationIdResults> AddOperation(long operationId, OperationCancelToken token)
+        protected override ValueTask AddOperationAsync(long operationId, OperationCancelToken token)
         {
             var t = RequestHandler.Database.Operations.AddOperation(
                 RequestHandler.Database,
@@ -24,15 +22,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
                 onProgress => RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, token),
                 operationId,
                 token: token);
-
-            return ValueTask.FromResult(new OperationIdResults()
-            {
-                Results = new List<OperationIdResult>() { new ()
-                {
-                    OperationId = operationId, 
-                    OperationNodeTag = RequestHandler.ServerStore.NodeTag
-                }}
-            });
+            return ValueTask.CompletedTask;
         }
 
         protected override OperationCancelToken CreateTimeLimitedOperationToken()

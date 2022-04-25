@@ -114,9 +114,7 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, TimeSeriesStatistics> GetTimeSeriesStatisticsResult = GenerateJsonDeserializationRoutine<TimeSeriesStatistics>();
 
         public static readonly Func<BlittableJsonReaderObject, OperationIdResult> OperationIdResult = GenerateJsonDeserializationRoutine<OperationIdResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, OperationIdResults> OperationIdResults = GenerateJsonDeserializationRoutine<OperationIdResults>();
-
+        
         public static readonly Func<BlittableJsonReaderObject, ReplayTxOperationResult> GetReplayTrxOperationResult = GenerateJsonDeserializationRoutine<ReplayTxOperationResult>();
 
         public static readonly Func<BlittableJsonReaderObject, HiLoResult> HiLoResult = GenerateJsonDeserializationRoutine<HiLoResult>();

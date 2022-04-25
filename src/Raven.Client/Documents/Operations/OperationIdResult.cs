@@ -13,11 +13,6 @@ namespace Raven.Client.Documents.Operations
         public TResult Result { get; set; }
     }
 
-    public class OperationIdResults
-    {
-        public List<OperationIdResult> Results { get; set; }
-    }
-
     /// <summary>
     /// The result of a OperationIdResult operation
     /// </summary>

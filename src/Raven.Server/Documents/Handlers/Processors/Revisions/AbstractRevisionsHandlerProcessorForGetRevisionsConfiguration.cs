@@ -16,35 +16,35 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected abstract RevisionsConfiguration GetRevisionsConfiguration(TOperationContext context);
+        protected abstract RevisionsConfiguration GetRevisionsConfiguration();
 
         public override async ValueTask ExecuteAsync()
         {
-            using (ContextPool.AllocateOperationContext(out TOperationContext context))
+
+            var revisionsConfig = GetRevisionsConfiguration();
+
+            if (revisionsConfig != null)
             {
-                var revisionsConfig = GetRevisionsConfiguration(context);
-
-                if (revisionsConfig != null)
+                var revisionsCollection = new DynamicJsonValue();
+                foreach (var collection in revisionsConfig.Collections)
                 {
-                    var revisionsCollection = new DynamicJsonValue();
-                    foreach (var collection in revisionsConfig.Collections)
-                    {
-                        revisionsCollection[collection.Key] = collection.Value.ToJson();
-                    }
+                    revisionsCollection[collection.Key] = collection.Value.ToJson();
+                }
 
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
+                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    context.Write(writer,
+                        new DynamicJsonValue
                         {
                             [nameof(revisionsConfig.Default)] = revisionsConfig.Default?.ToJson(),
                             [nameof(revisionsConfig.Collections)] = revisionsCollection
                         });
-                    }
                 }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
+            }
+            else
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             }
         }
     }

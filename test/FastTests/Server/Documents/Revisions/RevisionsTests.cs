@@ -1658,7 +1658,7 @@ namespace FastTests.Server.Documents.Revisions
             using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
-
+                
                 var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(0);
                 Assert.Equal(0, deletedRevisions.Count());
 
@@ -1697,6 +1697,49 @@ namespace FastTests.Server.Documents.Revisions
                 }
             }
         }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, Skip = "Need to implement Operation.WaitForCompletionAsync() for sharded databases")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task EnforceRevisionsConfiguration(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User() { Name = "Stav" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    var user = await session.LoadAsync<User>("users/1");
+                    for (int i = 0; i < 4; i++)
+                    {
+                        user.Name = "Stav" + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+                
+                //enforce max 2 revisions
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 2;
+                });
+                
+                var result = await store.Operations.SendAsync(new EnforceRevisionsConfigurationOperation());
+                await result.WaitForCompletionAsync();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var count = await session.Advanced.Revisions.GetCountForAsync("users/1");
+                    Assert.Equal(2, count);
+
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(2, revisions.Count);
+                }
+            }
+        }
+
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
