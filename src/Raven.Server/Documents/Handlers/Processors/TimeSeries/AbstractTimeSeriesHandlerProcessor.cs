@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -11,6 +12,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
@@ -21,6 +23,15 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
     {
         protected AbstractTimeSeriesHandlerProcessor([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
         {
+        }
+
+        protected async Task SendConfigurationResponseAsync(TransactionOperationContext context, long index)
+        {
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            {
+                var response = new DynamicJsonValue { ["RaftCommandIndex"] = index, };
+                context.Write(writer, response);
+            }
         }
 
         public static unsafe DateTime ParseDate(string dateStr, string name)
