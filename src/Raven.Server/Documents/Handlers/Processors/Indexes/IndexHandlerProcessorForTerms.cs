@@ -25,16 +25,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
             _existingResultEtag = existingResultEtag;
         }
 
-        protected override ValueTask<TermsQueryResultServerSide> GetTerms(TransactionOperationContext context2, string indexName, string field, string fromValue, int pageSize)
+        protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize)
         {
             using (_token)
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database))
             {
                 var name = GetIndexNameFromCollectionAndField(field) ?? indexName;
 
-                var existingResultEtag = _existingResultEtag;
-
-                var result = RequestHandler.Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, RequestHandler.GetPageSize(), context, _token, out var index);
+                var result = RequestHandler.Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, _existingResultEtag, RequestHandler.GetPageSize(), context, _token, out var index);
 
                 if (result.NotModified == false)
                 {

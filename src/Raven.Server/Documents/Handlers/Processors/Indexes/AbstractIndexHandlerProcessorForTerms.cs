@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         {
         }
 
-        protected abstract ValueTask<TermsQueryResultServerSide> GetTerms(TransactionOperationContext context, string indexName, string field, string fromValue, int pageSize);
+        protected abstract ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 var fromValue = RequestHandler.GetStringQueryString("fromValue", required: false) ?? "";
                 var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
 
-                var terms = await GetTerms(context, indexName, field, fromValue, pageSize);
+                var terms = await GetTermsAsync(indexName, field, fromValue, pageSize);
 
                 if (terms.NotModified)
                 {

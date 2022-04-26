@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
         {
         }
 
-        protected override async ValueTask<TermsQueryResultServerSide> GetTerms(TransactionOperationContext context, string indexName, string field, string fromValue, int pageSize)
+        protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize)
         {
             var op = new ShardedGetTermsOperation(RequestHandler, indexName, field, fromValue, pageSize);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
