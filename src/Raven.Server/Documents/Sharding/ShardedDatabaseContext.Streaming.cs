@@ -164,18 +164,7 @@ namespace Raven.Server.Documents.Sharding
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
-                    if (x?.Item == null)
-                        return 1;
-                    if (y?.Item == null)
-                        return 1;
-                    try
-                    {
-                        return x.Item.GetMetadata().GetLastModified() < y.Item.GetMetadata().GetLastModified() ? 1 : -1;
-                    }
-                    catch
-                    {
-                        return 1;
-                    }
+                    return y.Item.GetMetadata().GetLastModified().CompareTo(x.Item.GetMetadata().GetLastModified());
                 }
 
                 public static DocumentLastModifiedComparer Instance = new ();
