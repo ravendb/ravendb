@@ -35,35 +35,74 @@
     <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: isSecureServer">
         <div class="col-sm-12 col-lg-7 flex-vertical">
             <div class="margin-bottom flex-horizontal">
-                <div>
-                    <input class="form-control" placeholder="Filter" data-bind="textInput: nameFilter">
-                </div>
-                <div>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Filter visible certificates based on security clearance">
-                            <span data-bind="text: clearanceFilter() ? clearanceLabelFor(clearanceFilter()) : 'Any security clearance'"></span>
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="#" title="Show all certificates" data-bind="click: _.partial(clearanceFilter, null)">
-                                    <span>Any security clearance</span>
-                                </a>
-                            </li>
-                            <!-- ko foreach: securityClearanceTypes -->
-                            <li>
-                                <a href="#" data-bind="click: _.partial($parent.clearanceFilter, value)">
-                                    <span data-bind="text: label"></span>
-                                </a>
-                            </li>
-                            <!-- /ko -->
-                        </ul>
+                <div class="form-inline">
+                    <div class="btn-group-label" data-label="Filter">
+                        <input class="form-control" placeholder="By name/thumbprint" data-bind="textInput: nameFilter" />
+                        <div class="dropdown dropdown-menu-left" data-bind="template: { name: 'filter-options-dialog' }"></div>
+                        <div class="btn-group-label" title="Clear all filters">
+                            <button class="btn btn-default" data-bind="click: clearAllFilters, enable: hasAnyFilters">Show all</button>
+                            <!-- TODO - use icon - see RavenDB-18518 -->
+                        </div>
+                    </div>
+                    <div class="btn-group-label margin-left" data-label="Sort">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" title="Select sort option" data-toggle="dropdown" >
+                                <span>Sort options</span>
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu sort-dropdown">
+                                <li data-bind="click: _.partial(sortByDefault)" title="Server & Client certificates will show first in list">
+                                    <a href="#">
+                                        <span>Default</span>
+                                    </a>
+                                </li>
+                                <li class="divider"></li>
+                                <li data-bind="click: _.partial(sortByName, 'asc')">
+                                    <a href="#">
+                                        <span>By Name - Asc</span>
+                                        <i class="icon-arrow-up pull-right"></i>
+                                    </a>
+                                </li>
+                                <li data-bind="click: _.partial(sortByName, 'desc')">
+                                    <a href="#">
+                                        <span>By Name - Desc</span>
+                                        <i class="icon-arrow-down pull-right"></i>
+                                    </a>
+                                </li>
+                                <li class="divider"></li>
+                                <li data-bind="click: _.partial(sortByExpiration, 'asc')">
+                                    <a href="#">
+                                        <span>By Expiration Date - Asc</span>
+                                        <i class="icon-arrow-up pull-right"></i>
+                                    </a>
+                                </li>
+                                <li data-bind="click: _.partial(sortByExpiration, 'desc')">
+                                    <a href="#">
+                                        <span>By Expiration Date - Desc</span>
+                                        <i class="icon-arrow-down pull-right"></i>
+                                    </a>
+                                </li>
+                                <li class="divider"></li>
+                                <li data-bind="click: _.partial(sortByValidFrom, 'asc')">
+                                    <a href="#">
+                                        <span>By Valid-From Date - Asc</span>
+                                        <i class="icon-arrow-up pull-right"></i>
+                                    </a>
+                                </li>
+                                <li data-bind="click: _.partial(sortByValidFrom, 'desc')">
+                                    <a href="#">
+                                        <span>By Valid-From Date - Desc</span>
+                                        <i class="icon-arrow-down pull-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 <div class="flex-separator"></div>
                 <div class="dropdown">
-                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
+                    <button class="btn btn-info dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                             aria-expanded="true">
                         <i class="icon-settings"></i><span>Client certificate</span>
                         <span class="caret"></span>
@@ -84,7 +123,7 @@
                     </ul>
                 </div>
                 <div class="dropdown">
-                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
+                    <button class="btn btn-info dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                             aria-expanded="true">
                         <i class="icon-settings"></i><span>Server certificates</span>
                         <span class="caret"></span>
@@ -104,6 +143,9 @@
                         </li>
                     </ul>
                 </div>
+            </div>
+            <div class="margin-bottom-xs">
+                <small data-bind="html: filterAndSortDescription"></small>
             </div>
             <div class="scroll flex-grow margin-top margin-top-sm">
                 <div class="panel panel-info certificate-item" data-bind="visible: wellKnownAdminCertsVisible">
@@ -129,7 +171,6 @@
                                 <h5><i class="icon-clearance"></i> SECURITY CLEARANCE</h5>
                                 <strong data-bind="text: $root.clearanceLabelFor('ClusterAdmin')"></strong>
                             </div>
-                            
                             <div class="permissions">
                                 <h5><i class="icon-database"></i> DATABASE PERMISSIONS</h5>
                                 <strong>All</strong>
@@ -176,6 +217,11 @@
                                         <h5><i class="icon-clearance"></i> SECURITY CLEARANCE</h5>
                                         <strong data-bind="text: $root.clearanceLabelFor(SecurityClearance)"></strong>
                                     </div>
+                                    <div class="valid-from">
+                                        <h5><i data-bind="attr: { class: validFromIcon }"></i> VAlID FROM</h5>
+                                        <strong data-bind="attr: { class: validFromClass }, text: validFromText">
+                                        </strong>
+                                    </div>
                                     <div class="expiration">
                                         <h5><i data-bind="attr: { class: expirationIcon }"></i> EXPIRATION</h5>
                                         <strong data-bind="attr: { class: expirationClass }, text: expirationText">
@@ -206,6 +252,10 @@
                         </div>
                     </div>
                 <!-- /ko -->
+                <div data-bind="visible: noCertificateIsVisible" class="text-center text-muted margin-top-lg">
+                    <i class="icon-lg icon-empty-set"></i>
+                    <h3 class="margin-top">There are no certificates matching the current Filter Options</h3>
+                </div>
             </div>
         </div>
         <div class="col-sm-12 col-lg-5 flex-vertical" data-bind="with: model">
@@ -329,7 +379,7 @@
                                         <i class="icon-info"></i>
                                     </div>
                                     <div class="small">
-                                        If 'Replace immediately' is specified, RavenDB will replace the certificate by force, even if some nodes are not responding. 
+                                        If 'Replace immediately' is specified, RavenDB will replace the certificate by force, even if some nodes are not responding.
                                         In that case, you will have to manually replace the certificate in those nodes.<br>Use with care.
                                     </div>
                                 </div>
@@ -341,7 +391,7 @@
                                     <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
                                         <div class="dropdown btn-block">
                                             <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                                   id="databaseNameInput"
+                                                   id="databaseNameInput" autocomplete="off"
                                                    data-bind="textInput: $root.newPermissionDatabaseName"
                                                    placeholder="Select (or enter) a database">
                                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
@@ -354,12 +404,15 @@
                                         <span class="help-block" data-bind="validationMessage: $root.newPermissionDatabaseName"></span>
                                     </div>
                                     <div>
-                                        <button data-bind="click: $root.addNewPermission" title="Add permissions for selected database" class="btn btn-default"><i class="icon-plus"></i></button>
+                                        <button data-bind="click: $root.addNewPermission, enable: $root.newPermissionDatabaseName() && $root.canAddPermission()"
+                                                class="btn btn-default" title="Click to add permissions for the entered database">
+                                            <i class="icon-plus"></i>
+                                        </button>
                                     </div>
                                 </div>
                                 <ul class="well collection-list" data-bind="visible: $root.showDatabasesSelector() && permissions().length, foreach: permissions">
                                     <li>
-                                        <div class="name" data-bind="text: databaseName">
+                                        <div class="name force-text-wrap" data-bind="text: databaseName">
                                         </div>
                                         <div data-bind="validationOptions: { insertMessages: false }">
                                             <div class="radio radio-default radio-inline">
@@ -436,3 +489,127 @@
 <form id="certificates_download_form" target="certificate_download_iframe" style="display: none"></form>
 
 <iframe name="certificate_download_iframe" style="display: none"></iframe>
+
+<script type="text/html" id="filter-options-dialog">
+    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownFilterOptions" data-toggle="dropdown"
+            title="Click for more filtering options">
+        <span>Filter options</span>
+        <span class="caret"></span>
+    </button>
+    <div class="dropdown-menu slidein-style filter-options-dropdown-container" aria-labelledby="dropdownFilterOptions" data-bind="dropdownPanel: true">
+        <form>
+            <div class="panel">
+                <div>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h3 class="margin-top-lg margin-left-lg">Security Clearance</h3>
+                            <div class="row margin-left">
+                                <div class="col-sm-9">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">Admin</div>
+                                        <div class="toggle toggle-info">
+                                            <input type="checkbox" class="styled" data-bind="checked: showAdminCertificates" />
+                                            <label></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row margin-left">
+                                <div class="col-sm-9">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">Operator</div>
+                                        <div class="toggle toggle-info">
+                                            <input type="checkbox" class="styled" data-bind="checked: showOperatorCertificates" />
+                                            <label></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row margin-left">
+                                <div class="col-sm-9">
+                                    <div class="flex-horizontal margin-bottom">
+                                        <div class="flex-grow">User</div>
+                                        <div class="toggle toggle-info">
+                                            <input type="checkbox" class="styled" data-bind="checked: showUserCertificates" />
+                                            <label></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 no-padding-left">
+                            <h3 class="margin-top-lg">Certificates State</h3>
+                            <div class="row">
+                                <div class="col-sm-8 no-padding-right">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">Valid certificates</div>
+                                        <div class="toggle toggle-success">
+                                            <input type="checkbox" class="styled" data-bind="checked: showValidCertificates" />
+                                            <label></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-8 no-padding-right">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">About to expire</div>
+                                        <div class="toggle toggle-warning">
+                                            <input type="checkbox" class="styled" data-bind="checked: showAboutToExpireCertificates" />
+                                            <label></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-sm-8 no-padding-right">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">Expired</div>
+                                        <div class="toggle toggle-danger">
+                                            <input type="checkbox" class="styled" data-bind="checked: showExpiredCertificates" />
+                                            <label></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <h3 class="margin-top-lg margin-left-lg">Database Permissions</h3>
+                    <div class="margin-top margin-left-lg margin-right">
+                        <div class="flex-horizontal margin-bottom">
+                            <div class="flex-grow">
+                                <div class="dropdown btn-block flex-grow">
+                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database" data-toggle="dropdown" autocomplete="off"
+                                           data-bind="textInput: inputDatabase, attr: { id: 'dbNameInput' }, disable: $root.databases().length === 0" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                        data-bind="autoComplete: '#dbNameInput', foreach: $root.createDatabaseNameAutoCompleterForFilter()">
+                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <div data-bind="text: $data"></div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-default" data-bind="click: $root.addDatabase, enable: inputDatabase() && canAddDatabase()"
+                                        title="Click to add the entered database to the list">
+                                    <i class="icon-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div data-bind="visible: databasesToShow().length" class="margin-top margin-bottom-lg">
+                            <ul class="well collection-list" data-bind="foreach: databasesToShow">
+                                <li>
+                                    <div class="name force-text-wrap" data-bind="text: $data"></div>
+                                    <a title="Remove database" href="#" data-bind="click: $parent.removeDatabase.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</script>

@@ -27,7 +27,7 @@
             flex-shrink: 0;
         }
         
-        .clearance, .permissions, .expiration, .auto-renew {
+        .clearance, .permissions, .valid-from, .expiration, .auto-renew {
             margin-top: 0;
             line-height: 18px;
             margin-right: @grid-gutter-width/2;
@@ -37,6 +37,39 @@
             strong + strong {
                 margin-left: @grid-gutter-width / 4;
             }
+        }
+    }
+
+    .filter-options-dropdown-container {
+        background-color: @gray-darker;
+        width: 600px;
+        overflow: visible;
+        
+        h3 {
+            font-weight: bold;
+        }
+        
+        #dbNameInput {
+            width: inherit;
+            border: 1px solid @gray-dark;
+        }
+        
+        .dropdown-menu {
+            width: 550px;
+            overflow: auto;
+        }
+
+        .btn-default {
+            background-color: @gray-dark !important;
+            border-color: @gray-dark !important;
+        }
+    }
+    
+    .sort-dropdown {
+        width: 220px;
+        
+        i {
+            top: 5px;
         }
     }
 }

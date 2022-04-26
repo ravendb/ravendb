@@ -1217,6 +1217,7 @@ namespace Raven.Server
                         Thumbprint = Certificate.Certificate.Thumbprint,
                         PublicKeyPinningHash = Certificate.Certificate.GetPublicKeyPinningHash(),
                         NotAfter = Certificate.Certificate.NotAfter,
+                        NotBefore = Certificate.Certificate.NotBefore,
                         Name = "Old Server Certificate - can delete",
                         SecurityClearance = SecurityClearance.ClusterNode
                     }, $"{raftRequestId}/put-old-certificate"));
@@ -1228,6 +1229,7 @@ namespace Raven.Server
                         Thumbprint = newCertificate.Thumbprint,
                         PublicKeyPinningHash = newCertificate.GetPublicKeyPinningHash(),
                         NotAfter = newCertificate.NotAfter,
+                        NotBefore = newCertificate.NotBefore,
                         Name = "Server Certificate",
                         SecurityClearance = SecurityClearance.ClusterNode
                     }, $"{raftRequestId}/put-new-certificate"));
@@ -1663,7 +1665,8 @@ namespace Raven.Server
                 Password = certWithSameHash.Password,
                 Thumbprint = certificate.Thumbprint,
                 PublicKeyPinningHash = pinningHash,
-                NotAfter = certificate.NotAfter
+                NotAfter = certificate.NotAfter,
+                NotBefore = certificate.NotBefore
             };
 
             cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
