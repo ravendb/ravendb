@@ -62,10 +62,6 @@ namespace Raven.Server.Documents
             return Task.CompletedTask;
         }
 
-        protected internal delegate void RefAction<T>(string databaseName, ref T configuration, JsonOperationContext context, ServerStore serverStore);
-
-        protected internal delegate Task<(long, object)> SetupFunc<T>(TransactionOperationContext context, string databaseName, T json, string raftRequestId);
-
         protected Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
            string debug,
            string raftRequestId,
@@ -78,67 +74,15 @@ namespace Raven.Server.Documents
                 debug,
                 raftRequestId,
                 Database.Name,
-                this,
                 beforeSetupConfiguration,
                 fillJson,
                 statusCode
             );
         }
 
-        internal static async Task DatabaseConfigurations(
-            SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
-            string debug,
-            string raftRequestId,
-            string databaseName,
-            RequestHandler requestHandler,
-            RefAction<BlittableJsonReaderObject> beforeSetupConfiguration = null,
-            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
-            HttpStatusCode statusCode = HttpStatusCode.OK
-            )
-        {
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var configurationJson = await context.ReadForMemoryAsync(requestHandler.RequestBodyStream(), debug);
-                var result = await DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, databaseName, requestHandler, configurationJson, beforeSetupConfiguration);
-
-                if (result.Configuration == null)
-                    return;
-
-                requestHandler.HttpContext.Response.StatusCode = (int)statusCode;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
-                {
-                    var json = new DynamicJsonValue
-                    {
-                        ["RaftCommandIndex"] = result.Index
-                    };
-                    fillJson?.Invoke(json, result.Configuration, result.Index);
-                    context.Write(writer, json);
-                }
-            }
-        }
-
-        protected static async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context, string raftRequestId, string databaseName, RequestHandler requestHandler, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
-        {
-            if (await requestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
-                return (-1, default);
-
-            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            await requestHandler.ServerStore.EnsureNotPassiveAsync();
-
-            beforeSetupConfiguration?.Invoke(databaseName, ref configurationJson, context, requestHandler.ServerStore);
-
-            var (index, _) = await setupConfigurationFunc(context, databaseName, configurationJson, raftRequestId);
-            await requestHandler.WaitForIndexToBeAppliedAsync(context, index);
-
-            return (index, configurationJson);
-        }
-
         protected Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context, string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
         {
-            return DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, this, configurationJson, beforeSetupConfiguration);
+            return DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, configurationJson, beforeSetupConfiguration);
         }
 
         public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)

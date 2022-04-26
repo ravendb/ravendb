@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -39,7 +40,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
-
         [RavenShardedAction("/databases/*/admin/connection-strings", "GET")]
         public async Task GetConnectionStrings()
         {
@@ -57,25 +57,27 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/etl", "PUT")]
         public async Task AddEtl()
         {
-            await OngoingTasksHandler.AddEtl(DatabaseContext.DatabaseName, this);
+            await AddEtl(DatabaseContext.DatabaseName);
         }
 
         [RavenShardedAction("/databases/*/admin/etl", "RESET")]
         public async Task ResetEtl()
         {
-            await OngoingTasksHandler.ResetEtl(DatabaseContext.DatabaseName, this);
+            await ResetEtl(DatabaseContext.DatabaseName);
         }
 
         [RavenShardedAction("/databases/*/admin/tasks", "DELETE")]
         public async Task DeleteOngoingTask()
         {
-            await OngoingTasksHandler.DeleteOngoingTask(DatabaseContext.DatabaseName, this);
+            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(DatabaseContext.DatabaseName).First();
+
+            await DeleteOngoingTask(DatabaseContext.DatabaseName, database, waitForIndex: WaitForIndexToBeApplied);
         }
 
         [RavenShardedAction("/databases/*/admin/tasks/state", "POST")]
         public async Task ToggleTaskState()
         {
-            await OngoingTasksHandler.ToggleTaskState(DatabaseContext.DatabaseName, this);
+            await ToggleTaskState(DatabaseContext.DatabaseName, waitForIndex: WaitForIndexToBeApplied);
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
