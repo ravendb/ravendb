@@ -15,6 +15,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -198,10 +199,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanConfigureTimeSeries3()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanConfigureTimeSeries3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.TimeSeries.SetPolicyAsync<User>("By15SecondsFor1Minute", TimeValue.FromSeconds(15), TimeValue.FromSeconds(60));
                 await store.TimeSeries.SetPolicyAsync<User>("ByMinuteFor3Hours", TimeValue.FromMinutes(1), TimeValue.FromMinutes(180));

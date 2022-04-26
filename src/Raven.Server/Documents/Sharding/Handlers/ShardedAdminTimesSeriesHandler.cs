@@ -12,5 +12,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedAdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/timeseries/policy", "DELETE")]
+        public async Task RemoveTimeSeriesPolicy()
+        {
+            using (var processor = new ShardedAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

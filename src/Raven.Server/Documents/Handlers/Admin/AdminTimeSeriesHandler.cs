@@ -12,5 +12,12 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (var processor = new AdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenAction("/databases/*/admin/timeseries/policy", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        public async Task RemoveTimeSeriesPolicy()
+        {
+            using (var processor = new AdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
