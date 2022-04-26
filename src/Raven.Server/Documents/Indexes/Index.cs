@@ -3507,7 +3507,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
                 {
-                    result.Terms = reader.Terms(field, fromValue, pageSize, token.Token);
+                    result.Terms = reader.Terms(field, fromValue, pageSize, token.Token).ToList();
                 }
 
                 return result;

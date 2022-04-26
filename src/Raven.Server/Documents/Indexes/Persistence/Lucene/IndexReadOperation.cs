@@ -707,9 +707,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
+        public SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
-            var results = new HashSet<string>();
+            var results = new SortedSet<string>(StringComparer.Ordinal);
             using (var termDocs = _searcher.IndexReader.HasDeletions ? _searcher.IndexReader.TermDocs(_state) : null)
             using (var termEnum = _searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty), _state))
             {

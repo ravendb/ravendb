@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -16,23 +17,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
     internal class IndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<DatabaseRequestHandler, DocumentsOperationContext>
     {
         private readonly OperationCancelToken _token;
-        private readonly long? _existingResultEtag;
 
         public IndexHandlerProcessorForTerms([NotNull] DatabaseRequestHandler requestHandler, OperationCancelToken token, long? existingResultEtag)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler, requestHandler.ContextPool, existingResultEtag)
         {
             _token = token;
-            _existingResultEtag = existingResultEtag;
         }
 
-        protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize)
+        protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
         {
             using (_token)
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database))
             {
                 var name = GetIndexNameFromCollectionAndField(field) ?? indexName;
 
-                var result = RequestHandler.Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, _existingResultEtag, RequestHandler.GetPageSize(), context, _token, out var index);
+                var result = RequestHandler.Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, resultEtag, RequestHandler.GetPageSize(), context, _token, out var index);
 
                 if (result.NotModified == false)
                 {
@@ -49,14 +48,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                             {
                                 // Term-values for 'Spatial Index Fields' with 'BoundingBox' are encoded in Lucene as 'prefixCoded bytes'
                                 // Need to convert to numbers for the Studio
-                                var readableTerms = new HashSet<string>();
+                                var readableTerms = new SortedSet<string>();
                                 foreach (var item in result.Terms)
                                 {
                                     var num = Lucene.Net.Util.NumericUtils.PrefixCodedToDouble(item);
                                     readableTerms.Add(NumberUtil.NumberToString(num));
                                 }
 
-                                result.Terms = readableTerms;
+                                result.Terms = readableTerms.ToList();
                             }
                         }
                     }

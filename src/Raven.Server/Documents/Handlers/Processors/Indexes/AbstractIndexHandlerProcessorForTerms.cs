@@ -16,12 +16,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
-        protected AbstractIndexHandlerProcessorForTerms([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+        private readonly long? _resultEtag;
+
+        protected AbstractIndexHandlerProcessorForTerms([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool, long? existingResultEtag)
             : base(requestHandler, contextPool)
         {
+            _resultEtag = existingResultEtag;
         }
 
-        protected abstract ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize);
+        protected abstract ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -32,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 var fromValue = RequestHandler.GetStringQueryString("fromValue", required: false) ?? "";
                 var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
 
-                var terms = await GetTermsAsync(indexName, field, fromValue, pageSize);
+                var terms = await GetTermsAsync(indexName, field, fromValue, pageSize, _resultEtag);
 
                 if (terms.NotModified)
                 {
