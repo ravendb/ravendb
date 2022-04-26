@@ -455,88 +455,13 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
         {
-            await ResetEtl(Database.Name, this);
-        }
-
-        public static async Task ResetEtl(string databaseName, RequestHandler requestHandler)
-        {
-            var configurationName = requestHandler.GetStringQueryString("configurationName"); // etl task name
-            var transformationName = requestHandler.GetStringQueryString("transformationName");
-
-            await DatabaseConfigurations((_, db, etlConfiguration, guid) => requestHandler.ServerStore.RemoveEtlProcessState(_, db, configurationName, transformationName, guid),
-                "etl-reset", requestHandler.GetRaftRequestIdFromQuery(), databaseName, requestHandler);
+            await ResetEtl(Database.Name);
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-            await AddEtl(Database.Name, this);
-        }
-
-        public static async Task AddEtl(string databaseName, RequestHandler requestHandler)
-        {
-            var id = requestHandler.GetLongQueryString("id", required: false);
-
-            if (id == null)
-            {
-                await DatabaseConfigurations((_, db, etlConfiguration, guid) =>
-                        requestHandler.ServerStore.AddEtl(_, db, etlConfiguration, guid), "etl-add",
-                    requestHandler.GetRaftRequestIdFromQuery(),
-                    databaseName,
-                    requestHandler,
-                    beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
-                    fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
-
-                return;
-            }
-
-            string etlConfigurationName = null;
-
-            await DatabaseConfigurations((_, db, etlConfiguration, guid) =>
-                {
-                    var task = requestHandler.ServerStore.UpdateEtl(_, db, id.Value, etlConfiguration, guid);
-                    etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
-                    return task;
-                }, "etl-update",
-                requestHandler.GetRaftRequestIdFromQuery(),
-                databaseName,
-                requestHandler,
-                beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
-                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
-
-            // Reset scripts if needed
-            var scriptsToReset = requestHandler.HttpContext.Request.Query["reset"];
-            var raftRequestId = requestHandler.GetRaftRequestIdFromQuery();
-
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                foreach (var script in scriptsToReset)
-                {
-                    await requestHandler.ServerStore.RemoveEtlProcessState(ctx, databaseName, etlConfigurationName, script, $"{raftRequestId}/{script}");
-                }
-            }
-        }
-
-        private static void AssertCanAddOrUpdateEtl(string databaseName, ref BlittableJsonReaderObject etlConfiguration, JsonOperationContext context, ServerStore serverStore)
-        {
-            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
-            {
-                case EtlType.Raven:
-                    serverStore.LicenseManager.AssertCanAddRavenEtl();
-                    break;
-                case EtlType.Sql:
-                    serverStore.LicenseManager.AssertCanAddSqlEtl();
-                    break;
-                case EtlType.Olap:
-                    serverStore.LicenseManager.AssertCanAddOlapEtl();
-                    break;
-                case EtlType.ElasticSearch:
-                    serverStore.LicenseManager.AssertCanAddElasticSearchEtl();
-                    break;
-                default:
-                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
-            }
+            await AddEtl(Database.Name);
         }
 
         private OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
@@ -928,46 +853,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
-            await ToggleTaskState(Database.Name, this, Database);
-        }
-
-        internal static async Task ToggleTaskState(string databaseName, RequestHandler requestHandler, DocumentDatabase database = null)
-        {
-            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            var key = requestHandler.GetLongQueryString("key");
-            var typeStr = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var disable = requestHandler.GetBoolValueQueryString("disable") ?? true;
-            var taskName = requestHandler.GetStringQueryString("taskName", required: false);
-
-            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
-                throw new ArgumentException($"Unknown task type: {type}", nameof(type));
-
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var (index, _) = await requestHandler.ServerStore.ToggleTaskState(key, taskName, type, disable, databaseName, requestHandler.GetRaftRequestIdFromQuery());
-                if (database == null)
-                {
-                    // sharded database
-                    await requestHandler.WaitForIndexToBeAppliedAsync(context, index);
-                }
-                else
-                {
-                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index, requestHandler.ServerStore.Engine.OperationTimeout);
-                }
-
-                requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(ModifyOngoingTaskResult.TaskId)] = key,
-                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
-                    });
-                }
-            }
+            await ToggleTaskState(Database.Name, waitForIndex:  (_, index) => 
+                Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
         }
 
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -994,68 +881,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteOngoingTask()
         {
-            await DeleteOngoingTask(Database.Name, this, Database);
-        }
-
-        internal static async Task DeleteOngoingTask(string databaseName, RequestHandler requestHandler, DocumentDatabase database = null)
-        {
-            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            var id = requestHandler.GetLongQueryString("id");
-            var typeStr = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var taskName = requestHandler.GetStringQueryString("taskName", required: false);
-
-            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
-                throw new ArgumentException($"Unknown task type: {type}", "type");
-
-            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                long index;
-                bool sharded = false;
-                if (database == null)
-                {
-                    // sharded database
-                    database = await requestHandler.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(databaseName).First();
-                    sharded = true;
-                }
-
-                var action = new DeleteOngoingTaskAction(id, type, requestHandler.ServerStore, database, databaseName, context);
-                var raftRequestId = requestHandler.GetRaftRequestIdFromQuery();
-
-                try
-                {
-                    (index, _) = await requestHandler.ServerStore.DeleteOngoingTask(id, taskName, type, databaseName, $"{raftRequestId}/delete-ongoing-task");
-                    if (sharded)
-                    {
-                        await requestHandler.WaitForIndexToBeAppliedAsync(context, index);
-                    }
-                    else
-                    {
-                        await database.RachisLogIndexNotifications.WaitForIndexNotification(index, requestHandler.ServerStore.Engine.OperationTimeout);
-                    }
-
-                    if (type == OngoingTaskType.Subscription)
-                    {
-                        database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
-                    }
-                }
-                finally
-                {
-                    await action.Complete($"{raftRequestId}/complete");
-                }
-
-                requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(ModifyOngoingTaskResult.TaskId)] = id,
-                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
-                    });
-                }
-            }
+            await DeleteOngoingTask(Database.Name, Database, waitForIndex: (_, index) => 
+                Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
         }
 
         internal static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
@@ -1068,71 +895,6 @@ namespace Raven.Server.Web.System
                 taskState = OngoingTaskState.PartiallyEnabled;
 
             return taskState;
-        }
-
-        internal class DeleteOngoingTaskAction
-        {
-            private readonly ServerStore _serverStore;
-            private readonly DocumentDatabase _database;
-            private readonly TransactionOperationContext _context;
-            private readonly (string Name, List<string> Transformations) _deletingEtl;
-            private readonly string _databaseName;
-
-            public DeleteOngoingTaskAction(long id, OngoingTaskType type, ServerStore serverStore, DocumentDatabase database, string databaseName, TransactionOperationContext context)
-            {
-                _serverStore = serverStore;
-                _database = database;
-                _context = context;
-                _databaseName = databaseName;
-
-                        using (context.Transaction == null ? context.OpenReadTransaction() : null)
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
-                        {
-                            if (rawRecord == null)
-                        return;
-
-                    switch (type)
-                            {
-                        case OngoingTaskType.RavenEtl:
-                                var ravenEtls = rawRecord.RavenEtls;
-                                var ravenEtl = ravenEtls?.Find(x => x.TaskId == id);
-                                if (ravenEtl != null)
-                                    _deletingEtl = (ravenEtl.Name, ravenEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
-                            break;
-                        case OngoingTaskType.SqlEtl:
-                                var sqlEtls = rawRecord.SqlEtls;
-                                var sqlEtl = sqlEtls?.Find(x => x.TaskId == id);
-                                if (sqlEtl != null)
-                                    _deletingEtl = (sqlEtl.Name, sqlEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
-                            break;
-                        case OngoingTaskType.OlapEtl:
-                            var olapEtls = rawRecord.OlapEtls;
-                            var olapEtl = olapEtls?.Find(x => x.TaskId == id);
-                            if (olapEtl != null)
-                                _deletingEtl = (olapEtl.Name, olapEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
-                            break;
-                        case OngoingTaskType.ElasticSearchEtl:
-                            var elasticEtls = rawRecord.ElasticSearchEtls;
-                            var elasticEtl = elasticEtls?.Find(x => x.TaskId == id);
-                            if (elasticEtl != null)
-                                _deletingEtl = (elasticEtl.Name, elasticEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
-                            break;
-                            }
-                        }
-                }
-
-            public async Task Complete(string raftRequestId)
-            {
-                if (_deletingEtl.Name != null)
-                {
-                    foreach (var transformation in _deletingEtl.Transformations)
-                    {
-                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _databaseName, _deletingEtl.Name, transformation,
-                            $"{raftRequestId}/{transformation}");
-                        await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
-                    }
-                }
-            }
         }
     }
 
