@@ -70,13 +70,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
             public override int Compare(ShardStreamItem<string> x,
                 ShardStreamItem<string> y)
             {
-                if (x == null)
-                    return -1;
-
-                if (y == null)
-                    return 1;
-
-                return string.CompareOrdinal(x.Item, y.Item);
+                return string.CompareOrdinal(x?.Item, y?.Item);
             }
 
             public static TermsComparer Instance = new();
