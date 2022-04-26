@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Web;
@@ -21,6 +22,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
         public override async ValueTask ExecuteAsync()
         {
+            if (RequestHandler.GetLongQueryString("etag", required: false).HasValue)
+                throw new NotSupportedException("Parameter 'etag' is deprecated for endpoint /databases/*/revisions/bin. Use 'start' instead.");
+            
             var start = RequestHandler.GetStart();
             var pageSize = RequestHandler.GetPageSize();
 
