@@ -129,6 +129,50 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task CreatingARevisionManuallyAfterEnablingRevisionsForAnyCollectionWhenRevisionIsBlocked()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // Define revision settings on Orders collection
+                var configuration = new RevisionsConfiguration
+                {
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        {"Orders", new RevisionsCollectionConfiguration {PurgeOnDelete = true, MinimumRevisionsToKeep = 5}}
+                    }
+                };
+
+                var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration)); ;
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company {Name = "HR"};
+                    session.Store(company);
+                    session.SaveChanges();
+
+                    var revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
+                    Assert.Equal(0, revisionsCount);
+
+                    // Force revisions on a Company document
+                    session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
+                    session.SaveChanges();
+
+                    revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
+                    Assert.Equal(1, revisionsCount);
+
+                    session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
+                    session.SaveChanges();
+
+                    revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
+                    Assert.Equal(1, revisionsCount);
+
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata.TryGetValue("@flags", out var flagsContent);
+                    Assert.Equal("HasRevisions", flagsContent);
+                }
+            }
+        }
     }
 
 }
