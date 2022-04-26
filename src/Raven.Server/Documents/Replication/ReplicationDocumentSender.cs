@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Replication
         public bool MissingAttachmentsInLastBatch { get; private set; }
         private HashSet<Slice> _deduplicatedAttachmentHashes = new(SliceComparer.Instance);
         private Queue<Slice> _deduplicatedAttachmentHashesLru = new();
-        private int _deduplicateAttachmentBufferSize;
+        private int _numberOfAttachmentsTrackedForDeduplication;
         private ByteStringContext _context; // required to clone the hashes 
 
 
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Replication
                                            parent._outgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                            _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
             
-            _deduplicateAttachmentBufferSize = parent._database.Configuration.Replication.AttachmentDeduplicationBufferSize;
+            _numberOfAttachmentsTrackedForDeduplication = parent._database.Configuration.Replication.MaxNumberOfAttachmentsTrackedForDeduplication;
             _context = new ByteStringContext(SharedMultipleUseFlag.None);
 
         }
@@ -679,7 +679,7 @@ namespace Raven.Server.Documents.Replication
             var clone = attachment.Base64Hash.Clone(_context);
             _deduplicatedAttachmentHashes.Add(clone);
             _deduplicatedAttachmentHashesLru.Enqueue(clone);
-            while (_deduplicatedAttachmentHashesLru.Count > _deduplicateAttachmentBufferSize)
+            while (_deduplicatedAttachmentHashesLru.Count > _numberOfAttachmentsTrackedForDeduplication)
             {
                 var cur = _deduplicatedAttachmentHashesLru.Dequeue();
                 _deduplicatedAttachmentHashes.Remove(cur);
