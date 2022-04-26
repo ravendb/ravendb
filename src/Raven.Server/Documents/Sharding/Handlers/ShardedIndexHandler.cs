@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/indexes/terms", "GET")]
         public async Task Terms()
         {
-            using (var processor = new ShardedIndexHandlerProcessorForTerms(this))
+            using (var processor = new ShardedIndexHandlerProcessorForTerms(this, GetLongFromHeaders("If-None-Match")))
                 await processor.ExecuteAsync();
         }
     }

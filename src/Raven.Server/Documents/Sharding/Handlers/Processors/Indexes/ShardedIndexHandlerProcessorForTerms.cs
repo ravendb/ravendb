@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Queries;
@@ -14,20 +17,22 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 {
     internal class ShardedIndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedIndexHandlerProcessorForTerms([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedIndexHandlerProcessorForTerms([NotNull] ShardedDatabaseRequestHandler requestHandler, long? resultEtag) : base(requestHandler, requestHandler.ContextPool, resultEtag)
         {
         }
 
-        protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize)
+        protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
         {
-            var op = new ShardedGetTermsOperation(RequestHandler, indexName, field, fromValue, pageSize);
+            var op = new ShardedGetTermsOperation(RequestHandler, indexName, field, fromValue, pageSize, resultEtag);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
 
-            return result;
+            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.CombinedEtag + "\"";
+            result.Result.NotModified = result.StatusCode == (int)HttpStatusCode.NotModified;
+            return result.Result;
         }
 
 
-        private readonly struct ShardedGetTermsOperation : IShardedOperation<TermsQueryResultServerSide>
+        private readonly struct ShardedGetTermsOperation : IShardedReadOperation<TermsQueryResultServerSide>
         {
             private readonly ShardedDatabaseRequestHandler _handler;
             private readonly string _indexName;
@@ -35,21 +40,24 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
             private readonly string _fromValue;
             private readonly int _pageSize;
 
-            public ShardedGetTermsOperation(ShardedDatabaseRequestHandler handler, string indexName, string field, string fromValue, int pageSize)
+            public ShardedGetTermsOperation(ShardedDatabaseRequestHandler handler, string indexName, string field, string fromValue, int pageSize, long? resultEtag)
             {
                 _handler = handler;
                 _indexName = indexName;
                 _field = field;
                 _fromValue = fromValue;
                 _pageSize = pageSize;
+                ExpectedEtag = Convert.ToString(resultEtag);
             }
 
             public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-            public TermsQueryResultServerSide Combine(Memory<TermsQueryResultServerSide> results)
+            public string ExpectedEtag { get; }
+
+            public TermsQueryResultServerSide CombineResults(Memory<TermsQueryResultServerSide> results)
             {
                 var pageSize = _pageSize;
-                var terms = new HashSet<string>();
+                var terms = new SortedSet<string>();
                 foreach (var res in _handler.DatabaseContext.Streaming.CombinedResults(results, r => r.Terms, TermsComparer.Instance))
                 {
                     if (terms.Add(res.Item))
@@ -59,7 +67,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
                         break;
                 }
 
-                return new TermsQueryResultServerSide { IndexName = results.Span[0].IndexName, ResultEtag = results.Span[0].ResultEtag, Terms = terms };
+                return new TermsQueryResultServerSide { IndexName = results.Span[0].IndexName, Terms = terms.ToList() };
             }
 
             public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shard) => new GetIndexTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);

@@ -4,7 +4,7 @@ namespace Raven.Client.Documents.Queries
 {
     public class TermsQueryResult
     {
-        public HashSet<string> Terms { get; set; }
+        public List<string> Terms { get; set; }
 
         public long ResultEtag { get; set; }
 
