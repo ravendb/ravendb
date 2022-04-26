@@ -326,49 +326,6 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/admin/timeseries/policy", "DELETE", AuthorizationStatus.DatabaseAdmin)]
-        public async Task RemoveTimeSeriesPolicy()
-        {
-            await ServerStore.EnsureNotPassiveAsync();
-            var collection = GetStringQueryString("collection", required: true);
-            var name = GetStringQueryString("name", required: true);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                TimeSeriesConfiguration current;
-                using (context.OpenReadTransaction())
-                {
-                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration;
-                }
-
-                if (current?.Collections?.ContainsKey(collection) == true)
-                {
-                    var p = current.Collections[collection].GetPolicyByName(name, out _);
-                    if (p == null)
-                        return;
-
-                    if (ReferenceEquals(p, current.Collections[collection].RawPolicy))
-                    {
-                        current.Collections[collection].RawPolicy = RawTimeSeriesPolicy.Default;
-                    }
-                    else
-                    {
-                        current.Collections[collection].Policies.Remove(p);
-                    }
-
-                    current.InitializeRollupAndRetention();
-
-                    ServerStore.LicenseManager.AssertCanAddTimeSeriesRollupsAndRetention(current);
-
-                    var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
-                    var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
-
-                    await WaitForIndexToBeAppliedAsync(context, index);
-                    await SendConfigurationResponseAsync(context, index);
-                }
-            }
-        }
-
         [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ConfigTimeSeriesNames()
         {
