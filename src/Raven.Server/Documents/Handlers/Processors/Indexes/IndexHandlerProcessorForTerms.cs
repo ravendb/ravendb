@@ -9,29 +9,27 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
     internal class IndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        private readonly OperationCancelToken _token;
-
-        public IndexHandlerProcessorForTerms([NotNull] DatabaseRequestHandler requestHandler, OperationCancelToken token, long? existingResultEtag)
-            : base(requestHandler, requestHandler.ContextPool, existingResultEtag)
+        public IndexHandlerProcessorForTerms([NotNull] DatabaseRequestHandler requestHandler)
+            : base(requestHandler, requestHandler.ContextPool)
         {
-            _token = token;
         }
+
+        protected override long? GetLongFromHeaders(string name) => RequestHandler.GetLongFromHeaders(name);
 
         protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
         {
-            using (_token)
+            using (var token = RequestHandler.CreateTimeLimitedOperationToken())
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database))
             {
                 var name = GetIndexNameFromCollectionAndField(field) ?? indexName;
 
-                var result = RequestHandler.Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, resultEtag, RequestHandler.GetPageSize(), context, _token, out var index);
+                var result = RequestHandler.Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, resultEtag, RequestHandler.GetPageSize(), context, token, out var index);
 
                 if (result.NotModified == false)
                 {

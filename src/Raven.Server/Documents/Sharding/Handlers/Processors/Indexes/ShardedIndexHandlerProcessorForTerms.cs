@@ -17,9 +17,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 {
     internal class ShardedIndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedIndexHandlerProcessorForTerms([NotNull] ShardedDatabaseRequestHandler requestHandler, long? resultEtag) : base(requestHandler, requestHandler.ContextPool, resultEtag)
+        public ShardedIndexHandlerProcessorForTerms([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
+
+        protected override long? GetLongFromHeaders(string name) => RequestHandler.GetLongFromHeaders(name);
 
         protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
         {
