@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Text;
-using V8.Net;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Patch.V8;
-using Raven.Server.Extensions.V8;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 {
@@ -16,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 
         public override InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            var jsBinder = _engine.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderAttachmentObjectInstance(), keepAlive: keepAlive);
+            var jsBinder = _engine.CreateObjectBinder<CustomBinder<AttachmentObjectInstanceV8>>(this, EngineEx.Context.TypeBinderAttachmentObjectInstance(), keepAlive: keepAlive);
             var binder = (ObjectBinder)jsBinder.Object;
             binder.ShouldDisposeBoundObject = true;
             return jsBinder;
@@ -27,7 +25,52 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
             _attachment = attachment ?? throw new ArgumentNullException(nameof(attachment));
         }
 
-        private InternalHandle GetContentAsString(V8Engine engine, params InternalHandle[] args)
+        public override InternalHandle NamedPropertyGetterOnce(ref string propertyName)
+        {
+            if (propertyName == nameof(IAttachmentObject.Name))
+                return EngineEx.CreateValue(_attachment.Name).Item;
+            
+            if (propertyName == nameof(IAttachmentObject.ContentType))
+                return EngineEx.CreateValue(_attachment.ContentType).Item;
+            
+            if (propertyName == nameof(IAttachmentObject.Hash))
+                return EngineEx.CreateValue(_attachment.Hash).Item;
+            
+            if (propertyName == nameof(IAttachmentObject.Size))
+                return EngineEx.CreateValue(_attachment.Size).Item;
+            
+            if (propertyName == GetContentAsStringMethodName)
+                return EngineEx.CreateClrCallBack(GetContentAsStringMethodName, GetContentAsString, keepAlive: false).Item;
+
+            return InternalHandle.Empty;
+        }
+
+        private JsHandleV8 GetContentAsString(JsHandleV8 self, JsHandleV8[] args) // callback
+        {
+            try
+            {
+                if (self.IsObject && self.AsObject() is AttachmentObjectInstanceV8 attachment)
+                {
+                    if (attachment == null)
+                        throw new InvalidOperationException($"GetContentAsString: BoundObject is null.");
+
+
+                    return attachment.GetContentAsStringInternal(args);
+                }
+                else
+                {
+                    return EngineEx.Empty;
+                }
+            }
+            catch (Exception e)
+            {
+                //  EngineEx.Context.JsContext.LastException = e;
+              //  var str = engine.CreateError(e.ToString(), JSValueType.ExecutionError);
+                return EngineEx.CreateError(e.ToString(), JSValueType.ExecutionError);
+            }
+        }
+
+        private JsHandleV8 GetContentAsStringInternal(JsHandleV8[] args)
         {
             var encoding = Encoding.UTF8;
             if (args.Length > 0)
@@ -55,53 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
                 else
                     throw new InvalidOperationException($"Encoding parameter must be of type string and convertible to one of the .NET supported encodings, but was '{encodingAsString}'.");
             }
-
-            return engine.CreateValue(_attachment.GetContentAsString(encoding));
+            return EngineEx.CreateValue(_attachment.GetContentAsString(encoding));
         }
-
-        public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engineEx, ref string propertyName)
-        {
-            var engine = (V8Engine)engineEx; 
-            if (propertyName == nameof(IAttachmentObject.Name))
-                return engine.CreateValue(_attachment.Name);
-            
-            if (propertyName == nameof(IAttachmentObject.ContentType))
-                return engine.CreateValue(_attachment.ContentType);
-            
-            if (propertyName == nameof(IAttachmentObject.Hash))
-                return engine.CreateValue(_attachment.Hash);
-            
-            if (propertyName == nameof(IAttachmentObject.Size))
-                return engine.CreateValue(_attachment.Size);
-            
-            if (propertyName == GetContentAsStringMethodName)
-                return engine.CreateClrCallBack(GetContentAsString, false);
-
-            return InternalHandle.Empty;
-        }
-
-        private static InternalHandle GetContentAsString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
-        {
-            try
-            {
-                var attachment = (AttachmentObjectInstanceV8)(self.BoundObject);
-                if (attachment == null)
-                    throw new InvalidOperationException($"GetContentAsString: BoundObject is null.");
-                return attachment.GetContentAsString(engine, args);
-            }
-            catch (Exception e) 
-            {
-                var engineEx = (V8EngineEx)engine;
-                engineEx.Context.JsContext.LastException = e;
-                return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
-            }
-        }
-
-        public class CustomBinder : ObjectInstanceBaseV8.CustomBinder<AttachmentObjectInstanceV8>
-        {
-            public CustomBinder() : base()
-            {}
-        }
-
     }
 }

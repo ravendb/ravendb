@@ -5,7 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Config;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 
@@ -19,11 +22,13 @@ namespace Raven.Server.Documents.Patch
 
         private RavenConfiguration _configuration;
 
-        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner>> _cache = new();
+        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleV8>>> _scriptRunnerCacheV8 = new ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleV8>>>();
+        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleJint>>> _scriptRunnerCacheJint = new ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleJint>>>();
 
         public bool EnableClr;
 
         public readonly DocumentDatabase Database;
+        private readonly JavaScriptEngineType _engineType;
 
         public RavenConfiguration Configuration => _configuration;
 
@@ -44,6 +49,7 @@ namespace Raven.Server.Documents.Patch
         {
             Database = database;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _engineType = _configuration.JavaScript.EngineType;
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
@@ -52,16 +58,28 @@ namespace Raven.Server.Documents.Patch
         {
             get
             {
-                return _cache.Values
+                var x1 = _scriptRunnerCacheV8.Values
                     .Select(x => x.IsValueCreated ? x.Value : null)
                     .Where(x => x != null)
                     .Sum(x => x.NumberOfCachedScripts);
+
+                var x2 = _scriptRunnerCacheJint.Values
+                    .Select(x => x.IsValueCreated ? x.Value : null)
+                    .Where(x => x != null)
+                    .Sum(x => x.NumberOfCachedScripts);
+
+                return x1 + x2;
             }
         }
 
         public IEnumerable<DynamicJsonValue> GetDebugInfo(bool detailed = false)
         {
-            foreach (var item in _cache)
+            foreach (var item in _scriptRunnerCacheV8)
+            {
+                yield return item.Value.Value.GetDebugInfo(detailed);
+            }
+
+            foreach (var item in _scriptRunnerCacheJint)
             {
                 yield return item.Value.Value.GetDebugInfo(detailed);
             }
@@ -69,44 +87,92 @@ namespace Raven.Server.Documents.Patch
 
         public abstract class Key
         {
-            public abstract void GenerateScript(ScriptRunner runner);
+            public abstract void GenerateScript<T>(ScriptRunner<T> runner) where T : struct, IJsHandle<T>;
 
             public abstract override bool Equals(object obj);
 
             public abstract override int GetHashCode();
         }
         
-        public ScriptRunner.ReturnRun GetScriptRunner(IJavaScriptOptions jsOptions, Key key, bool readOnly, out ScriptRunner.SingleRun patchRun, bool executeScriptsSource = true)
+        public ReturnRun GetScriptRunner(Key key, bool readOnly, out ISingleRun patchRun, bool executeScriptsSource = true)
         {
             if (key == null)
             {
                 patchRun = null;
-                return new ScriptRunner.ReturnRun();
+                return new ReturnRun();
             }
-            var scriptRunner = GetScriptRunner(jsOptions, key);
-            var returnRun = scriptRunner.GetRunner(out patchRun, executeScriptsSource);
-            patchRun.ReadOnly = readOnly;
+
+            ReturnRun returnRun;
+            switch (_engineType)
+            {
+                case JavaScriptEngineType.Jint:
+                    returnRun = TryGetJintScriptRunnerFromCache(key).GetRunner(out patchRun, executeScriptsSource);
+                    break;
+                case JavaScriptEngineType.V8:
+                    returnRun = TryGetV8ScriptRunnerFromCache(key).GetRunner(out patchRun, executeScriptsSource);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+            patchRun.ReadOnly = false;
+           // patchRun.SetReadOnly(readOnly);
             return returnRun;
         }
-        
-        private ScriptRunner GetScriptRunner(IJavaScriptOptions jsOptions, Key script)
+
+        public ReturnRun GetScriptRunnerJint(Key key, bool readOnly, out SingleRun<JsHandleJint> patchRun, bool executeScriptsSource = true)
         {
-            if (_cache.TryGetValue(script, out var lazy))                
+            if (key == null)
+            {
+                patchRun = null;
+                return new ReturnRun();
+            }
+
+            ReturnRun returnRun = TryGetJintScriptRunnerFromCache(key).GetRunner(out patchRun, executeScriptsSource);
+            patchRun.ReadOnly = false;
+            // patchRun.SetReadOnly(readOnly);
+            return returnRun;
+        }
+        public ReturnRun GetScriptRunnerV8(Key key, bool readOnly, out SingleRun<JsHandleV8> patchRun, bool executeScriptsSource = true)
+        {
+            if (key == null)
+            {
+                patchRun = null;
+                return new ReturnRun();
+            }
+
+            ReturnRun returnRun = TryGetV8ScriptRunnerFromCache(key).GetRunner(out patchRun, executeScriptsSource);
+            patchRun.ReadOnly = false;
+            // patchRun.SetReadOnly(readOnly);
+            return returnRun;
+        }
+        private ScriptRunner<JsHandleJint> TryGetJintScriptRunnerFromCache(Key script)
+        {
+            if (_scriptRunnerCacheJint.TryGetValue(script, out var lazy))
                 return lazy.Value;
 
-            return GetScriptRunnerUnlikely(jsOptions, script);
-        }
-
-        private ScriptRunner GetScriptRunnerUnlikely(IJavaScriptOptions jsOptions, Key script) // TODO [shlomo] jsOptions should be taken into account
-        {
-            var value = new Lazy<ScriptRunner>(() =>
+            var value = new Lazy<ScriptRunner<JsHandleJint>>(() =>
             {
-                var runner = new ScriptRunner(this, EnableClr, jsOptions);
+                var runner = new ScriptRunnerJint(this, EnableClr);
                 script.GenerateScript(runner);
                 runner.ScriptType = script.GetType().Name;
                 return runner;
             });
-            return _cache.GetOrAdd(script, value).Value;
+            return _scriptRunnerCacheJint.GetOrAdd(script, value).Value;
+        }
+
+        private ScriptRunner<JsHandleV8> TryGetV8ScriptRunnerFromCache(Key script)
+        {
+            if (_scriptRunnerCacheV8.TryGetValue(script, out var lazy))                
+                return lazy.Value;
+
+            var value = new Lazy<ScriptRunner<JsHandleV8>>(() =>
+            {
+                var runner = new ScriptRunnerV8(this, EnableClr);
+                script.GenerateScript(runner);
+                runner.ScriptType = script.GetType().Name;
+                return runner;
+            });
+            return _scriptRunnerCacheV8.GetOrAdd(script, value).Value;
         }
 
         public void UpdateConfiguration(RavenConfiguration configuration)
@@ -117,7 +183,7 @@ namespace Raven.Server.Documents.Patch
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            _cache.Clear();
+            _scriptRunnerCacheV8.Clear();
         }
 
         public void LowMemoryOver()
@@ -126,12 +192,12 @@ namespace Raven.Server.Documents.Patch
 
         public void RunIdleOperations()
         {
-            foreach (var (key, lazyRunner) in _cache)
+            foreach (var (key, lazyRunner) in _scriptRunnerCacheV8)
             {
                 if (lazyRunner.IsValueCreated == false)
                     continue;
                 if (lazyRunner.Value.RunIdleOperations() == false)
-                    _cache.TryRemove(key, out _);
+                    _scriptRunnerCacheV8.TryRemove(key, out _);
             }
         }
     }

@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
-using V8.Net;
 using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
 using Raven.Server.Documents.Patch.V8;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters.V8
 {
@@ -18,31 +17,24 @@ namespace Raven.Server.Documents.Indexes.Static.Counters.V8
 
         public override InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            var jsBinder = _engine.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderCounterEntryObjectInstance(), keepAlive: keepAlive);
+            var jsBinder = _engine.CreateObjectBinder<CustomBinder<CounterEntryObjectInstanceV8>>(this, EngineEx.Context.TypeBinderCounterEntryObjectInstance(), keepAlive: keepAlive);
             var binder = (ObjectBinder)jsBinder.Object;
             binder.ShouldDisposeBoundObject = true;
             return jsBinder;
         }
 
-        public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engineEx, ref string propertyName)
+        public override InternalHandle NamedPropertyGetterOnce(ref string propertyName)
         {
-            var engine = (V8Engine)engineEx;
             if (propertyName == nameof(DynamicCounterEntry.Value))
-                return engine.CreateValue(_entry._value);
+                return EngineEx.Engine.CreateValue(_entry._value);
 
             if (propertyName == nameof(DynamicCounterEntry.DocumentId))
-                return engine.CreateValue(_entry._counterItemMetadata.DocumentId.ToString());
+                return EngineEx.Engine.CreateValue(_entry._counterItemMetadata.DocumentId.ToString());
 
             if (propertyName == nameof(DynamicCounterEntry.Name))
-                return engine.CreateValue(_entry._counterItemMetadata.CounterName.ToString());
+                return EngineEx.Engine.CreateValue(_entry._counterItemMetadata.CounterName.ToString());
 
             return InternalHandle.Empty;
-        }
-
-        public class CustomBinder : ObjectInstanceBaseV8.CustomBinder<CounterEntryObjectInstanceV8>
-        {
-            public CustomBinder() : base()
-            {}
         }
     }
 }

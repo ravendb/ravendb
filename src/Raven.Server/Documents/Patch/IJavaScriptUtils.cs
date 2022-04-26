@@ -1,48 +1,49 @@
 using System;
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime;
-using Jint.Runtime.Interop;
-using V8.Net;
-using Raven.Server.Extensions.V8;
-using Raven.Server.Extensions.Jint;
-using Sparrow.Json;
-using Sparrow.Server.Utils;
-using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public interface IJavaScriptUtils
+    public interface IJavaScriptUtils<T> : IJavaScriptUtilsClearance
+        where T : struct, IJsHandle<T>
     {
-        IJsEngineHandle EngineHandle { get; }
+        IJsEngineHandle<T> EngineHandle { get; }
 
         JsonOperationContext Context { get; }
         bool ReadOnly { get; set; }
 
-        IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IJavaScriptUtils javaScriptUtils,
-            IBlittableObjectInstance parent,
+        IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
             string id,
             DateTime? lastModified,
             string changeVector);
 
-        IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IJavaScriptUtils javaScriptUtils,
-            IBlittableObjectInstance parent,
+        IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
             Document doc);
 
-        IObjectInstance CreateTimeSeriesSegmentObjectInstance(IJsEngineHandle engineHandle, DynamicTimeSeriesSegment segment);
+        IObjectInstance<T> CreateTimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment);
 
-        IObjectInstance CreateCounterEntryObjectInstance(IJsEngineHandle engineHandle, DynamicCounterEntry entry);
+        IObjectInstance<T> CreateCounterEntryObjectInstance(DynamicCounterEntry entry);
+
+
+        T GetDocumentId(T self, T[] args);
+        T AttachmentsFor(T self, T[] args);
+        T GetMetadata(T self, T[] args);
+        T GetTimeSeriesNamesFor(T self, T[] args);
+        T GetCounterNamesFor(T self, T[] args);
+        T LoadAttachment(T self, T[] args);
+        T LoadAttachments(T self, T[] args);
+        T TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false);
+    }
+
+    public interface IJavaScriptUtilsClearance
+    {
 
         void Clear();
 
         void Reset(JsonOperationContext ctx);
+
     }
 }

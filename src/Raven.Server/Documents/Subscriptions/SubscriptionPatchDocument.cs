@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Subscriptions
             DeclaredFunctions = declaredFunctions;
         }
 
-        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, JsBlittableBridge.IResultModifier modifier, ref BlittableJsonReaderObject transformResult)
+        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, IResultModifier modifier, ref BlittableJsonReaderObject transformResult)
         {
             using (var result = run.Run(context, context, "execute", new[] { document }))
             {

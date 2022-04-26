@@ -154,5 +154,24 @@ namespace Raven.Server.Extensions.Jint
         {
             return obj.Call(JsValue.Null, args);
         }
+
+
+        public static IDisposable ChangeMaxStatements(this Engine engine, int value)
+        {
+            var maxStatements = engine.FindConstraint<MaxStatements>();
+            if (maxStatements == null)
+                return null;
+
+            var oldMaxStatements = maxStatements.Max;
+            maxStatements.Change(value);
+
+            return new DisposableAction(() => maxStatements.Change(oldMaxStatements));
+        }
+
+        public static IDisposable DisableMaxStatements(this Engine engine)
+        {
+            return ChangeMaxStatements(engine, int.MaxValue);
+        }
+
     }
 }

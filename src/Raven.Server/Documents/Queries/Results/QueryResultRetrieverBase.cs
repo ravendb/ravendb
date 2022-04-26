@@ -37,8 +37,6 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
-        protected readonly IJavaScriptOptions _jsOptions; 
-
         public static readonly Lucene.Net.Search.ScoreDoc ZeroScore = new Lucene.Net.Search.ScoreDoc(-1, 0f);
 
         public static readonly Lucene.Net.Search.ScoreDoc OneScore = new Lucene.Net.Search.ScoreDoc(-1, 1f);
@@ -99,9 +97,6 @@ namespace Raven.Server.Documents.Queries.Results
             DocumentFields = query?.DocumentFields ?? DocumentFields.All;
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
-            
-            _jsOptions = _database?.JsOptions ?? DocumentsStorage?.DocumentDatabase?.JsOptions ?? 
-                new JavaScriptOptions();
         }
 
         protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
@@ -1032,7 +1027,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             var key = new QueryKey(query.DeclaredFunctions);
-            using (_scriptRunnerCache.GetScriptRunner(_jsOptions, key, readOnly: true, patchRun: out var run))
+            using (_scriptRunnerCache.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args, timings, token))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);

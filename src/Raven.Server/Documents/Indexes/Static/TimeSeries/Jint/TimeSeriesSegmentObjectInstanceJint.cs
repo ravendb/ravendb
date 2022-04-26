@@ -12,7 +12,7 @@ using Raven.Server.Documents.Patch.Jint;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries.Jint
 {
-    public class TimeSeriesSegmentObjectInstanceJint : ObjectInstance, IObjectInstance
+    public class TimeSeriesSegmentObjectInstanceJint : ObjectInstance, IObjectInstance<JsHandleJint>
     {
         private JintEngineEx _engineEx;
         private Engine _engine;
@@ -21,21 +21,21 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries.Jint
 
         private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
 
-        public IJsEngineHandle EngineHandle => _engineEx;
+        public IJsEngineHandle<JsHandleJint> EngineHandle => _engineEx;
 
-        public JsHandle CreateJsHandle(bool keepAlive = false)
+        public JsHandleJint CreateJsHandle(bool keepAlive = false)
         {
-            return new JsHandle(this);
+            return new JsHandleJint(this);
         }
 
         public void Dispose()
         {}
 
         public TimeSeriesSegmentObjectInstanceJint(JintEngineEx engineEx, DynamicTimeSeriesSegment segment) 
-            : base(engineEx)
+            : base(engineEx.Engine)
         {
             _engineEx = engineEx;
-            _engine = _engineEx;
+            _engine = engineEx.Engine;
                 
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
 

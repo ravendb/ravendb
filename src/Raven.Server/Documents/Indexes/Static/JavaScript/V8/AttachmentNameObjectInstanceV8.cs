@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
-using V8.Net;
 using Raven.Client.Documents.Operations.Attachments;
-using Sparrow.Json;
 using Raven.Server.Documents.Patch.V8;
-using Raven.Server.Extensions.V8;
+using Sparrow.Json;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 {
@@ -14,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 
         public override InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            var jsBinder = _engine.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderAttachmentNameObjectInstance(), keepAlive: keepAlive);
+            var jsBinder = _engine.CreateObjectBinder<CustomBinder<AttachmentNameObjectInstanceV8>>(this, EngineEx.Context.TypeBinderAttachmentNameObjectInstance(), keepAlive: keepAlive);
             var binder = (ObjectBinder)jsBinder.Object;
             binder.ShouldDisposeBoundObject = true;
             return jsBinder;
@@ -25,28 +23,21 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
             _attachmentName = attachmentName ?? throw new ArgumentNullException(nameof(attachmentName));
         }
 
-        public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engineEx, ref string propertyName)
+        public override InternalHandle NamedPropertyGetterOnce(ref string propertyName)
         {
-            var engine = (V8Engine)engineEx;
             if (propertyName == nameof(AttachmentName.Name) && _attachmentName.TryGet(nameof(AttachmentName.Name), out string name))
-                return engine.CreateValue(name);
+                return EngineEx.CreateValue(name).Item;
             
             if (propertyName == nameof(AttachmentName.ContentType) && _attachmentName.TryGet(nameof(AttachmentName.ContentType), out string contentType))
-                return engine.CreateValue(contentType);
+                return EngineEx.CreateValue(contentType).Item;
             
             if (propertyName == nameof(AttachmentName.Hash) && _attachmentName.TryGet(nameof(AttachmentName.Hash), out string hash))
-                return engine.CreateValue(hash);
+                return EngineEx.CreateValue(hash).Item;
             
             if (propertyName == nameof(AttachmentName.Size) && _attachmentName.TryGet(nameof(AttachmentName.Size), out long size))
-                return engine.CreateValue(size);
+                return EngineEx.CreateValue(size).Item;
 
             return InternalHandle.Empty;
-        }
-
-        public class CustomBinder : ObjectInstanceBaseV8.CustomBinder<AttachmentNameObjectInstanceV8>
-        {
-            public CustomBinder() : base()
-            {}
         }
     }
 }

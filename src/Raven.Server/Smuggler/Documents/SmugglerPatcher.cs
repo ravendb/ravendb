@@ -33,7 +33,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DatabaseSmugglerOptions _options;
         private readonly ScriptRunnerCache _cache;
         protected IJavaScriptOptions _jsOptions;
-        private ScriptRunner.SingleRun _run;
+        private ISingleRun _run;
 
         protected SmugglerPatcher(DatabaseSmugglerOptions options, ScriptRunnerCache cache)
         {
@@ -42,12 +42,6 @@ namespace Raven.Server.Smuggler.Documents
                 throw new InvalidOperationException("Cannot create a patcher with empty transform script.");
             _options = options;
             _cache = cache;
-        }
-
-        public virtual IDisposable Initialize()
-        {
-            var key = new PatchRequest(_options.TransformScript, PatchRequestType.Smuggler);
-            return _database.Scripts.GetScriptRunner(_jsOptions, key, true, out _run);
         }
         
         public Document Transform(Document document)
@@ -61,7 +55,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     try
                     {
-                        using (var result = (ScriptRunnerResult)_run.Run(ctx, null, "execute", new object[] { document }))
+                        using (var result = _run.Run(ctx, null, "execute", new object[] { document }))
                         {
                             translatedResult = _run.Translate(result, ctx, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         }
@@ -93,7 +87,7 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable Initialize()
         {
             var key = new PatchRequest(_options.TransformScript, PatchRequestType.Smuggler);
-            return _cache.GetScriptRunner(key, true, out _run);
+            return _cache.GetScriptRunner(key, readOnly: true, out _run);
         }
     }
 }

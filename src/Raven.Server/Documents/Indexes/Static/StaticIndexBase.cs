@@ -20,6 +20,9 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
 using Esprima;
+using Raven.Client.ServerWide.JavaScript;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -626,7 +629,7 @@ namespace Raven.Server.Documents.Indexes.Static
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Add(AbstractField field)
             {
-                _fields.Add(field);
+                _fields.Add(field); 
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -656,8 +659,45 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected string MapCode;
 
-        public JavaScriptReduceOperation ReduceOperation { get; protected set; }
-        
+
+        public static AbstractStaticIndexBase Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+        {
+            switch (definition.SourceType)
+            {
+                case IndexSourceType.Documents:
+                    switch (configuration.JavaScript.EngineType)
+                    {
+                        case JavaScriptEngineType.Jint:
+                            return new JavaScriptIndexJint(definition, configuration, indexVersion);
+                        case JavaScriptEngineType.V8:
+                            return new JavaScriptIndexV8(definition, configuration, indexVersion);
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(configuration.JavaScript.EngineType));
+                    }
+                case IndexSourceType.TimeSeries:
+                    switch (configuration.JavaScript.EngineType)
+                    {
+                        case JavaScriptEngineType.Jint:
+                            return new TimeSeriesJavaScriptIndexJint(definition, configuration, indexVersion);
+                        case JavaScriptEngineType.V8:
+                            return new TimeSeriesJavaScriptIndexV8(definition, configuration, indexVersion);
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(configuration.JavaScript.EngineType));
+                    }
+                case IndexSourceType.Counters:
+                    switch (configuration.JavaScript.EngineType)
+                    {
+                        case JavaScriptEngineType.Jint:
+                            return new CountersJavaScriptIndexJint(definition, configuration, indexVersion);
+                        case JavaScriptEngineType.V8:
+                            return new CountersJavaScriptIndexV8(definition, configuration, indexVersion);
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(configuration.JavaScript.EngineType));
+                    }
+                default:
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
+            }
+        }
         protected AbstractJavaScriptIndexBase(IndexDefinition definition, RavenConfiguration configuration, string mapCode)
         {
             Definition = definition;
@@ -679,45 +719,6 @@ namespace Raven.Server.Documents.Indexes.Static
             return mappingFunctions;
         }
         
-        protected void ProcessFields(Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
-        {
-            var fields = new HashSet<string>();
-            HasDynamicFields = false;
-            foreach (var (collection, vals) in collectionFunctions)
-            {
-                foreach (var (subCollection, val) in vals)
-                {
-                    //TODO: Validation of matches fields between group by / collections / etc
-                    foreach (var operation in val)
-                    {
-                        AddMapInternal(collection, subCollection, (IndexingFunc)operation.IndexingFunction);
-
-                        HasDynamicFields |= operation.HasDynamicReturns;
-                        HasBoostedFields |= operation.HasBoostedFields;
-
-                        fields.UnionWith(operation.Fields);
-                        foreach (var (k, v) in operation.FieldOptions)
-                        {
-                            Definition.Fields.Add(k, v);
-                        }
-                    }
-                }
-            }
-
-            if (Definition.Fields != null)
-            {
-                foreach (var item in Definition.Fields)
-                {
-                    if (string.Equals(item.Key, Constants.Documents.Indexing.Fields.AllFields))
-                        continue;
-
-                    fields.Add(item.Key);
-                }
-            }
-
-            OutputFields = fields.ToArray();
-        }
-
 
 
         protected static readonly ParserOptions DefaultParserOptions = new ParserOptions();
@@ -764,16 +765,16 @@ function boost(value, boost) {
 }
 ";
 
+        //TODO: egor handle tests
+        //public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
+        //{
+        //    ReduceOperation?.SetBufferPoolForTestingPurposes(bufferPool);
+        //}
 
-        public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
-        {
-            ReduceOperation?.SetBufferPoolForTestingPurposes(bufferPool);
-        }
-
-        public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
-        {
-            ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
-        }
+        //public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
+        //{
+        //    ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
+        //}
 
         protected class MapMetadata
         {

@@ -7,95 +7,112 @@ using Raven.Server.Config.Categories;
 using JSFunction = V8.Net.JSFunction;
 using JSValueType = V8.Net.JSValueType;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Patch;
+
+//public interface IJavaScriptEngineForParsing<T>
+//    where T : IJsHandle<T>
+//{
+//    T GlobalObject { get; }
+
+//    T GetGlobalProperty(string propertyName);
+
+//    void SetGlobalProperty(string name, T value);
+
+//    void Execute(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
+
+//    void ExecuteWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
+
+//    IDisposable DisableConstraints();
+//}
+
+//public delegate JsValue JintFunction(JsValue self, JsValue[] args); // TODO [shlomo] to discuss with Pawel moving and using it inside Jint
+public interface IJsEngineHandle<T> : /*IJavaScriptEngineForParsing<T>,*/ IScriptEngineChanges, IDisposable
+    where T : IJsHandle<T>
 {
-    public interface IJavaScriptEngineForParsing
-    {
-        JsHandle GlobalObject { get; }
-        
-        JsHandle GetGlobalProperty(string propertyName);
+    T GlobalObject { get; }
 
-        void SetGlobalProperty(string name, JsHandle value);
-        
-        void Execute(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
+    T GetGlobalProperty(string propertyName);
 
-        void ExecuteWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
+    void SetGlobalProperty(string name, T value);
 
-        IDisposable DisableConstraints();
-    }
-    
-    //public delegate JsValue JintFunction(JsValue self, JsValue[] args); // TODO [shlomo] to discuss with Pawel moving and using it inside Jint
+    void Execute(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
 
-    public interface IJsEngineHandle : IJavaScriptEngineForParsing, IDisposable
-    {
+    void ExecuteWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true);
 
-        JavaScriptEngineType EngineType { get;  }
-            
-        [CanBeNull]
-        IJavaScriptOptions JsOptions { get;  }
-        
-        bool IsMemoryChecksOn { get;  }
+    IDisposable DisableConstraints();
+    JavaScriptEngineType EngineType { get; }
 
-        JsHandle ImplicitNull();
+    [CanBeNull]
+    IJavaScriptOptions JsOptions { get; }
 
-        JsHandle ExplicitNull();
+    bool IsMemoryChecksOn { get; }
+    T Empty { get; set; }
+    T Null { get; set; }
+    T Undefined { get; set; }
+    T True { get; set; }
+    T False { get; set; }
 
-        JsHandle JsonStringify();
-        
-        void ForceGarbageCollection();
+    T ImplicitNull();
 
-        object MakeSnapshot(string name);
+    T ExplicitNull();
 
-        bool RemoveMemorySnapshot(string name);
+    T JsonStringify();
 
-        void AddToLastMemorySnapshotBefore(JsHandle h);
-        
-        void RemoveFromLastMemorySnapshotBefore(JsHandle h);
-        
-        void CheckForMemoryLeaks(string name, bool shouldRemove = true);
-        
-        void TryCompileScript(string script);
+    void ForceGarbageCollection();
 
-        IDisposable ChangeMaxStatements(int value);
+    object MakeSnapshot(string name);
 
-        IDisposable ChangeMaxDuration(int value);
+    bool RemoveMemorySnapshot(string name);
 
-        void ResetCallStack();
+    void AddToLastMemorySnapshotBefore(T h);
 
-        void ResetConstraints();
+    void RemoveFromLastMemorySnapshotBefore(T h);
 
-        JsHandle FromObjectGen(object obj, bool keepAlive = false);
+    void CheckForMemoryLeaks(string name, bool shouldRemove = true);
 
-        JsHandle CreateClrCallBack(string propertyName, (Func<JsValue, JsValue[], JsValue> Jint, JSFunction V8) funcTuple, bool keepAlive = true);
+    void TryCompileScript(string script);
 
-        void SetGlobalClrCallBack(string propertyName, (Func<JsValue, JsValue[], JsValue> Jint, JSFunction V8) funcTuple);
-        
-        JsHandle CreateObject();
-        
-        JsHandle CreateEmptyArray();
+    void ResetCallStack();
 
-        JsHandle CreateArray(JsHandle[] items);
-        
-        JsHandle CreateArray(System.Array items);
-        
-        JsHandle CreateArray(IEnumerable<object> items);
+    void ResetConstraints();
 
-        JsHandle CreateUndefinedValue();
+    T FromObjectGen(object obj, bool keepAlive = false);
 
-        JsHandle CreateNullValue();
+    T CreateClrCallBack(string propertyName, Func<T, T[], T> func, bool keepAlive = true);
 
-        JsHandle CreateValue(bool value);
+    //    void SetGlobalClrCallBack(string propertyName, (Func<JsValue, JsValue[], JsValue> Jint, JSFunction V8) funcTuple);
+    void SetGlobalClrCallBack(string propertyName, Func<T, T[], T> funcTuple);
 
-        JsHandle CreateValue(Int32 value);
+    T CreateObject();
 
-        JsHandle CreateValue(double value);
+    T CreateEmptyArray();
 
-        JsHandle CreateValue(string value);
+    T CreateArray(System.Array items);
 
-        JsHandle CreateValue(TimeSpan ms);
+    T CreateArray(IEnumerable<object> items);
 
-        JsHandle CreateValue(DateTime value);
+    T CreateUndefinedValue();
 
-        JsHandle CreateError(string message, JSValueType errorType);
-    }
+    T CreateNullValue();
+
+    T CreateValue(bool value);
+
+    T CreateValue(Int32 value);
+
+    T CreateValue(double value);
+
+    T CreateValue(string value);
+
+    T CreateValue(TimeSpan ms);
+
+    T CreateValue(DateTime value);
+
+    T CreateError(string message, JSValueType errorType);
+}
+
+public interface IScriptEngineChanges
+{
+    IDisposable ChangeMaxStatements(int value);
+
+    IDisposable ChangeMaxDuration(int value);
 }

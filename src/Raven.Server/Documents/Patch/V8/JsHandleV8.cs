@@ -1,41 +1,96 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using V8.Net;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Patch.V8
 {
-    public struct JsHandleV8 : IJsHandle<JsHandle>
+
+    public static class JsHandleV8Extensions
     {
+        //public static JsHandleV8[] ToJsHandle1(this InternalHandle handle)
+        //{
+        //    return new[] { new JsHandleV8(ref handle) };
+        //}
+
+        public static JsHandleV8[] ToJsHandleArray(this InternalHandle[] handle)
+        {
+            var arr = new JsHandleV8[handle.Length];
+            for (var index = 0; index < handle.Length; index++)
+            {
+                var x = handle[index];
+                arr[index] = new JsHandleV8(ref x);
+            }
+
+            return arr;
+        }
+    }
+
+    public struct JsHandleV8 : IJsHandle<JsHandleV8>
+    {
+        public static JsHandleV8 Empty = new JsHandleV8() { Item = InternalHandle.Empty };
+        public static JsHandleV8 Null = new JsHandleV8() { Item = null };
+        // public static JsHandleV8 Undefined = Empty; // valuetype.undefined
+        //  public static JsHandleV8 Undefined2 = new JsHandleV8() { Item = new InternalHandle() };
+
         public InternalHandle Item;
+
+        //public JsHandleV8()
+        //{
+
+        //}
 
         public JsHandleV8(ref InternalHandle value)
         {
             Item = value;
         }
-        
+
+        public object AsObject()
+        {
+            return Item.BoundObject;
+        }
+
+        public bool IsBinder()
+        {
+            return Item.IsBinder;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
             Item.Dispose();
         }
 
-        public JsHandle Clone()
+        public JsHandleV8 Clone()
         {
-            var ItemClone = new InternalHandle(ref Item, true);
-            return new JsHandle(ItemClone);
+            var cloned = Item.Clone();
+            return new JsHandleV8(ref cloned);
         }
 
-        public JsHandle Set(JsHandle value)
+        public JsHandleV8 Set(JsHandleV8 value)
         {
-            return new JsHandle(Item.Set(value.V8.Item));
+            return new JsHandleV8(ref value.Item);
         }
 
-        public IJsEngineHandle Engine
+        public JsHandleV8 Empty1()
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Item.Engine as IJsEngineHandle; }
+            throw new NotImplementedException();
+        }
+
+
+        //TODO: egor
+        //public IJsEngineHandle Engine
+        //{
+        //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
+
+
+        //    get { return (IJsEngineHandle)Item.Engine as IJsEngineHandle; }
+        //}
+
+        public JsHandleV8 GetEmpty2()
+        {
+            return Empty;
         }
 
         public object NativeObject
@@ -61,7 +116,7 @@ namespace Raven.Server.Documents.Patch
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return Item.IsNull; }
         }
-        
+
         public bool IsNumberEx
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -109,7 +164,7 @@ namespace Raven.Server.Documents.Patch
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return Item.IsObject; }
         }
-        
+
         public bool IsFunction
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -158,6 +213,7 @@ namespace Raven.Server.Documents.Patch
             get { return Item.AsInt32; }
         }
 
+
         public double AsDouble
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -175,7 +231,7 @@ namespace Raven.Server.Documents.Patch
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return Item.AsDate; }
         }
-        
+
         public JSValueType ValueType
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -187,13 +243,13 @@ namespace Raven.Server.Documents.Patch
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return Item.BoundObject ?? Item.Object; }
         }
-        
-        public uint ArrayLength
+
+        public int ArrayLength
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (uint)Item.ArrayLength; }
+            get { return Item.ArrayLength; }
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ThrowOnError()
         {
@@ -213,66 +269,69 @@ namespace Raven.Server.Documents.Patch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void FastAddProperty(string name, JsHandle value, bool writable, bool enumerable, bool configurable)
+        public void FastAddProperty(string name, JsHandleV8 value, bool writable, bool enumerable, bool configurable)
         {
-            Item.FastAddProperty(name, value.V8.Item, writable, enumerable, configurable);
+            Item.FastAddProperty(name, value.Item, writable, enumerable, configurable);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetPropertyOrThrow(string propertyName, JsHandle value)
+        public void SetPropertyOrThrow(string propertyName, JsHandleV8 value)
         {
-            Item.SetPropertyOrThrow(propertyName, value.V8.Item);
+            Item.SetPropertyOrThrow(propertyName, value.Item);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SetProperty(string name, JsHandle value, bool throwOnError = false)
+        public bool SetProperty(string name, JsHandleV8 value, bool throwOnError = false)
         {
-            var res = Item.SetProperty(name, value.V8.Item);
+            var res = Item.SetProperty(name, value.Item);
             if (!res && throwOnError)
                 throw new InvalidOperationException($"Failed to set property {name}");
             return res;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SetProperty(int index, JsHandle value, bool throwOnError = false)
+        public bool SetProperty(int index, JsHandleV8 value, bool throwOnError = false)
         {
-            var res = Item.SetProperty(index, value.V8.Item);
+            var res = Item.SetProperty(index, value.Item);
             if (!res && throwOnError)
                 throw new InvalidOperationException($"Failed to set property {index}");
             return res;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetValue(string propertyName, out JsHandle value)
+        public bool TryGetValue(string propertyName, out JsHandleV8 value)
         {
-            InternalHandle jsValue;
-            bool res = Item.TryGetValue(propertyName, out jsValue);
-            value = new JsHandle(jsValue);
+            bool res = Item.TryGetValue(propertyName, out var jsValue);
+            value = new JsHandleV8(ref jsValue);
             return res;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetOwnProperty(string name)
+        public JsHandleV8 GetOwnProperty(string name)
         {
-            return new JsHandle(Item.GetOwnProperty(name));
+            var prop = Item.GetOwnProperty(name);
+            return new JsHandleV8(ref prop);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetOwnProperty(Int32 index)
+        public JsHandleV8 GetOwnProperty(int index)
         {
-            return new JsHandle(Item.GetOwnProperty(index));
+            var prop = Item.GetOwnProperty(index);
+            return new JsHandleV8(ref prop);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetProperty(string name)
+        public JsHandleV8 GetProperty(string name)
         {
-            return new JsHandle(Item.GetProperty(name));
+            var prop = Item.GetProperty(name);
+            return new JsHandleV8(ref prop);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetProperty(int index)
+        public JsHandleV8 GetProperty(int index)
         {
-            return new JsHandle(Item.GetProperty(index));
+            var prop = Item.GetProperty(index);
+            return new JsHandleV8(ref prop);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -312,73 +371,80 @@ namespace Raven.Server.Documents.Patch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<KeyValuePair<string, JsHandle>> GetOwnProperties()
+        public IEnumerable<KeyValuePair<string, JsHandleV8>> GetOwnProperties()
         {
             foreach (var kvp in Item.GetOwnProperties())
             {
-                yield return new KeyValuePair<string, JsHandle>(kvp.Key, new JsHandle(kvp.Value));
+                var prop = kvp.Value;
+                yield return new KeyValuePair<string, JsHandleV8>(kvp.Key, new JsHandleV8(ref prop));
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<KeyValuePair<string, JsHandle>> GetProperties()
+        public IEnumerable<KeyValuePair<string, JsHandleV8>> GetProperties()
         {
             foreach (var kvp in Item.GetProperties())
             {
-                yield return new KeyValuePair<string, JsHandle>(kvp.Key, new JsHandle(kvp.Value));
+                var prop = kvp.Value;
+
+                yield return new KeyValuePair<string, JsHandleV8>(kvp.Key, new JsHandleV8(ref prop));
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle Call(string functionName, JsHandle _this, params JsHandle[] args)
+        public JsHandleV8 Call(string functionName, JsHandleV8 _this, params JsHandleV8[] args)
         {
             int arrayLength = args.Length;
             var jsArgs = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
-                jsArgs[i] = args[i].V8.Item;
+                jsArgs[i] = args[i].Item;
             }
 
-            return new JsHandle(Item.Call(functionName, _this.V8.Item, jsArgs));
+            var res = Item.Call(functionName, _this.Item, jsArgs);
+            return new JsHandleV8(ref res);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle StaticCall(string functionName, params JsHandle[] args)
+        public JsHandleV8 StaticCall(string functionName, params JsHandleV8[] args)
         {
             int arrayLength = args.Length;
             var jsArgs = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
-                jsArgs[i] = args[i].V8.Item;
+                jsArgs[i] = args[i].Item;
             }
 
-            return new JsHandle(Item.StaticCall(functionName, jsArgs));
+            var res = Item.StaticCall(functionName, jsArgs);
+            return new JsHandleV8(ref res);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle Call(JsHandle _this, params JsHandle[] args)
+        public JsHandleV8 Call(JsHandleV8 _this, params JsHandleV8[] args)
         {
             int arrayLength = args.Length;
             var jsArgs = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
-                jsArgs[i] = args[i].V8.Item;
+                jsArgs[i] = args[i].Item;
             }
 
-            return new JsHandle(Item.Call(_this.V8.Item, jsArgs));
+            var res = Item.Call(_this.Item, jsArgs);
+            return new JsHandleV8(ref res);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle StaticCall(params JsHandle[] args)
+        public JsHandleV8 StaticCall(params JsHandleV8[] args)
         {
             int arrayLength = args.Length;
             var jsArgs = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
-                jsArgs[i] = args[i].V8.Item;
+                jsArgs[i] = args[i].Item;
             }
 
-            return new JsHandle(Item.StaticCall(jsArgs));
+            var res = Item.StaticCall(jsArgs);
+            return new JsHandleV8(ref res);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -386,17 +452,22 @@ namespace Raven.Server.Documents.Patch
         {
             return Item.Equals(other.V8.Item);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override bool Equals(object obj)
         {
-            return obj is JsHandle other && Equals(other);
+            return obj is JsHandleV8 other && Equals(other);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override int GetHashCode()
         {
-            return  HashCode.Combine((int) JsHandleType.V8, Item);
+            return Item.GetHashCode();
+        }
+
+        public bool Equals(JsHandleV8 other)
+        {
+            return Item.Equals(other.Item);
         }
     }
 }

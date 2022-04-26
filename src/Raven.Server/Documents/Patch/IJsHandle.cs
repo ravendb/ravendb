@@ -1,127 +1,133 @@
 using System;
-using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime;
-using Jint.Runtime.Interop;
 using V8.Net;
-using Raven.Server.Extensions.V8;
-using Raven.Server.Extensions.Jint;
-using Sparrow.Json;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Patch;
+
+public enum JsHandleType : byte
 {
-    public enum JsHandleType : byte
-    {
-        Empty = 0,
-        V8 = 1,
-        Jint = 2,
-        JintError = 3
-    }
+    Empty = 0,
+    V8 = 1,
+    Jint = 2,
+    JintError = 3
+}
 
-    public interface IJsHandle<THost> : IDisposable, IClonable<THost>, IEquatable<THost>
-    {
-        JsHandle Set(JsHandle value);
-        
-        IJsEngineHandle Engine { get; }
-        
-        object NativeObject { get; }
+public interface IJsHandle<T> : IDisposable, IClonable<T>, IEquatable<T>
+    where T : IJsHandle<T>/*, new()*/
+{
+    T Set(T value);
 
-        bool IsEmpty { get; }
+    //public static T Empty;
 
-        bool IsUndefined { get; }
+    //public static T GetEmpty()
+    //{
+    //    if (Empty == null)
+    //    {
+    //        //Empty = new T();
+    //    }
 
-        bool IsNull { get; }
+    //    return Empty;
+    //}
 
-        bool IsNumberEx { get; }
+    public T GetEmpty2();
 
-        bool IsNumberOrIntEx { get; }
+ //   IJsEngineHandle<T> Engine { get; set; }
 
-        bool IsStringEx { get; }
+    object NativeObject { get; }
 
-        bool IsBoolean { get; }
+    bool IsEmpty { get; }
 
-        bool IsInt32 { get; }
+    bool IsUndefined { get; }
 
-        bool IsNumber { get; }
+    bool IsNull { get; }
 
-        bool IsString { get; }
+    bool IsNumberEx { get; }
 
-        bool IsObject { get; }
-        
-        bool IsFunction { get; }
+    bool IsNumberOrIntEx { get; }
 
-        bool IsDate { get; }
+    bool IsStringEx { get; }
 
-        bool IsArray { get; }
+    bool IsBoolean { get; }
 
-        bool IsRegExp { get; }
+    bool IsInt32 { get; }
 
-        bool IsObjectType { get; }
+    bool IsNumber { get; }
 
-        bool IsError { get; }
+    bool IsString { get; }
 
-        bool AsBoolean { get; }
+    bool IsObject { get; }
 
-        int AsInt32 { get; }
+    bool IsFunction { get; }
 
-        double AsDouble { get; }
+    bool IsDate { get; }
 
-        string AsString { get; }
+    bool IsArray { get; }
 
-        DateTime AsDate { get; }
+    bool IsRegExp { get; }
 
-        
-        JSValueType ValueType { get; }
+    bool IsObjectType { get; }
 
-        object Object { get; }
+    bool IsError { get; }
 
-        uint ArrayLength { get; }
-        
-        void ThrowOnError();
+    bool AsBoolean { get; }
 
-        bool HasOwnProperty (string name);
+    int AsInt32 { get; }
 
-        bool HasProperty (string name);
+    double AsDouble { get; }
 
-        void FastAddProperty(string name, JsHandle value, bool writable, bool enumerable, bool configurable);
-        
-        bool SetProperty(string name, JsHandle value, bool throwOnError = false);
+    string AsString { get; }
 
-        bool SetProperty(int index, JsHandle value, bool throwOnError = false);
+    DateTime AsDate { get; }
 
-        bool TryGetValue(string propertyName, out JsHandle value);
+    JSValueType ValueType { get; }
 
-        JsHandle GetOwnProperty(string name);
+    object Object { get; }
 
-        JsHandle GetOwnProperty(Int32 index);
+    int ArrayLength { get; }
 
-        JsHandle GetProperty(string name);
+    void ThrowOnError();
 
-        JsHandle GetProperty(int index);
+    bool HasOwnProperty(string name);
 
-        bool DeleteProperty(string name, bool throwOnError = false);
+    bool HasProperty(string name);
 
-        bool DeleteProperty(int index, bool throwOnError = false);
+    void FastAddProperty(string name, T value, bool writable, bool enumerable, bool configurable);
 
-        string[] GetPropertyNames();
+    bool SetProperty(string name, T value, bool throwOnError = false);
 
-        string[] GetOwnPropertyNames();
+    bool SetProperty(int index, T value, bool throwOnError = false);
 
-        IEnumerable<KeyValuePair<string, JsHandle>> GetOwnProperties();
+    bool TryGetValue(string propertyName, out T value);
+    bool IsBinder();
+    T GetOwnProperty(string name);
 
-        IEnumerable<KeyValuePair<string, JsHandle>> GetProperties();
+    T GetOwnProperty(Int32 index);
 
-        JsHandle Call(string functionName, JsHandle _this, params JsHandle[] args);
+    T GetProperty(string name);
 
-        JsHandle StaticCall(string functionName, params JsHandle[] args);
+    T GetProperty(int index);
 
-        JsHandle Call(JsHandle _this, params JsHandle[] args);
+    bool DeleteProperty(string name, bool throwOnError = false);
 
-        JsHandle StaticCall(params JsHandle[] args);
-    }
+    bool DeleteProperty(int index, bool throwOnError = false);
+
+    string[] GetPropertyNames();
+
+    string[] GetOwnPropertyNames();
+
+    IEnumerable<KeyValuePair<string, T>> GetOwnProperties();
+
+    IEnumerable<KeyValuePair<string, T>> GetProperties();
+
+    T Call(string functionName, T _this, params T[] args);
+
+    T StaticCall(string functionName, params T[] args);
+
+    T Call(T _this, params T[] args);
+    T StaticCall(params T[] args);
+    object AsObject();
+
+    //TODO: egor c# 10 https://docs.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-abstract-interface-methods
+    //public static abstract bool operator !=(IJsHandle<T> lhs, IJsHandle<T> rhs);
+    //public static abstract bool operator ==(IJsHandle<T> lhs, IJsHandle<T> rhs);
 }

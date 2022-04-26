@@ -9,9 +9,9 @@ namespace Raven.Server.SqlMigration
 {
     public class JsPatcher : IDisposable
     {
-        private readonly ScriptRunner.SingleRun _runner;
+        private readonly ISingleRun _runner;
         private readonly DocumentsOperationContext _context;
-        private ScriptRunner.ReturnRun scriptRunner;
+        private ReturnRun scriptRunner;
         
         public JsPatcher(IJavaScriptOptions jsOptions, RootCollection collection, DocumentsOperationContext context) 
         {
@@ -21,7 +21,7 @@ namespace Raven.Server.SqlMigration
             _context = context;
             var patchRequest = new PatchRequest(collection.Patch, PatchRequestType.None);
             
-            scriptRunner = context.DocumentDatabase.Scripts.GetScriptRunner(jsOptions, patchRequest, true, out _runner);
+            scriptRunner = context.DocumentDatabase.Scripts.GetScriptRunner(patchRequest, true, out _runner);
         }
 
         public BlittableJsonReaderObject Patch(BlittableJsonReaderObject document)

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
@@ -13,7 +11,11 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.Counters.Jint;
 using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Static.TimeSeries.Jint;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Sparrow.Json;
@@ -21,26 +23,31 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Patch.Jint
 {
-    public class JavaScriptUtilsJint : JavaScriptUtilsBase
+    public class JavaScriptUtilsJint : JavaScriptUtilsBase<JsHandleJint>
     {
-        public readonly JintEngineEx EngineEx;
         public readonly Engine Engine;
+        public readonly JintEngineEx EngineEx;
 
-        public JavaScriptUtilsJint(ScriptRunner runner, JintEngineEx engine)
+        public JavaScriptUtilsJint(ScriptRunnerJint runner, JintEngineEx engine)
             : base(runner, engine)
         {
+            Engine = engine.Engine;
             EngineEx = engine;
-            Engine = engine;
         }
 
-        public JsValue GetMetadata(JsValue self, JsValue[] args)
+        public static JavaScriptUtilsJint Create(ScriptRunnerJint runner, JintEngineEx engine)
+        {
+            return new JavaScriptUtilsJint(runner, engine);
+        }
+
+        public override JsHandleJint GetMetadata(JsHandleJint self, JsHandleJint[] args)
         {
             if (args.Length != 1 && args.Length != 2 || //length == 2 takes into account Query Arguments that can be added to args
                 !(args[0].AsObject() is BlittableObjectInstanceJint boi))
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return JsValue.Null;
+                return new JsHandleJint(JsValue.Null);
             metadata.Modifications = new DynamicJsonValue
             {
                 [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
@@ -58,29 +65,29 @@ namespace Raven.Server.Documents.Patch.Jint
             //using (var old = metadata)
             {
                 metadata = Context.ReadObject(metadata, boi.DocumentId);
-                JsValue metadataJs = TranslateToJs(Context, metadata);
-                boi.Set(new JsString(Constants.Documents.Metadata.Key), metadataJs);
+                JsHandleJint metadataJs = TranslateToJs(Context, metadata);
+                boi.Set(new JsString(Constants.Documents.Metadata.Key), metadataJs.Item);
 
                 return metadataJs;
             }
         }
 
-        internal JsValue AttachmentsFor(JsValue self, JsValue[] args)
+        public override JsHandleJint AttachmentsFor(JsHandleJint self, JsHandleJint[] args)
         {
             if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstanceJint boi))
                 throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return EmptyArray(Engine);
+                return new JsHandleJint(EmptyArray(Engine));
 
             if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                return EmptyArray(Engine);
+                return new JsHandleJint(EmptyArray(Engine));
 
             JsValue[] attachmentsArray = new JsValue[attachments.Length];
             for (var i = 0; i < attachments.Length; i++)
                 attachmentsArray[i] = new AttachmentNameObjectInstanceJint(Engine, (BlittableJsonReaderObject)attachments[i]);
 
-            return Engine.Realm.Intrinsics.Array.Construct(attachmentsArray);
+            return new JsHandleJint(Engine.Realm.Intrinsics.Array.Construct(attachmentsArray));
 
             static ArrayInstance EmptyArray(Engine engine)
             {
@@ -88,34 +95,34 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
-        internal JsValue LoadAttachment(JsValue self, JsValue[] args)
+        public override JsHandleJint LoadAttachment(JsHandleJint JsHandleJint, JsHandleJint[] args)
         {
             if (args.Length != 2)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
 
-            if (args[0].IsNull())
-                return DynamicJsNullJint.ImplicitNullJint;
+            if (args[0].IsNull)
+                return new JsHandleJint(DynamicJsNullJint.ImplicitNullJint);
 
-            if (args[0].IsObject() == false)
+            if (args[0].IsObject == false)
                 ThrowInvalidFirstParameter();
 
             var doc = args[0].AsObject() as BlittableObjectInstanceJint;
             if (doc == null)
                 ThrowInvalidFirstParameter();
 
-            if (args[1].IsString() == false)
+            if (args[1].IsString == false)
                 ThrowInvalidSecondParameter();
 
-            var attachmentName = args[1].AsString();
+            var attachmentName = args[1].AsString;
 
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException($"Indexing scope was not initialized. Attachment Name: {attachmentName}");
 
             var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
             if (attachment is DynamicNullObject)
-                return DynamicJsNullJint.ImplicitNullJint;
+                return new JsHandleJint(DynamicJsNullJint.ImplicitNullJint);
 
-            return new AttachmentObjectInstanceJint(Engine, (DynamicAttachment)attachment);
+            return new JsHandleJint(new AttachmentObjectInstanceJint(Engine, (DynamicAttachment)attachment));
 
             void ThrowInvalidFirstParameter()
             {
@@ -128,15 +135,15 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
-        internal JsValue LoadAttachments(JsValue self, JsValue[] args)
+        public override JsHandleJint LoadAttachments(JsHandleJint self, JsHandleJint[] args)
         {
             if (args.Length != 1)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
 
-            if (args[0].IsNull())
-                return DynamicJsNullJint.ImplicitNullJint;
+            if (args[0].IsNull)
+                return new JsHandleJint(DynamicJsNullJint.ImplicitNullJint);
 
-            if (args[0].IsObject() == false)
+            if (args[0].IsObject == false)
                 ThrowInvalidParameter();
 
             var doc = args[0].AsObject() as BlittableObjectInstanceJint;
@@ -148,7 +155,7 @@ namespace Raven.Server.Documents.Patch.Jint
 
             var attachments = CurrentIndexingScope.Current.LoadAttachments(doc.DocumentId, GetAttachmentNames());
             if (attachments.Count == 0)
-                return EmptyArray(Engine);
+                return new JsHandleJint(EmptyArray(Engine));
 
             var values = new JsValue[attachments.Count];
             for (var i = 0; i < values.Length; i++)
@@ -157,7 +164,7 @@ namespace Raven.Server.Documents.Patch.Jint
             var array = Engine.Realm.Intrinsics.Array.Construct(Arguments.Empty);
             Engine.Realm.Intrinsics.Array.PrototypeObject.Push(array, values);
 
-            return array;
+            return new JsHandleJint(array);
 
             void ThrowInvalidParameter()
             {
@@ -187,32 +194,32 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
-        internal JsValue GetTimeSeriesNamesFor(JsValue self, JsValue[] args)
+        public override JsHandleJint GetTimeSeriesNamesFor(JsHandleJint self, JsHandleJint[] args)
         {
             return GetNamesFor(self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
         }
 
-        internal JsValue GetCounterNamesFor(JsValue self, JsValue[] args)
+        public override JsHandleJint GetCounterNamesFor(JsHandleJint self, JsHandleJint[] args)
         {
             return GetNamesFor(self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
         }
 
-        private JsValue GetNamesFor(JsValue self, JsValue[] args, string metadataKey, string methodName)
+        private JsHandleJint GetNamesFor(JsHandleJint self, JsHandleJint[] args, string metadataKey, string methodName)
         {
             if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstanceJint boi))
                 throw new InvalidOperationException($"{methodName}(doc) must be called with a single entity argument");
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return EmptyArray(Engine);
+                return new JsHandleJint(EmptyArray(Engine));
 
             if (metadata.TryGet(metadataKey, out BlittableJsonReaderArray timeSeries) == false)
-                return EmptyArray(Engine);
+                return new JsHandleJint(EmptyArray(Engine));
 
             JsValue[] timeSeriesArray = new JsValue[timeSeries.Length];
             for (var i = 0; i < timeSeries.Length; i++)
                 timeSeriesArray[i] = timeSeries[i]?.ToString();
 
-            return Engine.Realm.Intrinsics.Array.Construct(timeSeriesArray);
+            return new JsHandleJint(Engine.Realm.Intrinsics.Array.Construct(timeSeriesArray));
 
             static ArrayInstance EmptyArray(Engine engine)
             {
@@ -220,140 +227,167 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
-        public JsValue GetDocumentId(JsValue self, JsValue[] args)
+        public override JsHandleJint GetDocumentId(JsHandleJint self, JsHandleJint[] args)
         {
             if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
                 throw new InvalidOperationException("id(doc) must be called with a single argument");
 
-            if (args[0].IsNull() || args[0].IsUndefined())
+            if (args[0].IsNull || args[0].IsUndefined)
                 return args[0];
 
-            if (args[0].IsObject() == false)
+            if (args[0].IsObject == false)
                 throw new InvalidOperationException("id(doc) must be called with an object argument");
 
             var objectInstance = args[0].AsObject();
 
             if (objectInstance is BlittableObjectInstanceJint doc && doc.DocumentId != null)
-                return doc.DocumentId;
+            {
+                var jsString = new JsString(doc.DocumentId);
+                return new JsHandleJint(jsString);
+            }
 
-            var jsValue = objectInstance.Get(Constants.Documents.Metadata.Key);
+            var objectInstance2 = (ObjectInstance)objectInstance;
+            var jsValue = objectInstance2.Get(Constants.Documents.Metadata.Key);
             // search either @metadata.@id or @id
-            var metadata = jsValue.IsObject() == false ? objectInstance : jsValue.AsObject();
+            var metadata = jsValue.IsObject() == false ? objectInstance2 : jsValue.AsObject();
             var value = metadata.Get(Constants.Documents.Metadata.Id);
             if (value.IsString() == false)
             {
                 // search either @metadata.Id or Id
                 value = metadata.Get(Constants.Documents.Metadata.IdProperty);
                 if (value.IsString() == false)
-                    return JsValue.Null;
+                    return new JsHandleJint(JsValue.Null);
             }
-            return value;
+            return new JsHandleJint(value);
         }
 
-        internal JsValue TranslateToJs(JsonOperationContext context, object o)
+        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
+            string id, DateTime? lastModified, string changeVector)
         {
-            var engine = EngineEx;
+            return new BlittableObjectInstanceJint(Engine, (BlittableObjectInstanceJint)parent, blittable, id, lastModified,
+                changeVector);
+        }
+
+        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
+            Document doc)
+        {
+            return new BlittableObjectInstanceJint(Engine, (BlittableObjectInstanceJint)parent, blittable, doc);
+        }
+
+        public override IObjectInstance<JsHandleJint> CreateTimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment)
+        {
+            return new TimeSeriesSegmentObjectInstanceJint(EngineEx, segment);
+        }
+
+        public override IObjectInstance<JsHandleJint> CreateCounterEntryObjectInstance(DynamicCounterEntry entry)
+        {
+            return new CounterEntryObjectInstanceJint(EngineEx, entry);
+        }
+
+        public override JsHandleJint TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false)
+        {
             if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)
             {
                 // we are passing a streaming value to the JS engine, so we need
                 // to materialize all the results
-                
-                
+
+
                 var results = new DynamicJsonArray(tsrr.Stream);
                 var djv = new DynamicJsonValue
                 {
                     [nameof(TimeSeriesAggregationResult.Count)] = results.Count,
                     [nameof(TimeSeriesAggregationResult.Results)] = results
                 };
-                return new BlittableObjectInstanceJint(engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null);
+                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null));
             }
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
-                return new BlittableObjectInstanceJint(engine, null, Clone(d.Data, context), d)
+                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(d.Data, context), d)
                 {
                     LuceneDocument = t.Item2,
                     LuceneState = t.Item3,
                     LuceneIndexFields = t.Item4,
                     LuceneAnyDynamicIndexFields = t.Item5 ?? false,
                     Projection = t.Item6
-                };
+                });
             }
             if (o is Document doc)
             {
-                return new BlittableObjectInstanceJint(engine, null, Clone(doc.Data, context), doc);
+                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(doc.Data, context), doc));
             }
             if (o is DocumentConflict dc)
             {
-                return new BlittableObjectInstanceJint(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
+                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector));
             }
 
             if (o is BlittableJsonReaderObject json)
             {
-                return new BlittableObjectInstanceJint(engine, null, Clone(json, context), null, null, null);
+                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(json, context), null, null, null));
             }
 
             if (o == null)
-                return Undefined.Instance;
+                return new JsHandleJint(Undefined.Instance);
             if (o is long lng)
-                return lng;
+                return new JsHandleJint(new JsBigInt(lng));
             if (o is BlittableJsonReaderArray bjra)
             {
-                var jsArray = engine.Realm.Intrinsics.Array.Construct(Array.Empty<JsValue>());
-                var args = new JsValue[1];
+                var jsArray = Engine.Realm.Intrinsics.Array.Construct(Array.Empty<JsValue>());
+                var args = new JsHandleJint[1];
                 for (var i = 0; i < bjra.Length; i++)
                 {
                     args[0] = TranslateToJs(context, bjra[i]);
-                    engine.Realm.Intrinsics.Array.PrototypeObject.Push(jsArray, args);
+                    Engine.Realm.Intrinsics.Array.PrototypeObject.Push(jsArray, args.ToJsValueArray());
                 }
-                return jsArray;
+                return new JsHandleJint(jsArray);
             }
             if (o is List<object> list)
             {
-                var jsArray = engine.Realm.Intrinsics.Array.Construct(Array.Empty<JsValue>());
-                var args = new JsValue[1];
+                var jsArray = Engine.Realm.Intrinsics.Array.Construct(Array.Empty<JsValue>());
+                var args = new JsHandleJint[1];
                 for (var i = 0; i < list.Count; i++)
                 {
                     args[0] = TranslateToJs(context, list[i]);
-                    engine.Realm.Intrinsics.Array.PrototypeObject.Push(jsArray, args);
+                    Engine.Realm.Intrinsics.Array.PrototypeObject.Push(jsArray, args.ToJsValueArray());
                 }
-                return jsArray;
+                return new JsHandleJint(jsArray);
             }
             if (o is List<Document> docList)
             {
-                var jsArray = engine.Realm.Intrinsics.Array.Construct(Array.Empty<JsValue>());
+                var jsArray = Engine.Realm.Intrinsics.Array.Construct(Array.Empty<JsValue>());
                 var args = new JsValue[1];
                 for (var i = 0; i < docList.Count; i++)
                 {
-                    args[0] = new BlittableObjectInstanceJint(engine, null, Clone(docList[i].Data, context), docList[i]);
-                    engine.Realm.Intrinsics.Array.PrototypeObject.Push(jsArray, args);
+                    args[0] = new BlittableObjectInstanceJint(Engine, null, Clone(docList[i].Data, context), docList[i]);
+                    Engine.Realm.Intrinsics.Array.PrototypeObject.Push(jsArray, args);
                 }
-                return jsArray;
+                return new JsHandleJint(jsArray);
             }
             // for admin
             if (o is RavenServer || o is DocumentDatabase)
             {
                 AssertAdminScriptInstance();
-                return JsValue.FromObject(engine, o);
+                return new JsHandleJint(JsValue.FromObject(Engine, o));
             }
+            //TODO: egor consider doing new JsNumber() inside JsHandleJint ctor
             if (o is bool b)
-                return b ? JsBoolean.True : JsBoolean.False;
+                return new JsHandleJint(b ? JsBoolean.True : JsBoolean.False);
             if (o is int integer)
-                return integer;
+                return new JsHandleJint(new JsNumber(integer));
             if (o is double dbl)
-                return dbl;
+                return new JsHandleJint(new JsNumber(dbl));
             if (o is string s)
-                return s;
+                return new JsHandleJint(new JsString(s));
             if (o is LazyStringValue ls)
-                return ls.ToString();
+                return new JsHandleJint(new JsString(ls.ToString()));
             if (o is LazyCompressedStringValue lcs)
-                return lcs.ToString();
+                return new JsHandleJint(new JsString(lcs.ToString()));
             if (o is LazyNumberValue lnv)
             {
-                return BlittableObjectInstanceJint.BlittableObjectProperty.GetJsValueForLazyNumber(engine, lnv);
+                return new JsHandleJint(BlittableObjectInstanceJint.BlittableObjectProperty.GetJsValueForLazyNumber(Engine, lnv));
             }
             if (o is JsValue js)
-                return js;
+                return new JsHandleJint(js);
             throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");
         }
     }

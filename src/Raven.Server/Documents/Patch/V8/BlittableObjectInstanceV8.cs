@@ -19,7 +19,7 @@ using Raven.Server.Utils;
 namespace Raven.Server.Documents.Patch.V8
 {
     [DebuggerDisplay("Blittable JS object")]
-    public class BlittableObjectInstanceV8 : IBlittableObjectInstance
+    public class BlittableObjectInstanceV8 : IBlittableObjectInstance, IObjectInstance<JsHandleV8>
 #if DEBUG
     , IV8DebugInfo
 #endif
@@ -172,14 +172,14 @@ namespace Raven.Server.Documents.Patch.V8
         private V8EntityID _SelfID;
 #endif
 
-        public IJsEngineHandle EngineHandle => _engineEx;
+        public IJsEngineHandle<JsHandleV8> EngineHandle => _engineEx;
 
-        public JsHandle CreateJsHandle(bool keepAlive = false)
+        public JsHandleV8 CreateJsHandle(bool keepAlive = false)
         {
-            return new JsHandle(CreateObjectBinder(keepAlive));
+            return CreateObjectBinder(keepAlive);
         }
         
-        public bool TryGetValue(string propertyName, out IBlittableObjectProperty value, out bool isDeleted)
+        public bool TryGetValue(string propertyName, out IBlittableObjectProperty<JsHandleV8> value, out bool isDeleted)
         {
             value = null;
             isDeleted = _deletes?.Contains(propertyName) == true;
@@ -196,33 +196,38 @@ namespace Raven.Server.Documents.Patch.V8
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetOrCreate(string key)
+        public JsHandleV8 GetOrCreate(string key)
         {
-            return new JsHandle(GetOrCreateV8(key));
+            var val = GetOrCreateV8(key);
+            return new JsHandleV8(ref val);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetOwnPropertyJs(string propertyName)
+        public JsHandleV8 GetOwnPropertyJs(string propertyName)
         {
-            return new JsHandle(GetOwnPropertyJsV8(propertyName));
+            var val = GetOwnPropertyJsV8(propertyName);
+            return new JsHandleV8(ref val);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle SetOwnProperty(string propertyName, JsHandle jsValue, bool toReturnCopy = true)
+        public JsHandleV8 SetOwnProperty(string propertyName, JsHandleV8 jsValue, bool toReturnCopy = true)
         {
-            return new JsHandle(SetOwnProperty(propertyName, jsValue.V8.Item, V8PropertyAttributes.Undefined, toReturnCopy));
+            var val = SetOwnProperty(propertyName, jsValue.Item, V8PropertyAttributes.Undefined, toReturnCopy);
+            return new JsHandleV8(ref val);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public InternalHandle CreateObjectBinder(bool keepAlive = false)
+        public JsHandleV8 CreateObjectBinder(bool keepAlive = false)
         {
-            return CreateObjectBinder(_engineEx, this, keepAlive: keepAlive);
+            var val = CreateObjectBinder(_engineEx, this, keepAlive: keepAlive);
+            return new JsHandleV8(ref val);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstanceV8 boi, bool keepAlive = false)
         {
-            var jsBinder = engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.Context.TypeBinderBlittableObjectInstance(), keepAlive: keepAlive);
+
+            var jsBinder = engine.Engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.Context.TypeBinderBlittableObjectInstance(), keepAlive: keepAlive);
             var binder = (ObjectBinder)jsBinder.Object;
             binder.ShouldDisposeBoundObject = true;
             return jsBinder;
@@ -243,9 +248,9 @@ namespace Raven.Server.Documents.Patch.V8
         )
         {
             _javaScriptUtils = javaScriptUtils;
-            _engineEx = (V8EngineEx)_javaScriptUtils.Engine;
-            _engine = _engineEx;
-
+            _engineEx = _javaScriptUtils.EngineEx;
+            _engine = _javaScriptUtils.Engine;
+ 
             _parent = parent;
             _isEngineRooted = false;
             blittable.NoCache = true;
@@ -426,7 +431,7 @@ namespace Raven.Server.Documents.Patch.V8
             var scope = CurrentIndexingScope.Current;
             if (scope != null && propertyName == Constants.Documents.Metadata.Key && IsRoot)
             {
-                scope.RegisterJavaScriptUtils(_javaScriptUtils);
+                // TODO: egor scope.RegisterJavaScriptUtils(_javaScriptUtils);
                 GetMetadata();
                 _ownValues?.TryGetValue(propertyName, out val);
                 return val;
@@ -554,7 +559,7 @@ namespace Raven.Server.Documents.Patch.V8
             return list;
         }
 
-        public InternalHandle GetMetadata(bool toReturnCopy = false)
+        public JsHandleV8 GetMetadata(bool toReturnCopy = false)
         {
             _CheckIsNotDisposed($"GetMetadata");
 
@@ -562,7 +567,7 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 var propertyName = Constants.Documents.Metadata.Key;
                 if (!(_blittable[propertyName] is BlittableJsonReaderObject metadata))
-                    return _engine.CreateNullValue();
+                    return _engineEx.CreateNullValue();
 
                 metadata.Modifications = new DynamicJsonValue
                 {
@@ -590,7 +595,7 @@ namespace Raven.Server.Documents.Patch.V8
             }
             catch (Exception e) 
             {
-                return _engine.CreateError(e.ToString(), JSValueType.ExecutionError);
+                return _engineEx.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
 
@@ -658,7 +663,7 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        public sealed class BlittableObjectProperty : IBlittableObjectProperty
+        public sealed class BlittableObjectProperty : IBlittableObjectProperty<JsHandleV8>
 #if DEBUG
     , IV8DebugInfo
 #endif
@@ -795,8 +800,15 @@ namespace Raven.Server.Documents.Patch.V8
             }
 
             public bool Changed => _changed;
-            public JsHandle ValueHandle => new JsHandle(Value);
-            
+            public JsHandleV8 ValueHandle
+            {
+                get
+                {
+                    InternalHandle internalHandle = Value;
+                    return new JsHandleV8(ref internalHandle);
+                }
+            }
+
 #if DEBUG
             public V8EntityID SelfID
             {
@@ -914,7 +926,7 @@ namespace Raven.Server.Documents.Patch.V8
                     switch (val)
                     {
                         case Client.Constants.Documents.Indexing.Fields.NullValue:
-                            jsValue = _engineEx.Context.ExplicitNullV8().Clone();
+                            jsValue = _engineEx.Context.ExplicitNull().Item.Clone();
                             return true;
 
                         case Client.Constants.Documents.Indexing.Fields.EmptyString:
@@ -970,7 +982,7 @@ namespace Raven.Server.Documents.Patch.V8
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
-                        return _engineEx.Context.ExplicitNullV8().Clone();
+                        return _engineEx.Context.ExplicitNull().Item.Clone();
 
                     case BlittableJsonToken.Boolean:
                         return _engine.CreateValue((bool)value);
@@ -999,7 +1011,7 @@ namespace Raven.Server.Documents.Patch.V8
                         switch (obj)
                         {
                             case BlittableJsonReaderArray blittableArray:
-                                return GetArrayInstanceFromBlittableArray(_engineEx, blittableArray, owner);
+                                return GetArrayInstanceFromBlittableArray(_engineEx.Engine, blittableArray, owner);
 
                             case LazyStringValue asLazyStringValue:
                                 return _engine.CreateValue(asLazyStringValue.ToString());
@@ -1013,14 +1025,14 @@ namespace Raven.Server.Documents.Patch.V8
                                     owner,
                                     blittable, null, null, null
                                 );
-                                return boi.CreateObjectBinder(false);
+                                return boi.CreateObjectBinder(keepAlive: false).Item;
                         }
 
                     case BlittableJsonToken.StartArray:
                         _changed = true;
                         _parent.MarkChanged();
                         var array = (BlittableJsonReaderArray)value;
-                        return GetArrayInstanceFromBlittableArray(_engineEx, array, owner);
+                        return GetArrayInstanceFromBlittableArray(_engineEx.Engine, array, owner);
 
                     default:
                         throw new ArgumentOutOfRangeException(type.ToString());
@@ -1035,12 +1047,12 @@ namespace Raven.Server.Documents.Patch.V8
                 // But that are Jint's limitations
                 if (value.TryParseDouble(out double doubleVal))
                 {
-                    var engine = (V8Engine)engineEx; 
+                    var engine = engineEx.Engine; 
                     return engine.CreateValue(doubleVal);
                 }
 
                 // If number is not in double boundaries, we return the LazyNumberValue
-                return engineEx.CreateObjectBinder(value, keepAlive: false);
+                return engineEx.Engine.CreateObjectBinder(value, keepAlive: false);
             }
         }
     }

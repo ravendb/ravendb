@@ -9,7 +9,6 @@ namespace Raven.Server.Documents.Patch.V8
         public ObjectBinderEx() : base()
         {
         }
-
         public T ObjClr
         {
             get { return base.Object as T; }

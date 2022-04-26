@@ -136,8 +136,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     break;
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    index = AbstractJavaScriptIndex.Create(definition, configuration, indexVersion);
-                    break;
+                    return AbstractJavaScriptIndexBase.Create(definition, configuration, indexVersion);
+
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }

@@ -2,15 +2,23 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 
-namespace Raven.Server.Documents.Indexes.Static.Counters
-{
-    public class CountersJavaScriptIndex : AbstractCountersAndTimeSeriesJavaScriptIndex
-    {
-        private const string MapPrefix = "counters.";
+namespace Raven.Server.Documents.Indexes.Static.Counters;
 
-        public CountersJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
-            : base(definition, configuration, MapPrefix, Constants.Counters.All, indexVersion)
-        {
-        }
+public class CountersJavaScriptIndexJint : AbstractCountersAndTimeSeriesJavaScriptIndexJint
+{
+    public const string MapPrefix = "counters.";
+
+    public CountersJavaScriptIndexJint(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+        : base(definition, configuration, MapPrefix, Constants.Counters.All, indexVersion)
+    {
+    }
+}
+
+public class CountersJavaScriptIndexV8 : AbstractCountersAndTimeSeriesJavaScriptIndexV8
+{
+
+    public CountersJavaScriptIndexV8(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+        : base(definition, configuration, CountersJavaScriptIndexJint.MapPrefix, Constants.Counters.All, indexVersion)
+    {
     }
 }

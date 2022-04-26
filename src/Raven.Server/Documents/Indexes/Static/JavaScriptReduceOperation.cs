@@ -4,48 +4,74 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using Esprima.Ast;
 using Jint;
-using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Function;
-using Jint.Native.Object;
 using Jint.Runtime;
-using Jint.Runtime.Descriptors;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
-using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Documents.Indexes.Static.Utils;
-using JintPreventResolvingTasksReferenceResolver = Raven.Server.Documents.Patch.Jint.JintPreventResolvingTasksReferenceResolver;
 using V8Exception = V8.Net.V8Exception;
-using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public partial class JavaScriptReduceOperation
+    public class JavaScriptReduceOperationV8 : JavaScriptReduceOperation<JsHandleV8>
     {
-        private readonly AbstractJavaScriptIndex _index;
-        private JavaScriptIndexUtils _jsIndexUtils { get; }
-        private IJavaScriptUtils _jsUtils { get; }
-        private IJsEngineHandle EngineHandle { get; }
+        private V8EngineEx EngineExV8 => EngineHandle as V8EngineEx;
+        private readonly AbstractJavaScriptIndexV8 IndexV8;
+
+        public JavaScriptReduceOperationV8(AbstractJavaScriptIndexV8 index, JavaScriptIndexUtils<JsHandleV8> jsIndexUtils, ScriptFunctionInstance keyJint, Engine engineForParsing, 
+            JsHandleV8 reduce, JsHandleV8 key, long indexVersion) : base(index, jsIndexUtils, keyJint, engineForParsing, reduce, key, indexVersion)
+        {
+            IndexV8 = index;
+        }
+
+        public override void SetContext()
+        {
+            EngineExV8.Context = IndexV8._contextExV8;
+        }
+
+    }
+
+    public class JavaScriptReduceOperationJint : JavaScriptReduceOperation<JsHandleJint>
+    {
+        public JavaScriptReduceOperationJint(AbstractJavaScriptIndexJint index, JavaScriptIndexUtils<JsHandleJint> jsIndexUtils, ScriptFunctionInstance keyJint, Engine engineForParsing,
+            JsHandleJint reduce, JsHandleJint key, long indexVersion) : base(index, jsIndexUtils, keyJint, engineForParsing, reduce, key, indexVersion)
+        {
+        }
+
+        public override void SetContext()
+        {
+            //noop
+        }
+
+    }
+    public abstract class JavaScriptReduceOperation<T>
+        where T : struct, IJsHandle<T>
+    {
+        private readonly AbstractJavaScriptIndex<T> _index;
+        private JavaScriptIndexUtils<T> _jsIndexUtils { get; }
+        private IJavaScriptUtils<T> _jsUtils { get; }
+        protected IJsEngineHandle<T> EngineHandle { get; }
         private JavaScriptEngineType _jsEngineType => EngineHandle.EngineType;
-        private IJavaScriptEngineForParsing EngineForParsing { get; }
+        private Engine EngineForParsing { get; }
         public ScriptFunctionInstance KeyJint { get; }
 
-        public JsHandle Reduce { get; }
-        public JsHandle Key { get; }
+        public T Reduce { get; }
+        public T Key { get; }
 
         protected Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>> _groupedItems;
 
         private readonly long _indexVersion;
         
-        public JavaScriptReduceOperation(AbstractJavaScriptIndex index, JavaScriptIndexUtils jsIndexUtils, ScriptFunctionInstance keyJint, IJavaScriptEngineForParsing engineForParsing,
-            JsHandle reduce, JsHandle key, long indexVersion)
+        protected JavaScriptReduceOperation(AbstractJavaScriptIndex<T> index, JavaScriptIndexUtils<T> jsIndexUtils, ScriptFunctionInstance keyJint, Engine engineForParsing,
+            T reduce, T key, long indexVersion)
         {
             _index = index;
             _indexVersion = indexVersion;
@@ -58,11 +84,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (reduce.IsUndefined || reduce.IsNull)
                 throw new ArgumentNullException(nameof(reduce));
-            Reduce = new JsHandle(ref reduce);
+            Reduce = reduce;
 
             if (key.IsUndefined || key.IsNull)
                 throw new ArgumentNullException(nameof(key));
-            Key = new JsHandle(ref key);
+            Key = key;
 
             _jsIndexUtils = jsIndexUtils;
             _jsUtils = _jsIndexUtils.JsUtils;
@@ -73,17 +99,19 @@ namespace Raven.Server.Documents.Indexes.Static
             Reduce.Dispose();
             Key.Dispose();
         }
+       
 
-        protected struct GroupByKeyComparer : IEqualityComparer<BlittableJsonReaderObject>
+        protected struct GroupByKeyComparer/*<T>*/ : IEqualityComparer<BlittableJsonReaderObject>
+          //  where T : struct, IJsHandle<T>
         {
-            private readonly JavaScriptReduceOperation _parent;
+            private readonly JavaScriptReduceOperation<T> _parent;
             private readonly ReduceKeyProcessor _xKey;
             private readonly ReduceKeyProcessor _yKey;
             private BlittableJsonReaderObject _lastUsedBlittable;
             private BlittableJsonReaderObject _lastUsedBucket;
             private readonly ByteStringContext _allocator;
 
-            public GroupByKeyComparer(JavaScriptReduceOperation parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator, long indexVersion)
+            public GroupByKeyComparer(JavaScriptReduceOperation<T> parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator, long indexVersion)
             {
                 _parent = parent;
                 _allocator = allocator;
@@ -174,6 +202,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        public abstract void SetContext();
         public IEnumerable IndexingFunction(IEnumerable<dynamic> items)
         {
             try
@@ -192,17 +221,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 lock (EngineHandle)
                 {
-                    switch (EngineHandle.EngineType)
-                    {
-                        case JavaScriptEngineType.Jint:
-                            SetContextJint();
-                            break;
-                        case JavaScriptEngineType.V8:
-                            SetContextV8();
-                            break;
-                        default:
-                            throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.");
-                    }
+                    SetContext();
 
                     var memorySnapshotName = "reduce";
                     bool isMemorySnapshotMade = false;
@@ -214,25 +233,26 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     foreach (var item in _groupedItems.Values)
                     {
-                        _index._lastException = null;
+                        //TODO: egor check if this error handling needed
+                       // _index._lastException = null;
 
                         EngineHandle.ResetCallStack();
                         EngineHandle.ResetConstraints();
 
-                        JsHandle jsRes = JsHandle.Empty;
+                        T jsRes = EngineHandle.Empty;
                         try
                         {
                             using (var jsGrouping = ConstructGrouping(item))
                             {
                                 jsRes = Reduce.StaticCall(jsGrouping);
-                                if (_index._lastException != null)
-                                {
-                                    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
-                                }
-                                else
-                                {
+                                //if (_index._lastException != null)
+                                //{
+                                //    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
+                                //}
+                                //else
+                                //{
                                     jsRes.ThrowOnError();
-                                }
+                             //   }
 
                                 if (jsRes.IsObject == false)
                                     throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}",
@@ -254,7 +274,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         finally
                         {
-                            _index._lastException = null;
+                         //   _index._lastException = null;
                         }
 
                         if (isMemorySnapshotMade)
@@ -280,7 +300,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
 
-        private void ProcessRunException(JsHandle jsRes, string memorySnapshotName, bool isMemorySnapshotMade)
+        private void ProcessRunException(T jsRes, string memorySnapshotName, bool isMemorySnapshotMade)
         {
             EngineHandle.AddToLastMemorySnapshotBefore(jsRes); // as jsRes has been saved in V8Exception
             jsRes.Dispose(); // jsRes still has one reference
@@ -311,7 +331,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private JsHandle ConstructGrouping(List<BlittableJsonReaderObject> values)
+        private T ConstructGrouping(List<BlittableJsonReaderObject> values)
         {
             var result = EngineHandle.CreateObject();
             result.SetProperty("values", ConstructValues());
@@ -319,7 +339,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return result;
 
-            JsHandle ConstructKey()
+            T ConstructKey()
             {
                 if (_singleField)
                 {
@@ -334,7 +354,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return EngineHandle.CreateNullValue();
                 }
 
-                JsHandle jsRes;
+                T jsRes;
                 jsRes = EngineHandle.CreateObject();
                 foreach (var groupByField in _groupByFields)
                 {
@@ -351,15 +371,18 @@ namespace Raven.Server.Documents.Indexes.Static
                         var value = groupByField.GetValue(null, prop.Value);
                         var jsValue = value switch
                         {
-                            BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, JsHandle>)((BlittableJsonReaderObject bjro) =>
+                            BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, T>)((BlittableJsonReaderObject bjro) =>
                             {
-                                var boi = _jsUtils.CreateBlittableObjectInstanceFromScratch(_jsUtils, null, bjro, null, null, null);
-                                return boi.CreateJsHandle(true);
+                                var boi = _jsUtils.CreateBlittableObjectInstanceFromScratch(null, bjro, null, null, null);
+                                return _jsIndexUtils.CreateJsHandleFromBoi(boi, keepAlive: true);
                             }))(bjro),
-                            Document doc => ((Func<Document, JsHandle>)((Document doc) =>
+                            Document doc => ((Func<Document, T>)((Document doc) =>
                             {
-                                var boi = _jsUtils.CreateBlittableObjectInstanceFromDoc(_jsUtils, null, doc.Data, doc);
-                                return boi.CreateJsHandle(true);
+                                var boi = _jsUtils.CreateBlittableObjectInstanceFromDoc(null, doc.Data, doc);
+
+
+                                //TODO: egor extension method for boi?
+                                return _jsIndexUtils.CreateJsHandleFromBoi(boi, keepAlive: true);
                             }))(doc),
                             LazyNumberValue lnv => EngineHandle.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)),
                             _ => _jsIndexUtils.GetValueOrThrow(value, isMapReduce: true)
@@ -372,15 +395,15 @@ namespace Raven.Server.Documents.Indexes.Static
                 return jsRes;
             }
 
-            JsHandle ConstructValues()
+            T ConstructValues()
             {
                 int arrayLength = values.Count;
-                var jsItems = new JsHandle[arrayLength];
+                var jsItems = new T[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     var val = values[i];
 
-                    if (_jsIndexUtils.GetValue(val, out JsHandle jsValueHandle, isMapReduce: true) == false)
+                    if (_jsIndexUtils.GetValue(val, out T jsValueHandle, isMapReduce: true) == false)
                         continue;
 
                     jsItems[i] = jsValueHandle;

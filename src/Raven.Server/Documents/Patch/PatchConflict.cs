@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -12,7 +13,6 @@ namespace Raven.Server.Documents.Patch
 {
     public class PatchConflict
     {
-        protected readonly IJavaScriptOptions _jsOptions;
         protected readonly DocumentDatabase _database;
         protected readonly List<object> _docs = new List<object>();
         protected readonly DocumentConflict _fstDocumentConflict;
@@ -20,10 +20,8 @@ namespace Raven.Server.Documents.Patch
         protected static readonly string TombstoneResolverValue = Guid.NewGuid().ToString();
         protected readonly Logger _logger;
 
-
         public static PatchConflict CreatePatchConflict(DocumentDatabase database, IReadOnlyList<DocumentConflict> docs)
         {
-            var jsOptions = database.JsOptions;
             return new PatchConflict(database, docs);
         }
         
@@ -31,8 +29,6 @@ namespace Raven.Server.Documents.Patch
         {
             _logger = LoggingSource.Instance.GetLogger<PatchConflict>(database.Name);
             _database = database;
-            _jsOptions = database.JsOptions;
-
             foreach (var doc in docs)
             {
                 if (doc.Doc != null)
@@ -49,7 +45,7 @@ namespace Raven.Server.Documents.Patch
 
         public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
-            using (_database.Scripts.GetScriptRunner(_jsOptions, patch, false, out var run))
+            using (_database.Scripts.GetScriptRunner(patch, readOnly: false, out ISingleRun run))
             using (var result = run.Run(context, context, "resolve", new object[] {_docs, _hasTombstone, TombstoneResolverValue}))
             {
                 if (result.IsNull)

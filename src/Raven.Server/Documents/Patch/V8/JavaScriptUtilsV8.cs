@@ -1,84 +1,84 @@
 using System;
 using System.Collections.Generic;
-using V8.Net;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.Counters.V8;
 using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Static.TimeSeries.V8;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Sparrow.Json;
-using Raven.Server.Extensions.V8;
 using Sparrow.Json.Parsing;
+using V8.Net;
 
 namespace Raven.Server.Documents.Patch.V8
 {
-    public class JavaScriptUtilsV8 : JavaScriptUtilsBase
+    public class JavaScriptUtilsV8 : JavaScriptUtilsBase<JsHandleV8>
     {
-        public readonly V8EngineEx EngineEx;
         public readonly V8Engine Engine;
-
-        public JavaScriptUtilsV8(ScriptRunner runner, V8EngineEx engine)
+        public readonly V8EngineEx EngineEx;
+        public JavaScriptUtilsV8(ScriptRunnerV8 runner, V8EngineEx engine)
             : base(runner, engine)
         {
             EngineEx = engine;
-            Engine = engine;
+            Engine = engine.Engine;
         }
 
-        public InternalHandle GetMetadata(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        public static JavaScriptUtilsV8 Create(ScriptRunnerV8 runner, V8EngineEx engine)
+        {
+            return new JavaScriptUtilsV8(runner, engine);
+        }
+
+        public override JsHandleV8 GetMetadata(JsHandleV8 self, JsHandleV8[] args)
         {
             if (args.Length != 1 && args.Length != 2 || //length == 2 takes into account Query Arguments that can be added to args 
-                !(args[0].BoundObject is BlittableObjectInstanceV8 boi))
+                args[0].AsObject() is BlittableObjectInstanceV8 boi == false)
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
-            return boi.GetMetadata(toReturnCopy: true);
+            return boi.GetMetadata();
         }
 
-        internal InternalHandle AttachmentsFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        public override JsHandleV8 AttachmentsFor(JsHandleV8 self, JsHandleV8[] args)
         {
-            var engineEx = (V8EngineEx)engine;
-            if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstanceV8 boi))
+            if (args.Length != 1 || args[0].AsObject() is BlittableObjectInstanceV8 boi == false)
                 throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
-
-            if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return EmptyArray(engine);
+            var handle = (V8EngineEx)EngineHandle;
+            if (boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata == false)
+                return handle.CreateEmptyArray();
 
             if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                return EmptyArray(engine);
+                return handle.CreateEmptyArray();
 
-            int arrayLength =  attachments.Length;
+            int arrayLength = attachments.Length;
             InternalHandle[] jsItems = new InternalHandle[arrayLength];
-            for (int i = 0; i < arrayLength; i++) 
+            for (int i = 0; i < arrayLength; i++)
             {
-                var anoi = new AttachmentNameObjectInstanceV8(EngineEx, (BlittableJsonReaderObject)attachments[i]);
+                //TODO: egor fix cast
+                var anoi = new AttachmentNameObjectInstanceV8(handle, (BlittableJsonReaderObject)attachments[i]);
                 jsItems[i] = anoi.CreateObjectBinder(keepAlive: true);
             }
-
-            return engineEx.CreateArrayWithDisposal(jsItems);
-
-            static InternalHandle EmptyArray(V8Engine engine)
-            {
-                return engine.CreateArray(Array.Empty<InternalHandle>());
-            }
+            var arr = Engine.CreateArrayWithDisposal(jsItems);
+            return new JsHandleV8(ref arr);
         }
 
-        internal static InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        public override JsHandleV8 LoadAttachment(JsHandleV8 self, params JsHandleV8[] args)
         {
-            var engineEx = (V8EngineEx)engine;
-
             if (args.Length != 2)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
-
+            var handle = (V8EngineEx)EngineHandle;
             if (args[0].IsNull)
-                return engineEx.Context.ImplicitNullV8().Clone();
+                return handle.ImplicitNull();
 
             if (args[0].IsObject == false)
                 ThrowInvalidFirstParameter();
 
-            var doc = args[0].BoundObject as BlittableObjectInstanceV8;
+            var doc = args[0].AsObject() as BlittableObjectInstanceV8;
             if (doc == null)
                 ThrowInvalidFirstParameter();
 
@@ -92,10 +92,11 @@ namespace Raven.Server.Documents.Patch.V8
 
             var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
             if (attachment is DynamicNullObject)
-                return engineEx.Context.ImplicitNullV8().Clone();
+                return handle.ImplicitNull();
 
-            var aoi = new AttachmentObjectInstanceV8(engineEx, (DynamicAttachment)attachment);
-            return aoi.CreateObjectBinder(keepAlive: true);
+            var aoi = new AttachmentObjectInstanceV8(handle, (DynamicAttachment)attachment);
+            var obj = aoi.CreateObjectBinder(keepAlive: true);
+            return new JsHandleV8(ref obj);
 
             void ThrowInvalidFirstParameter()
             {
@@ -108,17 +109,16 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        internal static InternalHandle LoadAttachments(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        public override JsHandleV8 LoadAttachments(JsHandleV8 self, params JsHandleV8[] args)
         {
             if (args.Length != 1)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
 
-            var engineEx = (V8EngineEx)engine;
-            InternalHandle jsRes = InternalHandle.Empty;
+            var handle = (V8EngineEx)EngineHandle;
             if (args[0].IsNull)
-                return engineEx.Context.ImplicitNullV8().Clone();
+                return handle.ImplicitNull();
 
-            if (!(args[0].BoundObject is BlittableObjectInstanceV8 doc))
+            if (!(args[0].AsObject() is BlittableObjectInstanceV8 doc))
                 ThrowInvalidParameter();
 
             if (CurrentIndexingScope.Current == null)
@@ -126,17 +126,17 @@ namespace Raven.Server.Documents.Patch.V8
 
             var attachments = CurrentIndexingScope.Current.LoadAttachments(doc.DocumentId, GetAttachmentNames());
             if (attachments.Count == 0)
-                return engine.CreateArray(Array.Empty<InternalHandle>());
+                return handle.CreateArray(Array.Empty<JsHandleV8>());
 
-            int arrayLength =  attachments.Count;
+            int arrayLength = attachments.Count;
             var jsItems = new InternalHandle[attachments.Count];
             for (int i = 0; i < arrayLength; i++)
             {
-                var aoi = new AttachmentObjectInstanceV8(engineEx, (DynamicAttachment)attachments[i]);
+                var aoi = new AttachmentObjectInstanceV8(handle, (DynamicAttachment)attachments[i]);
                 jsItems[i] = aoi.CreateObjectBinder(keepAlive: true);
             }
 
-            return engineEx.CreateArrayWithDisposal(jsItems);
+            return handle.CreateArray(jsItems.ToJsHandleArray());
 
             void ThrowInvalidParameter()
             {
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 using (var jsMetadata = args[0].GetProperty(Constants.Documents.Metadata.Key))
                 {
-                    var metadata = jsMetadata.BoundObject as BlittableObjectInstanceV8;
+                    var metadata = jsMetadata.AsObject() as BlittableObjectInstanceV8;
                     if (metadata == null)
                         yield break;
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Patch.V8
                         if (jsAttachments.IsArray == false)
                             yield break;
 
-                        int arrayLength =  jsAttachments.ArrayLength;
+                        int arrayLength = jsAttachments.ArrayLength;
                         for (int i = 0; i < arrayLength; i++)
                         {
                             using (var jsAttachment = jsAttachments.GetProperty(i))
@@ -167,49 +167,53 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        internal static InternalHandle GetTimeSeriesNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        public override JsHandleV8 GetTimeSeriesNamesFor(JsHandleV8 self, JsHandleV8[] args)
         {
-            return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
+            return GetNamesFor(self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
         }
 
-        internal static InternalHandle GetCounterNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        public override JsHandleV8 GetCounterNamesFor(JsHandleV8 self, JsHandleV8[] args)
         {
-            return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
+            return GetNamesFor(self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
         }
 
-        private static InternalHandle GetNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args, string metadataKey, string methodName)
+        public JsHandleV8 GetNamesFor(JsHandleV8 self, JsHandleV8[] args, string metadataKey, string methodName)
         {
-            if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstanceV8 boi))
+            if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstanceV8 boi))
                 throw new InvalidOperationException($"{methodName}(doc) must be called with a single entity argument");
 
-            var engineEx = (V8EngineEx)engine;
+            var handle = (V8EngineEx)EngineHandle;
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return engine.CreateArray(Array.Empty<InternalHandle>());
+                return handle.CreateEmptyArray();
 
             if (metadata.TryGet(metadataKey, out BlittableJsonReaderArray timeSeries) == false)
-                return engine.CreateArray(Array.Empty<InternalHandle>());
+                return handle.CreateEmptyArray();
 
             InternalHandle[] jsItems = new InternalHandle[timeSeries.Length];
             for (var i = 0; i < timeSeries.Length; i++)
-                jsItems[i] = engine.CreateValue(timeSeries[i]?.ToString());
+                jsItems[i] = Engine.CreateValue(timeSeries[i]?.ToString());
 
-            return engineEx.CreateArrayWithDisposal(jsItems);
+            return handle.CreateArray(jsItems.ToJsHandleArray());
         }
 
-        public InternalHandle GetDocumentId(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        public override JsHandleV8 GetDocumentId(JsHandleV8 self, JsHandleV8[] args)
         {
             if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
                 throw new InvalidOperationException("id(doc) must be called with a single argument");
 
-            InternalHandle jsDoc = args[0];
+            JsHandleV8 jsDoc = args[0];
             if (jsDoc.IsNull || jsDoc.IsUndefined)
                 return jsDoc;
 
             if (jsDoc.IsObject == false)
                 throw new InvalidOperationException("id(doc) must be called with an object argument");
 
-            if (jsDoc.BoundObject is BlittableObjectInstanceV8 doc && doc.DocumentId != null)
-                return engine.CreateValue(doc.DocumentId);
+            var handle = (V8EngineEx)EngineHandle;
+            if (jsDoc.AsObject() is BlittableObjectInstanceV8 doc && doc.DocumentId != null)
+            {
+                var res = handle.CreateValue(doc.DocumentId);
+                return res;
+            }
 
             //throw new InvalidOperationException("jsDoc is not BoundObject");
             using (var jsValue = jsDoc.GetProperty(Constants.Documents.Metadata.Key))
@@ -226,7 +230,7 @@ namespace Raven.Server.Documents.Patch.V8
                         if (jsRes.IsStringEx == false)
                         {
                             jsRes.Dispose();
-                            return engine.CreateNullValue();
+                            return handle.CreateNullValue();
                         }
                     }
                     return jsRes;
@@ -234,14 +238,40 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        public InternalHandle TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false, BlittableObjectInstanceV8 parent = null)
+        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
+            string id, DateTime? lastModified, string changeVector)
+        {
+            return new BlittableObjectInstanceV8(this, (BlittableObjectInstanceV8)parent, blittable, id, lastModified, changeVector);
+        }
+
+        public override IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable, Document doc)
+        {
+            return new BlittableObjectInstanceV8(this, (BlittableObjectInstanceV8)parent, blittable, doc);
+        }
+
+        public override IObjectInstance<JsHandleV8> CreateTimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment)
+        {
+            return new TimeSeriesSegmentObjectInstanceV8(EngineEx, segment);
+        }
+
+        public override IObjectInstance<JsHandleV8> CreateCounterEntryObjectInstance(DynamicCounterEntry entry)
+        {
+            return new CounterEntryObjectInstanceV8(EngineEx, entry);
+        }
+
+        public override JsHandleV8 TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false)
+        {
+            return TranslateToJs(context, o, keepAlive, parent: null);
+        }
+
+        public JsHandleV8 TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false, BlittableObjectInstanceV8 parent = null)
         {
             if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)
             {
                 // we are passing a streaming value to the JS engine, so we need
                 // to materialize all the results
-                
-                
+
+
                 var results = new DynamicJsonArray(tsrr.Stream);
                 var djv = new DynamicJsonValue
                 {
@@ -282,13 +312,13 @@ namespace Raven.Server.Documents.Patch.V8
             }
 
             if (o == null)
-                return Engine.CreateNullValue();
+                return EngineEx.CreateNullValue();
             if (o is long lng)
-                return Engine.CreateValue(lng);
+                return EngineEx.CreateValue(lng);
             if (o is BlittableJsonReaderArray bjra)
             {
-                int arrayLength =  bjra.Length;
-                var jsItems = new InternalHandle[arrayLength];
+                int arrayLength = bjra.Length;
+                var jsItems = new JsHandleV8[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     jsItems[i] = TranslateToJs(context, bjra[i]);
@@ -296,12 +326,12 @@ namespace Raven.Server.Documents.Patch.V8
                         return jsItems[i];
                 }
 
-                return Engine.CreateArrayWithDisposal(jsItems);
+                return EngineEx.CreateArray(jsItems);
             }
             if (o is List<object> list)
             {
                 int arrayLength = list.Count;
-                var jsItems = new InternalHandle[arrayLength];
+                var jsItems = new JsHandleV8[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     jsItems[i] = TranslateToJs(context, list[i]);
@@ -309,50 +339,51 @@ namespace Raven.Server.Documents.Patch.V8
                         return jsItems[i];
                 }
 
-                return Engine.CreateArrayWithDisposal(jsItems);
+                return EngineEx.CreateArray(jsItems);
             }
             if (o is List<Document> docList)
             {
-                int arrayLength =  docList.Count;
-                var jsItems = new InternalHandle[arrayLength];
+                int arrayLength = docList.Count;
+                var jsItems = new JsHandleV8[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     BlittableObjectInstanceV8 boi = new BlittableObjectInstanceV8(this, parent, Clone(docList[i].Data, context), docList[i]);
                     jsItems[i] = boi.CreateObjectBinder(keepAlive);
                 }
 
-                return Engine.CreateArrayWithDisposal(jsItems);
+                return EngineEx.CreateArray(jsItems);
             }
             // for admin
             if (o is RavenServer || o is DocumentDatabase)
             {
                 AssertAdminScriptInstance();
-                return Engine.FromObject(o);
+                return EngineEx.FromObjectGen(o);
             }
             if (o is V8NativeObject j)
             {
-                InternalHandle h = j._;
-                return new InternalHandle(ref h, true);
+                var h = j._;
+                return new JsHandleV8(ref h);
             }
             if (o is bool b)
-                return Engine.CreateValue(b);
+                return EngineEx.CreateValue(b);
             if (o is int integer)
-                return Engine.CreateValue(integer);
+                return EngineEx.CreateValue(integer);
             if (o is double dbl)
-                return Engine.CreateValue(dbl);
+                return EngineEx.CreateValue(dbl);
             if (o is string s)
-                return Engine.CreateValue(s);
+                return EngineEx.CreateValue(s);
             if (o is LazyStringValue ls)
-                return Engine.CreateValue(ls.ToString());
+                return EngineEx.CreateValue(ls.ToString());
             if (o is LazyCompressedStringValue lcs)
-                return Engine.CreateValue(lcs.ToString());
+                return EngineEx.CreateValue(lcs.ToString());
             if (o is LazyNumberValue lnv)
             {
-                return BlittableObjectInstanceV8.BlittableObjectProperty.GetJsValueForLazyNumber(EngineEx, lnv);
+                var ih = BlittableObjectInstanceV8.BlittableObjectProperty.GetJsValueForLazyNumber(EngineEx, lnv);
+                return new JsHandleV8(ref ih);
             }
-            if (o is InternalHandle js)
+            if (o is JsHandleV8 js)
                 return js;
-            throw new InvalidOperationException("No idea how to convert " + o + " to InternalHandle");
+            throw new InvalidOperationException("No idea how to convert " + o + " to JsHandleV8");
         }
 
     }

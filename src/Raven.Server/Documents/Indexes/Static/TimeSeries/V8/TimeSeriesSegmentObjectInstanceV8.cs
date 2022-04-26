@@ -1,11 +1,8 @@
 using System;
-using System.Linq;
-using System.Collections.Generic;
-using V8.Net;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Patch.V8;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries.V8
 {
@@ -26,68 +23,62 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries.V8
 
         public override InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            var jsBinder =  _engine.CreateObjectBinder<TimeSeriesSegmentObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderTimeSeriesSegmentObjectInstance(), keepAlive: keepAlive);
+            var jsBinder =  _engine.CreateObjectBinder<CustomBinder<TimeSeriesSegmentObjectInstanceV8>>(this, EngineEx.Context.TypeBinderTimeSeriesSegmentObjectInstance(), keepAlive: keepAlive);
             var binder = (ObjectBinder)jsBinder.Object;
             binder.ShouldDisposeBoundObject = true;
             return jsBinder;
         }
 
-        public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engineEx, ref string propertyName)
+        public override InternalHandle NamedPropertyGetterOnce(ref string propertyName)
         {
-            var engine = (V8Engine)engineEx;
             if (propertyName == nameof(DynamicTimeSeriesSegment.Entries))
             {
                 var jsItems = new InternalHandle[_segment._segmentEntry.Segment.NumberOfLiveEntries];
                 var i = 0;
                 foreach (DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry in _segment.Entries)
                 {
-                    jsItems[i] = CreateDynamicTimeSeriesEntryObjectInstance(engineEx, entry);
+                    jsItems[i] = CreateDynamicTimeSeriesEntryObjectInstance(entry);
                     i++;
                 }
-                return (engineEx).CreateArrayWithDisposal(jsItems);
+
+                return EngineEx.Engine.CreateArrayWithDisposal(jsItems);
             }
 
             if (propertyName == nameof(TimeSeriesSegment.DocumentId))
-                return engine.CreateValue(_segment._segmentEntry.DocId.ToString());
+                return EngineEx.Engine.CreateValue(_segment._segmentEntry.DocId.ToString());
 
             if (propertyName == nameof(DynamicTimeSeriesSegment.Name))
-                return engine.CreateValue(_segment._segmentEntry.Name.ToString());
+                return EngineEx.Engine.CreateValue(_segment._segmentEntry.Name.ToString());
 
             if (propertyName == nameof(DynamicTimeSeriesSegment.Count))
-                return engine.CreateValue(_segment.Count);
+                return EngineEx.Engine.CreateValue(_segment.Count);
 
             if (propertyName == nameof(DynamicTimeSeriesSegment.End))
-                return engine.CreateValue(_segment.End);
+                return EngineEx.Engine.CreateValue(_segment.End);
 
             if (propertyName == nameof(DynamicTimeSeriesSegment.Start))
-                return engine.CreateValue(_segment.Start);
+                return EngineEx.Engine.CreateValue(_segment.Start);
 
             return InternalHandle.Empty;
         }
 
-        private InternalHandle CreateDynamicTimeSeriesEntryObjectInstance(V8EngineEx engineEx, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry)
+        private InternalHandle CreateDynamicTimeSeriesEntryObjectInstance(DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry)
         {
-            var engine = (V8Engine)engineEx;
+            var res = EngineEx.Engine.CreateObject();
 
-            var res = engine.CreateObject();
+            res.SetProperty(nameof(entry.Tag), EngineEx.Engine.CreateValue(entry._entry.Tag?.ToString()), V8PropertyAttributes.ReadOnly);
+            res.SetProperty(nameof(entry.Timestamp), EngineEx.Engine.CreateValue(entry._entry.Timestamp), V8PropertyAttributes.ReadOnly);
+            res.SetProperty(nameof(entry.Value), EngineEx.Engine.CreateValue(entry._entry.Values.Span[0]), V8PropertyAttributes.ReadOnly);
 
-            res.SetProperty(nameof(entry.Tag), engine.CreateValue(entry._entry.Tag?.ToString()), V8PropertyAttributes.ReadOnly);
-            res.SetProperty(nameof(entry.Timestamp), engine.CreateValue(entry._entry.Timestamp), V8PropertyAttributes.ReadOnly);
-            res.SetProperty(nameof(entry.Value), engine.CreateValue(entry._entry.Values.Span[0]), V8PropertyAttributes.ReadOnly);
-            
-            int arrayLength =  entry._entry.Values.Length;
+            int arrayLength = entry._entry.Values.Length;
             var jsItems = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
-                jsItems[i] = engine.CreateValue(entry._entry.Values.Span[i]);
+                jsItems[i] = EngineEx.Engine.CreateValue(entry._entry.Values.Span[i]);
             }
 
-            res.SetProperty(nameof(entry.Values), engine.CreateArrayWithDisposal(jsItems), V8PropertyAttributes.ReadOnly);
+            res.SetProperty(nameof(entry.Values), EngineEx.Engine.CreateArrayWithDisposal(jsItems), V8PropertyAttributes.ReadOnly);
             return res;
-        }
-
-        public class CustomBinder : CustomBinder<TimeSeriesSegmentObjectInstanceV8>
-        {
         }
     }
 }

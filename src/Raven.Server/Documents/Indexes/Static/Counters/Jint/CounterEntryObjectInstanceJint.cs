@@ -10,7 +10,7 @@ using Raven.Server.Documents.Patch.Jint;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters.Jint
 {
-    public class CounterEntryObjectInstanceJint : ObjectInstance, IObjectInstance
+    public class CounterEntryObjectInstanceJint : ObjectInstance, IObjectInstance<JsHandleJint>
     {
         private JintEngineEx _engineEx;
         private Engine _engine;
@@ -19,21 +19,21 @@ namespace Raven.Server.Documents.Indexes.Static.Counters.Jint
 
         private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
         
-        public IJsEngineHandle EngineHandle => _engineEx;
+        public IJsEngineHandle<JsHandleJint> EngineHandle => _engineEx;
 
-        public JsHandle CreateJsHandle(bool keepAlive = false)
+        public JsHandleJint CreateJsHandle(bool keepAlive = false)
         {
-            return new JsHandle(this);
+            return new JsHandleJint(this);
         }
 
         public void Dispose()
         {}
 
         public CounterEntryObjectInstanceJint(JintEngineEx engineEx, DynamicCounterEntry entry)
-            : base(engineEx)
+            : base(engineEx.Engine)
         {
             _engineEx = engineEx;
-            _engine = _engineEx;
+            _engine = _engineEx.Engine;
                 
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
 

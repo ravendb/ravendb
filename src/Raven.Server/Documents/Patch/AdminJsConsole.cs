@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Patch
         {
             _server = server;
             _database = database;
+
             if (Log.IsOperationsEnabled)
             {
                 if (database != null)
@@ -42,9 +43,7 @@ namespace Raven.Server.Documents.Patch
             try
             {
                 DocumentsOperationContext docsCtx = null;
-                IJavaScriptOptions jsOptions = _database?.JsOptions ?? _server?.Configuration.JavaScript ?? 
-                    (IJavaScriptOptions)(new JavaScriptOptions());
-                using (_server.AdminScripts.GetScriptRunner(jsOptions, new AdminJsScriptKey(script.Script), false, out var run))
+                using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), readOnly: false, out var run))
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out docsCtx))
                 using (var result = run.Run(ctx, docsCtx, "execute", new object[] {_server, _database}))

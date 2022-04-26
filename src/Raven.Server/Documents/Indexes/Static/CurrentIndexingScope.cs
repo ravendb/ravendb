@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadDocumentStats;
         private IndexingStatsScope _loadAttachmentStats;
         private IndexingStatsScope _loadCompareExchangeValueStats;
-        private JavaScriptUtilsBase _javaScriptUtils;
+        private IJavaScriptUtilsClearance _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
         public readonly QueryOperationContext QueryContext;
 
@@ -340,7 +341,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return _getSpatialField(name);
         }
 
-        public void RegisterJavaScriptUtils(JavaScriptUtilsBase javaScriptUtils)
+        public void RegisterJavaScriptUtils(IJavaScriptUtilsClearance javaScriptUtils)
         {
             if (_javaScriptUtils != null)
                 return;

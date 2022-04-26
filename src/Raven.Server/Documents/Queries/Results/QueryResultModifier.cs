@@ -3,16 +3,14 @@ using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Queries.Results
 {
-    public class QueryResultModifier : JsBlittableBridge.IResultModifier
+    public class QueryResultModifier : IResultModifier
     {
         public static readonly QueryResultModifier Instance = new QueryResultModifier();
 
-        public void Modify(JsHandle json)
+        public void Modify<T>(T json, IJsEngineHandle<T> engine) where T : struct, IJsHandle<T>
         {
             using (var jsMetadata = json.GetProperty(Constants.Documents.Metadata.Key))
             {
-                var engine = json.Engine;
-
                 if (!jsMetadata.IsObject)
                 {
                     using (var jsMetadataNew = engine.CreateObject())

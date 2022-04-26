@@ -1,24 +1,24 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using JetBrains.Annotations;
 using Jint;
-using Jint.Native;
-using Raven.Server.Extensions.Jint;
-using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
-using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Config.Categories;
-using JSFunction = V8.Net.JSFunction;
-using JSValueType = V8.Net.JSValueType;
-using Raven.Client.Exceptions.Documents.Patching;
 using Jint.Constraints;
+using Jint.Native;
+using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.Util;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
+using Raven.Server.Extensions.Jint;
+using JSValueType = V8.Net.JSValueType;
 
 namespace Raven.Server.Documents.Patch.Jint
 {
-    public class JintEngineEx : Engine, IJsEngineHandle
+    public class JintEngineEx : IJsEngineHandle<JsHandleJint>, IDisposable
     {
 
         public const string ExecEnvCodeJint = @"
@@ -30,53 +30,63 @@ var process = {
 }
 ";
         public readonly JintPreventResolvingTasksReferenceResolver RefResolver;
-        
+
         public DynamicJsNullJint ImplicitNullJint;
         public DynamicJsNullJint ExplicitNullJint;
 
-        public JsHandle ImplicitNull() => new(ImplicitNullJint);
-        public JsHandle ExplicitNull() => new(ExplicitNullJint);
 
-        private readonly JsHandle _jsonStringify;
-        public JsHandle JsonStringify() => _jsonStringify;
+        public JsHandleJint ImplicitNull() => new(ImplicitNullJint);
+        public JsHandleJint ExplicitNull() => new(ExplicitNullJint);
+
+        private readonly JsHandleJint _jsonStringify;
+        public JsHandleJint JsonStringify() => _jsonStringify;
 
         [CanBeNull]
         private IJavaScriptOptions _jsOptions;
 
-        public  bool IsMemoryChecksOn => false;
+        public bool IsMemoryChecksOn => false;
+        public JsHandleJint Empty { get; set; } = JsHandleJint.Empty;
+        public JsHandleJint Null { get; set; } = JsHandleJint.Empty;
+        public JsHandleJint Undefined { get; set; } = JsHandleJint.Undefined;
+        public JsHandleJint True { get; set; } = JsHandleJint.True;
+        public JsHandleJint False { get; set; } = JsHandleJint.False;
 
-        public JintEngineEx(IJavaScriptOptions jsJsOptions = null, JintPreventResolvingTasksReferenceResolver refResolver = null) : base(options =>
+        public readonly Engine Engine;
+
+        public JintEngineEx(RavenConfiguration configuration, JintPreventResolvingTasksReferenceResolver refResolver = null)
         {
-            if (jsJsOptions == null)
-                options.MaxStatements(1).LimitRecursion(1);
-            else
+            var jsOptions = configuration.JavaScript;
+            Engine = new Engine(options =>
             {
-                var maxDurationMs = jsJsOptions.MaxDuration.GetValue(TimeUnit.Milliseconds);
-                options.LimitRecursion(64)
-                    .SetReferencesResolver(refResolver)
-                    .Strict(jsJsOptions.StrictMode)
-                    .MaxStatements(jsJsOptions.MaxSteps)
-                    .AddObjectConverter(new JintGuidConverter())
-                    .AddObjectConverter(new JintStringConverter())
-                    .AddObjectConverter(new JintEnumConverter())
-                    .AddObjectConverter(new JintDateTimeConverter())
-                    .AddObjectConverter(new JintTimeSpanConverter())
-                    .LocalTimeZone(TimeZoneInfo.Utc);
+                if (jsOptions == null)
+                    options.MaxStatements(1).LimitRecursion(1);
+                else
+                {
+                    var maxDurationMs = jsOptions.MaxDuration.GetValue(TimeUnit.Milliseconds);
+                    options.LimitRecursion(64)
+                        .SetReferencesResolver(refResolver)
+                        .Strict(jsOptions.StrictMode)
+                        .MaxStatements(jsOptions.MaxSteps)
+                        .AddObjectConverter(new JintGuidConverter())
+                        .AddObjectConverter(new JintStringConverter())
+                        .AddObjectConverter(new JintEnumConverter())
+                        .AddObjectConverter(new JintDateTimeConverter())
+                        .AddObjectConverter(new JintTimeSpanConverter())
+                        .LocalTimeZone(TimeZoneInfo.Utc);
 
-                //options.TimeoutInterval(maxDurationMs == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(maxDurationMs)); // TODO [shlomo] to switch it on when tests get stable to exclude break because of operation timeout
-            }
-        })
-        {
-            _jsOptions = jsJsOptions;
-            
+                    //options.TimeoutInterval(maxDurationMs == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(maxDurationMs)); // TODO [shlomo] to switch it on when tests get stable to exclude break because of operation timeout
+                }
+            });
+            _jsOptions = jsOptions;
+
             RefResolver = refResolver;
 
             ExecuteWithReset(ExecEnvCodeJint, "ExecEnvCode");
 
-            _jsonStringify = new JsHandle(Evaluate("JSON.stringify"));
+            _jsonStringify = new JsHandleJint(Engine.Evaluate("JSON.stringify"));
         }
 
-        ~JintEngineEx() 
+        ~JintEngineEx()
         {
             Dispose(false);
         }
@@ -112,13 +122,13 @@ var process = {
                 disposeMaxStatements?.Dispose();
                 disposeMaxDuration?.Dispose();
             }
-            
+
             return new DisposableAction(Restore);
         }
 
         public IDisposable ChangeMaxStatements(int value)
         {
-            var maxStatements = FindConstraint<MaxStatements>();
+            var maxStatements = Engine.FindConstraint<MaxStatements>();
             if (maxStatements == null)
                 return null;
 
@@ -133,20 +143,30 @@ var process = {
             return ChangeMaxDuration(value == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(value));
         }
 
+        public void ResetCallStack()
+        {
+            Engine.ResetCallStack();
+        }
+
+        public void ResetConstraints()
+        {
+            Engine.ResetConstraints();
+        }
+
         public IDisposable ChangeMaxDuration(TimeSpan value)
         {
-            var maxDuration = FindConstraint<TimeConstraint2>();
+            var maxDuration = Engine.FindConstraint<TimeConstraint2>();
             if (maxDuration == null)
                 return null;
 
             var oldMaxDuration = maxDuration.Timeout;
-            maxDuration.Change(value); 
+            maxDuration.Change(value);
 
             return new DisposableAction(() => maxDuration.Change(oldMaxDuration));
         }
-        
+
         public void ForceGarbageCollection()
-        {}
+        { }
 
         public object MakeSnapshot(string name)
         {
@@ -158,12 +178,12 @@ var process = {
             return false;
         }
 
-        public void AddToLastMemorySnapshotBefore(JsHandle h) {}
-        
-        public void RemoveFromLastMemorySnapshotBefore(JsHandle h) {}
-        
+        public void AddToLastMemorySnapshotBefore(JsHandleJint h) { }
+
+        public void RemoveFromLastMemorySnapshotBefore(JsHandleJint h) { }
+
         public void CheckForMemoryLeaks(string name, bool shouldRemove = true)
-        {}
+        { }
 
         public void TryCompileScript(string script)
         {
@@ -175,18 +195,18 @@ var process = {
             {
                 throw new JavaScriptParseException("Failed to parse:" + Environment.NewLine + script, e);
             }
-            
+
         }
 
         public void Execute(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true)
         {
             if (throwExceptionOnError)
-                base.Execute(source);
+                Engine.Execute(source);
             else
             {
                 try
                 {
-                    base.Execute(source);
+                    Engine.Execute(source);
                 }
                 catch
                 {
@@ -197,136 +217,151 @@ var process = {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ExecuteWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true)
         {
-            this.ExecuteWithReset(source, throwExceptionOnError);
+            Engine.ExecuteWithReset(source, throwExceptionOnError);
         }
-        
-        public JsHandle GlobalObject
+
+        public JsHandleJint GlobalObject
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => new(Realm.GlobalObject);
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetGlobalProperty(string propertyName)
-        {
-            return new JsHandle(GetValue(propertyName));
+            get => new(Engine.Realm.GlobalObject);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetGlobalProperty(string name, JsHandle value)
+        public JsHandleJint GetGlobalProperty(string propertyName)
         {
-            SetValue(name, value.Jint.Item ?? JsValue.Undefined);
+            return new JsHandleJint(Engine.GetValue(propertyName));
         }
 
-        public JsHandle FromObjectGen(object obj, bool keepAlive = false)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetGlobalProperty(string name, JsHandleJint value)
         {
-            return new JsHandle(JsValue.FromObject(this, obj));
+            Engine.SetValue(name, value.Item ?? JsValue.Undefined);
         }
 
-        public JsHandle CreateClrCallBack(string propertyName, (Func<JsValue, JsValue[], JsValue> Jint, JSFunction V8) funcTuple, bool keepAlive = true)
+        public JsHandleJint FromObjectGen(object obj, bool keepAlive = false)
         {
-            return new JsHandle(this.CreateClrCallBack(propertyName, funcTuple.Jint));
+            return new JsHandleJint(JsValue.FromObject(Engine, obj));
         }
 
-        public void SetGlobalClrCallBack(string propertyName, (Func<JsValue, JsValue[], JsValue> Jint, JSFunction V8) funcTuple)
+        public JsHandleJint CreateClrCallBack(string propertyName, Func<JsHandleJint, JsHandleJint[], JsHandleJint> func, bool keepAlive = true)
         {
-            this.SetGlobalClrCallBack(propertyName, funcTuple.Jint);
+            var res = Engine.CreateClrCallBack(propertyName, CallbackFunction);
+
+            return new JsHandleJint(res);
+
+            JsValue CallbackFunction(JsValue arg1, JsValue[] arg2)
+            {
+                return func(new JsHandleJint(arg1), arg2.ToJsHandleArray()).Item;
+            }
         }
 
-        public JsHandle CreateObject()
+        public void SetGlobalClrCallBack(string propertyName, Func<JsHandleJint, JsHandleJint[], JsHandleJint> funcTuple)
         {
-            return new JsHandle(Realm.Intrinsics.Object.Construct(System.Array.Empty<JsValue>())); //new ObjectInstance(this));
+            Engine.SetGlobalClrCallBack(propertyName, CallbackFunction);
+
+            JsValue CallbackFunction(JsValue arg1, JsValue[] arg2)
+            {
+                return funcTuple(new JsHandleJint(arg1), arg2.ToJsHandleArray()).Item;
+            }
         }
 
-        public JsHandle CreateEmptyArray()
+        public JsHandleJint CreateObject()
         {
-            var be = (Engine)this;
-            return new JsHandle(be.CreateEmptyArray());
+            return new JsHandleJint(Engine.Realm.Intrinsics.Object.Construct(System.Array.Empty<JsValue>())); //new ObjectInstance(this));
         }
-        
-        public JsHandle CreateArray(JsHandle[] items)
+
+        public JsHandleJint CreateEmptyArray()
+        {
+            return new JsHandleJint(Engine.CreateEmptyArray());
+        }
+
+        public JsHandleJint CreateArray(JsHandleJint[] items)
         {
             int arrayLength = items.Length;
             var jsItems = new JsValue[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
                 var jhItem = items[i];
-                jsItems[i] = jhItem.Jint.Item;
+                jsItems[i] = jhItem.Item;
             }
-            return new JsHandle(JintExtensions.CreateArray(this, jsItems));
+            return new JsHandleJint(JintExtensions.CreateArray(Engine, jsItems));
         }
 
-        public JsHandle CreateArray(System.Array items)
+        public JsHandleJint CreateArray(System.Array items)
         {
             int arrayLength = items.Length;
             var jsItems = new JsValue[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
-                jsItems[i] = this.FromObject(items.GetValue(i));
+                jsItems[i] = Engine.FromObject(items.GetValue(i));
             }
-            return new JsHandle(JintExtensions.CreateArray(this, jsItems));
+            return new JsHandleJint(JintExtensions.CreateArray(Engine, jsItems));
         }
 
-        public JsHandle CreateArray(IEnumerable<object> items)
+        public JsHandleJint CreateArray(IEnumerable<object> items)
         {
-            var be = (Engine)this;
-            var list = be.CreateEmptyArray();
+            var list = Engine.CreateEmptyArray();
             void PushKey(object value)
             {
-                var jsValue = be.FromObject(value);
+                var jsValue = Engine.FromObject(value);
                 list.AsObject().StaticCall("push", jsValue);
             }
 
             foreach (var item in items)
                 PushKey(item);
-            return new JsHandle(list);
+            return new JsHandleJint(list);
         }
 
-        public JsHandle CreateUndefinedValue()
+        public JsHandleJint CreateUndefinedValue()
         {
-            return new JsHandle(JsValue.Undefined);
-        }
-        
-        public JsHandle CreateNullValue()
-        {
-            return new JsHandle(JsValue.Null);
-        }
-        
-        public JsHandle CreateValue(bool value)
-        {
-            return new JsHandle(new JsBoolean(value));
+            return new JsHandleJint(JsValue.Undefined);
         }
 
-        public JsHandle CreateValue(Int32 value)
+        public JsHandleJint CreateNullValue()
         {
-            return new JsHandle(new JsNumber(value));
+            return new JsHandleJint(JsValue.Null);
         }
 
-        public JsHandle CreateValue(double value)
+        public JsHandleJint CreateValue(bool value)
         {
-            return new JsHandle(new JsNumber(value));
+            return new JsHandleJint(new JsBoolean(value));
         }
 
-        public JsHandle CreateValue(string value)
+        public JsHandleJint CreateValue(Int32 value)
         {
-            return new JsHandle(new JsString(value));
+            return new JsHandleJint(new JsNumber(value));
         }
 
-        public JsHandle CreateValue(TimeSpan ms)
+        public JsHandleJint CreateValue(double value)
         {
-            var be = (Engine)this;
-            return new JsHandle(be.FromObject(ms));
+            return new JsHandleJint(new JsNumber(value));
         }
 
-        public JsHandle CreateValue(DateTime value)
+        public JsHandleJint CreateValue(string value)
         {
-            var be = (Engine)this;
-            return new JsHandle(be.FromObject(value));
+            return new JsHandleJint(new JsString(value));
         }
 
-        public JsHandle CreateError(string message, JSValueType errorType)
+        public JsHandleJint CreateValue(TimeSpan ms)
         {
-            return new JsHandle(message, errorType);
+
+            return new JsHandleJint(Engine.FromObject(ms));
         }
+
+        public JsHandleJint CreateValue(DateTime value)
+        {
+
+            return new JsHandleJint(Engine.FromObject(value));
+        }
+
+        public JsHandleJint CreateError(string message, JSValueType errorType)
+        {
+            throw new NotImplementedException();
+        }
+
+        //public JsHandleJint CreateError(string message, JSValueType errorType)
+        //{
+        //    return new JsHandleJint(message, errorType);
+        //}
     }
 }

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public interface IBlittableObjectInstance : IObjectInstance
+    public interface IBlittableObjectInstance 
     {
         bool Changed { get; }
         DateTime? LastModified { get; }
@@ -25,13 +25,13 @@ namespace Raven.Server.Documents.Patch
         SpatialResult? Distance { get; }
         float? IndexScore { get; }
 
-        bool TryGetValue(string propertyName, out IBlittableObjectProperty value, out bool isDeleted);
+       // bool TryGetValue(string propertyName, out IBlittableObjectProperty value, out bool isDeleted);
 
-        JsHandle GetOrCreate(string key);
+        //JsHandle GetOrCreate(string key);
 
-        JsHandle GetOwnPropertyJs(string propertyName);
+        //JsHandle GetOwnPropertyJs(string propertyName);
 
-        JsHandle SetOwnProperty(string propertyName, JsHandle jsValue, bool toReturnCopy = true);
+        //JsHandle SetOwnProperty(string propertyName, JsHandle jsValue, bool toReturnCopy = true);
 
         bool? DeleteOwnProperty(string propertyName);
 
@@ -39,4 +39,41 @@ namespace Raven.Server.Documents.Patch
 
         void Reset();
     }
+
+
+    //public interface IBlittableObjectInstance<T> : IObjectInstance<T>
+    //    where T : struct, IJsHandle<T>
+    //{
+    //    bool Changed { get; }
+    //    DateTime? LastModified { get; }
+    //    string ChangeVector { get; }
+    //    BlittableJsonReaderObject Blittable { get; }
+    //    string DocumentId { get; }
+    //    Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes { get; }
+    //    Lucene.Net.Documents.Document LuceneDocument { get; set; }
+    //    IState LuceneState { get; set; }
+    //    Dictionary<string, IndexField> LuceneIndexFields { get; set; }
+    //    bool LuceneAnyDynamicIndexFields { get; set; }
+    //    ProjectionOptions Projection { get; set; }
+
+    //    bool IsRoot { get; }
+    //    SpatialResult? Distance { get; }
+    //    float? IndexScore { get; }
+
+    //    bool TryGetValue(string propertyName, out IBlittableObjectProperty<T> value, out bool isDeleted);
+
+    //    T GetOrCreate(string key);
+
+    //    T GetOwnPropertyJs(string propertyName);
+
+    //    T SetOwnProperty(string propertyName, T jsValue, bool toReturnCopy = true);
+
+    //    bool? DeleteOwnProperty(string propertyName);
+
+    //    IEnumerable<string> EnumerateOwnProperties();
+
+    //    void Reset();
+
+    //    Dictionary<string, IBlittableObjectProperty<T>> OwnValues { get; set; }
+    //}
 }

@@ -22,7 +22,7 @@ using TypeConverter = Raven.Server.Utils.TypeConverter;
 namespace Raven.Server.Documents.Patch.Jint
 {
     [DebuggerDisplay("Blittable JS object")]
-    public class BlittableObjectInstanceJint : ObjectInstance, IBlittableObjectInstance
+    public class BlittableObjectInstanceJint : ObjectInstance, IBlittableObjectInstance, IObjectInstance<JsHandleJint>
     {
         private JintEngineEx _engineEx;
 
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Patch.Jint
         public JintEngineEx EngineExJint => _engineEx; 
         public Dictionary<JsValue, BlittableObjectProperty> OwnValues => _ownValues;
 
-        public IJsEngineHandle EngineHandle => _engineEx;
+        public IJsEngineHandle<JsHandleJint> EngineHandle => _engineEx;
         public bool Changed => _changed;
         public DateTime? LastModified => _lastModified;
         public string ChangeVector => _changeVector;
@@ -91,21 +91,21 @@ namespace Raven.Server.Documents.Patch.Jint
         public float? IndexScore => _doc?.IndexScore;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetOrCreate(string key)
+        public JsHandleJint GetOrCreate(string key)
         {
-            return new JsHandle(GetOrCreateJint(key));
+            return new JsHandleJint(GetOrCreateJint(key));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle GetOwnPropertyJs(string propertyName)
+        public JsHandleJint GetOwnPropertyJs(string propertyName)
         {
-            return new JsHandle(GetOwnPropertyJsJint(propertyName));
+            return new JsHandleJint(GetOwnPropertyJsJint(propertyName));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public JsHandle SetOwnProperty(string propertyName, JsHandle jsValue, bool toReturnCopy = true)
+        public JsHandleJint SetOwnProperty(string propertyName, JsHandleJint jsValue, bool toReturnCopy = true)
         {
-            return new JsHandle(Set(propertyName, jsValue.Jint.Item, this));
+            return new JsHandleJint(Set(propertyName, jsValue.Item, this));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,12 +120,12 @@ namespace Raven.Server.Documents.Patch.Jint
             _parent?.MarkChanged();
         }
 
-        public JsHandle CreateJsHandle(bool keepAlive = false)
+        public JsHandleJint CreateJsHandle(bool keepAlive = false)
         {
-            return new JsHandle(this);
+            return new JsHandleJint(this);
         }
         
-        public bool TryGetValue(string propertyName, out IBlittableObjectProperty value, out bool isDeleted)
+        public bool TryGetValue(string propertyName, out IBlittableObjectProperty<JsHandleJint> value, out bool isDeleted)
         {
             value = null;
             isDeleted = _deletes?.Contains(propertyName) == true;
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
-        public sealed class BlittableObjectProperty : PropertyDescriptor, IBlittableObjectProperty
+        public sealed class BlittableObjectProperty : PropertyDescriptor, IBlittableObjectProperty<JsHandleJint>
         {
             private readonly BlittableObjectInstanceJint _parent;
             private readonly string _property;
@@ -328,7 +328,7 @@ namespace Raven.Server.Documents.Patch.Jint
             }
 
             public bool Changed => _changed;
-            public JsHandle ValueHandle => new JsHandle(CustomValue);
+            public JsHandleJint ValueHandle => new JsHandleJint(CustomValue);
             
             public void Dispose()
             {}
@@ -456,7 +456,7 @@ namespace Raven.Server.Documents.Patch.Jint
             string changeVector) : base(engine)
         {
             //_engine = engine;
-            _engineEx = (JintEngineEx)engine;
+          //  _engineEx = (JintEngineEx)engine;
             _parent = parent;
             blittable.NoCache = true;
             _lastModified = lastModified;

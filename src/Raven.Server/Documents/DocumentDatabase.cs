@@ -227,20 +227,6 @@ namespace Raven.Server.Documents
 
         public RavenConfiguration Configuration { get; }
 
-        public IJavaScriptOptions JsOptions
-        {
-            get
-            {
-                return GetJsOptions(Configuration);
-            }
-        }
-
-        public static IJavaScriptOptions GetJsOptions(RavenConfiguration configuration)
-        {
-            var jsOptions = new IndexesStatic.JavaScriptOptions(configuration);
-            return jsOptions;
-        }
-
         public QueryRunner QueryRunner { get; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
