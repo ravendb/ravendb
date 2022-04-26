@@ -35,5 +35,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedPullReplicationHandlerProcessorForRegisterHubAccess(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET")]
+        public async Task ListHubAccess()
+        {
+            using (var processor = new ShardedPullReplicationHandlerProcessorForGetListHubAccess(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
