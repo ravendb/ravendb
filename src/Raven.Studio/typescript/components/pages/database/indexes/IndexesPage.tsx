@@ -675,7 +675,118 @@ export function IndexesPage(props: IndexesPageProps) {
                 <IndexFilterDescription filter={filter} indexes={getAllIndexes(groups, replacements)} />
             </div>
             <div className="flex-grow scroll js-scroll-container">
-                {groups.map((group) => {
+                <div className="indexes-list">
+                    <h2 className="on-base-background">Index group name</h2>
+                    <div className="index-item">
+                        <div className="index-header">
+                            <div className="flex-horizontal">
+                                <div className="checkbox">
+                                    <input type="checkbox" className="styled" /><label></label>
+                                </div>
+                                <h3 className="index-name flex-grow"><a href="" title="Companies/StockPrices/TradeVolumeByMonth">Companies/StockPrices/TradeVolumeByMonth</a></h3>                                
+                            </div>
+
+                            <div className="actions">
+                                <div className="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div className="btn-group properties-value">
+                                        <button type="button" className="btn btn-default" data-toggle="dropdown" data-bind="">Set State <span className="caret"></span> </button>
+                                        <ul className="dropdown-menu">
+                                            <li data-bind="visible: canBeEnabled()"><a href="#" title="Enable indexing on ALL cluster nodes"><i className="icon-play"></i><span>Enable indexing</span></a></li>
+                                            <li data-bind="visible: canBeDisabled()"><a href="#" title="Disable indexing on ALL cluster nodes"><i className="icon-cancel"></i><span>Disable indexing</span></a></li>
+                                            <li data-bind="visible: canBePaused()"><a href="#" className="text-warning" title="Pause until restart"><i className="icon-pause"></i><span>Pause indexing until restart</span></a></li>
+                                            <li data-bind="visible: canBeResumed()"><a href="#" className="text-success" title="Resume indexing"><i className="icon-play"></i><span>Resume indexing</span></a></li>
+                                        </ul>
+                                    </div>
+                                    <div className="btn-group" role="group">
+                                        <a className="btn btn-default" href="#databases/query/index/Companicon-timeseriesies%2FStockPrices%2FTradeVolumeByMonth?&amp;database=asdasd"><i className="icon-search"></i><span>Query</span></a>
+                                        <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span className="caret"></span> <span className="sr-only">Toggle Dropdown</span></button>
+                                        <ul className="dropdown-menu">
+                                            <li><a href="#databases/indexes/terms/Companies%2FStockPrices%2FTradeVolumeByMonth?&amp;database=asdasd"><i className="icon-terms"></i> Terms</a></li>
+                                        </ul>
+                                    </div>
+                                    <div className="btn-group" role="group">
+                                        <a className="btn btn-default" href="#databases/indexes/edit/Companies%2FStockPrices%2FTradeVolumeByMonth?&amp;database=asdasd" title="Edit index"><i className="icon-edit"></i></a>
+                                    </div>
+                                    <div className="btn-group" role="group">
+                                        <button className="btn btn-warning" type="button" title="Reset index (rebuild)"><i className="icon-reset-index"></i></button>
+                                        <button className="btn btn-danger" title="Delete the index"><i className="icon-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="">
+                            <div className="index-details">
+                                <div className="index-detail-item">
+                                    <i className="icon-map-reduce" /> MapReduce
+                                </div>
+                                <div className="index-detail-item">
+                                    <i className="icon-search" /> Lucene
+                                </div>
+                                <div className="index-detail-item">
+                                    <i className="icon-documents" /> Documents
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div className="index-distribution">
+                            <div className="distribution-legend">
+                                <div className="top"></div>
+                                <div className="node"><i className="icon-node" /> Node </div>
+                            </div>
+                            <div className="distribution-summary">
+                                <div className="top">
+                                    <i className="icon-sum" />
+                                </div>
+                            </div>
+                            <div className="distribution-item">
+                                <div className="top shard">1</div>
+                                <div className="node">A</div>
+                                <div className="entries">A</div>
+                                <div className="state">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+
+                            <div className="distribution-item">
+                                <div className="top shard">1</div>
+                                <div className="node">A</div>
+                                <div className="entries">A</div>
+                                <div className="state">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+
+                            <div className="distribution-item">
+                                <div className="top shard">1</div>
+                                <div className="node">A</div>
+                                <div className="entries">A</div>
+                                <div className="state">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+
+                            <div className="distribution-item">
+                                <div className="top shard">1</div>
+                                <div className="node">A</div>
+                                <div className="entries">A</div>
+                                <div className="state">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {groups.map(group => {
                     return (
                         <div key={"group-" + group.name}>
                             <h2 className="on-base-background" title={"Collection: " + group.name}>

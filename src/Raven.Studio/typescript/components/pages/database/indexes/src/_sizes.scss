@@ -1,0 +1,198 @@
+@use "sass:math";
+
+$global-easing: cubic-bezier(0, 0.5, 0.5, 1);
+$global-easing-in-out: cubic-bezier(0.6, 0, 0.6, 1);
+$global-easing-out: cubic-bezier(0.5, 0, 1, 0.5);
+
+$gutter: 30px;
+$gutter-ratio: 1.6180;
+$gutter-md: $gutter * $gutter-ratio;
+$gutter-lg: $gutter-md * $gutter-ratio;
+$gutter-xl: $gutter-lg * $gutter-ratio;
+$gutter-sm: math.div($gutter, $gutter-ratio);
+$gutter-xs: math.div($gutter-sm, $gutter-ratio);
+$gutter-xxs: math.div($gutter-xs, $gutter-ratio);
+
+$gutters: (
+    xxs: $gutter-xxs,
+    xs: $gutter-xs,
+    sm: $gutter-sm,
+    nr: $gutter,
+    md: $gutter-md,
+    lg: $gutter-lg,
+    xl: $gutter-xl
+);
+
+$screen-xs: 480px !default;
+$screen-xs-min: $screen-xs !default;
+$screen-sm: 768px; $screen-sm-min: $screen-sm !default;
+$screen-md: 992px; $screen-md-min: $screen-md !default;
+$screen-lg: 1200px; $screen-lg-min: $screen-lg !default;
+$screen-xs-max: ($screen-sm-min - 1) !default; $screen-sm-max: ($screen-md-min - 1) !default; $screen-md-max: ($screen-lg-min - 1) !default;
+
+
+@mixin padding {
+    padding: $gutter-sm;
+
+    @media (min-width: $screen-sm) {
+        padding: $gutter;
+    }   
+}
+
+@mixin padding-sm {
+    padding: $gutter-sm;
+        
+    @media (min-width: $screen-sm) {
+        padding: $gutter-sm;
+    }
+}
+
+@mixin padding-lg {
+    padding: $gutter;
+    @media (min-width: $screen-sm) {
+        padding: $gutter-lg;
+    }
+}
+
+
+$directions: (
+    'top',
+    'right',
+    'bottom',
+    'left'
+);
+
+.nomargin {
+    margin: 0 !important;
+}
+
+.margin {
+    margin: math.div($gutter, $gutter-ratio);
+
+    @each $name, $value in $gutters {
+        &.margin-#{$name} {
+            margin: math.div($value, $gutter-ratio);
+        }
+    }
+
+    @media (min-width: $screen-sm) {
+        margin: $gutter;
+
+        @each $name, $value in $gutters {
+            &.margin-#{$name} {
+                margin: $value;
+            }
+        }
+    }
+}
+
+.no-padding {
+    padding: 0 !important;
+}
+
+.padding {
+    padding: math.div($gutter, $gutter-ratio);
+
+    @each $name, $value in $gutters {
+        &.padding-#{$name} {
+            padding: math.div($value, $gutter-ratio);
+        }
+    }
+
+    @media (min-width: $screen-sm) {
+        padding: $gutter;
+
+        @each $name, $value in $gutters {
+            &.padding-#{$name} {
+                padding: $value;
+            }
+        }
+    }
+}
+
+@each $direction in $directions {
+    .margin-#{$direction} {
+        margin-#{$direction}: math.div($gutter, $gutter-ratio);
+
+        @media (min-width: $screen-sm) {
+            margin-#{$direction}: $gutter;
+        }
+    }
+
+    @each $name, $value in $gutters {
+        .margin-#{$direction}-#{$name} {
+
+            margin-#{$direction}: math.div($value, $gutter-ratio);
+
+            @media (min-width: $screen-sm) {
+                margin-#{$direction}: $value;
+            }
+        }
+    }
+}
+
+@each $direction in $directions {
+    .padding-#{$direction} {
+        padding-#{$direction}: math.div($gutter, $gutter-ratio);
+
+        @media (min-width: $screen-sm) {
+            padding-#{$direction}: $gutter;
+        }
+    }
+
+    @each $name, $value in $gutters {
+        .padding-#{$direction}-#{$name} {
+            padding-#{$direction}: math.div($value, $gutter-ratio);
+
+            @media (min-width: $screen-sm) {
+                padding-#{$direction}: $value;
+            }
+        }
+    }
+}
+
+.flex-vertical, .flex-horizontal {
+    display: flex;
+}
+
+.flex-horizontal-sm {
+    @media (min-width: $screen-sm) {
+        display: flex;
+    }
+}
+
+.flex-vertical {
+    flex-direction: column;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+.flex-grow-sm {
+    flex-grow: math.div(1, $gutter-ratio);
+}
+
+.flex-grow {
+    flex-grow: 1;
+}
+
+.flex-grow-lg {
+    flex-grow: $gutter-ratio;
+}
+
+.flex-noshrink {
+    flex-shrink: 0;
+}
+
+.flex-center {
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-self-center {
+    align-self: center;
+}
+
+.flex-justify-end {
+    justify-content: flex-end;
+}
