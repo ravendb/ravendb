@@ -343,7 +343,7 @@ namespace Raven.Server.Web
             return raw;
         }
 
-        protected long? GetLongFromHeaders(string name)
+        public virtual long? GetLongFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];
             if (headers.Count == 0)

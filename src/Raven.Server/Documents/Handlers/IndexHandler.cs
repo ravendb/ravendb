@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Terms()
         {
-            using (var processor = new IndexHandlerProcessorForTerms(this, token: CreateTimeLimitedOperationToken(), existingResultEtag: GetLongFromHeaders("If-None-Match")))
+            using (var processor = new IndexHandlerProcessorForTerms(this))
                 await processor.ExecuteAsync();
         }
 
