@@ -147,7 +147,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanPerformDynamicQueryUsingClientLuceneQuery(Options options)
         {
             var blogOne = new Blog
@@ -192,7 +192,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery(Options options)
         {
             var blogOne = new Blog
