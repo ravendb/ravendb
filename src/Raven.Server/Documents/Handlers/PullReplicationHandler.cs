@@ -6,9 +6,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -31,28 +29,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task UnregisterHubAccess()
         {
-            var hub = GetStringQueryString("name", true);
-            var thumbprint = GetStringQueryString("thumbprint", true);
-
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var command = new UnregisterReplicationHubAccessCommand(Database.Name, hub, thumbprint, GetRaftRequestIdFromQuery());
-                var result = await Server.ServerStore.SendToLeaderAsync(command);
-                await WaitForIndexToBeAppliedAsync(context, result.Index);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(ReplicationHubAccessResponse.RaftCommandIndex));
-                    writer.WriteInteger(result.Index);
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new PullReplicationHandlerProcessorForUnregisterHubAccess(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET", AuthorizationStatus.DatabaseAdmin)]
