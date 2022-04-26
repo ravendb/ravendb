@@ -8,7 +8,10 @@
     </aside>
     <nav class="navbar">
         <div class="navbar-header">
-            <a class="navbar-brand" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
+            <a class="navbar-brand" data-bind="attr: { href: appUrls.serverDashboard }">
+                <img src="../../Content/img/ravendb_logo.svg" class="main-logo" />
+                <i class="icon-raven"></i>
+            </a>
         </div>
         <div id="navbar">
             <div class="server-environment" data-bind="if: serverEnvironment, visible: serverEnvironment">
