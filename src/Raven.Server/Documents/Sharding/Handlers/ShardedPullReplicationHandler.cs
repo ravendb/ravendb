@@ -42,5 +42,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedPullReplicationHandlerProcessorForGetListHubAccess(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE")]
+        public async Task UnregisterHubAccess()
+        {
+            using (var processor = new ShardedPullReplicationHandlerProcessorForUnregisterHubAccess(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
