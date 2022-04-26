@@ -45,7 +45,7 @@ namespace Raven.Server.Config.Categories
         
         [Description("The number of duplicate attachments that should be tracked for de-duplication per outgoing replication connection.")]
         [DefaultValue(16*1024)]
-        [ConfigurationEntry("Replication.AttachmentDeduplicationBufferSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int AttachmentDeduplicationBufferSize { get; set; }
+        [ConfigurationEntry("Replication.MaxNumberOfAttachmentsTrackedForDeduplication", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxNumberOfAttachmentsTrackedForDeduplication { get; set; }
     }
 }
