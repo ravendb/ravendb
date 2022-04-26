@@ -1,3 +1,63 @@
-.indexes {
-    // TODO:
+@use "src/variables";
+@use "src/colors";
+@use "src/sizes";
+
+.indexes-list {
+    .index-item {
+        background-color: colors.$gray-900;
+
+        .index-header {
+            background-color: colors.$gray-800;
+            padding: sizes.$gutter-sm;
+            display: flex;
+            align-items: center;
+
+            .actions {
+                flex-grow: 1;
+            }
+        }
+
+        .index-details {
+            padding: sizes.$gutter-sm;
+        }
+
+        .index-distribution {
+            padding: sizes.$gutter-sm;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, 100px);
+            grid-gap: sizes.$gutter-xs;
+
+
+            .distribution-legend, .distribution-summary, .distribution-item {
+
+                & > div {
+                    height: 30px;
+
+                    &:first-of-type {
+                        height: 50px;
+                    }
+
+                    &:last-of-type {
+                        height: 75px;
+                    }
+                }
+            }
+
+            .distribution-summary, .distribution-item {
+                text-align: center;
+            }
+
+            .distribution-item {
+                max-width: 100px;
+                background-color: colors.$gray-800;
+                border-radius: sizes.$gutter-xs;
+
+                & > div {
+                    & + div {
+                        border-top: 2px solid colors.$gray-900;
+                    }
+                }
+            }
+        }
+    }
 }

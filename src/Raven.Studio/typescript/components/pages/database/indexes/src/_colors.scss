@@ -1,0 +1,83 @@
+//== Colors
+//
+
+$white:     #f0f4f6;
+$gray-100:  #c4ced7;
+$gray-200:  #98a7b7;
+$gray-300:  #7e8c9e;
+$gray-400:  #637085;
+$gray-500:  #4f5b6d;
+$gray-600:  #3b4654;
+$gray-700:  #333d48;
+$gray-800:  #2b333b;
+$gray-900:  #262a30;
+$black:     #22252b;
+
+$gray-base:         $black; 
+$gray-base-light:   $gray-900; 
+$gray-darker:       $gray-800;
+$gray-dark:         $gray-600;
+$gray:              $gray-400;
+$gray-light:        $gray-200;
+$gray-lighter:      $white;
+
+$brand-primary-dark: #b21557;
+$brand-primary: #d7325a;
+$brand-primary-light: #ff6482;
+
+$color-1: #f06582;
+$color-1-1: #f3766e;
+$color-1-2: #f38a66;
+$color-1-3: #eea361;
+$color-2: #f0b362;
+$color-2-1: #f0c254;
+$color-2-2: #edcd51;
+$color-2-3: #c4d451;
+$color-3: #7bd85d;
+$color-3-1: #51d27a;
+$color-3-2: #37c4ac;
+$color-3-3: #2fb7d2;
+$color-4: #2f9ef3;
+$color-4-1: #5186ee;
+$color-4-2: #7069ee;
+$color-4-3: #8361d4;
+$color-5: #945ab5;
+$color-5-1: #bf569f;
+$color-5-2: #d85b9a;
+$color-5-3: #ed558c;
+
+$brand-ravendb: #d7325a;
+$brand-cloud: #37c4ac !default;
+$brand-hr: #f78831 !default;
+
+$color-support-free: $color-4;
+$color-support-professional: $color-4-2;
+$color-support-production: $color-5;
+
+$brand-primary-dark: darken($color-3-2 , 5%);
+$brand-primary: $color-3-2;
+$brand-primary-light: lighten($color-3-2 , 5%);
+
+$brand-success-dark: adjust-color($color-3, $lightness: -13%, $saturation: -20%);
+$brand-success: $color-3;
+$brand-success-light: adjust-color($color-3, $lightness: 13%, $saturation: 20%);
+
+$brand-info-dark: adjust-color($color-4, $lightness: -13%, $saturation: -20%);
+$brand-info: $color-4;
+$brand-info-light: adjust-color($color-4, $lightness: 13%, $saturation: 20%);
+
+$brand-warning-dark: adjust-color($color-2, $lightness: -13%, $saturation: -20%);
+$brand-warning: $color-2;
+$brand-warning-light: adjust-color($color-2, $lightness: 13%, $saturation: 20%);
+
+$brand-danger-dark: adjust-color($color-1, $lightness: -13%, $saturation: -20%); 
+$brand-danger: $color-1;
+$brand-danger-light: adjust-color($color-1, $lightness: 13%, $saturation: 20%);
+
+$colors: (
+    "primary": $brand-primary, 
+    "success": $brand-success,
+    "info": $brand-info,
+    "warning": $brand-warning,
+    "danger": $brand-danger
+);
