@@ -58,23 +58,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ListHubAccess()
         {
-            var hub = GetStringQueryString("name", true);
-            var filter = GetStringQueryString("filter", false);
-            int pageSize = GetPageSize();
-            var start = GetStart();
-
-            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var results = Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, Database.Name, hub, filter, start, pageSize);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray(nameof(ReplicationHubAccessResult.Results), results);
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new PullReplicationHandlerProcessorForGetListHubAccess(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks/sink-pull-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
