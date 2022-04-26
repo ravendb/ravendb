@@ -43,7 +43,7 @@ namespace Raven.Server.ServerWide.Commands
             if (index < 0)
                 throw new InvalidDataException("Index must be a non-negative number");
             if (ShardHelper.IsShardedName(database))
-                throw new ArgumentException($"The sharded database '{database}' is not allow");
+                throw new ArgumentException($"{GetType()} cannot accept shards as a database. This command use the _shard_ '{database}' which is not allow here.");
 
             Key = key;
             Index = index;
