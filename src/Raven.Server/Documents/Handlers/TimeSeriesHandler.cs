@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
@@ -325,52 +324,6 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new ConfigurationHandlerProcessorForPostTimeSeriesConfiguration(this))
                 await processor.ExecuteAsync();
-        }
-
-        [RavenAction("/databases/*/admin/timeseries/policy", "PUT", AuthorizationStatus.DatabaseAdmin)]
-        public async Task AddTimeSeriesPolicy()
-        {
-            await ServerStore.EnsureNotPassiveAsync();
-            var collection = GetStringQueryString("collection", required: true);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "time-series policy config"))
-            {
-                var policy = JsonDeserializationCluster.TimeSeriesPolicy(json);
-
-                TimeSeriesConfiguration current;
-                using (context.OpenReadTransaction())
-                {
-                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
-                }
-
-                current.Collections ??= new Dictionary<string, TimeSeriesCollectionConfiguration>(StringComparer.OrdinalIgnoreCase);
-
-                if (current.Collections.ContainsKey(collection) == false)
-                    current.Collections[collection] = new TimeSeriesCollectionConfiguration();
-
-                if (RawTimeSeriesPolicy.IsRaw(policy))
-                    current.Collections[collection].RawPolicy = new RawTimeSeriesPolicy(policy.RetentionTime);
-                else
-                {
-                    current.Collections[collection].Policies ??= new List<TimeSeriesPolicy>();
-                    var existing = current.Collections[collection].GetPolicyByName(policy.Name, out _);
-                    if (existing != null)
-                        current.Collections[collection].Policies.Remove(existing);
-
-                    current.Collections[collection].Policies.Add(policy);
-                }
-
-                current.InitializeRollupAndRetention();
-
-                ServerStore.LicenseManager.AssertCanAddTimeSeriesRollupsAndRetention(current);
-
-                var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
-                var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
-
-                await WaitForIndexToBeAppliedAsync(context, index);
-                await SendConfigurationResponseAsync(context, index);
-            }
         }
 
         [RavenAction("/databases/*/admin/timeseries/policy", "DELETE", AuthorizationStatus.DatabaseAdmin)]
