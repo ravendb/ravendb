@@ -281,6 +281,7 @@ namespace Raven.Server.ServerWide
             {
                 [nameof(DatabaseRecord.Sharding.ShardBucketRanges)] = null,
                 [nameof(DatabaseRecord.Sharding.Shards)] = null,
+                [nameof(DatabaseRecord.Sharding.Prefixed)] = null,
             };
             
             _record.Modifications = new DynamicJsonValue(_record)

@@ -970,7 +970,8 @@ namespace Raven.Server.Documents.Replication
                 if (handler is not OutgoingMigrationReplicationHandler migrationHandler)
                     continue;
 
-                if (newRecord.Sharding.ShardBucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
+                if (newRecord.Sharding == null ||
+                    newRecord.Sharding.ShardBucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
                 {
                     RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
                     continue;
