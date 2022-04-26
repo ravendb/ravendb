@@ -26,7 +26,7 @@ public static class CoraxQueryBuilder
 
     public static IQueryMatch BuildQuery(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context,
         QueryMetadata metadata,
-        Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, Dictionary<string, object> highlightingTerms = null,
+        Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         List<string> buildSteps = null, int take = TakeAll)
     {
         using (CultureHelper.EnsureInvariantCulture())
@@ -64,7 +64,7 @@ public static class CoraxQueryBuilder
         QueryExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping,
         FieldsToFetch queryMapping, bool exact = false, int? proximity = null, bool secondary = false,
-        List<string> buildSteps = null, Dictionary<string, object> highlightingTerms = null, int take = TakeAll)
+        List<string> buildSteps = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
@@ -144,6 +144,7 @@ public static class CoraxQueryBuilder
                         right = QueryBuilderHelper.EvaluateMethod(query, metadata, serverContext, documentsContext, rme, ref parameters);
                     }
 
+
                     var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, where.Left, metadata);
 
                     exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
@@ -162,7 +163,15 @@ public static class CoraxQueryBuilder
                         return rawMatch;
 
                     }
-                    
+
+                    CoraxHighlightingTermIndex highlightingTerm = null;
+                    bool? isHighlighting = highlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
+                    if (isHighlighting.HasValue && isHighlighting.Value == false)
+                    {
+                        highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
+                        highlightingTerms.TryAdd(fieldName, highlightingTerm);
+                    }
+
                     var match = valueType switch
                     {
                         ValueTokenType.Double => indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, (double)value, operation, take),
@@ -175,8 +184,10 @@ public static class CoraxQueryBuilder
                         _ => null
                     };
 
-                    if (valueType is ValueTokenType.Double or ValueTokenType.Long)
-                        highlightingTerms?.TryAdd(fieldName, value);
+                    if (highlightingTerm != null && valueType is ValueTokenType.Double or ValueTokenType.Long)
+                    {
+                        highlightingTerm.Values = value.ToString();
+                    }                       
                     
                     if (match is null)
                         QueryBuilderHelper.ThrowUnhandledValueTokenType(valueType);
@@ -186,7 +197,8 @@ public static class CoraxQueryBuilder
                     IQueryMatch HandleStringUnaryMatch()
                     {
                         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-                        highlightingTerms?.TryAdd(fieldName, valueAsString);
+                        if (highlightingTerm != null)
+                            highlightingTerm.Values = valueAsString;
                                                 
                         if (exact && metadata.IsDynamic)
                         {
@@ -236,10 +248,23 @@ public static class CoraxQueryBuilder
             buildSteps?.Add($"In: {expression.Type} - {ie}");
 
             var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, ie.Source, metadata);
+            
+            CoraxHighlightingTermIndex highlightingTerm = null;
+            if (highlightingTerms != null)
+            {
+                highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
+                highlightingTerms[fieldName] = highlightingTerm;
+            }
+
             exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
             if (exact && metadata.IsDynamic)
             {
                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
+                if (highlightingTerms != null)
+                {
+                    highlightingTerm.DynamicFieldName = fieldName;
+                    highlightingTerms[fieldName] = highlightingTerm;
+                }
             }
 
             var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
@@ -255,7 +280,9 @@ public static class CoraxQueryBuilder
             {
                 matches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
             }
-            highlightingTerms?.TryAdd(fieldName, matches);
+
+            if (highlightingTerm != null )
+                highlightingTerm.Values = matches;
 
             return (isNegated, scoreFunction) switch
             {
@@ -310,7 +337,7 @@ public static class CoraxQueryBuilder
         MethodExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping,
         FieldsToFetch queryMapping, int? proximity = null, bool secondary = false,
-        List<string> buildSteps = null, Dictionary<string, object> highlightingTerms = null, int take = TakeAll)
+        List<string> buildSteps = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
@@ -321,7 +348,7 @@ public static class CoraxQueryBuilder
         BlittableJsonReaderObject parameters,
         bool exact,
         BetweenExpression be, bool secondary, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
-        Dictionary<string, object> highlightingTerms = null,
+        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
@@ -342,7 +369,11 @@ public static class CoraxQueryBuilder
 
         if ((valueFirstType, valueSecondType) is (ValueTokenType.Double, ValueTokenType.Double) or (ValueTokenType.Long, ValueTokenType.Long))
         {
-            highlightingTerms?.TryAdd(fieldName, (valueFirst, valueSecond));
+            if (highlightingTerms != null)
+            {
+                var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
+                highlightingTerms[fieldName] = highlightingTerm;
+            }
         }
 
         return scoreFunction is NullScoreFunction
@@ -354,7 +385,13 @@ public static class CoraxQueryBuilder
             exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
             var valueFirstAsString = QueryBuilderHelper.CoraxGetValueAsString(valueFirst);
             var valueSecondAsString = QueryBuilderHelper.CoraxGetValueAsString(valueSecond);
-            highlightingTerms?.TryAdd(fieldName, (valueFirstAsString, valueSecondAsString));
+
+            if (highlightingTerms != null)
+            {
+                var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
+                highlightingTerms[fieldName] = highlightingTerm;
+            }
+
             return indexSearcher.Between(indexSearcher.AllEntries(), fieldId, valueFirstAsString, valueSecondAsString, isNegated, take);
         }
     }
@@ -371,57 +408,77 @@ public static class CoraxQueryBuilder
     private static IQueryMatch HandleStartsWith<TScoreFunction>(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata,
         Index index,
         BlittableJsonReaderObject parameters, bool exact, bool isNegated, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
-        Dictionary<string, object> highlightingTerms = null,
+        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
         var (value, valueType) = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
-
         if (valueType != ValueTokenType.String)
             QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+        CoraxHighlightingTermIndex highlightingTerm = null;
+        if (highlightingTerms != null)
+        {
+            highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = valueAsString };
+            highlightingTerms[fieldName] = highlightingTerm;
+        }
+
         exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
-
         if (exact && metadata.IsDynamic)
+        {
             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+            if (highlightingTerms != null)
+            {
+                highlightingTerm.DynamicFieldName = fieldName;
+                highlightingTerms[fieldName] = highlightingTerm;
+            }
+        }            
 
-        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
-        highlightingTerms?.TryAdd(fieldName, valueAsString);
-        
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);        
         return indexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction, isNegated, fieldId);
     }
 
     private static IQueryMatch HandleEndsWith<TScoreFunction>(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, bool exact, bool isNegated, TScoreFunction scoreFunction, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
-        Dictionary<string, object> highlightingTerms = null,
+        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
         var (value, valueType) = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
-
         if (valueType != ValueTokenType.String)
             QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+
+        CoraxHighlightingTermIndex highlightingTerm = null;
+        if (highlightingTerms != null)
+        {
+            highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = valueAsString };
+            highlightingTerms[fieldName] = highlightingTerm;
+        }
+
         exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
-
         if (exact && metadata.IsDynamic)
+        {
             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
-
+            if (highlightingTerms != null)
+            {
+                highlightingTerm.DynamicFieldName = fieldName;
+                highlightingTerms[fieldName] = highlightingTerm;
+            }
+        }
+           
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
-
-        highlightingTerms?.TryAdd(fieldName, valueAsString);
-
         return indexSearcher.EndsWithQuery(fieldName, valueAsString, scoreFunction, isNegated, fieldId);
     }
 
     private static IQueryMatch HandleBoost(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context, Query query,
         MethodExpression expression, QueryMetadata metadata, Index index,
         BlittableJsonReaderObject parameters, QueryBuilderFactories factories, bool exact, bool isNegated, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
-        Dictionary<string, object> highlightingTerms = null,
+        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll,
         List<string> buildSteps = null)
     {
@@ -473,7 +530,7 @@ public static class CoraxQueryBuilder
     private static IQueryMatch HandleSearch<TScoreFunction>(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata,
         BlittableJsonReaderObject parameters, int? proximity, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping,
         Index index,
-        Dictionary<string, object> highlightingTerms = null,
+        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
@@ -495,19 +552,35 @@ public static class CoraxQueryBuilder
                 throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
         }
 
-        var (value, valueType) = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
+        var (value, valueType) = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String)
             QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
         Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
+        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+        if (!highlightingTerms.TryGetValue(fieldName, out var highlightingTerm))
+        {
+            highlightingTerm = new CoraxHighlightingTermIndex
+            {
+                FieldName = fieldName,
+                Values = valueAsString,
+            };
+            highlightingTerms?.TryAdd(fieldName, highlightingTerm);
+        }
+     
         if (metadata.IsDynamic && isDocumentId == false)
+        {
             fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+            
+            // We now add the dynamic field too. 
+            highlightingTerm.DynamicFieldName = fieldName;
+            highlightingTerms?.TryAdd(fieldName, highlightingTerm);
+        }            
 
         var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
 
-        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         if (proximity.HasValue)
         {
             throw new NotSupportedException($"{nameof(Corax)} doesn't support proximity over search() method");
@@ -521,8 +594,6 @@ public static class CoraxQueryBuilder
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
 
             var op = fieldExpression.Compound[0];
-
-
             if (string.Equals("AND", op.Value, StringComparison.OrdinalIgnoreCase))
                 @operator = Constants.Search.Operator.And;
             else if (string.Equals("OR", op.Value, StringComparison.OrdinalIgnoreCase))
@@ -530,8 +601,6 @@ public static class CoraxQueryBuilder
             else
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
         }
-
-        highlightingTerms?.TryAdd(fieldName, valueAsString);
         
         return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated);
     }

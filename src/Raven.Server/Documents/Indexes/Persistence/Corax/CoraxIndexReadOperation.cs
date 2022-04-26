@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Corax;
@@ -11,6 +12,7 @@ using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
@@ -70,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             IQueryMatch queryMatch;
-            Dictionary<string, object> highlightingTerms = query.Metadata.HasHighlightings ? new() : null;
+            Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = query.Metadata.HasHighlightings ? new() : null;
             using (coraxScope?.Start())
             {
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
@@ -96,15 +98,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             while (true)
             {
-                if (hasHighlights)
-                {
-                    foreach (var highlightings in query.Metadata.Highlightings)
-                    {
-                        var fieldName = highlightings.Field.Value;
-                        var fieldId = _fieldMappings.GetByFieldName(fieldName);
-                    }
-                }
-
                 token.ThrowIfCancellationRequested();
                 int i = queryScope.RecordAlreadyPagedItemsInPreviousPage(ids.AsSpan(), queryMatch, totalResults, out var read, ref queryStart, token);
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
@@ -189,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     if (query.Metadata.HasHighlightings)
                     {
-                        using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
+                        using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Fill)))
                         {
                             highlightings = new();
 
@@ -197,15 +190,49 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             // to retrieve the fields and perform the transformations required by Highlightings. 
                             foreach (var current in query.Metadata.Highlightings)
                             {
-                                var fieldName = current.Field.Value;
-                                if (highlightingTerms.TryGetValue(fieldName, out var value) == false)
+                                // We get the actual highlight description. 
+                                if (highlightingTerms.TryGetValue(current.Field.Value, out var fieldDescription) == false)
                                     continue;
 
-                                //Highlight
-                            }
-                        }
+                                // We get the field binding to ensure that we are running the analyzer to find the actual tokens.
+                                var fieldName = fieldDescription.DynamicFieldName != null ? fieldDescription.DynamicFieldName : fieldDescription.FieldName;
+                                if (_fieldMappings.TryGetByFieldName(fieldName, out var fieldBinding) == false)
+                                    continue;
 
-                        throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Highlightings)} yet.");
+                                // We will get the actual tokens dictionary for this field. If it exists we get it immediately, if not we create
+                                if (!highlightings.TryGetValue(fieldDescription.FieldName, out var tokensDictionary))
+                                {
+                                    tokensDictionary = new(StringComparer.OrdinalIgnoreCase);
+                                    highlightings[fieldDescription.FieldName] = tokensDictionary;
+                                }
+
+                                List<string> fragments = new();
+                                
+                                // We need to get the actual field, not the dynamic field. 
+                                int propIdx = document.Data.GetPropertyIndex(fieldDescription.FieldName);
+                                BlittableJsonReaderObject.PropertyDetails property = default;
+                                document.Data.GetPropertyByIndex(propIdx, ref property);
+
+                                if (property.Token == BlittableJsonToken.String)
+                                {
+                                    var fieldValue = ((LazyStringValue)property.Value).ToString();
+                                    ProcessHighlightings(current, fieldDescription, fieldValue, fragments, current.FragmentCount);
+                                }
+                                else if (property.Token.HasFlag(BlittableJsonToken.StartArray))
+                                {
+                                    int maxFragments = current.FragmentCount;
+                                    foreach (var item in ((BlittableJsonReaderArray)property.Value).Items)
+                                    {
+                                        var fieldValue = item.ToString();
+                                        maxFragments -= ProcessHighlightings(current, fieldDescription, fieldValue, fragments, maxFragments);
+                                    }
+                                }
+                                else continue;
+
+                                if (fragments.Count > 0)
+                                    tokensDictionary[document.Id] = fragments.ToArray();
+                            }                       
+                        }
                     }
 
                     if (query.Metadata.HasExplanations)
@@ -222,11 +249,109 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             ArrayPool<long>.Shared.Return(ids);
         }
 
-        private Dictionary<string, (string[] PreTags, string[] PostTags, string Term)> _tagsPerField;
-
-        private void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context, Dictionary<string, object> highlightingTerms)
+        private static int ProcessHighlightings(HighlightingField current, CoraxHighlightingTermIndex highlightingTerm, ReadOnlySpan<char> fieldFragment, List<string> fragments, int maxFragmentCount)
         {
-            _tagsPerField = null;
+            int totalFragments = 0;
+
+            // For each potential token we are looking for, and for each token that we need to find... we will test every analyzed token
+            // and decide if we create a highlightings fragment for it or not.
+            string[] values = (string[])highlightingTerm.Values;
+            for (int i = 0; i < values.Length; i++)
+            {
+                // We have reached the amount of fragments we required.
+                if (totalFragments >= maxFragmentCount)
+                    break;
+
+                var value = values[i];
+                var preTag = highlightingTerm.GetPreTagByIndex(i);
+                var postTag = highlightingTerm.GetPostTagByIndex(i);
+
+                int currentIndex = 0;
+                while (true)
+                {
+                    // We have reached the amount of fragments we required.
+                    if (totalFragments >= maxFragmentCount)
+                        break;
+
+                    // We found an exact match in the property value.
+                    var index = fieldFragment.Slice(currentIndex)
+                                             .IndexOf(value, StringComparison.InvariantCultureIgnoreCase);
+                    if (index < 0)
+                        break;
+
+                    index += currentIndex; // Adjusting to absolute positioning
+
+                    // We will look for a whitespace before the match to start the token. 
+                    int tokenStart = fieldFragment.Slice(0, index)
+                                                  .LastIndexOf(' ');
+                    if (tokenStart < 0)
+                        tokenStart = 0;
+
+                    // We will look for a whitespace after the match to end the token. 
+                    int tokenEnd = fieldFragment.Slice(index)
+                                                .IndexOf(' ');
+                    if (tokenEnd < 0)
+                        tokenEnd = fieldFragment.Length - index;
+
+                    tokenEnd += index; // Adjusting to absolute positioning
+
+                    int highlightingLength = preTag.Length + postTag.Length + (tokenEnd - tokenStart);
+
+                    int fragmentRestLength = Math.Min(current.FragmentLength - highlightingLength, fieldFragment.Length);
+                    if (fragmentRestLength < 0)
+                        fragmentRestLength = 0;
+                    else if (fragmentRestLength != fieldFragment.Length)
+                    {
+                        // We may have a fragment we can find a space near the end. 
+                        int fragmentEnd = fieldFragment.Slice(tokenEnd)
+                                                       .LastIndexOf(' ');
+
+                        // We need to discard the space used to separate the token itself.
+                        if (fragmentEnd > 0)
+                            fragmentRestLength = tokenEnd + fragmentEnd;
+                    }
+
+                    var fragmentRest = fragmentRestLength != 0 ? fieldFragment[tokenEnd..fragmentRestLength] : string.Empty;
+                    var fragment = $"{preTag}{fieldFragment[tokenStart..tokenEnd]}{postTag}{fragmentRest}";
+                    fragments.Add(fragment);
+
+                    totalFragments++;
+                    currentIndex = tokenEnd;
+                }
+            }
+
+            return totalFragments;
+        }
+
+        private void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms)
+        {
+            foreach(var term in highlightingTerms)
+            {
+                string[] nls;
+                switch (term.Value.Values)
+                {
+                    case string s:
+                        nls = new string[] { s.TrimEnd('*').TrimStart('*') };
+                        break;
+                    case List<string> ls:
+                        nls = new string[ls.Count];
+                        for (int i = 0; i < ls.Count; i++)
+                            nls[i] = ls[i].TrimEnd('*').TrimStart('*');
+                        break;
+                    case Tuple<string, string> t2:
+                        nls = new string[] { t2.Item1.TrimEnd('*').TrimStart('*'), t2.Item2.TrimEnd('*').TrimStart('*') };
+                        break;
+                    case string[] as1:
+                        continue;
+                    default:
+                        throw new Exception("If this happens, we have a bug.");
+                }
+
+                term.Value.Values = nls;
+                term.Value.PreTags = null;
+                term.Value.PostTags = null;
+            }
+
             foreach (var highlighting in query.Metadata.Highlightings)
             {
                 var options = highlighting.GetOptions(context, query.QueryParameters);
@@ -235,26 +360,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 var numberOfPreTags = options.PreTags?.Length ?? 0;
                 var numberOfPostTags = options.PostTags?.Length ?? 0;
-
                 if (numberOfPreTags != numberOfPostTags)
                     throw new InvalidOperationException("Number of pre-tags and post-tags must match.");
 
                 if (numberOfPreTags == 0)
                     continue;
 
-                if (_tagsPerField == null)
-                    _tagsPerField = new();
-
                 var fieldName = 
                     query.Metadata.IsDynamic 
                         ? AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value)
                         : highlighting.Field.Value;
 
-                // TODO: get the terms.
-                highlightingTerms.TryGetValue(fieldName, out var term);
-                if (term is not string)
-                    throw new Exception("Term is null or list. Please change your query");
-                _tagsPerField[fieldName] = (options.PreTags, options.PostTags, term.ToString());
+                if (highlightingTerms.TryGetValue(fieldName, out var termIndex))
+                {
+                    termIndex.PreTags = options.PreTags;
+                    termIndex.PostTags = options.PostTags;
+                }
             }
         }
 

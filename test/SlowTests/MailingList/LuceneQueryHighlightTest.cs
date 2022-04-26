@@ -18,12 +18,12 @@ namespace SlowTests.MailingList
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 
         [Theory]
-        [RavenData(Q, "con cur", "con cu")]
-        [RavenData(Q, "con ency", "con cy")]
-        [RavenData(Q, "curr ency", "curr enc")]
-        [RavenData(Q, "wo rds", "wor ds")]
-        [RavenData(Q, "asymp totic", "asymp tot")]
-        [RavenData(Q, "asymp totic", "asymp tic")]
+        [RavenData(Q, "con cur", "con cu", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(Q, "con ency", "con cy", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(Q, "curr ency", "curr enc", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(Q, "wo rds", "wor ds", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(Q, "asymp totic", "asymp tot", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(Q, "asymp totic", "asymp tic", SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldReturnResultsWithHighlightsAndThrowException(Options options, string question, string goodSearchTerm, string badSearchTerm)
         {
             using (var store = GetDocumentStore(options))
