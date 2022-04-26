@@ -1293,7 +1293,8 @@ namespace Raven.Server.Commercial
                 SecurityClearance = SecurityClearance.ClusterAdmin,
                 Thumbprint = clientCert.Thumbprint,
                 PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash(),
-                NotAfter = clientCert.NotAfter
+                NotAfter = clientCert.NotAfter,
+                NotBefore = clientCert.NotBefore
             };
 
             try
@@ -2102,7 +2103,8 @@ namespace Raven.Server.Commercial
                 SecurityClearance = SecurityClearance.ClusterAdmin,
                 Thumbprint = selfSignedCertificate.Thumbprint,
                 PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
-                NotAfter = selfSignedCertificate.NotAfter
+                NotAfter = selfSignedCertificate.NotAfter,
+                NotBefore = selfSignedCertificate.NotBefore
             };
 
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));

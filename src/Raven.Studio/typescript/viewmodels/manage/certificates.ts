@@ -27,6 +27,9 @@ interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefini
     expirationClass: string;
     expirationText: string;
     expirationIcon: string;
+    validFromClass: string;
+    validFromText: string;
+    validFromIcon: string;
 }
 
 class certificates extends viewModelBase {
@@ -34,9 +37,6 @@ class certificates extends viewModelBase {
     spinners = {
         processing: ko.observable<boolean>(false)
     };
-    
-    nameFilter = ko.observable<string>("");
-    clearanceFilter = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
     
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
@@ -62,6 +62,7 @@ class certificates extends viewModelBase {
     importedFileName = ko.observable<string>();
     
     newPermissionDatabaseName = ko.observable<string>();
+    canAddPermission: KnockoutComputed<boolean>;
     
     newPermissionValidationGroup: KnockoutValidationGroup = ko.validatedObservable({
         newPermissionDatabaseName: this.newPermissionDatabaseName
@@ -74,18 +75,51 @@ class certificates extends viewModelBase {
     clearanceLabelFor = certificateModel.clearanceLabelFor;
     securityClearanceTypes = certificateModel.securityClearanceTypes;
     
+    nameFilter = ko.observable<string>("");
+    
+    showAdminCertificates = ko.observable<boolean>(true);
+    showOperatorCertificates = ko.observable<boolean>(true);
+    showUserCertificates = ko.observable<boolean>(true);
+
+    showValidCertificates = ko.observable<boolean>(true);
+    showExpiredCertificates = ko.observable<boolean>(true);
+    showAboutToExpireCertificates = ko.observable<boolean>(true);
+    
+    databases = databasesManager.default.databases;
+    
+    inputDatabase = ko.observable<string>();
+    databasesToShow = ko.observableArray<string>([]); // empty means show all, no specific dbs are selected
+
+    canAddDatabase: KnockoutComputed<boolean>;
+    allDatabasesSelected: KnockoutComputed<boolean>;
+
+    hasAnyFilters: KnockoutComputed<boolean>;
+    filterAndSortDescription: KnockoutComputed<string>;
+    sortCriteria = ko.observable<string>();
+    noCertificateIsVisible: KnockoutComputed<boolean>;
+    
     constructor() {
         super();
 
         this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", 
             "deletePermission", "addNewPermission", "fileSelected", "copyThumbprint",
-            "useDatabase", "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed");
+            "useDatabase", "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed",
+            "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters");
         
         this.initObservables();
         this.initValidation();
         
         this.nameFilter.throttle(300).subscribe(() => this.filterCertificates());
-        this.clearanceFilter.subscribe(() => this.filterCertificates());
+        
+        this.showValidCertificates.subscribe(() => this.filterCertificates());
+        this.showExpiredCertificates.subscribe(() => this.filterCertificates());
+        this.showAboutToExpireCertificates.subscribe(() => this.filterCertificates());
+        
+        this.showAdminCertificates.subscribe(() => this.filterCertificates());
+        this.showOperatorCertificates.subscribe(() => this.filterCertificates());
+        this.showUserCertificates.subscribe(() => this.filterCertificates());
+        
+        this.databasesToShow.subscribe(() => this.filterCertificates());
     }
     
     activate() {
@@ -108,7 +142,9 @@ class certificates extends viewModelBase {
         super.compositionComplete();
         
         this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
-
+        
+        $('.filter-options-dropdown-container [data-toggle="tooltip"]').tooltip();
+        
         $(".js-export-certificates").tooltip({
             container: "body",
             placement: "right",
@@ -126,24 +162,55 @@ class certificates extends viewModelBase {
     
     private filterCertificates() {
         const filter = this.nameFilter().toLocaleLowerCase();
-        const clearance = this.clearanceFilter();
         
-        this.certificates().forEach(certificate => {
+        this.certificates().forEach((certificate: unifiedCertificateDefinitionWithCache) => {
+            
             const nameMatch = !certificate || certificate.Name.toLocaleLowerCase().includes(filter);
-            const clearanceMatch = !clearance || certificate.SecurityClearance === clearance;
             const thumbprintMatch = !certificate || _.some(certificate.Thumbprints, x => x.toLocaleLowerCase().includes(filter));
-            certificate.Visible((nameMatch || thumbprintMatch) && clearanceMatch);
+
+            const validMatch = !certificate || (this.showValidCertificates() && !certificate.expirationClass);
+            const expiredMatch = !certificate || (this.showExpiredCertificates() && certificate.expirationClass === "text-danger");
+            const aboutToExpireMatch = !certificate || (this.showAboutToExpireCertificates() && certificate.expirationClass === "text-warning");
+
+            const adminMatch = !certificate || (this.showAdminCertificates() && (certificate.SecurityClearance === "ClusterAdmin" || certificate.SecurityClearance === "ClusterNode"));
+            const operatorMatch = !certificate || (this.showOperatorCertificates() && certificate.SecurityClearance === "Operator");
+            const userMatch = !certificate || (this.showUserCertificates() && certificate.SecurityClearance === "ValidUser");
+            
+            const dbToShow = this.databasesToShow();
+            const dbInCertificate = Object.keys(certificate.Permissions);
+            const found = dbToShow.some(dbItem => dbInCertificate.indexOf(dbItem) >= 0);
+            
+            const dbMatch = !certificate || this.allDatabasesSelected() || found ||
+                certificate.SecurityClearance === "Operator" || certificate.SecurityClearance === "ClusterAdmin" || certificate.SecurityClearance === "ClusterNode";
+            
+            certificate.Visible((nameMatch || thumbprintMatch) &&
+                (validMatch || expiredMatch || aboutToExpireMatch) &&
+                (adminMatch || operatorMatch || userMatch) &&
+                 dbMatch);
         });
         
         const wellKnownAdminCerts = this.wellKnownAdminCerts();
         
-        if (wellKnownAdminCerts.length) {
-            const clearanceMatch = !clearance || clearance === "ClusterAdmin";
+        if (wellKnownAdminCerts.length && this.showAdminCertificates()) {
             const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(filter));
-            this.wellKnownAdminCertsVisible(thumbprintMatch && clearanceMatch);
+            this.wellKnownAdminCertsVisible(thumbprintMatch);
         } else {
             this.wellKnownAdminCertsVisible(false);
         }
+    }
+    
+    clearAllFilters() {
+        this.nameFilter("");
+
+        this.showAdminCertificates(true);
+        this.showOperatorCertificates(true);
+        this.showUserCertificates(true);
+        
+        this.showValidCertificates(true);
+        this.showExpiredCertificates(true);
+        this.showAboutToExpireCertificates(true);
+        
+        this.databasesToShow([]);
     }
     
     private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
@@ -191,6 +258,61 @@ class certificates extends viewModelBase {
         this.canReplaceServerCertificate = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
+        });
+
+        this.canAddPermission = ko.pureComputed(() => {
+            const databasePermissionToAdd = this.newPermissionDatabaseName();
+            return databasePermissionToAdd && !this.model().permissions().find(x => x.databaseName() === databasePermissionToAdd);
+        });
+        
+        this.canAddDatabase = ko.pureComputed(() => {
+            const databaseToAdd = this.inputDatabase();
+            return databaseToAdd && !this.databasesToShow().find(x => x === databaseToAdd);
+        });
+
+        this.allDatabasesSelected = ko.pureComputed(() => !this.databasesToShow().length);
+
+        this.hasAnyFilters = ko.pureComputed(() => !!this.filterAndSortDescription() || !!this.nameFilter());
+        
+        this.filterAndSortDescription = ko.pureComputed(() => {
+            const adminPart = this.showAdminCertificates() ? "Admin clearance, " : "";
+            const operatorPart = this.showOperatorCertificates() ? "Operator clearance, " : "";
+            const userPart = this.showUserCertificates() ? "User clearance, " : "";
+            
+            if (!adminPart && !operatorPart && !userPart) {
+                return `<div class="bg-warning text-warning padding padding-xs">
+                            <i class="icon-warning"></i><span>No security clearance is selected in Filter Options</span>
+                        </div>`;
+            }
+           
+            const validPart = this.showValidCertificates() ? "Valid, " : "";
+            const aboutToExpirePart = this.showAboutToExpireCertificates() ? "About to expire, " : "";
+            const expiredPart = this.showExpiredCertificates() ? "Expired, " : "";
+
+            if (!validPart && !aboutToExpirePart && !expiredPart) {
+                return `<div class="bg-warning text-warning padding padding-xs">
+                            <i class="icon-warning"></i><span>No state is selected in Filter Options</span>
+                        </div>`;
+            }
+
+            const hasAllClearance = adminPart && operatorPart && userPart;
+            const clearancePart = hasAllClearance ? "" : `<strong>Clearance</strong>: ${adminPart}${operatorPart}${userPart}`.slice(0, -2);
+            
+            const hasAllStates = validPart && aboutToExpirePart && expiredPart;
+            const statePart = hasAllStates ? "" : `<strong>State</strong>: ${validPart}${aboutToExpirePart}${expiredPart}`.slice(0, -2);
+            
+            const databases = this.databasesToShow();
+            const databasesNames = databases.map(db => ` ${db}`);
+            const databasesPart = databases.length ? `<strong>Databases</strong>: ${databasesNames}` : "";
+
+            const sortPart = this.sortCriteria() ? `<strong>Sorted by</strong>: ${this.sortCriteria()} <br />` : "";
+            
+            return `${sortPart}${clearancePart}${clearancePart ? "<span class='margin-right-sm'></span>" : ""}${statePart}${clearancePart || statePart ? "<br />" : ""}${databasesPart}`;
+        });
+        
+        this.noCertificateIsVisible = ko.pureComputed(() => {
+           const found = this.certificates().find(x => x.Visible());
+           return !found; 
         });
     }
     
@@ -398,7 +520,7 @@ class certificates extends viewModelBase {
         return new getCertificatesCommand(true)
             .execute()
             .done(certificatesInfo => {
-                let mergedCertificates: unifiedCertificateDefinition[] = [];
+                const mergedCertificates: unifiedCertificateDefinition[] = [];
                 
                 const secondaryCertificates: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition[] = [];
                 
@@ -421,18 +543,7 @@ class certificates extends viewModelBase {
                     primaryCert.Thumbprints.push(cert.Thumbprint);
                 });
                 
-                mergedCertificates = _.sortBy(mergedCertificates, x => x.Name.toLocaleLowerCase());
-                
-                // place the server certificate and client certificate first in list
-                const serverCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.serverCertificateThumbprint()));
-                const clientCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
-                const orderedCertificates = mergedCertificates.filter(x => x !== serverCert && x !== clientCert);
-                
-                if (clientCert && serverCert && clientCert.Thumbprint !== serverCert.Thumbprint) {
-                    orderedCertificates.unshift(clientCert);
-                }
-                
-                orderedCertificates.unshift(serverCert);
+                const orderedCertificates = this.sortByDefaultInternal(mergedCertificates);
                 
                 this.updateCache(orderedCertificates);
                 this.certificates(orderedCertificates);
@@ -444,24 +555,33 @@ class certificates extends viewModelBase {
     
     private updateCache(certificates: Array<unifiedCertificateDefinition>) {
         certificates.forEach((cert: unifiedCertificateDefinitionWithCache) => {
-            const date = moment.utc(cert.NotAfter);
-            const dateFormatted = date.format("YYYY-MM-DD");
+            const expirationDate = moment.utc(cert.NotAfter);
+            const expirationDateFormatted = expirationDate.format("YYYY-MM-DD");
             
             const nowPlusMonth = moment.utc().add(1, 'months');
             
-            if (date.isBefore()) {
-                cert.expirationText = 'Expired ' + dateFormatted;
+            if (expirationDate.isBefore()) {
+                cert.expirationText = 'Expired ' + expirationDateFormatted;
                 cert.expirationIcon = "icon-danger";
                 cert.expirationClass = "text-danger"
-            } else if (date.isAfter(nowPlusMonth)) {
-                cert.expirationText = dateFormatted;
-                cert.expirationIcon = "icon-clock";
+            } else if (expirationDate.isAfter(nowPlusMonth)) {
+                cert.expirationText = expirationDateFormatted;
+                cert.expirationIcon = "icon-clock"; // TODO.. RavenDB-18518
                 cert.expirationClass = "";
             } else {
-                cert.expirationText = dateFormatted;
+                cert.expirationText = expirationDateFormatted;
                 cert.expirationIcon = "icon-warning";
                 cert.expirationClass = "text-warning";
             }
+
+            if (cert.NotBefore) {
+                const validFromDate = moment.utc(cert.NotBefore);
+                cert.validFromText = validFromDate.format("YYYY-MM-DD");
+            } else {
+                cert.validFromText = "Unavailable" // TODO.. RavenDB-18519
+            }
+            cert.validFromIcon = "icon-clock"; // TODO.. RavenDB-18518
+            cert.validFromClass = "";
         });
     }
     
@@ -550,6 +670,86 @@ class certificates extends viewModelBase {
 
             return true;
         });
+    }
+    
+    sortByDefault() {
+        this.sortCriteria("");
+        const orderedCertificates = this.sortByDefaultInternal(this.certificates());
+        this.certificates(orderedCertificates);
+    }
+
+    sortByDefaultInternal(certList: unifiedCertificateDefinition[]): unifiedCertificateDefinition[] {
+        let orderedCertificates = certList;
+        
+        orderedCertificates.sort((a, b) =>
+            generalUtils.sortAlphaNumeric(a.Name.toLocaleLowerCase(), b.Name.toLocaleLowerCase(), "asc"));
+        
+        const serverCert = certList.find(x => _.includes(x.Thumbprints, this.serverCertificateThumbprint()));
+        const clientCert = certList.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
+        orderedCertificates = certList.filter(x => x !== serverCert && x !== clientCert);
+
+        if (clientCert && serverCert && clientCert.Thumbprint !== serverCert.Thumbprint) {
+            orderedCertificates.unshift(clientCert);
+        }
+        
+        orderedCertificates.unshift(serverCert);
+        return orderedCertificates
+    }
+    
+    sortByName(mode: string) {
+        this.sortCriteria(`Name - ${this.getModeText(mode)}`);
+        this.certificates.sort((a, b) =>
+            generalUtils.sortAlphaNumeric(a.Name.toLocaleLowerCase(), b.Name.toLocaleLowerCase(), mode as sortMode));
+    }
+
+    sortByExpiration(mode: string) {
+        this.sortCriteria(`Expiration Date - ${this.getModeText(mode)}`);
+        this.certificates.sort((a, b) =>
+            generalUtils.sortUTC(a.NotAfter, b.NotAfter, mode as sortMode));
+    }
+
+    sortByValidFrom(mode: string) {
+        this.sortCriteria(`Valid-From Date - ${this.getModeText(mode)}`);
+        this.certificates.sort((a, b) =>
+            generalUtils.sortUTC(a.NotBefore, b.NotBefore, mode as sortMode));
+    }
+    
+    getModeText(mode: string) {
+        return mode === "asc" ? "Ascending" : "Descending";
+    }
+
+    createDatabaseNameAutoCompleterForFilter() {
+        return ko.pureComputed(() => {
+            const key = this.inputDatabase();
+
+            const options = this.databases().map(x => x.name);
+
+            const usedOptions = this.databasesToShow().filter(k => k !== key);
+
+            const filteredOptions = _.difference(options, usedOptions);
+
+            if (key) {
+                return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return filteredOptions;
+            }
+        });
+    }
+
+    addDatabase() {
+        this.addWithBlink(this.inputDatabase());
+    }
+
+    removeDatabase(database: string) {
+        this.databasesToShow.remove(database);
+    }
+
+    addWithBlink(databaseName: string) {
+        this.databasesToShow.unshift(databaseName);
+        
+        this.inputDatabase("");
+        
+        $(".collection-list li").first().addClass("blink-style");
     }
 }
 

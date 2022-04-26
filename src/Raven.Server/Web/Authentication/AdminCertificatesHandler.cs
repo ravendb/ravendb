@@ -110,7 +110,8 @@ namespace Raven.Server.Web.Authentication
                 SecurityClearance = certificate.SecurityClearance,
                 Thumbprint = selfSignedCertificate.Thumbprint,
                 PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
-                NotAfter = selfSignedCertificate.NotAfter
+                NotAfter = selfSignedCertificate.NotAfter,
+                NotBefore = selfSignedCertificate.NotBefore
             };
 
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, raftRequestId));
@@ -318,6 +319,7 @@ namespace Raven.Server.Web.Authentication
                 currentCertDef.Thumbprint = x509Certificate.Thumbprint;
                 currentCertDef.PublicKeyPinningHash = x509Certificate.GetPublicKeyPinningHash();
                 currentCertDef.NotAfter = x509Certificate.NotAfter;
+                currentCertDef.NotBefore = x509Certificate.NotBefore;
                 currentCertDef.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
 
                 if (first)
@@ -490,7 +492,8 @@ namespace Raven.Server.Web.Authentication
                                 SecurityClearance = SecurityClearance.ClusterNode,
                                 Thumbprint = Server.Certificate.Certificate.Thumbprint,
                                 PublicKeyPinningHash = Server.Certificate.Certificate.GetPublicKeyPinningHash(),
-                                NotAfter = Server.Certificate.Certificate.NotAfter
+                                NotAfter = Server.Certificate.Certificate.NotAfter,
+                                NotBefore = Server.Certificate.Certificate.NotBefore
                             };
 
                             var serverCert = context.ReadObject(serverCertDef.ToJson(metadataOnly), "Server/Certificate/Definition");
@@ -584,6 +587,18 @@ namespace Raven.Server.Web.Authentication
                     continue;
                 }
 
+                if (def.NotBefore == null)
+                {
+                    // NotBefore will be null if the certificate was generated prior to adding the NotBefore property to class CertificateMetadata
+                    // So we are manually extracting this info - See issue RavenDB-18519
+                    var tempCertificate = new X509Certificate2(Convert.FromBase64String(def.Certificate));
+                    using (tempCertificate) 
+                    {
+                          def.NotBefore = tempCertificate.NotBefore;
+                    }
+                    
+                }
+
                 var certificateRef = certificate;
                 if (metadataOnly)
                 {
@@ -630,7 +645,8 @@ namespace Raven.Server.Web.Authentication
                                 SecurityClearance = SecurityClearance.ClusterNode,
                                 Thumbprint = Server.Certificate.Certificate.Thumbprint,
                                 PublicKeyPinningHash = Server.Certificate.Certificate.GetPublicKeyPinningHash(),
-                                NotAfter = Server.Certificate.Certificate.NotAfter
+                                NotAfter = Server.Certificate.Certificate.NotAfter,
+                                NotBefore = Server.Certificate.Certificate.NotBefore
                             };
 
                             certificate = ctx.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
@@ -705,7 +721,8 @@ namespace Raven.Server.Web.Authentication
                         SecurityClearance = newCertificate.SecurityClearance,
                         Thumbprint = existingCertificate.Thumbprint,
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
-                        NotAfter = existingCertificate.NotAfter
+                        NotAfter = existingCertificate.NotAfter,
+                        NotBefore = existingCertificate.NotBefore
                     }, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(putResult.Index);
 

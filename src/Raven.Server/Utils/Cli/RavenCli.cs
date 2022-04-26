@@ -689,7 +689,8 @@ namespace Raven.Server.Utils.Cli
                     SecurityClearance = SecurityClearance.ClusterNode,
                     Thumbprint = cert.Thumbprint,
                     PublicKeyPinningHash = cert.GetPublicKeyPinningHash(),
-                    NotAfter = cert.NotAfter
+                    NotAfter = cert.NotAfter,
+                    NotBefore = cert.NotBefore
                 };
 
                 try
@@ -776,7 +777,8 @@ namespace Raven.Server.Utils.Cli
                     SecurityClearance = SecurityClearance.ClusterAdmin,
                     Thumbprint = cert.Thumbprint,
                     PublicKeyPinningHash = cert.GetPublicKeyPinningHash(),
-                    NotAfter = cert.NotAfter
+                    NotAfter = cert.NotAfter,
+                    NotBefore = cert.NotBefore
                 };
 
                 try
