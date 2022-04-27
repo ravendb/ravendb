@@ -5,32 +5,18 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using FastTests;
-using FastTests.Utils;
 using Orders;
-using Raven.Client;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Client.Documents.Operations.Identities;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server;
-using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using SlowTests.Smuggler;
@@ -41,216 +27,10 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Backup
 {
-    public class ShardedSmugglerTests : RavenTestBase
+    public class ShardedSmugglerTests : ShardedBackupTestsBase
     {
         public ShardedSmugglerTests(ITestOutputHelper output) : base(output)
         {
-        }
-
-        private class Item
-        {
-
-        }
-
-        private class Index : AbstractIndexCreationTask<Item>
-        {
-            public Index()
-            {
-                Map = items =>
-                    from item in items
-                    select new
-                    {
-                        _ = new[]
-                        {
-                            CreateField("foo", "a"),
-                            CreateField("foo", "b"),
-                        }
-                    };
-            }
-        }
-
-        private async Task InsertData(IDocumentStore store1, string[] names, RavenServer server)
-        {
-            using (var session = store1.OpenAsyncSession())
-            {
-                await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration
-                {
-                    Default = new RevisionsCollectionConfiguration
-                    {
-                        Disabled = false
-                    }
-                });
-
-                //Docs
-                await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, "users/1");
-                await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, "users/2");
-                await session.StoreAsync(new User { Name = "Name1", LastName = "LastName3", Age = 4 }, "users/3");
-                await session.StoreAsync(new User { Name = "Name2", LastName = "LastName4", Age = 15 }, "users/4");
-
-                //Time series
-                session.TimeSeriesFor("users/1", "Heartrate")
-                    .Append(DateTime.Now, 59d, "watches/fitbit");
-                session.TimeSeriesFor("users/3", "Heartrate")
-                    .Append(DateTime.Now.AddHours(6), 59d, "watches/fitbit");
-                //counters
-                session.CountersFor("users/2").Increment("Downloads", 100);
-                //Attachments
-                await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
-                await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
-                {
-                    session.Advanced.Attachments.Store("users/1", names[0], backgroundStream, "ImGgE/jPeG");
-                    session.Advanced.Attachments.Store("users/2", names[1], fileStream);
-                    session.Advanced.Attachments.Store("users/3", names[2], profileStream, "image/png");
-                    await session.SaveChangesAsync();
-                }
-            }
-
-            //tombstone + revision
-            using (var session = store1.OpenAsyncSession())
-            {
-                session.Delete("users/4");
-                var user = await session.LoadAsync<User>("users/1");
-                user.Age = 10;
-                await session.SaveChangesAsync();
-            }
-
-            //subscription
-            await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
-
-            //Identity
-            var result1 = store1.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
-
-            //CompareExchange
-            var user1 = new User
-            {
-                Name = "Toli"
-            };
-            var user2 = new User
-            {
-                Name = "Mitzi"
-            };
-
-            var operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
-            operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
-            var result = await store1.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Efrat, DevelopmentHelper.Severity.Normal, "need to wait for sharding cluster transaction issue - RavenDB-13111");
-            //Cluster transaction
-            // using var session2 = store1.OpenAsyncSession(new SessionOptions
-            // {
-            //     TransactionMode = TransactionMode.ClusterWide
-            // });
-            //
-            // var user4 = new User { Name = "Ayende" };
-            // await session2.StoreAsync(user4);
-            // await session2.StoreAsync(new { ReservedFor = user4.Id }, "usernames/" + user4.Name);
-            //
-            // await session2.SaveChangesAsync();
-
-            //Index
-            await new Index().ExecuteAsync(store1);
-        }
-
-        private async Task CheckData(DocumentStore store2, string[] names)
-        {
-            var db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
-            //doc
-            Assert.Equal(3, db.DocumentsStorage.GetNumberOfDocuments());
-            //Assert.Equal(1, detailedStats.CountOfCompareExchangeTombstones); //TODO - Not working for 4.2
-            //tombstone
-            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                Assert.Equal(1, db.DocumentsStorage.GetNumberOfTombstones(context));
-                Assert.Equal(16, db.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context));
-            }
-
-            //Index
-            var indexes = await store2.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
-            Assert.Equal(1, indexes.Length);
-
-            //Subscriptions
-            var subscriptionDocuments = await store2.Subscriptions.GetSubscriptionsAsync(0, 10);
-            Assert.Equal(1, subscriptionDocuments.Count);
-
-            using (var session = store2.OpenSession())
-            {
-                //Time series
-                var val = session.TimeSeriesFor("users/1", "Heartrate")
-                    .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                Assert.Equal(1, val.Length);
-
-                val = session.TimeSeriesFor("users/3", "Heartrate")
-                    .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                Assert.Equal(1, val.Length);
-
-                //Counters
-                var counterValue = session.CountersFor("users/2").Get("Downloads");
-                Assert.Equal(100, counterValue.Value);
-            }
-
-            using (var session = store2.OpenAsyncSession())
-            {
-                for (var i = 0; i < names.Length; i++)
-                {
-                    var user = await session.LoadAsync<User>("users/" + (i + 1));
-                    var metadata = session.Advanced.GetMetadataFor(user);
-
-                    //Attachment
-                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                    Assert.Equal(1, attachments.Length);
-                    var attachment = attachments[0];
-                    Assert.Equal(names[i], attachment.GetString(nameof(AttachmentName.Name)));
-                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
-                    if (i == 0)
-                    {
-                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
-                        Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
-                    }
-                    else if (i == 1)
-                    {
-                        Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
-                        Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
-                    }
-                    else if (i == 2)
-                    {
-                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
-                        Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
-                    }
-                }
-
-                await session.StoreAsync(new User() { Name = "Toli" }, "users|");
-                await session.SaveChangesAsync();
-            }
-            //Identity
-            using (var session = store2.OpenAsyncSession())
-            {
-                var user = await session.LoadAsync<User>("users/1991");
-                Assert.NotNull(user);
-
-
-            }
-            //CompareExchange
-            using (var session = store2.OpenAsyncSession(new SessionOptions
-            {
-                TransactionMode = TransactionMode.ClusterWide
-            }))
-            {
-                var user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("cat/toli"));
-                Assert.NotNull(user1);
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Efrat, DevelopmentHelper.Severity.Normal, "need to wait for sharding cluster transaction issue - RavenDB-13111");
-
-                //TODO - need to wait for sharding cluster transaction issue - RavenDB-13111
-                // user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/usernames/ayende"));
-                // Assert.NotNull(user1);
-                //
-                // user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/users/1-a"));
-                // Assert.NotNull(user1);
-            }
-
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
@@ -314,8 +94,7 @@ namespace SlowTests.Sharding.Backup
                 File.Delete(file2);
             }
         }
-
-
+        
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         public async Task RegularToShardToRegular()
         {
@@ -331,7 +110,7 @@ namespace SlowTests.Sharding.Backup
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await InsertData(store1, names, Server);
+                    await InsertData(store1, names);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         OperateOnTypes = DatabaseItemType.Documents
@@ -496,7 +275,7 @@ namespace SlowTests.Sharding.Backup
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await InsertData(store1, names, Server);
+                    await InsertData(store1, names);
                     WaitForUserToContinueTheTest(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
@@ -904,7 +683,7 @@ namespace SlowTests.Sharding.Backup
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await InsertData(store1, names, Server);
+                    await InsertData(store1, names);
                     //WaitForUserToContinueTheTest(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
@@ -1011,7 +790,7 @@ namespace SlowTests.Sharding.Backup
                     ModifyDatabaseName = s => $"{s}_2",
                 }))
                 {
-                    await InsertData(store1, names, Server);
+                    await InsertData(store1, names);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         OperateOnTypes = DatabaseItemType.Documents
@@ -1085,15 +864,15 @@ namespace SlowTests.Sharding.Backup
                             return op.Status == OperationStatus.Completed;
                         }, true);
                         var res = (SmugglerResult)op.Result;
-                        Assert.Equal(3, res.Documents.ReadCount);
+                        Assert.Equal(5, res.Documents.ReadCount);
                         Assert.Equal(1, res.Tombstones.ReadCount);
                         Assert.Equal(2, res.TimeSeries.ReadCount);
                         Assert.Equal(1, res.Counters.ReadCount);
                         Assert.Equal(3, res.Documents.Attachments.ReadCount);
-                        Assert.Equal(15, res.RevisionDocuments.ReadCount);
+                        Assert.Equal(21, res.RevisionDocuments.ReadCount);
                         Assert.Equal(1, res.Subscriptions.ReadCount);
                         Assert.Equal(1, res.Identities.ReadCount);
-                        Assert.Equal(1, res.CompareExchange.ReadCount);
+                        Assert.Equal(3, res.CompareExchange.ReadCount);
                         //Assert.Equal(0, res.CompareExchangeTombstones.ReadCount);
                         Assert.Equal(1, res.Indexes.ReadCount);
                     }
@@ -1105,8 +884,5 @@ namespace SlowTests.Sharding.Backup
                 File.Delete(file2);
             }
         }
-
-
-
     }
 }
