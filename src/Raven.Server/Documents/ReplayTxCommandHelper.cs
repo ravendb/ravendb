@@ -222,8 +222,8 @@ namespace Raven.Server.Documents
                 case nameof(HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommand):
                     return jsonSerializer.Deserialize<HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommandDto>(reader);
 
-                case nameof(HiLoHandler.MergedHiLoReturnCommand):
-                    return jsonSerializer.Deserialize<MergedHiLoReturnCommandDto>(reader);
+                case nameof(HiLoHandlerProcessorForReturnHiLo.MergedHiLoReturnCommand):
+                    return jsonSerializer.Deserialize<HiLoHandlerProcessorForReturnHiLo.MergedHiLoReturnCommandDto>(reader);
 
                 case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
                     return jsonSerializer.Deserialize<MergedDocumentReplicationCommandDto>(reader);
