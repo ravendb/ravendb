@@ -34,7 +34,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
     private readonly DocumentDatabase _database;
     private readonly ServerStore _server;
 
-    public OngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] DatabaseRequestHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(requestHandler, contextPool)
+    public OngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
     {
         _requestHandler = requestHandler;
         _database = _requestHandler.Database;

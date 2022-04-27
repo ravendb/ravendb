@@ -14,6 +14,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/tasks", "GET")]
         public async Task GetOngoingTasks()
         {
-            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(this, ContextPool))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(this))
                 await processor.ExecuteAsync();
         }
 

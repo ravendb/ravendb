@@ -47,7 +47,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetOngoingTasks()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForGetOngoingTasks(this, ContextPool))
+            using (var processor = new OngoingTasksHandlerProcessorForGetOngoingTasks(this))
                 await processor.ExecuteAsync();
         }
 

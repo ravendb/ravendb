@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await InternalGetState(state, context);
+                await InternalGetStateAsync(state, context);
             }
         }
     }
