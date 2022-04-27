@@ -7,6 +7,7 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
