@@ -432,9 +432,9 @@ namespace Voron
                     var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
                     return new DriveInfoByPath
                     {
-                        BasePath = DiskSpaceChecker.GetDriveInfo(BasePath.FullPath, drivesInfo, out _),
-                        JournalPath = DiskSpaceChecker.GetDriveInfo(JournalPath.FullPath, drivesInfo, out _),
-                        TempPath = DiskSpaceChecker.GetDriveInfo(TempPath.FullPath, drivesInfo, out _)
+                        BasePath = DiskHelper.GetDriveInfo(BasePath.FullPath, drivesInfo, out _),
+                        JournalPath = DiskHelper.GetDriveInfo(JournalPath.FullPath, drivesInfo, out _),
+                        TempPath = DiskHelper.GetDriveInfo(TempPath.FullPath, drivesInfo, out _)
                     };
                 });
             }

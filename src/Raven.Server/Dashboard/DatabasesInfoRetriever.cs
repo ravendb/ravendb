@@ -492,7 +492,7 @@ namespace Raven.Server.Dashboard
             foreach (var mountPointUsage in databaseInfo.MountPointsUsage)
             {
                 var driveName = mountPointUsage.DiskSpaceResult.DriveName;
-                var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(
+                var diskSpaceResult = DiskHelper.GetDiskSpaceInfo(
                     mountPointUsage.DiskSpaceResult.DriveName,
                     new DriveInfoBase
                     {
