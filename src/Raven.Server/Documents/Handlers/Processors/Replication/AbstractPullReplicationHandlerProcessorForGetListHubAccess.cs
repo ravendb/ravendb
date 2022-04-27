@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide.Context;
@@ -27,9 +28,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             var start = RequestHandler.GetStart();
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
-                var results = RequestHandler.Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, databaseName, hub, filter, start, pageSize);
+                IEnumerable<BlittableJsonReaderObject> results;
+                using (context.OpenReadTransaction())
+                {
+                    results = RequestHandler.Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, databaseName, hub, filter, start, pageSize);
+                }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
