@@ -91,6 +91,8 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseIndexStorageUsedSize(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseTotalStorageSize(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseStorageDiskRemainingSpace(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseStorageDiskIosRead(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseStorageDiskIosWrite(_databaseName, _databaseLandlord, _databaseIndex));
 
             _objectStore.Add(new DatabaseWritesPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseDataWrittenPerSecond(_databaseName, _databaseLandlord, _databaseIndex));

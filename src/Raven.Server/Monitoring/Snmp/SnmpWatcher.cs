@@ -453,7 +453,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerStorageTotalSize(server.ServerStore));
             store.Add(new ServerStorageDiskRemainingSpace(server.ServerStore));
             store.Add(new ServerStorageDiskRemainingSpacePercentage(server.ServerStore));
-
+            store.Add(new ServerStorageDiskIosRead(server.ServerStore));
+            store.Add(new ServerStorageDiskIosWrite(server.ServerStore));
+            
             store.Add(new ServerCertificateExpiration(server.ServerStore));
             store.Add(new ServerCertificateExpirationLeft(server.ServerStore));
             store.Add(new WellKnownAdminCertificates(server.ServerStore));
