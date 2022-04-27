@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,14 +12,10 @@ using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Handlers
@@ -329,51 +324,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ConfigTimeSeriesNames()
         {
-            await ServerStore.EnsureNotPassiveAsync();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "time-series value names"))
-            {
-                var parameters = JsonDeserializationServer.Parameters.TimeSeriesValueNamesParameters(json);
-                parameters.Validate();
-
-                TimeSeriesConfiguration current;
-                using (context.OpenReadTransaction())
-                {
-                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
-                }
-
-                if (current.NamedValues == null)
-                    current.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
-                else
-                {
-                    var currentNames = current.GetNames(parameters.Collection, parameters.TimeSeries);
-                    if (currentNames?.SequenceEqual(parameters.ValueNames, StringComparer.Ordinal) == true)
-                        return; // no need to update, they identical
-
-                    if (parameters.Update == false)
-                    {
-                        if (current.TryAddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames) == false)
-                            throw new InvalidOperationException(
-                                $"Failed to update the names for time-series '{parameters.TimeSeries}' in collection '{parameters.Collection}', they already exists.");
-                    }
-                    current.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
-                }
-                var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
-                var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
-
-                await WaitForIndexToBeAppliedAsync(context, index);
-                await SendConfigurationResponseAsync(context, index);
-            }
-        }
-
-        private async Task SendConfigurationResponseAsync(TransactionOperationContext context, long index)
-        {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var response = new DynamicJsonValue { ["RaftCommandIndex"] = index, };
-                context.Write(writer, response);
-            }
+            using (var processor = new TimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration(this))
+                await processor.ExecuteAsync();
         }
 
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
