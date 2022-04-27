@@ -33,6 +33,9 @@ namespace Sparrow.Json
         // PropertyId sizes
         PropertyIdSizeByte = 64,
         PropertyIdSizeShort = 128,
-        PropertyIdSizeInt = 192
+        PropertyIdSizeInt = 192,
+
+        PositionMask = OffsetSizeByte | OffsetSizeShort | OffsetSizeInt,        
+        PropertyIdMask = PropertyIdSizeByte | PropertyIdSizeShort | PropertyIdSizeInt,
     }
 }
