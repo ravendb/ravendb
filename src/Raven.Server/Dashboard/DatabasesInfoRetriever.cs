@@ -240,7 +240,7 @@ namespace Raven.Server.Dashboard
 
                         // Get new data
                         var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
-                        var systemMountPoints = ServerStore.GetMountPointUsageDetailsFor(systemEnv, includeTempBuffers: true);
+                        var systemMountPoints = serverStore.GetMountPointUsageDetailsFor(systemEnv, includeTempBuffers: true);
 
                         foreach (var systemPoint in systemMountPoints)
                         {
@@ -413,6 +413,7 @@ namespace Raven.Server.Dashboard
             usage.VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel;
             usage.FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpaceInBytes;
             usage.TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSizeInBytes;
+            usage.IoStatsResult = mountPointUsage.IoStatsResult;
             usage.IsLowSpace = StorageSpaceMonitor.IsLowSpace(new Size(usage.FreeSpace, SizeUnit.Bytes), new Size(usage.TotalCapacity, SizeUnit.Bytes), storageConfiguration, out string _);
 
             var existingDatabaseUsage = usage.Items.FirstOrDefault(x => x.Database == databaseName);
@@ -510,7 +511,17 @@ namespace Raven.Server.Dashboard
                         TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
                     };
                 }
-
+                
+                var diskStatsResult = serverStore.Server.DiskStatsGetter.Get(driveName);
+                if (diskStatsResult != null)
+                {
+                    mountPointUsage.IoStatsResult = new IoStatsResult
+                    {
+                        ReadIOs = diskStatsResult.ReadIos,
+                        WriteIOs = diskStatsResult.WriteIos
+                    };
+                }
+                
                 UpdateMountPoint(serverStore.Configuration.Storage, mountPointUsage, databaseName, existingDrivesUsage);
             }
         }
