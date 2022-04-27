@@ -241,7 +241,9 @@ namespace Sparrow.Server.Utils
 
         internal static IDiskStatsGetter GetOsDiskUsageCalculator(TimeSpan minInterval)
         {
-            return PlatformDetails.RunningOnPosix == false ? new NotImplementedDiskStatsGetter() : new DiskStatsGetter(minInterval);
+            return PlatformDetails.RunningOnLinux == false 
+                ? new NotImplementedDiskStatsGetter() 
+                : new DiskStatsGetter(minInterval);
         }
         
         private const uint FILE_READ_EA = 0x0008;
