@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Handlers.Processors.HiLo;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
@@ -18,12 +19,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/hilo/next", "GET")]
         public async Task GetNextHiLo()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var cmd = await ExecuteShardedHiloCommand(context);
-                await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
-            }
-
+            using (var processor = new ShardedHiLoHandlerProcessorForGetNextHiLo(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/hilo/return", "PUT")]
