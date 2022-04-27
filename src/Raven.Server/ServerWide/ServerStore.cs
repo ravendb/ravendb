@@ -858,7 +858,7 @@ namespace Raven.Server.ServerWide
                         {
                             addDatabase.Record.ShardBucketRanges = new List<ShardBucketRange>();
                             var start = 0;
-                            var step = (1024*1024) / addDatabase.Record.Shards.Length;
+                            var step = (1024 * 1024) / addDatabase.Record.Shards.Length;
                             for (int i = 0; i < addDatabase.Record.Shards.Length; i++)
                             {
                                 addDatabase.Record.ShardBucketRanges.Add(new ShardBucketRange
@@ -871,7 +871,7 @@ namespace Raven.Server.ServerWide
                         }
                         foreach (var shard in addDatabase.Record.Shards)
                         {
-                            if(shard.Count == 0)
+                            if (shard.Count == 0)
                             {
                                 AssignNodesToDatabase(clusterTopology,
                                     addDatabase.Record.DatabaseName,
@@ -1921,7 +1921,7 @@ namespace Raven.Server.ServerWide
             var editDocumentsCompression = new EditDocumentsCompressionCommand(documentsCompression, databaseName, raftRequestId);
             return SendToLeaderAsync(editDocumentsCompression);
         }
-        
+
         public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var config = JsonDeserializationCluster.PostgreSqlConfiguration(configurationJson);
@@ -2302,9 +2302,9 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case ConnectionStringType.ElasticSearch:
-                        
+
                         var elasticSearchEtls = rawRecord.ElasticSearchEtls;
-                        
+
                         // Don't delete the connection string if used by tasks types: ElasticSearch Etl
                         if (elasticSearchEtls != null)
                         {
@@ -3571,9 +3571,9 @@ namespace Raven.Server.ServerWide
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
         }
-        
+
         public readonly MemoryCache QueryClauseCache;
-        
+
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)

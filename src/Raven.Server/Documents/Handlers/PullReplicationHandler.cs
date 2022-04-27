@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -150,28 +151,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/sink-pull-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePullReplicationOnSinkNode()
         {
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.LicenseManager.AssertCanAddPullReplicationAsSink();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                PullReplicationAsSink pullReplication = null;
-                await DatabaseConfigurations(
-                    (_, databaseName, blittableJson, guid) => ServerStore.UpdatePullReplicationAsSink(databaseName, blittableJson, guid, out pullReplication),
-                    "update-sink-pull-replication", GetRaftRequestIdFromQuery(),
-                    fillJson: (json, _, index) =>
-                    {
-                        using (context.OpenReadTransaction())
-                        {
-                            var topology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
-                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(topology, pullReplication, null);
-                        }
-
-                        json[nameof(ModifyOngoingTaskResult.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
-                    }, statusCode: HttpStatusCode.Created);
-            }
+            using (var processor = new PullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
