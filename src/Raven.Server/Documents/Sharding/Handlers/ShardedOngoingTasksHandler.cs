@@ -19,7 +19,6 @@ using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
