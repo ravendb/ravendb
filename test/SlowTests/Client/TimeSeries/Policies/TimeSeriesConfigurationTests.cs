@@ -132,10 +132,11 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
-        public async Task CanConfigureTimeSeries2()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanConfigureTimeSeries2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var collectionName = "Users";
                 var policies = new List<TimeSeriesPolicy>

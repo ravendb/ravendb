@@ -41,5 +41,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedTimeSeriesHandlerProcessorForGetTimeSeriesStats(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/timeseries/names/config", "POST")]
+        public async Task ConfigTimeSeriesNames()
+        {
+            using (var processor = new ShardedTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
