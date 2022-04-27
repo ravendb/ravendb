@@ -21,15 +21,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
         {
         }
 
-        protected override long? GetLongFromHeaders(string name) => RequestHandler.GetLongFromHeaders(name);
-
         protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
         {
             var op = new ShardedGetTermsOperation(RequestHandler, indexName, field, fromValue, pageSize, resultEtag);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
 
+            if (result.StatusCode == (int)HttpStatusCode.NotModified)
+                return TermsQueryResultServerSide.NotModifiedResult;
+
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.CombinedEtag + "\"";
-            result.Result.NotModified = result.StatusCode == (int)HttpStatusCode.NotModified;
             return result.Result;
         }
 

@@ -20,8 +20,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         {
         }
 
-        protected override long? GetLongFromHeaders(string name) => RequestHandler.GetLongFromHeaders(name);
-
         protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
         {
             using (var token = RequestHandler.CreateTimeLimitedOperationToken())
