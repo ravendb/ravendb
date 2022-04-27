@@ -1634,6 +1634,33 @@ namespace Raven.Server.Json
             return (count, sizeInBytes);
         }
 
+        public static async Task<(long Count, long SizeInBytes)> WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, IEnumerable<BlittableJsonReaderObject> includes, CancellationToken token = default)
+        {
+            writer.WriteStartObject();
+
+            long count = 0, sizeInBytes = 0;
+
+            var first = true;
+            foreach (var includeDoc in includes)
+            {
+                count++;
+                sizeInBytes += includeDoc.Size;
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WritePropertyName(includeDoc.GetMetadata().GetId());
+                writer.WriteObject(includeDoc);
+
+                await writer.MaybeOuterFlushAsync();
+            }
+
+            writer.WriteEndObject();
+
+            return (count, sizeInBytes);
+        }
+
         internal static async Task WriteRevisionIncludes(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, Document> revisionsByChangeVector, Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTime, CancellationToken token = default)
         {
             var first = true;
@@ -1777,7 +1804,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, List<CounterDetail>> counters, CancellationToken token)
+        public static async ValueTask WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, List<CounterDetail>> counters, CancellationToken token)
         {
             writer.WriteStartObject();
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
@@ -17,7 +18,6 @@ namespace Raven.Server.Documents.Sharding.Operations
         private readonly ShardedDocumentHandler _handler;
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
-        private readonly string _etag;
         private readonly string[] _includePaths;
         private readonly bool _metadataOnly;
 
@@ -25,20 +25,20 @@ namespace Raven.Server.Documents.Sharding.Operations
             TransactionOperationContext context,
             ShardedDocumentHandler handler,
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
-            string etag,
             string[] includePaths,
+            string etag,
             bool metadataOnly)
         {
             _context = context;
             _handler = handler;
             _databaseContext = handler.DatabaseContext;
             _idsByShards = idsByShards;
-            _etag = etag;
+            ExpectedEtag = etag;
             _includePaths = includePaths;
             _metadataOnly = metadataOnly;
         }
 
-        public string ExpectedEtag => _etag;
+        public string ExpectedEtag { get; }
 
         public GetShardedDocumentsResult CombineResults(Memory<GetDocumentsResult> results)
         {
@@ -54,6 +54,8 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                 var cmdResults = cmd.Results;
                 var cmdIncludes = cmd.Includes;
+                var cmdCounterIncludes = cmd.CounterIncludes;
+
                 if (cmdIncludes != null)
                 {
                     BlittableJsonReaderObject.PropertyDetails prop = default;
@@ -75,6 +77,16 @@ namespace Raven.Server.Documents.Sharding.Operations
                     }
                     docs.Add(cmdResult.Clone(_context));
                 }
+
+                if (cmdCounterIncludes != null)
+                {
+                    BlittableJsonReaderObject.PropertyDetails prop = default;
+                    for (int i = 0; i < cmdCounterIncludes.Count; i++)
+                    {
+                        cmdCounterIncludes.GetPropertyByIndex(i, ref prop);
+                        includesMap[prop.Name] = ((BlittableJsonReaderObject)prop.Value).Clone(_context);
+                    }
+                }
             }
 
             foreach (var kvp in includesMap) // remove the items we already have
@@ -86,24 +98,21 @@ namespace Raven.Server.Documents.Sharding.Operations
 
             return new GetShardedDocumentsResult
             {
-                Results = docs,
-                Includes = includesMap,
+                Documents = docs,
+                Includes = includesMap.Values.ToList(),
                 MissingIncludes = missingIncludes
             };
         }
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
+
         public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shard) => new GetDocumentsCommand(_idsByShards[shard].Ids.ToArray(), _includePaths, _metadataOnly);
     }
 
     public class GetShardedDocumentsResult
     {
-        public Dictionary<string, BlittableJsonReaderObject> Includes;
-        public List<BlittableJsonReaderObject> Results;
-        public BlittableJsonReaderObject[] CounterIncludes;
-        public BlittableJsonReaderObject[] RevisionIncludes;
-        public BlittableJsonReaderObject[] TimeSeriesIncludes;
-        public BlittableJsonReaderObject[] CompareExchangeValueIncludes;
+        public List<BlittableJsonReaderObject> Includes;
+        public List<BlittableJsonReaderObject> Documents;
 
         public HashSet<string> MissingIncludes;
     }

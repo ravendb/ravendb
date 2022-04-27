@@ -5,39 +5,21 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session.Loaders;
-using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Documents;
-using Raven.Server.Documents.Handlers.Processors.TimeSeries;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Queries.Revisions;
-using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
-using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
-using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
 using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
@@ -68,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            using (var processor = new DocumentHandlerProcessorForGet(this, ContextPool))
+            using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Get, this, ContextPool))
             {
                 await processor.ExecuteAsync();
             }
@@ -77,341 +59,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostGet()
         {
-            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Post, this, ContextPool))
             {
-                var docs = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
-                if (docs.TryGet("Ids", out BlittableJsonReaderArray array) == false)
-                    ThrowRequiredPropertyNameInRequest("Ids");
-
-                var ids = new string[array.Length];
-                for (int i = 0; i < array.Length; i++)
-                {
-                    ids[i] = array.GetStringByIndex(i);
-                }
-
-                context.OpenReadTransaction();
-
-                // init here so it can be passed to TW
-                var idsStringValues = new Microsoft.Extensions.Primitives.StringValues(ids);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(idsStringValues.ToString(), TrafficWatchChangeType.Documents);
-
-                await GetDocumentsByIdAsync(context, idsStringValues, metadataOnly);
+                await processor.ExecuteAsync();
             }
-        }
-
-        internal async Task GetDocumentsAsync(DocumentsOperationContext context, bool metadataOnly)
-        {
-            var sw = Stopwatch.StartNew();
-
-            // everything here operates on all docs
-            var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-
-            if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == databaseChangeVector)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-            HttpContext.Response.Headers["ETag"] = "\"" + databaseChangeVector + "\"";
-
-            var etag = GetLongQueryString("etag", false);
-            var start = GetStart();
-            var pageSize = GetPageSize();
-            var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
-
-            IEnumerable<Document> documents;
-            if (etag != null)
-            {
-                documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
-            }
-            else if (isStartsWith)
-            {
-                documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
-                     HttpContext.Request.Query["startsWith"],
-                     HttpContext.Request.Query["matches"],
-                     HttpContext.Request.Query["exclude"],
-                     HttpContext.Request.Query["startAfter"],
-                     start,
-                     pageSize);
-            }
-            else // recent docs
-            {
-                documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
-            }
-
-            long numberOfResults;
-            long totalDocumentsSizeInBytes;
-
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Results");
-
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly, Database.DatabaseShutdown);
-
-                writer.WriteEndObject();
-            }
-
-            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
-        }
-
-        internal async Task GetDocumentsByIdAsync(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues ids, bool metadataOnly)
-        {
-            var sw = Stopwatch.StartNew();
-
-            var includePaths = GetStringValuesQueryString("include", required: false);
-            var documents = new List<Document>(ids.Count);
-            var includes = new List<Document>(includePaths.Count * ids.Count);
-            var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths, isProjection: false);
-            GetCountersQueryString(Database, context, out var includeCounters);
-            
-            GetRevisionsQueryString(Database, context, out var includeRevisions);
-
-            GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
-
-            GetCompareExchangeValueQueryString(Database, out var includeCompareExchangeValues);
-
-            using (includeCompareExchangeValues)
-            {
-                foreach (var id in ids)
-                {
-                    Document document = null;
-                    if (string.IsNullOrEmpty(id) == false)
-                    {
-                        document = Database.DocumentsStorage.Get(context, id);
-                    }
-
-                    if (document == null && ids.Count == 1)
-                    {
-                        HttpContext.Response.StatusCode = GetStringFromHeaders(Constants.Headers.IfNoneMatch) == HttpCache.NotFoundResponse
-                        ?(int)HttpStatusCode.NotModified
-                        :(int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    documents.Add(document);
-                    includeDocs.Gather(document);
-                    includeCounters?.Fill(document);
-                    includeRevisions?.Fill(document);
-                    includeTimeSeries?.Fill(document);
-                    includeCompareExchangeValues?.Gather(document);
-                }
-
-                includeDocs.Fill(includes, GetBoolFromHeaders(Constants.Headers.Sharded) ?? false);
-                includeCompareExchangeValues?.Materialize();
-
-                var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
-
-                var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-                if (etag == actualEtag)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
-
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-
-
-                var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
-                    includeCompareExchangeValues?.Results);
-
-                AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults,
-                    documents.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
-            }
-        }
-
-        private void GetCompareExchangeValueQueryString(DocumentDatabase database, out IncludeCompareExchangeValuesCommand includeCompareExchangeValues)
-        {
-            includeCompareExchangeValues = null;
-
-            var compareExchangeValues = GetStringValuesQueryString("cmpxchg", required: false);
-            if (compareExchangeValues.Count == 0)
-                return;
-
-            includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(database, compareExchangeValues);
-        }
-
-        private void GetCountersQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeCountersCommand includeCounters)
-        {
-            includeCounters = null;
-
-            var counters = GetStringValuesQueryString("counter", required: false);
-            if (counters.Count == 0)
-                return;
-
-            if (counters.Count == 1 &&
-                counters[0] == Constants.Counters.All)
-            {
-                counters = new string[0];
-            }
-
-            includeCounters = new IncludeCountersCommand(database, context, counters);
-        }
-        
-        private void GetRevisionsQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeRevisionsCommand includeRevisions)
-        {
-            includeRevisions = null;
-            
-            var rif = new RevisionIncludeField();
-            var revisionsByChangeVectors = GetStringValuesQueryString("revisions", required: false);
-            var revisionByDateTimeBefore = GetStringValuesQueryString("revisionsBefore", required: false);
-            
-            if (revisionsByChangeVectors.Count == 0 && revisionByDateTimeBefore.Count == 0)
-                return;
-
-            if (DateTime.TryParseExact(revisionByDateTimeBefore.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal, out var dateTime))
-                rif.RevisionsBeforeDateTime = dateTime.ToUniversalTime();
-            
-            foreach (var changeVector in revisionsByChangeVectors)
-                rif.RevisionsChangeVectorsPaths.Add(changeVector);
-
-            includeRevisions = new IncludeRevisionsCommand(database, context, rif);
-        }
-
-        private void GetTimeSeriesQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeTimeSeriesCommand includeTimeSeries)
-        {
-            includeTimeSeries = null;
-
-            var timeSeriesNames = GetStringValuesQueryString("timeseries", required: false);
-            var timeSeriesTimeNames = GetStringValuesQueryString("timeseriestime", required: false);
-            var timeSeriesCountNames = GetStringValuesQueryString("timeseriescount", required: false);
-            if (timeSeriesNames.Count == 0 && timeSeriesTimeNames.Count == 0 && timeSeriesCountNames.Count == 0)
-                return;
-
-            if (timeSeriesNames.Count > 1 && timeSeriesNames.Contains(Constants.TimeSeries.All))
-                throw new InvalidOperationException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
-            if (timeSeriesTimeNames.Count > 1 && timeSeriesTimeNames.Contains(Constants.TimeSeries.All))
-                throw new InvalidOperationException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
-            if (timeSeriesCountNames.Count > 1 && timeSeriesCountNames.Contains(Constants.TimeSeries.All))
-                throw new InvalidOperationException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
-
-            var fromList = GetStringValuesQueryString("from", required: false);
-            var toList = GetStringValuesQueryString("to", required: false);
-            if (timeSeriesNames.Count != fromList.Count || fromList.Count != toList.Count)
-                throw new InvalidOperationException("Parameters 'timeseriesNames', 'fromList' and 'toList' must be of equal length. " +
-                                                    $"Got : timeseriesNames.Count = {timeSeriesNames.Count}, fromList.Count = {fromList.Count}, toList.Count = {toList.Count}.");
-
-            var timeTypeList = GetStringValuesQueryString("timeType", required: false);
-            var timeValueList = GetStringValuesQueryString("timeValue", required: false);
-            var timeUnitList = GetStringValuesQueryString("timeUnit", required: false);
-            if (timeSeriesTimeNames.Count != timeTypeList.Count || timeTypeList.Count != timeValueList.Count || timeValueList.Count != timeUnitList.Count)
-                throw new InvalidOperationException($"Parameters '{nameof(timeSeriesTimeNames)}', '{nameof(timeTypeList)}', '{nameof(timeValueList)}' and '{nameof(timeUnitList)}' must be of equal length. " +
-                                                    $"Got : {nameof(timeSeriesTimeNames)}.Count = {timeSeriesTimeNames.Count}, {nameof(timeTypeList)}.Count = {timeTypeList.Count}, {nameof(timeValueList)}.Count = {timeValueList.Count}, {nameof(timeUnitList)}.Count = {timeUnitList.Count}.");
-
-            var countTypeList = GetStringValuesQueryString("countType", required: false);
-            var countValueList = GetStringValuesQueryString("countValue", required: false);
-            if (timeSeriesCountNames.Count != countTypeList.Count || countTypeList.Count != countValueList.Count)
-                throw new InvalidOperationException($"Parameters '{nameof(timeSeriesCountNames)}', '{nameof(countTypeList)}', '{nameof(countValueList)}' must be of equal length. " +
-                                                    $"Got : {nameof(timeSeriesCountNames)}.Count = {timeSeriesCountNames.Count}, {nameof(countTypeList)}.Count = {countTypeList.Count}, {nameof(countValueList)}.Count = {countValueList.Count}.");
-
-            var hs = new HashSet<AbstractTimeSeriesRange>(AbstractTimeSeriesRangeComparer.Instance);
-
-            for (int i = 0; i < timeSeriesNames.Count; i++)
-            {
-                hs.Add(new TimeSeriesRange
-                {
-                    Name = timeSeriesNames[i],
-                    From = string.IsNullOrEmpty(fromList[i])
-                        ? DateTime.MinValue
-                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(fromList[i], "from"),
-                    To = string.IsNullOrEmpty(toList[i])
-                        ? DateTime.MaxValue
-                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(toList[i], "to")
-                });
-            }
-
-            for (int i = 0; i < timeSeriesTimeNames.Count; i++)
-            {
-                var timeValueUnit = (TimeValueUnit)Enum.Parse(typeof(TimeValueUnit), timeUnitList[i]);
-                if (timeValueUnit == TimeValueUnit.None)
-                    throw new InvalidOperationException($"Got unexpected {nameof(TimeValueUnit)} '{nameof(TimeValueUnit.None)}'. Only the following are supported: '{nameof(TimeValueUnit.Second)}' or '{nameof(TimeValueUnit.Month)}'.");
-
-                if (int.TryParse(timeValueList[i], out int res) == false)
-                    throw new InvalidOperationException($"Could not parse timeseries time range value.");
-
-                hs.Add(new TimeSeriesTimeRange
-                {
-                    Name = timeSeriesTimeNames[i],
-                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), timeTypeList[i]),
-                    Time = timeValueUnit == TimeValueUnit.Second ? TimeValue.FromSeconds(res) : TimeValue.FromMonths(res)
-                });
-            }
-
-            for (int i = 0; i < timeSeriesCountNames.Count; i++)
-            {
-                if (int.TryParse(countValueList[i], out int res) == false)
-                    throw new InvalidOperationException($"Could not parse timeseries count value.");
-
-                hs.Add(new TimeSeriesCountRange
-                {
-                    Name = timeSeriesCountNames[i],
-                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), countTypeList[i]),
-                    Count = res
-                });
-            }
-
-            includeTimeSeries = new IncludeTimeSeriesCommand(context, new Dictionary<string, HashSet<AbstractTimeSeriesRange>> { { string.Empty, hs } });
-        }
-
-        private async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsJsonAsync(
-            JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
-            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisionByChangeVectorResults,
-            Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTimeResults,
-            Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries,
-            Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
-        {
-            long numberOfResults;
-            long totalDocumentsSizeInBytes;
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetDocumentsResult.Results));
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, Database.DatabaseShutdown);
-
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
-                if (includes.Count > 0)
-                {
-                    await writer.WriteIncludesAsync(context, includes, Database.DatabaseShutdown);
-                }
-                else
-                {
-                    writer.WriteStartObject();
-                    writer.WriteEndObject();
-                }
-                if (counters?.Count > 0)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
-                    await writer.WriteCountersAsync(counters, Database.DatabaseShutdown);
-                }
-                if (timeseries?.Count > 0)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
-                    await writer.WriteTimeSeriesAsync(timeseries, Database.DatabaseShutdown);
-                }
-                if(revisionByChangeVectorResults?.Count > 0 || revisionsByDateTimeResults?.Count > 0)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
-                    writer.WriteStartArray();
-                    await writer.WriteRevisionIncludes(context:context, revisionsByChangeVector: revisionByChangeVectorResults, revisionsByDateTime: revisionsByDateTimeResults); 
-                    writer.WriteEndArray();
-                }
-                if (compareExchangeValues?.Count > 0)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
-                    await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, Database.DatabaseShutdown);
-                }
-
-                writer.WriteEndObject();
-            }
-            return (numberOfResults, totalDocumentsSizeInBytes);
         }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
