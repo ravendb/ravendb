@@ -25,10 +25,10 @@ namespace SlowTests.Voron
         }
 
         [RavenTheory(RavenTestCategory.Voron)]
-        [InlineData(1337, SamplingMethod.FullScan)]
-        [InlineData(1337, SamplingMethod.FullRandom)]
-        [InlineData(1337, SamplingMethod.BranchRandom)]
-        public void CanRecompressItemsWithDeletesAndInserts(int seed, SamplingMethod samplingMode)
+        [InlineData(1337, 200000, SamplingMethod.FullScan)]
+        [InlineData(1337, 200000, SamplingMethod.FullRandom)]
+        [InlineData(1337, 200000, SamplingMethod.BranchRandom)]
+        public void CanRecompressItemsWithDeletesAndInserts(int seed, int size, SamplingMethod samplingMode)
         {
             static void Shuffle(string[] list, Random rng)
             {
@@ -43,8 +43,6 @@ namespace SlowTests.Voron
                 }
             }
 
-            const int Size = 200000;
-
             Random random = new Random(seed);
 
             var uniqueKeys = new HashSet<string>();
@@ -56,7 +54,7 @@ namespace SlowTests.Voron
                 using (var wtx = Env.WriteTransaction())
                 {
                     var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-                    for (int i = 0; i < Size; i++)
+                    for (int i = 0; i < size; i++)
                     {
                         var rname = random.Next();
                         var key = "hi" + rname;
@@ -71,16 +69,16 @@ namespace SlowTests.Voron
                     int samples = (int)tree.State.NumberOfEntries / 10;
                     if (samplingMode == SamplingMethod.FullRandom)
                         tree.TryImproveDictionary(
-                            new RandomDictionaryKeyScanner(tree, samples, seed),
-                            new FullDictionaryKeyScanner(tree));
+                            new RandomKeyScanner(tree, samples, seed),
+                            new SequentialKeyScanner(tree));
                     else if (samplingMode == SamplingMethod.BranchRandom)
                         tree.TryImproveDictionary(
-                            new RandomBranchDictionaryKeyScanner(tree, samples, seed),
-                            new FullDictionaryKeyScanner(tree));
+                            new RandomBranchKeyScanner(tree, samples, seed),
+                            new SequentialKeyScanner(tree));
                     else
                         tree.TryImproveDictionary(
-                            new FullDictionaryKeyScanner(tree),
-                            new FullDictionaryKeyScanner(tree));
+                            new SequentialKeyScanner(tree),
+                            new SequentialKeyScanner(tree));
 
                     wtx.Commit();
                 }
@@ -91,7 +89,7 @@ namespace SlowTests.Voron
                 using (var wtx = Env.WriteTransaction())
                 {
                     var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-                    for (int i = 0; i < Size / 2; i++)
+                    for (int i = 0; i < size / 2; i++)
                     {
                         Assert.True(tree.TryRemove(values[i], out var v));
                         inTreeKeys.Remove(values[i]);

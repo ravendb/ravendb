@@ -45,7 +45,7 @@ namespace Voron.Data.CompactTrees
 
         public static long CreateDefault(LowLevelTransaction llt)
         {
-            Slice.From(llt.Allocator, $"{nameof(PersistentDictionary)}.Default", out var defaultKey);
+            using var _ = Slice.From(llt.Allocator, $"{nameof(PersistentDictionary)}.Default", out var defaultKey);
 
             long pageNumber;
 
@@ -183,7 +183,8 @@ namespace Voron.Data.CompactTrees
             if (tableHash != header->TableHash)
                 throw new VoronErrorException($"Persistent storage checksum mismatch, expected: {tableHash}, actual: {header->TableHash}");
 
-            // TODO: Perform more advanced encoding/decoding verifications to ensure the table is not corrupted. 
+            // In the future for recovery scenarios we should do more advanced encoding/decoding verifications to ensure the table is not corrupted. 
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-18547
         }
 
         public PersistentDictionary(Page page)
