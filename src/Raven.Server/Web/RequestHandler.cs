@@ -361,7 +361,7 @@ namespace Raven.Server.Web
             return null;
         }
         
-        protected bool? GetBoolFromHeaders(string name)
+        internal bool? GetBoolFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];
             if (headers.Count == 0)

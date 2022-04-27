@@ -1,10 +1,7 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands;
-using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Documents;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;

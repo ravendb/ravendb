@@ -1,30 +1,179 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Changes;
+using Raven.Client;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Http;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessorForGet<DocumentHandler, DocumentsOperationContext>
+internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessorForGet<DocumentHandler, DocumentsOperationContext, Document>
 {
-    public DocumentHandlerProcessorForGet([NotNull] DocumentHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(requestHandler, contextPool)
+    public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(method, requestHandler, contextPool)
     {
     }
 
-    protected override async ValueTask GetDocumentsAsync(DocumentsOperationContext context, StringValues ids, bool metadataOnly)
-    {
-        using (context.OpenReadTransaction())
-        {
-            if (TrafficWatchManager.HasRegisteredClients)
-                RequestHandler.AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
+    protected override bool SupportsShowingRequestInTrafficWatch => true;
 
-            if (ids.Count > 0)
-                await RequestHandler.GetDocumentsByIdAsync(context, ids, metadataOnly);
-            else
-                await RequestHandler.GetDocumentsAsync(context, metadataOnly);
+    protected override bool SupportsHandlingOfMissingIncludes => false;
+
+    protected override CancellationToken CancellationToken => RequestHandler.Database.DatabaseShutdown;
+
+    protected override void Initialize(DocumentsOperationContext context)
+    {
+        var txr = context.OpenReadTransaction();
+
+        Disposables.Add(txr);
+    }
+
+    protected override ValueTask<DocumentsByIdResult<Document>> GetDocumentsByIdImplAsync(DocumentsOperationContext context, StringValues ids, StringValues includePaths,
+        RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, string etag)
+    {
+        var documents = new List<Document>(ids.Count);
+        var includes = new List<Document>(includePaths.Count * ids.Count);
+        var includeDocs = new IncludeDocumentsCommand(RequestHandler.Database.DocumentsStorage, context, includePaths, isProjection: false);
+
+        IncludeRevisionsCommand includeRevisions = null;
+        IncludeCountersCommand includeCounters = null;
+        IncludeTimeSeriesCommand includeTimeSeries = null;
+        IncludeCompareExchangeValuesCommand includeCompareExchangeValues = null;
+
+        if (revisions != null)
+            includeRevisions = new IncludeRevisionsCommand(RequestHandler.Database, context, revisions);
+
+        if (counters.Count > 0)
+        {
+            if (counters.Count == 1 && counters[0] == Constants.Counters.All)
+                counters = Array.Empty<string>();
+
+            includeCounters = new IncludeCountersCommand(RequestHandler.Database, context, counters);
         }
+
+        if (timeSeries != null)
+            includeTimeSeries = new IncludeTimeSeriesCommand(context, new Dictionary<string, HashSet<AbstractTimeSeriesRange>> { { string.Empty, timeSeries } });
+
+        if (compareExchangeValues.Count > 0)
+        {
+            includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(RequestHandler.Database, compareExchangeValues);
+            Disposables.Add(includeCompareExchangeValues);
+        }
+
+        foreach (var id in ids)
+        {
+            Document document = null;
+
+            if (string.IsNullOrEmpty(id) == false)
+            {
+                document = RequestHandler.Database.DocumentsStorage.Get(context, id);
+            }
+
+            if (document == null && ids.Count == 1)
+            {
+                return new ValueTask<DocumentsByIdResult<Document>>(new DocumentsByIdResult<Document>
+                {
+                    StatusCode = HttpStatusCode.NotFound,
+                    Etag = HttpCache.NotFoundResponse
+                });
+            }
+
+            documents.Add(document);
+            includeDocs.Gather(document);
+            includeCounters?.Fill(document);
+            includeRevisions?.Fill(document);
+            includeTimeSeries?.Fill(document);
+            includeCompareExchangeValues?.Gather(document);
+        }
+
+        includeDocs.Fill(includes, RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false);
+        includeCompareExchangeValues?.Materialize();
+
+        var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);
+
+        return new ValueTask<DocumentsByIdResult<Document>>(new DocumentsByIdResult<Document>
+        {
+            Etag = actualEtag,
+            Documents = documents,
+            Includes = includes,
+            RevisionsChangeVectorIncludes = includeRevisions?.RevisionsChangeVectorResults,
+            IdByRevisionsByDateTimeIncludes = includeRevisions?.IdByRevisionsByDateTimeResults,
+            CounterIncludes = includeCounters?.Results,
+            TimeSeriesIncludes = includeTimeSeries?.Results,
+            CompareExchangeIncludes = includeCompareExchangeValues?.Results
+        });
+    }
+
+    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
+    {
+        writer.WritePropertyName(propertyName);
+
+        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+    }
+
+    protected override async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> includes, CancellationToken token)
+    {
+        writer.WritePropertyName(propertyName);
+
+        await writer.WriteIncludesAsync(context, includes, token);
+    }
+
+    protected override ValueTask HandleMissingIncludes(DocumentsOperationContext context, DocumentsByIdResult<Document> result, bool metadataOnly)
+    {
+        throw new NotSupportedException($"{nameof(HandleMissingIncludes)} is not supported by {nameof(DocumentHandlerProcessorForGet)}");
+    }
+
+    protected override ValueTask<DocumentsResult> GetDocumentsImplAsync(DocumentsOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)
+    {
+        var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+
+        if (changeVector == databaseChangeVector)
+        {
+            return new ValueTask<DocumentsResult>(new DocumentsResult
+            {
+                StatusCode = HttpStatusCode.NotModified
+            });
+        }
+
+        var start = RequestHandler.GetStart();
+        var pageSize = RequestHandler.GetPageSize();
+
+        IEnumerable<Document> documents;
+        if (etag != null)
+        {
+            documents = RequestHandler.Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
+        }
+        else if (startsWith != null)
+        {
+            documents = RequestHandler.Database.DocumentsStorage.GetDocumentsStartingWith(context, startsWith.IdPrefix, startsWith.Matches, startsWith.Exclude,
+                startsWith.StartAfterId, start, pageSize);
+        }
+        else // recent docs
+        {
+            documents = RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
+        }
+
+        return new ValueTask<DocumentsResult>(new DocumentsResult
+        {
+            Documents = documents,
+            Etag = databaseChangeVector
+        });
+    }
+
+    protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+        long totalDocumentsSizeInBytes)
+    {
+        RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults,
+            pageSize, duration, totalDocumentsSizeInBytes);
     }
 }
