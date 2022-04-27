@@ -459,7 +459,7 @@ namespace Raven.Server.Web
             return val[0];
         }
 
-        protected char? GetCharQueryString(string name, bool required = true)
+        internal char? GetCharQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))

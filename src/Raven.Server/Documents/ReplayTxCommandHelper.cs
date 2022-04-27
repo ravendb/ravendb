@@ -15,6 +15,7 @@ using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.BulkInsert;
 using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
+using Raven.Server.Documents.Handlers.Processors.HiLo;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -218,8 +219,8 @@ namespace Raven.Server.Documents
                 case nameof(ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand):
                     return jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
 
-                case nameof(HiLoHandler.MergedNextHiLoCommand):
-                    return jsonSerializer.Deserialize<MergedNextHiLoCommandDto>(reader);
+                case nameof(HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommand):
+                    return jsonSerializer.Deserialize<HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommandDto>(reader);
 
                 case nameof(HiLoHandler.MergedHiLoReturnCommand):
                     return jsonSerializer.Deserialize<MergedHiLoReturnCommandDto>(reader);
