@@ -1007,6 +1007,15 @@ namespace Raven.Server.Smuggler.Documents
                 new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
         }
 
+        public static SmugglerBase GetDatabaseSmugglerForBackup(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
+            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
+            CancellationToken token = default)
+        {
+            return database is ShardedDocumentDatabase ?
+                new SingleShardDatabaseSmugglerForBackup(database, source, destination, time, context, options, result, onProgress, token) :
+                new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
+        }
+
         protected abstract Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result);
         protected abstract Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result);
     }
