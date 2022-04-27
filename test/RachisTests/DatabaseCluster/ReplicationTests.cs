@@ -319,7 +319,7 @@ namespace RachisTests.DatabaseCluster
                 }
             }
 
-            var count = (await GetOngoingTasks(databaseName)).Count(t => t is OngoingTaskReplication);
+            var count = (await Databases.GetOngoingTasks(databaseName, Servers)).Count(t => t is OngoingTaskReplication);
 
             Assert.Equal(5, count);
         }
@@ -334,21 +334,6 @@ namespace RachisTests.DatabaseCluster
             {
                 return WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel", timeout: 15_000);
             }
-        }
-
-        private async Task<List<OngoingTask>> GetOngoingTasks(string name)
-        {
-            var tasks = new Dictionary<long, OngoingTask>();
-            foreach (var server in Servers)
-            {
-                var handler = await InstantiateOutgoingTaskHandler(name, server);
-                foreach (var task in handler.GetOngoingTasksInternal().OngoingTasksList)
-                {
-                    if (tasks.ContainsKey(task.TaskId) == false && task.TaskConnectionStatus != OngoingTaskConnectionStatus.NotOnThisNode)
-                        tasks.Add(task.TaskId, task);
-                }
-            }
-            return tasks.Values.ToList();
         }
 
         [Fact]
@@ -486,8 +471,12 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(WaitForDocument(new[] { leader.WebUrl }, watcher.Database));
             }
 
-            var handler = await InstantiateOutgoingTaskHandler(databaseName, leader);
-            var tasks = handler.GetOngoingTasksInternal().OngoingTasksList;
+            List<OngoingTask> tasks;
+            using (var processor = await Databases.InstantiateOutgoingTaskProcessor(databaseName, leader))
+            {
+                tasks = processor.GetOngoingTasksInternal().OngoingTasksList;
+            }
+
             Assert.Equal(1, tasks.Count);
             var repTask = tasks[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, watcher.Database);
@@ -534,7 +523,11 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(WaitForDocument(new[] { leader.WebUrl }, watcher.Database));
             }
 
-            tasks = handler.GetOngoingTasksInternal().OngoingTasksList;
+            using (var processor = await Databases.InstantiateOutgoingTaskProcessor(databaseName, leader))
+            {
+                tasks = processor.GetOngoingTasksInternal().OngoingTasksList;
+            }
+
             Assert.Equal(1, tasks.Count);
             repTask = tasks[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, external2);
@@ -566,7 +559,10 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 await DeleteOngoingTask((DocumentStore)store, watcher.TaskId, OngoingTaskType.Replication);
-                tasks = await GetOngoingTasks(databaseName);
+                using (var processor = await Databases.InstantiateOutgoingTaskProcessor(databaseName, leader))
+                {
+                    tasks = processor.GetOngoingTasksInternal().OngoingTasksList;
+                }
                 Assert.Equal(0, tasks.Count);
             }
         }
@@ -937,17 +933,19 @@ namespace RachisTests.DatabaseCluster
 
                     var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                     var server = Servers.Single(s => s.WebUrl == responsibale);
-                    var handler = await InstantiateOutgoingTaskHandler(srcDB, server);
-                    Assert.True(WaitForValue(
-                        () => ((OngoingTaskReplication)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
-                              null,
-                        true));
+                    using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
+                    {
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                                  null,
+                            true));
 
-                    var watcherTaskUrl = ((OngoingTaskReplication)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
-                        .DestinationUrl;
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
 
-                    // fail the node to to where the data is sent
-                    DisposeServerAndWaitForFinishOfDisposal(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                    }
 
                     using (var session = srcStore.OpenSession())
                     {

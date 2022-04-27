@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -38,7 +37,7 @@ namespace SlowTests.Issues
                 WaitForDocumentToReplicate<User>(store2, "users/1", 15000);
 
                 await DeleteOngoingTask(store1, ongoing[0].TaskId, OngoingTaskType.Replication);
-                var tasks = await GetOngoingTasks(store1.Database);
+                var tasks = await Databases.GetOngoingTasks(store1.Database, Servers);
                 Assert.Equal(0, tasks.Count);
 
                 using (var session = store1.OpenSession())
@@ -116,21 +115,6 @@ namespace SlowTests.Issues
                 Assert.Equal(2, conflicts.Count);
 
             }
-        }
-
-        private async Task<List<OngoingTask>> GetOngoingTasks(string name)
-        {
-            var tasks = new Dictionary<long, OngoingTask>();
-            foreach (var server in Servers)
-            {
-                var handler = await InstantiateOutgoingTaskHandler(name, server);
-                foreach (var task in handler.GetOngoingTasksInternal().OngoingTasksList)
-                {
-                    if (tasks.ContainsKey(task.TaskId) == false && task.TaskConnectionStatus != OngoingTaskConnectionStatus.NotOnThisNode)
-                        tasks.Add(task.TaskId, task);
-                }
-            }
-            return tasks.Values.ToList();
         }
     }
 }
