@@ -339,12 +339,16 @@ namespace Voron.Data.CompactTrees
 
         public void PrepareForCommit()
         {
-            if (ShouldImproveDictionary())
+            if (_state.NumberOfEntries >= _state.NextTrainAt)
             {
-                if (_state.NumberOfEntries > 32 * 1_000_000)
-                    TryImproveDictionaryByRandomlyScanning(_state.NumberOfEntries / 100);
-                else
-                    TryImproveDictionaryByRandomlyScanning(_state.NumberOfEntries / 10);
+                // Because the size of the tree is really big, we are better of sampling less amount of data because unless we
+                // grow the table size there is probably not much improvement we can do adding more samples. Only way to improve
+                // under those conditions is in finding a better sample for training. 
+                long sampleSize = (_state.NumberOfEntries > 32 * 1_000_000) ? 
+                    _state.NumberOfEntries / 100 :  
+                    _state.NumberOfEntries / 10;
+
+                TryImproveDictionaryByRandomlyScanning(sampleSize);
             }
 
             using var _ = _parent.DirectAdd(Name, sizeof(CompactTreeState), out var ptr);
