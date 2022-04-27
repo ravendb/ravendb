@@ -17,13 +17,19 @@ using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedOngoingTasksHandler : ShardedDatabaseRequestHandler
     {
+        [RavenShardedAction("/databases/*/tasks", "GET")]
+        public async Task GetOngoingTasks()
+        {
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(this, ContextPool))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/admin/connection-strings", "PUT")]
         public async Task PutConnectionString()
         {

@@ -17,7 +17,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public abstract class DatabaseRequestHandler : RequestHandler
+    public abstract class DatabaseRequestHandler : AbstractDatabaseRequestHandler
     {
         public DocumentsContextPool ContextPool;
         public DocumentDatabase Database;
@@ -33,6 +33,8 @@ namespace Raven.Server.Documents
 
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
+
+        public override string DatabaseName => Database.Name;
 
         public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command)
         {

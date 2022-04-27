@@ -420,17 +420,18 @@ namespace SlowTests.Server.Replication
 
                 var minionUrl = minion.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                 var server = Servers.Single(s => s.WebUrl == minionUrl);
-                var handler = await InstantiateOutgoingTaskHandler(minionDB, server);
-                Assert.True(WaitForValue(
-                    () => ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl !=
-                          null,
-                    true));
+                using (var processor = await Databases.InstantiateOutgoingTaskProcessor(minionDB, server))
+                {
+                    Assert.True(WaitForValue(
+                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl !=
+                              null,
+                        true));
 
-                var watcherTaskUrl = ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl;
-
-                // dispose the hub node, from which we are currently pulling
-                DisposeServerAndWaitForFinishOfDisposal(Servers.Single(s => s.WebUrl == watcherTaskUrl));
-
+                    var watcherTaskUrl = ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl;
+                    // dispose the hub node, from which we are currently pulling
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                }
+               
                 using (var session = hubStore.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), replicas: clusterSize - 2);
@@ -514,11 +515,14 @@ namespace SlowTests.Server.Replication
 
                 var minionUrl = minion.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                 var minionServer = Servers.Single(s => s.WebUrl == minionUrl);
-                var handler = await InstantiateOutgoingTaskHandler(minionDB, minionServer);
-                Assert.True(WaitForValue(
-                    () => ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
-                    true));
 
+                using (var processor = await Databases.InstantiateOutgoingTaskProcessor(minionDB, minionServer))
+                {
+                    Assert.True(WaitForValue(
+                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
+                        true));
+                }
+               
                 var mentorUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
                 var mentor = Servers.Single(s => s.WebUrl == mentorUrl);
                 var mentorDatabase = await mentor.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(hubDB);
@@ -560,14 +564,15 @@ namespace SlowTests.Server.Replication
                 await SetupPullReplicationAsync(name, sink1, hub);
                 await SetupPullReplicationAsync(name, sink2, hub);
 
-                var handler = await InstantiateOutgoingTaskHandler(hub.Database, hubServer);
-
-                await AssertWaitForTrueAsync(() => Task.FromResult(handler.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
-                    x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink1.Database, StringComparison.OrdinalIgnoreCase) &&
-                    t.DestinationUrl == sink1.Urls.FirstOrDefault())));
-                await AssertWaitForTrueAsync(() => Task.FromResult(handler.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
-                    x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink2.Database, StringComparison.OrdinalIgnoreCase) &&
-                    t.DestinationUrl == sink2.Urls.FirstOrDefault())));
+                using (var processor = await Databases.InstantiateOutgoingTaskProcessor(hub.Database, hubServer))
+                {
+                    await AssertWaitForTrueAsync(() => Task.FromResult(processor.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                        x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink1.Database, StringComparison.OrdinalIgnoreCase) &&
+                        t.DestinationUrl == sink1.Urls.FirstOrDefault())));
+                    await AssertWaitForTrueAsync(() => Task.FromResult(processor.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                        x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink2.Database, StringComparison.OrdinalIgnoreCase) &&
+                        t.DestinationUrl == sink2.Urls.FirstOrDefault())));
+                }
             }
         }
 
@@ -627,13 +632,16 @@ namespace SlowTests.Server.Replication
 
                 var minionUrl = minion.ServerStore.GetClusterTopology().GetUrlFromTag("B");
                 var server = Servers.Single(s => s.WebUrl == minionUrl);
-                var handler = await InstantiateOutgoingTaskHandler(minionDB, server);
-                Assert.True(WaitForValue(
-                    () => ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
-                    true));
 
+                using (var processor = await Databases.InstantiateOutgoingTaskProcessor(minionDB, server))
+                {
+                    Assert.True(WaitForValue(
+                        () => ((OngoingTaskPullReplicationAsSink)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
+                        true));
+                }
+               
                 // dispose the minion node.
-                DisposeServerAndWaitForFinishOfDisposal(server);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(server);
 
                 using (var session = hubStore.OpenSession())
                 {

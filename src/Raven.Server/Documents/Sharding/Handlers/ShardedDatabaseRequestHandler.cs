@@ -17,7 +17,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public partial class ShardedDatabaseRequestHandler : RequestHandler
+    public partial class ShardedDatabaseRequestHandler : AbstractDatabaseRequestHandler
     {
         public ShardedDatabaseContext DatabaseContext;
         public TransactionContextPool ContextPool;
@@ -115,5 +115,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             return new OperationCancelToken(cancelAfter, DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
         }
+        public override string DatabaseName => DatabaseContext.DatabaseName;
     }
 }
