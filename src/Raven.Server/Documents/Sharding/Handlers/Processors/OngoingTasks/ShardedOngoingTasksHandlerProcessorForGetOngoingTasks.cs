@@ -5,21 +5,19 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.OngoingTasks;
-using Sparrow.Json;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks;
+namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 
 internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<TransactionOperationContext>
 {
     [NotNull]
     private readonly ShardedDatabaseRequestHandler _handler;
 
-    public ShardedOngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] ShardedDatabaseRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TransactionOperationContext> contextPool) : base(requestHandler, contextPool)
+    public ShardedOngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
     {
         _handler = requestHandler;
     }

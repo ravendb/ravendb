@@ -257,7 +257,7 @@ namespace Raven.Server.Web
             }
         }
 
-        internal async Task InternalGetState(OperationState state, JsonOperationContext context)
+        internal async Task InternalGetStateAsync(OperationState state, JsonOperationContext context)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {

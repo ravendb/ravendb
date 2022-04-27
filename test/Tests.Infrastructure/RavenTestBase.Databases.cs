@@ -74,7 +74,7 @@ public partial class RavenTestBase
                 HttpContext = new DefaultHttpContext()
             };
             handler.Init(ctx);
-            return new OngoingTasksHandlerProcessorForGetOngoingTasks(handler, handler.ContextPool);
+            return new OngoingTasksHandlerProcessorForGetOngoingTasks(handler);
         }
 
         public IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)

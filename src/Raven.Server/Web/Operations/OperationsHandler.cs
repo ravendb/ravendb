@@ -81,7 +81,7 @@ namespace Raven.Server.Web.Operations
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await InternalGetState(state, context);
+                await InternalGetStateAsync(state, context);
             }
         }
     }
