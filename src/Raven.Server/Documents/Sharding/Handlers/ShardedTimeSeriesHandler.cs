@@ -48,5 +48,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/timeseries/debug/segments-summary", "GET")]
+        public async Task GetSegmentSummary()
+        {
+            using (var processor = new ShardedTimeSeriesHandlerProcessorForGetDebugSegmentsSummary(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

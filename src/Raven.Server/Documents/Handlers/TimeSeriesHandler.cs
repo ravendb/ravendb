@@ -522,33 +522,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/timeseries/debug/segments-summary", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetSegmentSummary()
         {
-            var documentId = GetStringQueryString("docId");
-            var name = GetStringQueryString("name");
-            var from = GetDateTimeQueryString("from", false) ?? DateTime.MinValue;
-            var to = GetDateTimeQueryString("to", false) ?? DateTime.MaxValue;
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var segmentsSummary = Database.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(context, documentId, name, from, to);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (var summery in segmentsSummary)
-                    {
-                        if (!first)
-                            writer.WriteComma();
-                        context.Write(writer, summery.ToJson());
-                        first = false;
-                    }
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new TimeSeriesHandlerProcessorForGetDebugSegmentsSummary(this))
+                await processor.ExecuteAsync();
         }
     }
 }

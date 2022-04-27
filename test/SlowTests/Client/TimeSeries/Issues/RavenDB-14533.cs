@@ -2,8 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public async Task TimeSeriesSegmentsSummary()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TimeSeriesSegmentsSummary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2000, 1, 1);
 
@@ -30,32 +32,19 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         session.TimeSeriesFor("users/1", "Heartrate")
                             .Append(baseline.AddMinutes(i), new[] { 58d + i }, "fitbit");
-                        
                     }
 
                     session.SaveChanges();
                 }
 
                 var sum = 0;
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
-
-                    sum += summary.Sum(seg => seg.NumberOfEntries);
-                }
-
+                var summary = await store.Operations.SendAsync(new GetSegmentsSummaryOperation("users/1", "Heartrate", baseline, baseline.AddMinutes(16000)));
+                sum += summary.Results.Sum(seg => seg.NumberOfEntries);
                 Assert.Equal(15000, sum);
 
                 sum = 0;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(100));
-
-                    sum += summary.Sum(seg => seg.NumberOfEntries);
-                }
+                summary = await store.Operations.SendAsync(new GetSegmentsSummaryOperation("users/1", "Heartrate", baseline, baseline.AddMinutes(100)));
+                sum += summary.Results.Sum(seg => seg.NumberOfEntries);
                 Assert.NotEqual(15000, sum);
 
                 using (var session = store.OpenSession())
@@ -64,14 +53,10 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     session.SaveChanges();
                 }
-                sum = 0;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
 
-                    sum += summary.Sum(seg => seg.NumberOfLiveEntries);
-                }
+                sum = 0;
+                summary = await store.Operations.SendAsync(new GetSegmentsSummaryOperation("users/1", "Heartrate", baseline, baseline.AddMinutes(16000)));
+                sum += summary.Results.Sum(seg => seg.NumberOfLiveEntries);
                 Assert.Equal(14900, sum);
             }
         }
