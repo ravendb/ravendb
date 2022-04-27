@@ -31,6 +31,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
@@ -3272,18 +3273,19 @@ namespace Raven.Server.ServerWide
             return json;
         }
 
-        public static IEnumerable<Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment, bool includeTempBuffers)
+        public IEnumerable<Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment, bool includeTempBuffers)
         {
             var fullPath = environment?.Environment.Options.BasePath.FullPath;
             if (fullPath == null)
                 yield break;
 
+            var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
+            
             var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
             var diskSpaceResult = DiskHelper.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
             if (diskSpaceResult == null)
                 yield break;
 
-            var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
             var usage = new Client.ServerWide.Operations.MountPointUsage
             {
                 Name = environment.Name,
@@ -3298,45 +3300,54 @@ namespace Raven.Server.ServerWide
                 },
                 UsedSpaceByTempBuffers = 0
             };
+            
+            var ioStatsResult = Server.DiskStatsGetter.Get(driveInfo?.BasePath.DriveName);
+            if (ioStatsResult != null)
+                usage.IoStatsResult = new IoStatsResult {ReadIOs = ioStatsResult.ReadIos, WriteIOs = ioStatsResult.WriteIos}; 
 
-            var journalPathUsage = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
-            if (journalPathUsage != null)
+            if (diskSpaceResult.DriveName == driveInfo?.JournalPath.DriveName)
             {
-                if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
+                usage.UsedSpace += sizeOnDisk.JournalsInBytes;
+                usage.UsedSpaceByTempBuffers += includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0;
+            }
+            else
+            {
+                var journalDiskSpaceResult = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
+                if (journalDiskSpaceResult != null)
                 {
-                    usage.UsedSpace += sizeOnDisk.JournalsInBytes;
-                    usage.UsedSpaceByTempBuffers += includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0;
-                }
-                else
-                {
-                    yield return new Client.ServerWide.Operations.MountPointUsage
+                    var journalUsage = new Client.ServerWide.Operations.MountPointUsage
                     {
                         Name = environment.Name,
                         Type = environment.Type.ToString(),
                         DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                         {
-                            DriveName = journalPathUsage.DriveName,
-                            VolumeLabel = journalPathUsage.VolumeLabel,
-                            TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                            TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
+                            DriveName = journalDiskSpaceResult.DriveName,
+                            VolumeLabel = journalDiskSpaceResult.VolumeLabel,
+                            TotalFreeSpaceInBytes = journalDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                            TotalSizeInBytes = journalDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
                         },
                         UsedSpaceByTempBuffers = includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0
                     };
+                    var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
+                    if (journalIoStatsResult != null)
+                        usage.IoStatsResult = new IoStatsResult {ReadIOs = journalIoStatsResult.ReadIos, WriteIOs = journalIoStatsResult.WriteIos}; 
+                    
+                    yield return journalUsage;
                 }
             }
 
             if (includeTempBuffers)
             {
-                var tempBuffersDiskSpaceResult = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
-                if (tempBuffersDiskSpaceResult != null)
+                if (diskSpaceResult.DriveName == driveInfo?.TempPath.DriveName)
                 {
-                    if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
+                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
+                }
+                else
+                {
+                    var tempBuffersDiskSpaceResult = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+                    if (tempBuffersDiskSpaceResult != null)
                     {
-                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
-                    }
-                    else
-                    {
-                        yield return new Client.ServerWide.Operations.MountPointUsage
+                        var tempBuffersUsage = new Client.ServerWide.Operations.MountPointUsage
                         {
                             Name = environment.Name,
                             Type = environment.Type.ToString(),
@@ -3349,6 +3360,11 @@ namespace Raven.Server.ServerWide
                                 TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
                             }
                         };
+                        var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
+                        if(tempBufferIoStatsResult != null)
+                            tempBuffersUsage.IoStatsResult = new IoStatsResult {ReadIOs = tempBufferIoStatsResult.ReadIos, WriteIOs = tempBufferIoStatsResult.WriteIos}; 
+
+                        yield return tempBuffersUsage;
                     }
                 }
             }
