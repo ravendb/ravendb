@@ -78,6 +78,7 @@ namespace Raven.Server.Dashboard
                 [nameof(TotalCapacity)] = TotalCapacity,
                 [nameof(FreeSpace)] = FreeSpace,
                 [nameof(IsLowSpace)] = IsLowSpace,
+                [nameof(IoStatsResult)] = IoStatsResult?.ToJson(),
             };
         }
 
