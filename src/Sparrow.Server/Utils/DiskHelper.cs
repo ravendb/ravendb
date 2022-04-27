@@ -10,9 +10,9 @@ using Sparrow.Server.Platform.Posix;
 
 namespace Sparrow.Server.Utils
 {
-    public static class DiskSpaceChecker
+    public static class DiskHelper
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(DiskSpaceChecker).FullName);
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(DiskHelper).FullName);
 
         // from https://github.com/dotnet/corefx/blob/9c06da6a34fcefa6fb37776ac57b80730e37387c/src/Common/src/System/IO/PathInternal.Windows.cs#L52
         public const short WindowsMaxPath = short.MaxValue;
@@ -28,7 +28,7 @@ namespace Sparrow.Server.Utils
             if (result != PalFlags.FailCodes.Success)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to get file system statistics for path: {pathToCheck}, error: {error}");
+                    Logger.Info(PalHelper.GetNativeErrorString(error, $"Failed to get file system statistics for path: {pathToCheck}. FailCode={result}", out _));
 
                 return null;
             }
@@ -239,7 +239,11 @@ namespace Sparrow.Server.Utils
             return realPath;
         }
 
-
+        internal static IDiskStatsGetter GetOsDiskUsageCalculator(TimeSpan minInterval)
+        {
+            return PlatformDetails.RunningOnPosix == false ? new NotImplementedDiskStatsGetter() : new DiskStatsGetter(minInterval);
+        }
+        
         private const uint FILE_READ_EA = 0x0008;
         private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x2000000;
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);

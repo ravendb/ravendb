@@ -3279,7 +3279,7 @@ namespace Raven.Server.ServerWide
                 yield break;
 
             var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
-            var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
+            var diskSpaceResult = DiskHelper.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
             if (diskSpaceResult == null)
                 yield break;
 
@@ -3299,7 +3299,7 @@ namespace Raven.Server.ServerWide
                 UsedSpaceByTempBuffers = 0
             };
 
-            var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
+            var journalPathUsage = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
             if (journalPathUsage != null)
             {
                 if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
@@ -3327,7 +3327,7 @@ namespace Raven.Server.ServerWide
 
             if (includeTempBuffers)
             {
-                var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+                var tempBuffersDiskSpaceResult = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
                 if (tempBuffersDiskSpaceResult != null)
                 {
                     if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
