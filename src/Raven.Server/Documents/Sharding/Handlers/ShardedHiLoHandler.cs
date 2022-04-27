@@ -24,27 +24,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
         }
 
         [RavenShardedAction("/databases/*/hilo/return", "PUT")]
-        public async Task HiLoReturn()
+        public async Task ReturnHiLo()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                await ExecuteShardedHiloCommand(context);
-            }
-        }
-
-        private async Task<ShardedCommand> ExecuteShardedHiloCommand(TransactionOperationContext context)
-        {
-            var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
-            var hiloDocId = HiLoHandler.RavenHiloIdPrefix + tag;
-            var shardNumber = DatabaseContext.GetShardNumber(context, hiloDocId);
-
-            var cmd = new ShardedCommand(this, Headers.None);
-            await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, shardNumber);
-            
-            HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-            HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
-
-            return cmd;
+            using (var processor = new ShardedHiLoHandlerProcessorForReturnHiLo(this))
+                await processor.ExecuteAsync();
         }
     }
 }

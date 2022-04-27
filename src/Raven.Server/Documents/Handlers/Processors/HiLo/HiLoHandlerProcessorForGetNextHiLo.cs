@@ -17,14 +17,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
-internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessorForGetNextHiLo<DatabaseRequestHandler, DocumentsOperationContext>
+internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public HiLoHandlerProcessorForGetNextHiLo([NotNull] DatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }
 
-    protected override async ValueTask HandleGetNextHiLoAsync(string tag)
+    protected override async ValueTask HandleHiLoAsync(string tag)
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
