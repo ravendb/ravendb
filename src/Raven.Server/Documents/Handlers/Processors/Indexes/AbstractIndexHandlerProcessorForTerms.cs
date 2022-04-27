@@ -23,8 +23,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
 
         protected abstract ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag);
 
-        protected abstract long? GetLongFromHeaders(string name);
-
         public override async ValueTask ExecuteAsync()
         {
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -33,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 var indexName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var fromValue = RequestHandler.GetStringQueryString("fromValue", required: false) ?? "";
                 var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
-                var resultEtag = GetLongFromHeaders("If-None-Match");
+                var resultEtag = RequestHandler.GetLongFromHeaders("If-None-Match");
 
                 var terms = await GetTermsAsync(indexName, field, fromValue, pageSize, resultEtag);
 
