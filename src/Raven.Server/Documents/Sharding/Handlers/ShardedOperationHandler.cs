@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         }
 
         [RavenShardedAction("/databases/*/operations/state", "GET")]
-        public Task State()
+        public async Task State()
         {
             var id = GetLongQueryString("id");
 
@@ -33,14 +33,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (state == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                return;
             }
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                InternalGetState(state, context);
+                await InternalGetState(state, context);
             }
-            return Task.CompletedTask;
         }
     }
 }
