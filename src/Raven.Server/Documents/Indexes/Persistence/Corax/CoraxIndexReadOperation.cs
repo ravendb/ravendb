@@ -212,14 +212,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 int propIdx = document.Data.GetPropertyIndex(fieldDescription.FieldName);
                                 BlittableJsonReaderObject.PropertyDetails property = default;
                                 document.Data.GetPropertyByIndex(propIdx, ref property);
-
+                                
                                 if (property.Token == BlittableJsonToken.String)
                                 {
                                     var fieldValue = ((LazyStringValue)property.Value).ToString();
                                     ProcessHighlightings(current, fieldDescription, fieldValue, fragments, current.FragmentCount);
                                 }
-                                else if (property.Token.HasFlag(BlittableJsonToken.StartArray))
+                                else if (property.Token == BlittableJsonToken.CompressedString)
                                 {
+                                    var fieldValue = ((LazyCompressedStringValue)property.Value).ToString();
+                                    ProcessHighlightings(current, fieldDescription, fieldValue, fragments, current.FragmentCount);
+                                }
+                                else if ((property.Token & ~BlittableJsonToken.PositionMask) == BlittableJsonToken.StartArray)
+                                {
+                                    // This is an array, now we need to know if it is compressed or not. 
                                     int maxFragments = current.FragmentCount;
                                     foreach (var item in ((BlittableJsonReaderArray)property.Value).Items)
                                     {
