@@ -21,8 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         private long _taskId;
         private DeleteOngoingTaskAction _action;
 
-        protected AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask([NotNull] TRequestHandler requestHandler)
-            : base(requestHandler)
+        protected AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -70,32 +69,39 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 _context = context;
                 _databaseName = databaseName;
 
-                switch (type)
+                using (context.Transaction == null ? context.OpenReadTransaction() : null)
+                using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
                 {
-                    case OngoingTaskType.RavenEtl:
-                    case OngoingTaskType.SqlEtl:
-                        using (context.Transaction == null ? context.OpenReadTransaction() : null)
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
-                        {
-                            if (rawRecord == null)
-                                break;
+                    if (rawRecord == null)
+                        return;
 
-                            if (type == OngoingTaskType.RavenEtl)
-                            {
-                                var ravenEtls = rawRecord.RavenEtls;
-                                var ravenEtl = ravenEtls?.Find(x => x.TaskId == id);
-                                if (ravenEtl != null)
-                                    _deletingEtl = (ravenEtl.Name, ravenEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
-                            }
-                            else
-                            {
-                                var sqlEtls = rawRecord.SqlEtls;
-                                var sqlEtl = sqlEtls?.Find(x => x.TaskId == id);
-                                if (sqlEtl != null)
-                                    _deletingEtl = (sqlEtl.Name, sqlEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
-                            }
-                        }
-                        break;
+                    switch (type)
+                    {
+                        case OngoingTaskType.RavenEtl:
+                            var ravenEtls = rawRecord.RavenEtls;
+                            var ravenEtl = ravenEtls?.Find(x => x.TaskId == id);
+                            if (ravenEtl != null)
+                                _deletingEtl = (ravenEtl.Name, ravenEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
+                        case OngoingTaskType.SqlEtl:
+                            var sqlEtls = rawRecord.SqlEtls;
+                            var sqlEtl = sqlEtls?.Find(x => x.TaskId == id);
+                            if (sqlEtl != null)
+                                _deletingEtl = (sqlEtl.Name, sqlEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
+                        case OngoingTaskType.OlapEtl:
+                            var olapEtls = rawRecord.OlapEtls;
+                            var olapEtl = olapEtls?.Find(x => x.TaskId == id);
+                            if (olapEtl != null)
+                                _deletingEtl = (olapEtl.Name, olapEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
+                        case OngoingTaskType.ElasticSearchEtl:
+                            var elasticEtls = rawRecord.ElasticSearchEtls;
+                            var elasticEtl = elasticEtls?.Find(x => x.TaskId == id);
+                            if (elasticEtl != null)
+                                _deletingEtl = (elasticEtl.Name, elasticEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
+                    }
                 }
             }
 
