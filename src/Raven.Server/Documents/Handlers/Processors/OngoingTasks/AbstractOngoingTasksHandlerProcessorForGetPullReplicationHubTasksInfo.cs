@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected override RavenCommand<PullReplicationDefinitionAndCurrentConnections> CreateCommandForNode(string nodeTag)
         {
             var key = RequestHandler.GetLongQueryString("key");
-            return new GetPullReplicationTasksInfoOperation.GetPullReplicationTasksInfoCommand(key);
+            return new GetPullReplicationTasksInfoOperation.GetPullReplicationTasksInfoCommand(key, nodeTag);
         }
     }
 }

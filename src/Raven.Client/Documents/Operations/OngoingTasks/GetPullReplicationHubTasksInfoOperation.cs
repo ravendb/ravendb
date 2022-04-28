@@ -30,6 +30,12 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 _taskId = taskId;
             }
 
+            public GetPullReplicationTasksInfoCommand(long taskId, string nodeTag)
+            {
+                _taskId = taskId;
+                SelectedNodeTag = nodeTag;
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/tasks/pull-replication/hub?key={_taskId}";
