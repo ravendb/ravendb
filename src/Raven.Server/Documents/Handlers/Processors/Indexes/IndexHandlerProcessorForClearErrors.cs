@@ -11,8 +11,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForClearErrors : AbstractIndexHandlerProcessorForClearErrors<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexHandlerProcessorForClearErrors([NotNull] DatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public IndexHandlerProcessorForClearErrors([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

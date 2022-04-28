@@ -8,7 +8,7 @@ namespace Raven.Server.Web.Studio.Processors;
 internal class StudioDatabaseTasksHandlerProcessorForGetIndexDefaults : AbstractStudioDatabaseTasksHandlerProcessorForGetIndexDefaults<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public StudioDatabaseTasksHandlerProcessorForGetIndexDefaults([NotNull] DatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+        : base(requestHandler)
     {
     }
 

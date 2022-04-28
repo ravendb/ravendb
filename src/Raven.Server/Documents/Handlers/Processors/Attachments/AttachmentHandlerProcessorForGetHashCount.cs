@@ -8,8 +8,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
 internal class AttachmentHandlerProcessorForGetHashCount : AbstractAttachmentHandlerProcessorForGetHashCount<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AttachmentHandlerProcessorForGetHashCount([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public AttachmentHandlerProcessorForGetHashCount([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

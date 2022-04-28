@@ -9,11 +9,10 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors;
 
 internal abstract class AbstractHandlerProxyReadProcessor<TResult, TRequestHandler, TOperationContext> : AbstractHandlerProxyProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractHandlerProxyReadProcessor([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractHandlerProxyReadProcessor([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

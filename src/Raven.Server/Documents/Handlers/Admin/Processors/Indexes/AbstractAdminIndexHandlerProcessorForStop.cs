@@ -4,17 +4,15 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal abstract class AbstractAdminIndexHandlerProcessorForStop<TRequestHandler, TOperationContext> : AbstractHandlerProxyActionProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAdminIndexHandlerProcessorForStop([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractAdminIndexHandlerProcessorForStop([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

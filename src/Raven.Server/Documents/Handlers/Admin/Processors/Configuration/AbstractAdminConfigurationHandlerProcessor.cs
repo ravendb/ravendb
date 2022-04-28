@@ -3,23 +3,19 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
 {
-    internal abstract class AbstractAdminConfigurationHandlerProcessor<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractAdminConfigurationHandlerProcessor<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
-        protected AbstractAdminConfigurationHandlerProcessor(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+        protected AbstractAdminConfigurationHandlerProcessor(AbstractDatabaseRequestHandler<TOperationContext> requestHandler)
+            : base(requestHandler)
         {
         }
 
-        protected abstract ValueTask WaitForIndexNotificationAsync(long index);
-
-        protected async ValueTask UpdateDatabaseRecordAsync(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId, string databaseName)
+        protected async ValueTask UpdateDatabaseRecordAsync(ClusterOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId, string databaseName)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
@@ -37,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
                 raftCommandIndex = result.Index;
             }
 
-            await WaitForIndexNotificationAsync(raftCommandIndex);
+            await RequestHandler.WaitForIndexNotificationAsync(raftCommandIndex);
         }
     }
 }

@@ -8,13 +8,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
 internal class ShardedAdminIndexHandlerProcessorForJavaScriptPut : AbstractAdminIndexHandlerProcessorForJavaScriptPut<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminIndexHandlerProcessorForJavaScriptPut([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedAdminIndexHandlerProcessorForJavaScriptPut([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
-
     protected override AbstractIndexCreateController GetIndexCreateProcessor() => RequestHandler.DatabaseContext.Indexes.Create;
 
     protected override RavenConfiguration GetDatabaseConfiguration() => RequestHandler.DatabaseContext.Configuration;

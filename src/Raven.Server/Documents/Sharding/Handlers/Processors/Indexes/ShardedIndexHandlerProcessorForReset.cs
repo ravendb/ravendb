@@ -9,8 +9,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
 internal class ShardedIndexHandlerProcessorForReset : AbstractIndexHandlerProcessorForReset<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexHandlerProcessorForReset([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedIndexHandlerProcessorForReset([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

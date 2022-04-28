@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 {
     internal class ShardedIndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedIndexHandlerProcessorForTerms([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedIndexHandlerProcessorForTerms([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

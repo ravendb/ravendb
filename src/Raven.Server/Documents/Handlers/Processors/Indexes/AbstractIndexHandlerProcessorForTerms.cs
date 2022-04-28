@@ -13,12 +13,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
-    internal abstract class AbstractIndexHandlerProcessorForTerms<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : AbstractDatabaseRequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractIndexHandlerProcessorForTerms<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractIndexHandlerProcessorForTerms([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+        protected AbstractIndexHandlerProcessorForTerms([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

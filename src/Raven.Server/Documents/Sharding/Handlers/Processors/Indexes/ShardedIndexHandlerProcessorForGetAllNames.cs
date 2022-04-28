@@ -10,8 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
 internal class ShardedIndexHandlerProcessorForGetAllNames : AbstractIndexHandlerProcessorForGetAllNames<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexHandlerProcessorForGetAllNames([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedIndexHandlerProcessorForGetAllNames([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

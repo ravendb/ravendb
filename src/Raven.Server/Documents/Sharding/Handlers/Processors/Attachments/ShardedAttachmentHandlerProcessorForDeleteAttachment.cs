@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
 {
     internal class ShardedAttachmentHandlerProcessorForDeleteAttachment : AbstractAttachmentHandlerProcessorForDeleteAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedAttachmentHandlerProcessorForDeleteAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedAttachmentHandlerProcessorForDeleteAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

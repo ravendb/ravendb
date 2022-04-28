@@ -10,8 +10,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions;
 
-internal abstract class AbstractRevisionsHandlerProcessorForPostRevisionsConfiguration<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractRevisionsHandlerProcessorForPostRevisionsConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     protected AbstractRevisionsHandlerProcessorForPostRevisionsConfiguration([NotNull] TRequestHandler requestHandler)
         : base(requestHandler)

@@ -9,8 +9,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
 internal class ShardedIndexProcessorForGenerateCSharpIndexDefinition : AbstractIndexProcessorForGenerateCSharpIndexDefinition<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexProcessorForGenerateCSharpIndexDefinition([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedIndexProcessorForGenerateCSharpIndexDefinition([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

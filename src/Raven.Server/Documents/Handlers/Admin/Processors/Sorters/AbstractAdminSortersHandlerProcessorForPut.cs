@@ -11,18 +11,13 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Sorters;
 
-internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAdminSortersHandlerProcessorForPut([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractAdminSortersHandlerProcessorForPut([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
-
-    protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
     public override async ValueTask ExecuteAsync()
     {
@@ -32,7 +27,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandl
             if (input.TryGet("Sorters", out BlittableJsonReaderArray sorters) == false)
                 Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Sorters");
 
-            var databaseName = GetDatabaseName();
+            var databaseName = RequestHandler.DatabaseName;
             var command = new PutSortersCommand(databaseName, RequestHandler.GetRaftRequestIdFromQuery());
             foreach (var sorterToAdd in sorters)
             {
@@ -57,7 +52,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandl
 
             var index = (await RequestHandler.ServerStore.SendToLeaderAsync(command)).Index;
 
-            await WaitForIndexNotificationAsync(index);
+            await RequestHandler.WaitForIndexNotificationAsync(index);
 
             RequestHandler.NoContentStatus(HttpStatusCode.Created);
         }

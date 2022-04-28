@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
     internal class RevisionsHandlerProcessorForGetRevisionsCount : AbstractRevisionsHandlerProcessorForGetRevisionsCount<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public RevisionsHandlerProcessorForGetRevisionsCount([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public RevisionsHandlerProcessorForGetRevisionsCount([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

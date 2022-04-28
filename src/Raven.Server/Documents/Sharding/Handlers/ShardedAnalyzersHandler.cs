@@ -10,7 +10,7 @@ public class ShardedAnalyzersHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/analyzers", "GET")]
     public async Task Get()
     {
-        using (var processor = new AnalyzersHandlerProcessorForGet<TransactionOperationContext>(this, ContextPool, DatabaseContext.DatabaseName))
+        using (var processor = new AnalyzersHandlerProcessorForGet<TransactionOperationContext>(this))
             await processor.ExecuteAsync();
     }
 }

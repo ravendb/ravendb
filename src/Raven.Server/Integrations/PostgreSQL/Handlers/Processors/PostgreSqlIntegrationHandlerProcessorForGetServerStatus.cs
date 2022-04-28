@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -8,11 +9,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
-internal class PostgreSqlIntegrationHandlerProcessorForGetServerStatus<TOperationContext> : AbstractPostgreSqlIntegrationHandlerProcessor<RequestHandler, TOperationContext>
-    where TOperationContext : JsonOperationContext
+internal class PostgreSqlIntegrationHandlerProcessorForGetServerStatus<TRequestHandler, TOperationContext> : AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    public PostgreSqlIntegrationHandlerProcessorForGetServerStatus([NotNull] RequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    public PostgreSqlIntegrationHandlerProcessorForGetServerStatus([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

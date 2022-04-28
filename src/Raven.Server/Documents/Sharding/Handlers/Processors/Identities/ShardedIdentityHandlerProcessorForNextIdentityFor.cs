@@ -6,12 +6,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Identities;
 
 internal class ShardedIdentityHandlerProcessorForNextIdentityFor : AbstractIdentityHandlerProcessorForNextIdentityFor<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIdentityHandlerProcessorForNextIdentityFor([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedIdentityHandlerProcessorForNextIdentityFor([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
     protected override char GetDatabaseIdentityPartsSeparator() => RequestHandler.DatabaseContext.IdentityPartsSeparator;
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 }

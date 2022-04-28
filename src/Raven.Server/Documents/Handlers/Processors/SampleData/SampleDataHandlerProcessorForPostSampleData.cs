@@ -11,20 +11,10 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
 {
     internal class SampleDataHandlerProcessorForPostSampleData : AbstractSampleDataHandlerProcessorForPostSampleData<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public SampleDataHandlerProcessorForPostSampleData([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public SampleDataHandlerProcessorForPostSampleData([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.Database.Name;
-        }
-
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
-        }
-
+        
         protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes)
         {
             var destination = new DatabaseDestination(RequestHandler.Database);

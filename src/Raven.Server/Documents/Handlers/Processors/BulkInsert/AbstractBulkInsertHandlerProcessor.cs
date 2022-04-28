@@ -15,10 +15,10 @@ using Raven.Server.Documents.Handlers.BulkInsert;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
-internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TCommandData : IBatchCommandData
     where TOperationContext : JsonOperationContext
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     private readonly CancellationTokenSource _cts;
     private readonly BulkInsertProgress _progress;
@@ -27,8 +27,8 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
     protected readonly bool SkipOverwriteIfUnchanged;
     protected List<StreamsTempFile> AttachmentStreamsTempFiles;
 
-    protected AbstractBulkInsertHandlerProcessor([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool, Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token)
-        : base(requestHandler, contextPool)
+    protected AbstractBulkInsertHandlerProcessor([NotNull] TRequestHandler requestHandler, Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token)
+        : base(requestHandler)
     {
         _onProgress = onProgress;
         SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged;

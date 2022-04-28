@@ -6,16 +6,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Configuration;
 
 internal class ConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    private readonly DocumentDatabase _database;
 
-    public ConfigurationHandlerProcessorForGetStudioConfiguration([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ConfigurationHandlerProcessorForGetStudioConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-        _database = requestHandler.Database;
     }
 
-    protected override StudioConfiguration GetStudioConfiguration()
-    {
-        return _database.StudioConfiguration;
-    }
+    protected override StudioConfiguration GetStudioConfiguration() => RequestHandler.Database.StudioConfiguration;
 }

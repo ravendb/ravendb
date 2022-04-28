@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 {
     internal class ShardedIndexHandlerProcessorForGetIndexesStatus : AbstractIndexHandlerProcessorForGetIndexesStatus<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedIndexHandlerProcessorForGetIndexesStatus([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedIndexHandlerProcessorForGetIndexesStatus([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
         protected override bool SupportsCurrentNode => false;

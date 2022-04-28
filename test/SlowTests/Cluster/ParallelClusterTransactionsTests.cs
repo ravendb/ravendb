@@ -193,7 +193,7 @@ namespace SlowTests.Cluster
                 {
                     await node.ServerStore.Cluster.WaitForIndexNotification(maxLog, TimeSpan.FromMinutes(1));
 
-                    using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (node.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         compareExchangeCount.Add(node.ServerStore.Cluster.GetNumberOfCompareExchange(context, db));

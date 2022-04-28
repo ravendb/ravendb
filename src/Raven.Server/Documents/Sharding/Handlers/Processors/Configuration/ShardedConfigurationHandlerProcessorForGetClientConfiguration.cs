@@ -7,8 +7,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Configuration;
 
 internal class ShardedConfigurationHandlerProcessorForGetClientConfiguration : AbstractConfigurationHandlerProcessorForGetClientConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedConfigurationHandlerProcessorForGetClientConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedConfigurationHandlerProcessorForGetClientConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

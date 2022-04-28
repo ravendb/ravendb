@@ -8,12 +8,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration;
 
-internal abstract class AbstractConfigurationHandlerProcessorForGetTimeSeriesConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractConfigurationHandlerProcessorForGetTimeSeriesConfiguration<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractConfigurationHandlerProcessorForGetTimeSeriesConfiguration([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractConfigurationHandlerProcessorForGetTimeSeriesConfiguration([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

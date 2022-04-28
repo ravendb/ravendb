@@ -12,7 +12,7 @@ public class ShardedPostgreSqlIntegrationHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/admin/integrations/postgresql/server/status", "GET")]
     public async Task GetServerStatus()
     {
-        using (var processor = new PostgreSqlIntegrationHandlerProcessorForGetServerStatus<TransactionOperationContext>(this, ContextPool))
+        using (var processor = new PostgreSqlIntegrationHandlerProcessorForGetServerStatus<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
             await processor.ExecuteAsync();
     }
 

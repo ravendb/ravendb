@@ -10,11 +10,10 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal abstract class AbstractIndexHandlerProcessorForGetErrors<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<IndexErrors[], TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractIndexHandlerProcessorForGetErrors([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) 
-        : base(requestHandler, contextPool)
+    protected AbstractIndexHandlerProcessorForGetErrors([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

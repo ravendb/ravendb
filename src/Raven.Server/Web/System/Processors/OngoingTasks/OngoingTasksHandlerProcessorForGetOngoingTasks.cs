@@ -23,22 +23,19 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
-internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<DocumentsOperationContext>
+internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<DatabaseRequestHandler, DocumentsOperationContext>
 {
     [NotNull]
-    private readonly DatabaseRequestHandler _requestHandler;
     private readonly DocumentDatabase _database;
     private readonly ServerStore _server;
 
-    public OngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+    public OngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-        _requestHandler = requestHandler;
-        _database = _requestHandler.Database;
-        _server = _requestHandler.ServerStore;
+        _database = requestHandler.Database;
+        _server = requestHandler.ServerStore;
     }
 
     protected override IEnumerable<OngoingTaskBackup> CollectBackupTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
@@ -311,7 +308,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
         watcher.Database = connection?.Database;
         watcher.ConnectionString = connection;
 
-        var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, _requestHandler.DatabaseName, watcher.TaskId);
+        var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, RequestHandler.DatabaseName, watcher.TaskId);
         var tag = _database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
 
         (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);

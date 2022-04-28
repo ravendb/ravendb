@@ -3,27 +3,23 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings<TRequestHandler, TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings<TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TOperationContext>
+    where TOperationContext : JsonOperationContext 
 {
-    protected AbstractAdminConfigurationHandlerProcessorForPutSettings(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractAdminConfigurationHandlerProcessorForPutSettings(AbstractDatabaseRequestHandler<TOperationContext> requestHandler)
+        : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
 
     public override async ValueTask ExecuteAsync()
     {
         await RequestHandler.ServerStore.EnsureNotPassiveAsync();
 
-        using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
             var databaseSettingsJson = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
@@ -36,7 +32,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
                 settings.Add(prop.Name, prop.Value?.ToString());
             }
 
-            await UpdateDatabaseRecordAsync(context, (record, _) => record.Settings = settings, RequestHandler.GetRaftRequestIdFromQuery(), GetDatabaseName());
+            await UpdateDatabaseRecordAsync(context, (record, _) => record.Settings = settings, RequestHandler.GetRaftRequestIdFromQuery(), RequestHandler.DatabaseName);
         }
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);

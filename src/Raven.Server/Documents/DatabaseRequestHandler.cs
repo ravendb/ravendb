@@ -17,9 +17,8 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public abstract class DatabaseRequestHandler : AbstractDatabaseRequestHandler
+    public abstract class DatabaseRequestHandler : AbstractDatabaseRequestHandler<DocumentsOperationContext>
     {
-        public DocumentsContextPool ContextPool;
         public DocumentDatabase Database;
         public Logger Logger;
 
@@ -33,6 +32,7 @@ namespace Raven.Server.Documents
 
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
+
 
         public override string DatabaseName => Database.Name;
 
@@ -187,15 +187,17 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected bool ShouldAddPagingPerformanceHint(long numberOfResults)
+        public override bool ShouldAddPagingPerformanceHint(long numberOfResults)
         {
             return numberOfResults > Database.Configuration.PerformanceHints.MaxNumberOfResults;
         }
 
-        protected internal void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
+        public override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
         {
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
+
+        public override Task WaitForIndexNotificationAsync(long index) => Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
     }
 }

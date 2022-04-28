@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
     internal class IndexHandlerProcessorForGetIndexesStatus : AbstractIndexHandlerProcessorForGetIndexesStatus<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public IndexHandlerProcessorForGetIndexesStatus([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public IndexHandlerProcessorForGetIndexesStatus([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

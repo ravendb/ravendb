@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
     internal class IndexHandlerProcessorForGetDatabaseIndexStatistics : AbstractIndexHandlerProcessorForGetDatabaseIndexStatistics<DatabaseRequestHandler,
          DocumentsOperationContext>
     {
-        public IndexHandlerProcessorForGetDatabaseIndexStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public IndexHandlerProcessorForGetDatabaseIndexStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
         protected override bool SupportsCurrentNode => true;

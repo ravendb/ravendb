@@ -3,27 +3,23 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal abstract class AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration<TRequestHandler, TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration<TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TOperationContext>
+    where TOperationContext : JsonOperationContext 
 {
-    protected AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration(AbstractDatabaseRequestHandler<TOperationContext> requestHandler)
+        : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
 
     public override async ValueTask ExecuteAsync()
     {
         await RequestHandler.ServerStore.EnsureNotPassiveAsync();
 
-        using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
             var clientConfigurationJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), Constants.Configuration.ClientId);
             var clientConfiguration = JsonDeserializationServer.ClientConfiguration(clientConfigurationJson);
@@ -32,7 +28,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutClientCo
             {
                 record.Client = clientConfiguration;
                 record.Client.Etag = index;
-            }, RequestHandler.GetRaftRequestIdFromQuery(), GetDatabaseName());
+            }, RequestHandler.GetRaftRequestIdFromQuery(), RequestHandler.DatabaseName);
         }
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);

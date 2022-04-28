@@ -11,22 +11,31 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal abstract class AbstractHandlerProcessorForGetDatabaseRecord<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractHandlerDatabaseProcessorForGetDatabaseRecord<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForGetDatabaseRecord<TRequestHandler>
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractHandlerProcessorForGetDatabaseRecord([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractHandlerDatabaseProcessorForGetDatabaseRecord([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected abstract string GetDatabaseName();
+    protected override string DatabaseName => RequestHandler.DatabaseName;
+}
+
+internal abstract class AbstractHandlerProcessorForGetDatabaseRecord<TRequestHandler> : AbstractHandlerProcessor<TRequestHandler>
+    where TRequestHandler : RequestHandler
+{
+    protected AbstractHandlerProcessorForGetDatabaseRecord([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    {
+    }
+
+    protected abstract string DatabaseName { get; }
 
     public override async ValueTask ExecuteAsync()
     {
-        var name = GetDatabaseName();
+        var name = DatabaseName;
 
-        using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
             var dbId = Constants.Documents.Prefix + name;
             using (context.OpenReadTransaction())

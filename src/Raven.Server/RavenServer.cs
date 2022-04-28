@@ -2528,7 +2528,7 @@ namespace Raven.Server
                     {
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                             using (ctx.OpenReadTransaction())
                             {
                                 if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication))

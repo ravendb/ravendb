@@ -10,8 +10,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
     internal class ReplicationHandlerProcessorForGetConflicts : AbstractReplicationHandlerProcessorForGetConflicts<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public ReplicationHandlerProcessorForGetConflicts([NotNull] DatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+        public ReplicationHandlerProcessorForGetConflicts([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

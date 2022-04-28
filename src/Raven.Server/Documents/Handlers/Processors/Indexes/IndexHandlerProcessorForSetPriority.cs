@@ -6,8 +6,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForSetPriority : AbstractIndexHandlerProcessorForSetPriority<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexHandlerProcessorForSetPriority([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public IndexHandlerProcessorForSetPriority([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

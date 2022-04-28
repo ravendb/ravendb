@@ -7,8 +7,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
 internal class ShardedIndexHandlerProcessorForSetPriority : AbstractIndexHandlerProcessorForSetPriority<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexHandlerProcessorForSetPriority([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedIndexHandlerProcessorForSetPriority([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio
@@ -11,7 +10,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetFolderPathOptionsForDatabaseAdmin()
         {
-            using (var processor = new StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin<DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin(this))
                 await processor.ExecuteAsync();
         }
 

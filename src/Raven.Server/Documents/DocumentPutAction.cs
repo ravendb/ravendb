@@ -79,7 +79,7 @@ namespace Raven.Server.Documents
                 if (indexFromChangeVector == 0)
                     return;
                 
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext clusterContext))
+                using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
                 using (clusterContext.OpenReadTransaction())
                 {
                     var guardId = CompareExchangeKey.GetStorageKey(_parent._documentDatabase.Name, ClusterTransactionCommand.GetAtomicGuardKey(id));

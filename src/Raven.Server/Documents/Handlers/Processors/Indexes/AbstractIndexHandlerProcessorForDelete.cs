@@ -8,18 +8,15 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal abstract class AbstractIndexHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractIndexHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractIndexHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractIndexHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
     protected abstract AbstractIndexDeleteController GetIndexDeleteProcessor();
-
-    protected abstract string GetDatabaseName();
 
     public override async ValueTask ExecuteAsync()
     {
@@ -29,7 +26,7 @@ internal abstract class AbstractIndexHandlerProcessorForDelete<TRequestHandler, 
         {
             var clientCert = RequestHandler.GetCurrentCertificate();
 
-            var auditLog = LoggingSource.AuditLog.GetLogger(GetDatabaseName(), "Audit");
+            var auditLog = LoggingSource.AuditLog.GetLogger(RequestHandler.DatabaseName, "Audit");
             auditLog.Info($"Index {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
         }
 

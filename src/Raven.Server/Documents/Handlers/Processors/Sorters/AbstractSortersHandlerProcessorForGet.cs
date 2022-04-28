@@ -8,15 +8,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Sorters;
 
-internal abstract class AbstractSortersHandlerProcessorForGet<TRequestHandler> : AbstractHandlerProcessor<TRequestHandler, TransactionOperationContext>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractSortersHandlerProcessorForGet<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
+    where TOperationContext : JsonOperationContext
 {
-    protected AbstractSortersHandlerProcessorForGet([NotNull] TRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ServerStore.ContextPool)
+    protected AbstractSortersHandlerProcessorForGet([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler) 
+        : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
 
     public override async ValueTask ExecuteAsync()
     {
@@ -25,7 +23,7 @@ internal abstract class AbstractSortersHandlerProcessorForGet<TRequestHandler> :
             Dictionary<string, SorterDefinition> sorters;
             using (context.OpenReadTransaction())
             {
-                var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, GetDatabaseName());
+                var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName);
                 sorters = rawRecord?.Sorters;
             }
 

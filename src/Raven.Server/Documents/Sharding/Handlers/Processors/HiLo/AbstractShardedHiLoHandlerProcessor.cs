@@ -10,8 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.HiLo;
 
 internal abstract class AbstractShardedHiLoHandlerProcessor : AbstractHiLoHandlerProcessor<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    protected AbstractShardedHiLoHandlerProcessor([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    protected AbstractShardedHiLoHandlerProcessor([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

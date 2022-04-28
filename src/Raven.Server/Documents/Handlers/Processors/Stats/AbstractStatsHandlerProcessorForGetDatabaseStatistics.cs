@@ -9,10 +9,10 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.Stats
 {
     internal abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<DatabaseStatistics, TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractStatsHandlerProcessorForGetDatabaseStatistics([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> operationContext) : base(requestHandler, operationContext)
+        protected AbstractStatsHandlerProcessorForGetDatabaseStatistics([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

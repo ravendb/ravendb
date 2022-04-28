@@ -9,12 +9,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
 internal class ShardedAdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandlerProcessorForStaticPut<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminIndexHandlerProcessorForStaticPut([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedAdminIndexHandlerProcessorForStaticPut([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 
     protected override AbstractIndexCreateController GetIndexCreateProcessor() => RequestHandler.DatabaseContext.Indexes.Create;
 

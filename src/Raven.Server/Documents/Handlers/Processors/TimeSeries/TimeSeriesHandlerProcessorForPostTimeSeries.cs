@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
     internal class TimeSeriesHandlerProcessorForPostTimeSeries : AbstractTimeSeriesHandlerProcessorForPostTimeSeries<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public TimeSeriesHandlerProcessorForPostTimeSeries([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public TimeSeriesHandlerProcessorForPostTimeSeries([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

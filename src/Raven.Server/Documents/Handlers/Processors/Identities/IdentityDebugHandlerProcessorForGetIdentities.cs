@@ -5,10 +5,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Identities
 {
     internal class IdentityDebugHandlerProcessorForGetIdentities : AbstractIdentityDebugHandlerProcessorForGetIdentities<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public IdentityDebugHandlerProcessorForGetIdentities([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public IdentityDebugHandlerProcessorForGetIdentities([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected override string GetDatabaseName() => RequestHandler.Database.Name;
     }
 }

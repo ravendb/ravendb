@@ -4,22 +4,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisions<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisions<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractRevisionsHandlerProcessorForGetRevisions([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractRevisionsHandlerProcessorForGetRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-            long totalDocumentsSizeInBytes);
 
         protected abstract bool NotModified(string actualEtag);
 

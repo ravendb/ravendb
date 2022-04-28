@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Rachis
 {
     internal class RachisHandlerProcessorForWaitForIndexNotifications : AbstractRachisHandlerProcessorForWaitForIndexNotifications<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public RachisHandlerProcessorForWaitForIndexNotifications([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public RachisHandlerProcessorForWaitForIndexNotifications([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

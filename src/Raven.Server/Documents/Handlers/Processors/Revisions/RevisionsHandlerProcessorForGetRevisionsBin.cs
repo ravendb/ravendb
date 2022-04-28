@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
     internal class RevisionsHandlerProcessorForGetRevisionsBin : AbstractRevisionsHandlerProcessorForGetRevisionsBin<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public RevisionsHandlerProcessorForGetRevisionsBin([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public RevisionsHandlerProcessorForGetRevisionsBin([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -47,14 +47,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+                RequestHandler.AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
-        }
-        
-        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-            long totalDocumentsSizeInBytes)
-        {
-            RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }
 }

@@ -12,8 +12,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForStale : AbstractIndexHandlerProcessorForStale<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexHandlerProcessorForStale([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public IndexHandlerProcessorForStale([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

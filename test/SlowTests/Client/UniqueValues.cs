@@ -304,7 +304,7 @@ namespace SlowTests.Client
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(dbName, hardDelete: false));
 
                 int resultItems = 0;
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     var result = Server.ServerStore.Cluster.GetCompareExchangeFromPrefix(ctx, dbName, 0, int.MaxValue);
@@ -337,7 +337,7 @@ namespace SlowTests.Client
 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(dbName, hardDelete: false));
                 int resultItems = 0;
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     var result = Server.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(ctx, dbName);

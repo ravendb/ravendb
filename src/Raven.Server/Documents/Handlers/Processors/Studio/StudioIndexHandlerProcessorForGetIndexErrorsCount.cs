@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio;
 
 internal class StudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public StudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+    public StudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

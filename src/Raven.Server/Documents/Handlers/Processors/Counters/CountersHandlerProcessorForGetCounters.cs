@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Counters
 {
     internal class CountersHandlerProcessorForGetCounters : AbstractCountersHandlerProcessorForGetCounters<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public CountersHandlerProcessorForGetCounters([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public CountersHandlerProcessorForGetCounters([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

@@ -12,10 +12,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
-internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<TOperationContext> : AbstractHandlerProcessor<AbstractDatabaseRequestHandler, TOperationContext>
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractOngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] AbstractDatabaseRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+    protected AbstractOngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

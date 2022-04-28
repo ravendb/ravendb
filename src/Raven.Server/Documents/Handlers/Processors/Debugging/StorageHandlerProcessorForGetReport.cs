@@ -9,10 +9,10 @@ using Voron.Debugging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging
 {
-    internal class StorageHandlerProcessorForGetReport : AbstractHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class StorageHandlerProcessorForGetReport : AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public StorageHandlerProcessorForGetReport([NotNull] DatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler)
         {
         }
 

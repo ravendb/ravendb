@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
+        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> serverStoreContext, bool history, int start, int take) where TRavenTransaction : RavenTransaction
         {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(_databaseName)))
             {

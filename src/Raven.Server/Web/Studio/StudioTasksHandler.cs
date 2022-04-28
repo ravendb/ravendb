@@ -293,7 +293,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/studio-tasks/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task TestPeriodicBackupCredentials()
         {
-            using (var processor = new StudioTasksHandlerProcessorForTestPeriodicBackupCredentials<RequestHandler, TransactionOperationContext>(this, ServerStore.ContextPool))
+            using (var processor = new StudioTasksHandlerProcessorForTestPeriodicBackupCredentials(this))
                 await processor.ExecuteAsync();
         }
 

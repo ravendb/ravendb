@@ -6,15 +6,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Identities
 {
-    internal abstract class AbstractIdentityHandlerProcessorForPostIdentity<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractIdentityHandlerProcessorForPostIdentity<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractIdentityHandlerProcessorForPostIdentity([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractIdentityHandlerProcessorForPostIdentity([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected abstract string GetDatabaseName();
 
         public override async ValueTask ExecuteAsync()
         {
@@ -27,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Identities
             if (name[name.Length - 1] != '|')
                 name += '|';
 
-            var newIdentityValue = await RequestHandler.ServerStore.UpdateClusterIdentityAsync(name, GetDatabaseName(), value.Value, forced, RequestHandler.GetRaftRequestIdFromQuery());
+            var newIdentityValue = await RequestHandler.ServerStore.UpdateClusterIdentityAsync(name, RequestHandler.DatabaseName, value.Value, forced, RequestHandler.GetRaftRequestIdFromQuery());
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {

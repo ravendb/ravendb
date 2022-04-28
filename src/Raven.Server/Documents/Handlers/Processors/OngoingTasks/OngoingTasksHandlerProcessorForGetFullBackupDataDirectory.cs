@@ -1,25 +1,19 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.Sharding.Handlers;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal class OngoingTasksHandlerProcessorForGetFullBackupDataDirectory<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        private readonly string _databaseName;
 
-        public OngoingTasksHandlerProcessorForGetFullBackupDataDirectory([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
-            : base(requestHandler, contextPool)
+        public OngoingTasksHandlerProcessorForGetFullBackupDataDirectory([NotNull] TRequestHandler requestHandler)
+            : base(requestHandler)
         {
-            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
         public override async ValueTask ExecuteAsync()
@@ -29,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var getNodesInfo = RequestHandler.GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
 
             var pathSetting = new PathSetting(path);
-            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, _databaseName, requestTimeoutInMs, getNodesInfo, RequestHandler.ServerStore, RequestHandler.ResponseBodyStream());
+            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, RequestHandler.DatabaseName, requestTimeoutInMs, getNodesInfo, RequestHandler.ServerStore, RequestHandler.ResponseBodyStream());
         }
     }
 }

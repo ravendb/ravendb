@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Counters
 {
     internal class CountersHandlerProcessorForPostCounters : AbstractCountersHandlerProcessorForPostCounters<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public CountersHandlerProcessorForPostCounters([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public CountersHandlerProcessorForPostCounters([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

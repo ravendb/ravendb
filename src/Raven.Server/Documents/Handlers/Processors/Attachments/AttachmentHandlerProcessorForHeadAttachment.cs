@@ -9,8 +9,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
 internal class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AttachmentHandlerProcessorForHeadAttachment([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public AttachmentHandlerProcessorForHeadAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

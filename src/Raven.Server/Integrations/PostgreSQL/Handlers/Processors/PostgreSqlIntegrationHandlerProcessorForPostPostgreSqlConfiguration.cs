@@ -1,20 +1,14 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
-internal class PostgreSqlIntegrationHandlerProcessorForPostPostgreSqlConfiguration : AbstractPostgreSqlIntegrationHandlerProcessorForPostPostgreSqlConfiguration<DatabaseRequestHandler>
+internal class PostgreSqlIntegrationHandlerProcessorForPostPostgreSqlConfiguration : AbstractPostgreSqlIntegrationHandlerProcessorForPostPostgreSqlConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public PostgreSqlIntegrationHandlerProcessorForPostPostgreSqlConfiguration([NotNull] DatabaseRequestHandler requestHandler) 
         : base(requestHandler)
     {
-    }
-
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
-
-    protected override async ValueTask WaitForIndexNotificationAsync(long index)
-    {
-        await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
     }
 }

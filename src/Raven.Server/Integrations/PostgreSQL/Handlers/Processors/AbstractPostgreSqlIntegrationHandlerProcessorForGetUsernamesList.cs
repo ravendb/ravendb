@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -11,15 +12,13 @@ using Sparrow.Json.Parsing;
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
 internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForGetUsernamesList<TRequestHandler, TOperationContext> : AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractPostgreSqlIntegrationHandlerProcessorForGetUsernamesList([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractPostgreSqlIntegrationHandlerProcessorForGetUsernamesList([NotNull] TRequestHandler requestHandler)
+        : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
 
     public override async ValueTask ExecuteAsync()
     {
@@ -31,7 +30,7 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForGetUsern
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
-                databaseRecord = RequestHandler.ServerStore.Cluster.ReadDatabase(transactionOperationContext, GetDatabaseName(), out long index);
+                databaseRecord = RequestHandler.ServerStore.Cluster.ReadDatabase(transactionOperationContext, RequestHandler.DatabaseName, out long index);
 
             var usernames = new List<PostgreSqlUsername>();
 

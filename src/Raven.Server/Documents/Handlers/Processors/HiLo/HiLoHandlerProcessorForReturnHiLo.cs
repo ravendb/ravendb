@@ -9,8 +9,7 @@ namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
 internal class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public HiLoHandlerProcessorForReturnHiLo([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public HiLoHandlerProcessorForReturnHiLo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

@@ -129,7 +129,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var server = GetNewServer(new ServerCreationOptions { DeletePrevious = false, RunInMemory = false, DataDirectory = folder, RegisterForDisposal = false}))
             {
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var dbs = server.ServerStore.Cluster.GetDatabaseNames(context);
@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var server = GetNewServer(new ServerCreationOptions {DeletePrevious = false, RunInMemory = false, DataDirectory = folder, RegisterForDisposal = false}))
             {
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var dbs = server.ServerStore.Cluster.GetDatabaseNames(context);

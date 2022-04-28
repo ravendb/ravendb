@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Handlers.Processors.DocumentsCompression
 {
     internal class DocumentsCompressionHandlerProcessorForGet : AbstractDocumentsCompressionHandlerProcessorForGet<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public DocumentsCompressionHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public DocumentsCompressionHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

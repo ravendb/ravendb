@@ -18,11 +18,11 @@ namespace Raven.Server.Documents.Includes
         private HashSet<string> _includedKeys;
 
         private IDisposable _releaseContext;
-        private TransactionOperationContext _serverContext;
+        private ClusterOperationContext _serverContext;
         private readonly bool _throwWhenServerContextIsAllocated;
         public Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> Results;
 
-        private IncludeCompareExchangeValuesCommand(DocumentDatabase database, TransactionOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
+        private IncludeCompareExchangeValuesCommand(DocumentDatabase database, ClusterOperationContext serverContext, bool throwWhenServerContextIsAllocated, string[] compareExchangeValues)
         {
             _database = database ?? throw new ArgumentNullException(nameof(database));
             _serverContext = serverContext;
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Includes
                 if (_throwWhenServerContextIsAllocated)
                     throw new InvalidOperationException("Cannot allocate new server context during materialization of compare exchange includes.");
 
-                _releaseContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+                _releaseContext = _database.ServerStore.Engine.ContextPool.AllocateOperationContext(out _serverContext);
                 _serverContext.OpenReadTransaction();
             }
 

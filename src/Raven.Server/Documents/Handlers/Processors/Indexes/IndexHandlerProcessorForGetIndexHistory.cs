@@ -11,15 +11,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal class IndexHandlerProcessorForGetIndexHistory<TOperationContext> : AbstractHandlerProcessor<RequestHandler, TOperationContext>
+internal class IndexHandlerProcessorForGetIndexHistory<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    private readonly string _databaseName;
 
-    public IndexHandlerProcessorForGetIndexHistory([NotNull] RequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
-        : base(requestHandler, contextPool)
+    public IndexHandlerProcessorForGetIndexHistory([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler)
+        : base(requestHandler)
     {
-        _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
     }
 
     public override async ValueTask ExecuteAsync()
@@ -29,7 +27,7 @@ internal class IndexHandlerProcessorForGetIndexHistory<TOperationContext> : Abst
         List<IndexHistoryEntry> history;
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
         using (ctx.OpenReadTransaction())
-        using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(ctx, _databaseName))
+        using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(ctx, RequestHandler.DatabaseName))
         {
             var indexesHistory = rawRecord.IndexesHistory;
             if (indexesHistory.TryGetValue(name, out history) == false)

@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
 {
     internal class ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics : AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

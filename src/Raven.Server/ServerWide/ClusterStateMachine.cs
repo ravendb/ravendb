@@ -3008,13 +3008,13 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, string key)
+        public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string key) where TRavenTransaction : RavenTransaction
         {
             using (Slice.From(context.Allocator, key, out Slice keySlice))
                 return GetCompareExchangeValue(context, keySlice);
         }
 
-        public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, Slice key)
+        public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, Slice key) where TRavenTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
@@ -3034,7 +3034,7 @@ namespace Raven.Server.ServerWide
             return (-1, null);
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context,
+        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(ClusterOperationContext context,
             string dbName, string prefix, long start = 0, long pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
@@ -3054,7 +3054,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, long take)
+        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(ClusterOperationContext context, string dbName, long fromIndex, long take)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
             {
@@ -3077,7 +3077,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public long GetLastCompareExchangeIndexForDatabase(TransactionOperationContext context, string databaseName)
+        public long GetLastCompareExchangeIndexForDatabase(ClusterOperationContext context, string databaseName)
         {
             CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
 
@@ -3095,7 +3095,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public long GetLastCompareExchangeTombstoneIndexForDatabase(TransactionOperationContext context, string databaseName)
+        public long GetLastCompareExchangeTombstoneIndexForDatabase(ClusterOperationContext context, string databaseName)
         {
             CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
 
@@ -3113,7 +3113,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesByKey(TransactionOperationContext context,
+        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesByKey(ClusterOperationContext context,
             string databaseName, long fromIndex = 0, long take = long.MaxValue)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, databaseName, fromIndex, out var buffer))
@@ -3136,7 +3136,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal bool HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(TransactionOperationContext context, string databaseName, long start, long end)
+        internal bool HasCompareExchangeTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(ClusterOperationContext context, string databaseName, long start, long end)
         {
             if (start >= end)
                 return false;
@@ -3215,7 +3215,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe CompareExchangeKey ReadCompareExchangeKey(TransactionOperationContext context, TableValueReader reader, string dbPrefix)
+        private static unsafe CompareExchangeKey ReadCompareExchangeKey(ClusterOperationContext context, TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)CompareExchangeTable.Key, out var size);
 
@@ -3525,7 +3525,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool TryReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context, out PullReplicationDefinition pullReplication)
+        public bool TryReadPullReplicationDefinition(string database, string definitionName, ClusterOperationContext context, out PullReplicationDefinition pullReplication)
         {
             pullReplication = null;
             try
@@ -3549,7 +3549,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public PullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
+        public PullReplicationDefinition ReadPullReplicationDefinition<TRavenTranscation>(string database, string definitionName, TransactionOperationContext<TRavenTranscation> context) where TRavenTranscation : RavenTransaction  
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, database))
             {
@@ -3568,7 +3568,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string Prefix, long Value, long index)> GetIdentitiesFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, long take)
+        public IEnumerable<(string Prefix, long Value, long index)> GetIdentitiesFromPrefix(ClusterOperationContext context, string dbName, long fromIndex, long take)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
             {
@@ -3604,7 +3604,7 @@ namespace Raven.Server.ServerWide
             return key;
         }
 
-        public long GetNumberOfIdentities(TransactionOperationContext context, string databaseName)
+        public long GetNumberOfIdentities(ClusterOperationContext context, string databaseName)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(IdentitiesSchema, Identities);
             var identities = items.GetTree(IdentitiesSchema.Key);
@@ -3613,7 +3613,7 @@ namespace Raven.Server.ServerWide
             return GetNumberOf(identities, prefix, context);
         }
 
-        public long GetNumberOfCompareExchange(TransactionOperationContext context, string databaseName)
+        public long GetNumberOfCompareExchange(ClusterOperationContext context, string databaseName)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var compareExchange = items.GetTree(CompareExchangeSchema.Key);
@@ -3621,7 +3621,7 @@ namespace Raven.Server.ServerWide
             return GetNumberOf(compareExchange, prefix, context);
         }
 
-        public long GetNumberOfCompareExchangeTombstones(TransactionOperationContext context, string databaseName)
+        public long GetNumberOfCompareExchangeTombstones(ClusterOperationContext context, string databaseName)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
             var compareExchangeTombstone = items.GetTree(CompareExchangeTombstoneSchema.Key);
@@ -3629,7 +3629,7 @@ namespace Raven.Server.ServerWide
             return GetNumberOf(compareExchangeTombstone, prefix, context);
         }
 
-        public bool HasCompareExchangeTombstones(TransactionOperationContext context, string databaseName)
+        public bool HasCompareExchangeTombstones<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName) where TRavenTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones);
             var compareExchangeTombstone = items.GetTree(CompareExchangeTombstoneSchema.Key);
@@ -3637,7 +3637,7 @@ namespace Raven.Server.ServerWide
             return HasPrefixOf(compareExchangeTombstone, prefix, context);
         }
 
-        private static bool HasPrefixOf(Tree tree, string prefix, TransactionOperationContext context)
+        private static bool HasPrefixOf<TRavenTransaction>(Tree tree, string prefix, TransactionOperationContext<TRavenTransaction> context) where TRavenTransaction : RavenTransaction
         {
             using (Slice.From(context.Allocator, prefix, out var prefixAsSlice))
             {
@@ -3653,7 +3653,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static long GetNumberOf(Tree tree, string prefix, TransactionOperationContext context)
+        private static long GetNumberOf(Tree tree, string prefix, ClusterOperationContext context)
         {
             using (Slice.From(context.Allocator, prefix, out var prefixAsSlice))
             {
@@ -4495,7 +4495,7 @@ namespace Raven.Server.ServerWide
             return new ClusterValidator();
         }
 
-        public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(TransactionOperationContext context, string database, string hub, string filter, int start, int pageSize)
+        public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(ClusterOperationContext context, string database, string hub, string filter, int start, int pageSize)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
@@ -4534,7 +4534,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificateForDatabase(TransactionOperationContext context, string database)
+        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificateForDatabase(ClusterOperationContext context, string database)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
@@ -4567,12 +4567,12 @@ namespace Raven.Server.ServerWide
             return certBase64;
         }
 
-        private unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(TransactionOperationContext context, ref TableValueReader reader)
+        private unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(ClusterOperationContext context, ref TableValueReader reader)
         {
             return new BlittableJsonReaderObject(reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
         }
 
-        public bool IsReplicationCertificate(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert, out DetailedReplicationHubAccess access)
+        public bool IsReplicationCertificate(ClusterOperationContext context, string database, string hub, X509Certificate2 userCert, out DetailedReplicationHubAccess access)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
@@ -4590,7 +4590,7 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
-        public unsafe bool IsReplicationCertificateByPublicKeyPinningHash(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert, SecurityConfiguration securityConfiguration, out DetailedReplicationHubAccess access)
+        public unsafe bool IsReplicationCertificateByPublicKeyPinningHash(ClusterOperationContext context, string database, string hub, X509Certificate2 userCert, SecurityConfiguration securityConfiguration, out DetailedReplicationHubAccess access)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
             // maybe we need to check by public key hash?

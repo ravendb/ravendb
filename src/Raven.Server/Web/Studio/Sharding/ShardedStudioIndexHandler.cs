@@ -19,7 +19,7 @@ public class ShardedStudioIndexHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/studio/index-type", "POST")]
     public async Task PostIndexType()
     {
-        using (var processor = new StudioIndexHandlerForPostIndexType<TransactionOperationContext>(this, ContextPool))
+        using (var processor = new StudioIndexHandlerForPostIndexType<TransactionOperationContext>(this))
             await processor.ExecuteAsync();
     }
 

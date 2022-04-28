@@ -10,8 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 
 internal class ShardedIndexHandlerProcessorForStale : AbstractIndexHandlerProcessorForStale<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedIndexHandlerProcessorForStale([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedIndexHandlerProcessorForStale([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

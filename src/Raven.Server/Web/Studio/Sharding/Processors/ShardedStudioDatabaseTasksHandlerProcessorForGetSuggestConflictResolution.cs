@@ -12,7 +12,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
     internal class ShardedStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution : AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution([NotNull] ShardedDatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler)
         {
         }
 

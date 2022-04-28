@@ -14,8 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorForProgress<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public IndexHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

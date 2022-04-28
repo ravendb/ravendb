@@ -12,22 +12,16 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForGetConnectionString<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal class OngoingTasksHandlerProcessorForGetConnectionString<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        private readonly string _databaseName;
-
-        public OngoingTasksHandlerProcessorForGetConnectionString([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
-            : base(requestHandler, contextPool)
+        public OngoingTasksHandlerProcessorForGetConnectionString([NotNull] TRequestHandler requestHandler): base(requestHandler)
         {
-            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
         private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
@@ -85,10 +79,10 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         public override async ValueTask ExecuteAsync()
         {
-            if (ResourceNameValidator.IsValidResourceName(_databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(RequestHandler.DatabaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            if (await RequestHandler.CanAccessDatabaseAsync(_databaseName, requireAdmin: true, requireWrite: false) == false)
+            if (await RequestHandler.CanAccessDatabaseAsync(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: false) == false)
                 return;
 
             var connectionStringName = RequestHandler.GetStringQueryString("connectionStringName", false);
@@ -105,7 +99,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
 
                 using (context.OpenReadTransaction())
-                using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
+                using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
                 {
                     if (connectionStringName != null)
                     {

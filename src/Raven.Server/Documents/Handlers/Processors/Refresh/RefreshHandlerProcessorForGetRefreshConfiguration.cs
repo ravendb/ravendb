@@ -6,8 +6,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Refresh;
 
 internal class RefreshHandlerProcessorForGetRefreshConfiguration : AbstractRefreshHandlerProcessorForGetRefreshConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public RefreshHandlerProcessorForGetRefreshConfiguration([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public RefreshHandlerProcessorForGetRefreshConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

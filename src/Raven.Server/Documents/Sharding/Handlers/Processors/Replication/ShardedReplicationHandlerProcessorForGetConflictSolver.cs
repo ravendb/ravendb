@@ -6,10 +6,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
 
 internal class ShardedReplicationHandlerProcessorForGetConflictSolver : AbstractReplicationHandlerProcessorForGetConflictSolver<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedReplicationHandlerProcessorForGetConflictSolver([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedReplicationHandlerProcessorForGetConflictSolver([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 }

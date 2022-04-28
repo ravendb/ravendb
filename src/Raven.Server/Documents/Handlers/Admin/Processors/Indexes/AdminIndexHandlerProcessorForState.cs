@@ -11,8 +11,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal class AdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerProcessorForState<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AdminIndexHandlerProcessorForState(IndexState state, [NotNull] DatabaseRequestHandler requestHandler) 
-        : base(state, requestHandler, requestHandler.ContextPool)
+    public AdminIndexHandlerProcessorForState(IndexState state, [NotNull] DatabaseRequestHandler requestHandler) : base(state, requestHandler)
     {
     }
 

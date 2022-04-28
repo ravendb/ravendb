@@ -17,17 +17,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.SampleData
 {
-    internal abstract class AbstractSampleDataHandlerProcessorForPostSampleData<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractSampleDataHandlerProcessorForPostSampleData<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractSampleDataHandlerProcessorForPostSampleData([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractSampleDataHandlerProcessorForPostSampleData([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected abstract string GetDatabaseName();
-
-        protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
         protected abstract ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes);
 
@@ -35,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
 
         public override async ValueTask ExecuteAsync()
         {
-            var databaseName = GetDatabaseName();
+            var databaseName = RequestHandler.DatabaseName;
             
             if(await IsDatabaseEmptyAsync() == false)
                 throw new InvalidOperationException("You cannot create sample data in a database that already contains documents");
@@ -56,7 +52,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
                     }
                 }, databaseName, RequestHandler.GetRaftRequestIdFromQuery() + "/revisions");
                 var (index, _) = await RequestHandler.ServerStore.SendToLeaderAsync(editRevisions);
-                await WaitForIndexNotificationAsync(index);
+                await RequestHandler.WaitForIndexNotificationAsync(index);
             }
 
             if (operateOnTypes.HasFlag(DatabaseItemType.TimeSeries))
@@ -78,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
                 
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(tsConfig, databaseName, RequestHandler.GetRaftRequestIdFromQuery() + "/time-series");
                 var (index, _) = await RequestHandler.ServerStore.SendToLeaderAsync(editTimeSeries);
-                await WaitForIndexNotificationAsync(index);
+                await RequestHandler.WaitForIndexNotificationAsync(index);
             }
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -86,7 +82,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
                 await using (var sampleData = typeof(SampleDataHandler).Assembly
                                  .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 await using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
-                using (var source = new StreamSource(stream, context, GetDatabaseName()))
+                using (var source = new StreamSource(stream, context, databaseName))
                 {
                     await ExecuteSmugglerAsync(context, source, sampleData, operateOnTypes);
                 }

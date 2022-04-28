@@ -11,8 +11,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors;
 
 internal class ShardedStudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedStudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedStudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

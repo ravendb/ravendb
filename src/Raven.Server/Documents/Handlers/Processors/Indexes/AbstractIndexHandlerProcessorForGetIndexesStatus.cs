@@ -10,11 +10,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
     internal abstract class AbstractIndexHandlerProcessorForGetIndexesStatus<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<IndexingStatus, TRequestHandler,
             TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractIndexHandlerProcessorForGetIndexesStatus([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> operationContext) : base(requestHandler, operationContext)
+        protected AbstractIndexHandlerProcessorForGetIndexesStatus([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

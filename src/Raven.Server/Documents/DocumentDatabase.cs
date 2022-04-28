@@ -1008,7 +1008,7 @@ namespace Raven.Server.Documents
         public DatabaseSummary GetDatabaseSummary()
         {
             using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext transactionContext))
             using (documentsContext.OpenReadTransaction())
             using (transactionContext.OpenReadTransaction())
             {

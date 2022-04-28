@@ -6,12 +6,10 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
 internal class AdminConfigurationHandlerProcessorForGetSettings : AbstractAdminConfigurationHandlerProcessorForGetSettings<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AdminConfigurationHandlerProcessorForGetSettings([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public AdminConfigurationHandlerProcessorForGetSettings([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
 
     protected override RavenConfiguration GetDatabaseConfiguration() => RequestHandler.Database.Configuration;
 }

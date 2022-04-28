@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 {
     internal class ShardedCountersHandlerProcessorForGetCounters : AbstractCountersHandlerProcessorForGetCounters<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedCountersHandlerProcessorForGetCounters([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedCountersHandlerProcessorForGetCounters([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

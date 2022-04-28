@@ -20,13 +20,13 @@ internal class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHandlerProc
     private readonly ShardedBulkInsertOperation _operation;
     private readonly CancellationTokenSource _cts;
 
-    public ShardedBulkInsertHandlerProcessor([NotNull] ShardedBulkInsertHandler requestHandler, [NotNull] JsonContextPoolBase<TransactionOperationContext> contextPool, ShardedDatabaseContext databaseContext,
+    public ShardedBulkInsertHandlerProcessor([NotNull] ShardedBulkInsertHandler requestHandler, ShardedDatabaseContext databaseContext,
         long operationId, bool skipOverwriteIfUnchanged, CancellationToken token) :
-        base(requestHandler, contextPool, null, skipOverwriteIfUnchanged, token)
+        base(requestHandler, null, skipOverwriteIfUnchanged, token)
     {
         _databaseContext = databaseContext;
         _cts = CancellationTokenSource.CreateLinkedTokenSource(token, requestHandler.AbortRequestToken);
-        _operation = new ShardedBulkInsertOperation(operationId, skipOverwriteIfUnchanged, requestHandler, databaseContext, contextPool, _cts.Token);
+        _operation = new ShardedBulkInsertOperation(operationId, skipOverwriteIfUnchanged, requestHandler, databaseContext, requestHandler.ContextPool, _cts.Token);
     }
 
     protected override AbstractBulkInsertBatchCommandsReader<ShardedBatchCommandData> GetCommandsReader(JsonOperationContext context, Stream requestBodyStream, JsonOperationContext.MemoryBuffer buffer, CancellationToken token)

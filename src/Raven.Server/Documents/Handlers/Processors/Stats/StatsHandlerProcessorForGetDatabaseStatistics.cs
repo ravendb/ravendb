@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
 {
     internal class StatsHandlerProcessorForGetDatabaseStatistics : AbstractStatsHandlerProcessorForGetDatabaseStatistics<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public StatsHandlerProcessorForGetDatabaseStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public StatsHandlerProcessorForGetDatabaseStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

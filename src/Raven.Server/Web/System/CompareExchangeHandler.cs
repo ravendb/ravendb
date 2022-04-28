@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors;
 using Raven.Server.Web.System.Processors.CompareExchange;
 
@@ -11,7 +12,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/cmpxchg", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetCompareExchangeValues()
         {
-            using (var processor = new CompareExchangeHandlerProcessorForGetCompareExchangeValues(this, Database.Name))
+            using (var processor = new CompareExchangeHandlerProcessorForGetCompareExchangeValues(this))
                 await processor.ExecuteAsync();
         }
 
@@ -26,7 +27,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/cmpxchg", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task DeleteCompareExchangeValue()
         {
-            using (var processor = new CompareExchangeHandlerProcessorForDeleteCompareExchangeValue(this, Database.Name))
+            using (var processor = new CompareExchangeHandlerProcessorForDeleteCompareExchangeValue<DocumentsOperationContext>(this))
                 await processor.ExecuteAsync();
         }
     }

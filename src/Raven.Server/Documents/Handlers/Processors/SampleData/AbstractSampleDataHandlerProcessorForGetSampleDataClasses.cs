@@ -6,11 +6,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.SampleData
 {
-    internal abstract class AbstractSampleDataHandlerProcessorForGetSampleDataClasses<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractSampleDataHandlerProcessorForGetSampleDataClasses<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractSampleDataHandlerProcessorForGetSampleDataClasses([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractSampleDataHandlerProcessorForGetSampleDataClasses([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

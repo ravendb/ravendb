@@ -8,9 +8,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Sharding.Handlers.Processors;
 internal class ShardedPostgreSqlIntegrationHandlerProcessorForGetUsernamesList : AbstractPostgreSqlIntegrationHandlerProcessorForGetUsernamesList<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedPostgreSqlIntegrationHandlerProcessorForGetUsernamesList([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+        : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 }

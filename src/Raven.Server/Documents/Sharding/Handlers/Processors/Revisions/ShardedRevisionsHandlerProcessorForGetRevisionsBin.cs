@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
     internal class ShardedRevisionsHandlerProcessorForGetRevisionsBin : AbstractRevisionsHandlerProcessorForGetRevisionsBin<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedRevisionsHandlerProcessorForGetRevisionsBin([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedRevisionsHandlerProcessorForGetRevisionsBin([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -33,13 +33,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
             await ShardedRevisionsHandlerProcessorForGetRevisions.WriteRevisionsResultAsync(context, RequestHandler, result, totalResult: null, continuationToken);
 
-            AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, 0, pageSize, sw.ElapsedMilliseconds, 0);
-        }
-        
-        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-            long totalDocumentsSizeInBytes)
-        {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Minor, "Implement AddPagingPerformanceHint. Make sure this gets passed real params");
+            RequestHandler.AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisionsBin", HttpContext.Request.QueryString.Value, 0, pageSize, sw.ElapsedMilliseconds, 0);
         }
 
         internal readonly struct ShardedGetRevisionsBinOperation : IShardedOperation<BlittableArrayResult, BlittableJsonReaderObject[]>

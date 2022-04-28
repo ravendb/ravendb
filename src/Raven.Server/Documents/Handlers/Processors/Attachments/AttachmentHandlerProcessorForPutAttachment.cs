@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
     internal class AttachmentHandlerProcessorForPutAttachment : AbstractAttachmentHandlerProcessorForPutAttachment<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public AttachmentHandlerProcessorForPutAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public AttachmentHandlerProcessorForPutAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
