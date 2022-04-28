@@ -231,15 +231,6 @@ class genUtils {
 
         return input;
     }
-    
-    static sortUTC(timeStampA: string, timeStampB: string, mode: sortMode = "asc"): number {
-        const result = moment.utc(timeStampA).diff(moment.utc(timeStampB));
-
-        if (result === 0)
-            return 0;
-
-        return mode === "asc" ? result : -result;
-    }
 
     /***  Size Methods ***/
 

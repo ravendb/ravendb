@@ -218,7 +218,7 @@
                                         <strong data-bind="text: $root.clearanceLabelFor(SecurityClearance)"></strong>
                                     </div>
                                     <div class="valid-from">
-                                        <h5><i data-bind="attr: { class: validFromIcon }"></i> VAlID FROM</h5>
+                                        <h5><i data-bind="attr: { class: validFromIcon }"></i> VALID FROM</h5>
                                         <strong data-bind="attr: { class: validFromClass }, text: validFromText">
                                         </strong>
                                     </div>
@@ -258,7 +258,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-12 col-lg-5 flex-vertical" data-bind="with: model">
+        <div class="col-sm-12 col-lg-5 flex-vertical generate-certificate" data-bind="with: model">
             <div class="panel padding padding-sm">
                 <form data-bind="submit: $root.save">
                     <div class="flex-header">
@@ -395,8 +395,8 @@
                                                    data-bind="textInput: $root.newPermissionDatabaseName"
                                                    placeholder="Select (or enter) a database">
                                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                            <ul class="dropdown-menu" data-bind="foreach: $root.createDatabaseNameAutocompleter(), autoComplete: '#databaseNameInput'">
-                                                <li data-bind="click: _.partial($root.useDatabase, $data)">
+                                            <ul class="dropdown-menu" data-bind="foreach: $root.createDatabaseNameAutoCompleter(), autoComplete: '#databaseNameInput'">
+                                                <li data-bind="click: _.partial($root.addPermissionWithBlink, $data)">
                                                     <a href="#" data-bind="text: $data"></a>
                                                 </li>
                                             </ul>
@@ -404,7 +404,7 @@
                                         <span class="help-block" data-bind="validationMessage: $root.newPermissionDatabaseName"></span>
                                     </div>
                                     <div>
-                                        <button data-bind="click: $root.addNewPermission, enable: $root.newPermissionDatabaseName() && $root.canAddPermission()"
+                                        <button data-bind="click: $root.addPermission, enable: $root.newPermissionDatabaseName"
                                                 class="btn btn-default" title="Click to add permissions for the entered database">
                                             <i class="icon-plus"></i>
                                         </button>
@@ -580,11 +580,11 @@
                             <div class="flex-grow">
                                 <div class="dropdown btn-block flex-grow">
                                     <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database" data-toggle="dropdown" autocomplete="off"
-                                           data-bind="textInput: inputDatabase, attr: { id: 'dbNameInput' }, disable: $root.databases().length === 0" />
+                                           data-bind="textInput: inputDatabase, attr: { id: 'dbNameInput' }" />
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu" role="menu" style="display: none;"
                                         data-bind="autoComplete: '#dbNameInput', foreach: $root.createDatabaseNameAutoCompleterForFilter()">
-                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                        <li role="presentation" data-bind="click: _.partial($root.addDatabaseWithBlink, $data)">
                                             <a role="menuitem" tabindex="-1" href="#">
                                                 <div data-bind="text: $data"></div>
                                             </a>
@@ -593,7 +593,7 @@
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-default" data-bind="click: $root.addDatabase, enable: inputDatabase() && canAddDatabase()"
+                                <button class="btn btn-default" data-bind="click: $root.addDatabase, enable: inputDatabase"
                                         title="Click to add the entered database to the list">
                                     <i class="icon-plus"></i>
                                 </button>
