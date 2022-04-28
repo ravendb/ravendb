@@ -93,13 +93,7 @@ namespace Sparrow.Server.Utils
 
         private DiskStatsRawResult GetDiskInfo(string path)
         {
-            var result = Pal.rvn_get_path_disk_stats(path, out var ioStats, out var error);
-            if (result == PalFlags.FailCodes.Success)
-                return new DiskStatsRawResult {Time = DateTime.UtcNow, ReadIOs = (long)ioStats.Read, WriteIOs = (long)ioStats.Write};
-            
-            if (Logger.IsInfoEnabled)
-                Logger.Info(PalHelper.GetNativeErrorString(error, $"Failed to get file system statistics for path: {path}. FailCode={result}", out _));
-         
+
             return null;
         }
         
