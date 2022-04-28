@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
                 return TermsQueryResultServerSide.NotModifiedResult;
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.CombinedEtag + "\"";
+            result.Result.ResultEtag = Convert.ToInt64(result.CombinedEtag);
+
             return result.Result;
         }
 
@@ -73,6 +75,29 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
             }
 
             public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shard) => new GetIndexTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
+
+            public string CombineCommandsEtag(Memory<RavenCommand<TermsQueryResultServerSide>> commands)
+            {
+                var etags = ComputeHttpEtags.EnumerateEtags(commands);
+
+                long combinedEtag = 0;
+                bool isFirst = true;
+                foreach (var res in etags)
+                {
+                    var etag = Convert.ToInt64(res);
+
+                    if (isFirst)
+                    {
+                        combinedEtag = etag;
+                        isFirst = false;
+                        continue;
+                    }
+
+                    combinedEtag ^= etag;
+                }
+
+                return Convert.ToString(combinedEtag);
+            }
         }
 
         public class TermsComparer : Comparer<ShardStreamItem<string>>
