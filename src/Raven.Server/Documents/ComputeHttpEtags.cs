@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
 
         public static string CombineEtags<T>(Memory<RavenCommand<T>> cmds) => CombineEtags(EnumerateEtags(cmds));
 
-        private static IEnumerable<string> EnumerateEtags<T>(Memory<RavenCommand<T>> cmds)
+        public static IEnumerable<string> EnumerateEtags<T>(Memory<RavenCommand<T>> cmds)
         {
             for (var index = 0; index < cmds.Length; index++)
             {
