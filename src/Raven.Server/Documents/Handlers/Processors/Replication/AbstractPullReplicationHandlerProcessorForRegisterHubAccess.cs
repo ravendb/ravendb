@@ -45,11 +45,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                                                     ". Create a new replication hub and try again");
             }
 
-            using (context.OpenReadTransaction())
-            {
-                var blittableJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "register-hub-access");
-                return blittableJson;
-            }
+            return await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "register-hub-access");
         }
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
