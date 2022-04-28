@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 {
     public class RavenEtlDocumentTransformerV8 : EtlTransformerV8<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
     {
-        private RavenEtlScriptRun _currentRun;
+        private RavenEtlScriptRunV8 _currentRun;
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
         private JsHandleV8 _addAttachmentMethod;
@@ -42,7 +42,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public override void Dispose()
         {
-            _currentRun.Dispose(); 
             _addAttachmentMethod.Dispose();
             _addCounterMethod.Dispose();
             _addTimeSeriesMethod.Dispose();
@@ -258,7 +257,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)
         {
             Current = item;
-            _currentRun ??= new RavenEtlScriptRun(stats);
+            _currentRun ??= new RavenEtlScriptRunV8(DocumentEngineHandle, stats);
 
             if (item.IsDelete == false)
             {
