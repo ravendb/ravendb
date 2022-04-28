@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
-        [RavenShardedAction("/databases/*/task", "GET")] 
+        [RavenShardedAction("/databases/*/task", "GET")]
         public async Task GetOngoingTaskInfo()
         {
             if (ResourceNameValidator.IsValidResourceName(DatabaseContext.DatabaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -90,9 +90,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
             var taskId = GetLongQueryString("key", false);
             if (taskId != null)
                 key = taskId.Value;
-            var name = GetStringQueryString("taskName", false);
+            var taskName = GetStringQueryString("taskName", false);
 
-            if ((taskId == null) && (name == null))
+            if ((taskId == null) && (taskName == null))
                 throw new ArgumentException("You must specify a query string argument of either 'key' or 'name' , but none was specified.");
 
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
@@ -116,6 +116,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         case OngoingTaskType.PullReplicationAsSink:
                         case OngoingTaskType.Replication:
                             // todo https://issues.hibernatingrhinos.com/issue/RavenDB-13110
+                            await GetTaskInfoForSingleShard(context, key, taskName);
                             break;
                         case OngoingTaskType.Backup:
                             // todo https://issues.hibernatingrhinos.com/issue/RavenDB-13112
@@ -125,20 +126,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         case OngoingTaskType.SqlEtl:
                         case OngoingTaskType.OlapEtl:
                         case OngoingTaskType.RavenEtl:
-                            if (name == null)
-                                throw new ArgumentException($"ETL task {key} is sharded, you must specify a query string argument for 'name', but none was specified.");
-
-                            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref name, out var shardNumber) == false)
-                                throw new ArgumentException($"ETL task '{name}' is sharded, you must specify the shard index, for example : '{name}$0'");
-
-                            var cmd = new ShardedCommand(this, Headers.None);
-                            await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, shardNumber);
-
-                            HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-                            HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
-
-                            if (cmd.Result != null)
-                                await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
+                            await GetTaskInfoForSingleShard(context, key, taskName);
                             break;
                         default:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -146,6 +134,24 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     }
                 }
             }
+        }
+
+        private async Task GetTaskInfoForSingleShard(TransactionOperationContext context, long key, string taskName)
+        {
+            if (taskName == null)
+                throw new ArgumentException($"This task {key} is sharded, you must specify a query string argument for 'name', but none was specified.");
+
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref taskName, out var shardNumber) == false)
+                throw new ArgumentException($"Task '{taskName}' is sharded, you must specify the shard index, for example : '{taskName}$0'");
+
+            var cmd = new ShardedCommand(this, Headers.None);
+            await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, shardNumber);
+
+            HttpContext.Response.StatusCode = (int)cmd.StatusCode;
+            HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
+
+            if (cmd.Result != null)
+                await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
         }
 
         [RavenShardedAction("/databases/*/admin/periodic-backup", "POST")]
