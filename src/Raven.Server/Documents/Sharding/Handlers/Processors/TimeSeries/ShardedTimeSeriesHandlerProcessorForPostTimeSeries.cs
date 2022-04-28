@@ -1,12 +1,9 @@
-﻿using System;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Utils;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 {
@@ -22,20 +19,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
             using (var token = RequestHandler.CreateOperationToken())
             {
                 var cmd = new TimeSeriesBatchOperation.TimeSeriesBatchCommand(docId, operation);
-                await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token.Token);
-
-                switch (cmd.StatusCode)
-                {
-                    case HttpStatusCode.NotFound:
-                        HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Execution of command should rethrow the exception using injected behavior");
-                        throw new DocumentDoesNotExistException(docId);
-                    case HttpStatusCode.NoContent:
-                        HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(cmd.StatusCode), $"Not supported status code: {cmd.StatusCode}");
-                }
+                await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<object>(cmd, RequestHandler.HttpContext.Response), shardNumber, token.Token);
             }
         }
     }
