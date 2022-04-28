@@ -49,6 +49,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
+        [RavenShardedAction("/databases/*/docs", "DELETE")]
+        public async Task Delete()
+        {
+            using (var processor = new ShardedDocumentHandlerProcessorForDelete(this, ContextPool))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
+
         [RavenShardedAction("/databases/*/docs", "PUT")]
         public async Task Put()
         {
@@ -95,22 +104,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 HttpContext.Response.StatusCode = (int)cmd.StatusCode;
                 await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
             }
-        }
-
-        [RavenShardedAction("/databases/*/docs", "DELETE")]
-        public async Task Delete()
-        {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var index = DatabaseContext.GetShardNumber(context, id);
-
-                var cmd = new ShardedCommand(this, Headers.IfMatch);
-                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
-            }
-
-            NoContentStatus();
         }
 
         [RavenShardedAction("/databases/*/docs/class", "GET")]

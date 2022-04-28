@@ -12,8 +12,7 @@ namespace Raven.Server.Web.Http;
 
 public class ProxyCommand : ProxyCommand<object>
 {
-    public ProxyCommand(RavenCommand command, [NotNull] HttpResponse response)
-        : base(command, response)
+    public ProxyCommand(RavenCommand command, [NotNull] HttpResponse response) : base(command, response)
     {
     }
 }

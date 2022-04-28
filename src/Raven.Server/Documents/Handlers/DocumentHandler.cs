@@ -68,16 +68,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Delete()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var processor = new DocumentHandlerProcessorForDelete(this, ContextPool))
             {
-                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
-
-                var cmd = new DeleteDocumentCommand(id, changeVector, Database);
-                await Database.TxMerger.Enqueue(cmd);
+                await processor.ExecuteAsync();
             }
-
-            NoContentStatus();
         }
 
         [RavenAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
