@@ -11,6 +11,7 @@ using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
@@ -21,10 +22,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
         {
         }
 
-        protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
+        protected override OperationCancelToken CreateTimeLimitedOperationToken()
+        {
+            return new OperationCancelToken(RequestHandler.DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, RequestHandler.DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
+        }
+
+        protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag, OperationCancelToken token)
         {
             var op = new ShardedGetTermsOperation(RequestHandler, indexName, field, fromValue, pageSize, resultEtag);
-            var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+            var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token.Token);
 
             if (result.StatusCode == (int)HttpStatusCode.NotModified)
                 return TermsQueryResultServerSide.NotModifiedResult;
@@ -81,18 +87,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
                 var etags = ComputeHttpEtags.EnumerateEtags(commands);
 
                 long combinedEtag = 0;
-                bool isFirst = true;
                 foreach (var res in etags)
                 {
                     var etag = Convert.ToInt64(res);
-
-                    if (isFirst)
-                    {
-                        combinedEtag = etag;
-                        isFirst = false;
-                        continue;
-                    }
-
                     combinedEtag ^= etag;
                 }
 

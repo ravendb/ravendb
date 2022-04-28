@@ -9,6 +9,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
@@ -20,9 +21,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         {
         }
 
-        protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag)
+        protected override OperationCancelToken CreateTimeLimitedOperationToken() => RequestHandler.CreateTimeLimitedOperationToken();
+
+        protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag, OperationCancelToken token)
         {
-            using (var token = RequestHandler.CreateTimeLimitedOperationToken())
+            using (token)
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database))
             {
                 var name = GetIndexNameFromCollectionAndField(field) ?? indexName;
