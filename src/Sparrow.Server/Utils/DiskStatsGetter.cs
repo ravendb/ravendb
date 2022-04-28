@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using Sparrow.Logging;
 using Sparrow.Server.Platform;
 
@@ -8,54 +9,86 @@ namespace Sparrow.Server.Utils
     public interface IDiskStatsGetter
     {
         DiskStatsResult Get(string drive);
+        Task<DiskStatsResult> GetAsync(string drive);
     }
 
     internal class DiskStatsGetter : IDiskStatsGetter
     {
-        private readonly double _minInterval;
+        private readonly TimeSpan _minInterval;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(DiskStatsGetter).FullName);
 
-        private readonly object _locker = new object();
-        private readonly Dictionary<string, PrevInfo> _previousInfo = new Dictionary<string, PrevInfo>();
+        private readonly ConcurrentDictionary<string, Task<PrevInfo>> _previousInfo = new ConcurrentDictionary<string, Task<PrevInfo>>();
 
         public DiskStatsGetter(TimeSpan minInterval)
         {
-            _minInterval = minInterval.TotalSeconds;
+            _minInterval = minInterval;
         }
+
+        public DiskStatsResult Get(string drive) => GetAsync(drive).ConfigureAwait(false).GetAwaiter().GetResult();
         
-        public DiskStatsResult Get(string drive)
+        public async Task<DiskStatsResult> GetAsync(string drive)
         {
             if (drive == null)
                 return null;
 
-            lock (_locker)
+            var start = DateTime.UtcNow;
+            State state = null;
+            while (true)
             {
-                if (_previousInfo.TryGetValue(drive, out var prev))
+                if (_previousInfo.TryGetValue(drive, out var prevTask) == false)
                 {
-                    var diff = (DateTime.UtcNow - prev.Raw.Time).TotalSeconds;
-                    if (diff < _minInterval)
-                        return prev.Calculated;
+                    state = new State {Drive = drive};
+                    var task = new Task<PrevInfo>(GetStats, state);
+                    if (_previousInfo.TryAdd(drive, task) == false)
+                        continue;
 
-                    var currentInfo = GetDiskInfo(drive);
-                    if (currentInfo == null)
-                        return null;
-                
-                    var read = (currentInfo.ReadIOs - prev.Raw.ReadIOs) / diff;
-                    var write = (currentInfo.WriteIOs - prev.Raw.WriteIOs) / diff;
-                    var diskSpaceResult = new DiskStatsResult {ReadIos = read, WriteIos = write};
-                
-                    prev.Raw = currentInfo;
-                    prev.Calculated = diskSpaceResult;
-                    return diskSpaceResult;
-                }
-                else
-                {
-                    var currentInfo = GetDiskInfo(drive);
-                    if (currentInfo != null)
-                        _previousInfo[drive] = new PrevInfo {Raw = currentInfo};
+                    task.Start();
                     return null;
                 }
+
+                var prev = await prevTask.ConfigureAwait(false);
+                var diff = DateTime.UtcNow - prev.Raw.Time;
+                if (start < prev.Raw.Time || diff < _minInterval)
+                    return prev.Calculated;
+
+                state ??= new State {Drive = drive};
+                state.Prev = prev;
+
+                var calculateTask = new Task<PrevInfo>(CalculateStats, state);
+                if (_previousInfo.TryUpdate(drive, calculateTask, prevTask) == false)
+                    continue;
+
+                calculateTask.Start();
+                return (await calculateTask.ConfigureAwait(false)).Calculated;
             }
+        }
+
+        private PrevInfo GetStats(object o)
+        {
+            var state = (State)o;
+            var currentInfo = GetDiskInfo(state.Drive);
+            return currentInfo != null ? new PrevInfo {Raw = currentInfo} : null;
+        }
+
+        private PrevInfo CalculateStats(object o)
+        {
+            var state = (State)o;
+            var currentInfo = GetDiskInfo(state.Drive);
+            if (currentInfo == null)
+                return null;
+
+            var diff = (currentInfo.Time - state.Prev.Raw.Time).TotalSeconds;
+            var read = (currentInfo.ReadIOs - state.Prev.Raw.ReadIOs) / diff;
+            var write = (currentInfo.WriteIOs - state.Prev.Raw.WriteIOs) / diff;
+            var diskSpaceResult = new DiskStatsResult {ReadIos = read, WriteIos = write};
+
+            return new PrevInfo {Raw = currentInfo, Calculated = diskSpaceResult};
+        }
+
+        class State
+        {
+            public string Drive;
+            public PrevInfo Prev;
         }
 
         private DiskStatsRawResult GetDiskInfo(string path)
@@ -96,5 +129,6 @@ namespace Sparrow.Server.Utils
     internal class NotImplementedDiskStatsGetter : IDiskStatsGetter
     {
         public DiskStatsResult Get(string drive) => null;
+        public Task<DiskStatsResult> GetAsync(string drive) => null;
     }    
 }
