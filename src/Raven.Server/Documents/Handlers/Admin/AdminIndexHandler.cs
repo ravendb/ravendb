@@ -1,12 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -58,36 +54,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task Dump()
         {
-            var name = GetStringQueryString("name");
-            var path = GetStringQueryString("path");
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-            {
-                IndexDoesNotExistException.ThrowFor(name);
-                return; //never hit
-            }
-
-            var operationId = Database.Operations.GetNextOperationId();
-            var token = CreateTimeLimitedQueryOperationToken();
-
-            _ = Database.Operations.AddOperation(
-                Database,
-                "Dump index " + name + " to " + path,
-                Operations.Operations.OperationType.DumpRawIndexData,
-                onProgress =>
-                {
-                    var totalFiles = index.Dump(path, onProgress);
-                    return Task.FromResult((IOperationResult)new DumpIndexResult
-                    {
-                        Message = $"Dumped {totalFiles} files from {name}",
-                    });
-                }, operationId, token: token);
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
-            }
+            using (var processor = new AdminIndexHandlerProcessorForDump(this))
+                await processor.ExecuteAsync();
         }
 
         public class DumpIndexResult : IOperationResult
