@@ -5,24 +5,26 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    internal partial class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
+    public class SqlDocumentTransformerJint : EtlTransformerJint<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private static readonly int DefaultVarCharSize = 50;
         
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
-        private Dictionary<string, Queue<Attachment>> _loadedAttachments;
+        private readonly Dictionary<string, Queue<Attachment>> _loadedAttachments;
         private readonly List<SqlEtlTable> _tablesForScript;
 
         private EtlStatsScope _stats;
 
-        public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
+        public SqlDocumentTransformerJint(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
         {
             _transformation = transformation;
@@ -51,21 +53,53 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
-            
-            DocumentEngineHandle.SetGlobalClrCallBack("varchar",
-                (((value, values) => ToVarcharTranslatorJint(VarcharFunctionCall.AnsiStringType, values)),
-                (engine, isConstructCall, self, args) => ToVarcharTranslatorV8(VarcharFunctionCall.AnsiStringType, args))
-            );
 
-            DocumentEngineHandle.SetGlobalClrCallBack("nvarchar",
-                (((value, values) => ToVarcharTranslatorJint(VarcharFunctionCall.StringType, values)),
-                (engine, isConstructCall, self, args) => ToVarcharTranslatorV8(VarcharFunctionCall.StringType, args))
-            );
+            DocumentEngineHandle.SetGlobalClrCallBack("varchar", (_, values) => ToVarcharTranslator(DocumentEngineHandle.CreateValue(VarcharFunctionCall.AnsiStringType), values));
+            DocumentEngineHandle.SetGlobalClrCallBack("nvarchar", (_, values) => ToVarcharTranslator(DocumentEngineHandle.CreateValue(VarcharFunctionCall.StringType), values));
+        }
+
+        private JsHandleJint ToVarcharTranslator(JsHandleJint type, JsHandleJint[] args)
+        {
+            if (args[0].IsStringEx == false)
+                throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
+
+            var sizeSpecified = args.Length > 1;
+
+            if (sizeSpecified && args[1].IsNumber == false)
+                throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
+
+            var item = DocumentEngineHandle.CreateObject();
+            item.SetProperty(nameof(VarcharFunctionCall.Type), type, throwOnError: true);
+            item.SetProperty(nameof(VarcharFunctionCall.Value), args[0], throwOnError: true);
+            item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DocumentEngineHandle.CreateValue(DefaultVarCharSize), throwOnError: true);
+
+            return item;
         }
 
         protected override string[] LoadToDestinations { get; }
+        protected override void AddLoadedAttachment(JsHandleJint reference, string name, Attachment attachment)
+        {
+            var strReference = reference.ToString();
+            if (_loadedAttachments.TryGetValue(strReference, out var loadedAttachments) == false)
+            {
+                loadedAttachments = new Queue<Attachment>();
+                _loadedAttachments.Add(strReference, loadedAttachments);
+            }
 
-        protected override void LoadToFunction(string tableName, ScriptRunnerResult cols)
+            loadedAttachments.Enqueue(attachment);
+        }
+
+        protected override void AddLoadedCounter(JsHandleJint reference, string name, long value)
+        {
+            throw new NotSupportedException("Counters aren't supported by SQL ETL");
+        }
+
+        protected override void AddLoadedTimeSeries(JsHandleJint reference, string name, IEnumerable<SingleResult> entries)
+        {
+            throw new NotSupportedException("Time series aren't supported by SQL ETL");
+        }
+
+        protected override void LoadToFunction(string tableName, ScriptRunnerResult<JsHandleJint> cols)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));

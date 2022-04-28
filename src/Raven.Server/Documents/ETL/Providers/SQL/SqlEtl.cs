@@ -10,6 +10,8 @@ using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -71,9 +73,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public override bool ShouldTrackTimeSeries() => false;
 
-        protected override EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation, JsHandleV8> GetTransformerV8(DocumentsOperationContext context)
         {
-            return new SqlDocumentTransformer(Transformation, Database, context, Configuration);
+            return new SqlDocumentTransformerV8(Transformation, Database, context, Configuration);
+        }
+
+        protected override EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation, JsHandleJint> GetTransformerJint(DocumentsOperationContext context)
+        {
+            return new SqlDocumentTransformerJint(Transformation, Database, context, Configuration);
         }
 
         protected override int LoadInternal(IEnumerable<SqlTableWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)

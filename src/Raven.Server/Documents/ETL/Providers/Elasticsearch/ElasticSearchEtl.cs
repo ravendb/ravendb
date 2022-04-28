@@ -11,6 +11,8 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Enumerators;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions.ETL.ElasticSearch;
@@ -92,9 +94,14 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
         }
 
-        protected override EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation, JsHandleV8> GetTransformerV8(DocumentsOperationContext context)
         {
-            return new ElasticSearchDocumentTransformer(Transformation, Database, context, Configuration);
+            return new ElasticSearchDocumentTransformerV8(Transformation, Database, context, Configuration);
+        }
+
+        protected override EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation, JsHandleJint> GetTransformerJint(DocumentsOperationContext context)
+        {
+            return new ElasticSearchDocumentTransformerJint(Transformation, Database, context, Configuration);
         }
 
         protected override int LoadInternal(IEnumerable<ElasticSearchIndexWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)

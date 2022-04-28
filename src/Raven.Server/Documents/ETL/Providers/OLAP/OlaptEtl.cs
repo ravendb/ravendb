@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using NCrontab.Advanced;
@@ -13,6 +12,8 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
@@ -136,9 +137,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
         }
 
-        protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation, JsHandleV8> GetTransformerV8(DocumentsOperationContext context)
         {
-            return new OlapDocumentTransformer(Transformation, Database, context, Configuration);
+            return new OlapDocumentTransformerV8(Transformation, Database, context, Configuration);
+        }
+
+        protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation, JsHandleJint> GetTransformerJint(DocumentsOperationContext context)
+        {
+            return new OlapDocumentTransformerJint(Transformation, Database, context, Configuration);
         }
 
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, OlapEtlStatsScope scope)

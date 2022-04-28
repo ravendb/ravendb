@@ -5,18 +5,20 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    internal partial class ElasticSearchDocumentTransformer : EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
+    public class ElasticSearchDocumentTransformerJint : EtlTransformerJint<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly ElasticSearchEtlConfiguration _config;
         private readonly Dictionary<string, ElasticSearchIndexWithRecords> _indexes;
         private readonly List<ElasticSearchIndex> _indexesForScript;
 
-        public ElasticSearchDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ElasticSearchEtlConfiguration config)
+        public ElasticSearchDocumentTransformerJint(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ElasticSearchEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.ElasticSearchEtl), null)
         {
             _config = config;
@@ -47,13 +49,27 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string indexName, ScriptRunnerResult document)
+        protected override void AddLoadedAttachment(JsHandleJint reference, string name, Attachment attachment)
+        {
+            throw new NotSupportedException("Attachments aren't supported by ElasticSearch ETL");
+        }
+
+        protected override void AddLoadedCounter(JsHandleJint reference, string name, long value)
+        {
+            throw new NotSupportedException("Counters aren't supported by ElasticSearch ETL");
+        }
+
+        protected override void AddLoadedTimeSeries(JsHandleJint reference, string name, IEnumerable<SingleResult> entries)
+        {
+            throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
+        }
+
+        protected override void LoadToFunction(string indexName, ScriptRunnerResult<JsHandleJint> document)
         {
             if (indexName == null)
                 ThrowLoadParameterIsMandatory(nameof(indexName));
 
             var result = document.TranslateToObject(Context);
-
 
             var index = GetOrAdd(indexName);
 
