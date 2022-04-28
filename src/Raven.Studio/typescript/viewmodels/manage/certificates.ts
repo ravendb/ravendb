@@ -27,9 +27,12 @@ interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefini
     expirationClass: string;
     expirationText: string;
     expirationIcon: string;
+    expirationNumber: number;
+    
     validFromClass: string;
     validFromText: string;
     validFromIcon: string;
+    validFromNumber: number;
 }
 
 class certificates extends viewModelBase {
@@ -62,11 +65,6 @@ class certificates extends viewModelBase {
     importedFileName = ko.observable<string>();
     
     newPermissionDatabaseName = ko.observable<string>();
-    canAddPermission: KnockoutComputed<boolean>;
-    
-    newPermissionValidationGroup: KnockoutValidationGroup = ko.validatedObservable({
-        newPermissionDatabaseName: this.newPermissionDatabaseName
-    });
 
     generateCertificateUrl = endpoints.global.adminCertificates.adminCertificates;
     exportCertificateUrl = endpoints.global.adminCertificates.adminCertificatesExport;
@@ -89,8 +87,6 @@ class certificates extends viewModelBase {
     
     inputDatabase = ko.observable<string>();
     databasesToShow = ko.observableArray<string>([]); // empty means show all, no specific dbs are selected
-
-    canAddDatabase: KnockoutComputed<boolean>;
     allDatabasesSelected: KnockoutComputed<boolean>;
 
     hasAnyFilters: KnockoutComputed<boolean>;
@@ -101,13 +97,13 @@ class certificates extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", 
-            "deletePermission", "addNewPermission", "fileSelected", "copyThumbprint",
-            "useDatabase", "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed",
-            "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters");
+        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode",
+            "deletePermission", "fileSelected", "copyThumbprint",
+            "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed",
+            "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters",
+            "addPermission","addPermissionWithBlink","addDatabase","addDatabaseWithBlink");
         
         this.initObservables();
-        this.initValidation();
         
         this.nameFilter.throttle(300).subscribe(() => this.filterCertificates());
         
@@ -160,46 +156,65 @@ class certificates extends viewModelBase {
         });
     }
     
-    private filterCertificates() {
-        const filter = this.nameFilter().toLocaleLowerCase();
-        
+    private filterCertificates(): void {
         this.certificates().forEach((certificate: unifiedCertificateDefinitionWithCache) => {
-            
-            const nameMatch = !certificate || certificate.Name.toLocaleLowerCase().includes(filter);
-            const thumbprintMatch = !certificate || _.some(certificate.Thumbprints, x => x.toLocaleLowerCase().includes(filter));
-
-            const validMatch = !certificate || (this.showValidCertificates() && !certificate.expirationClass);
-            const expiredMatch = !certificate || (this.showExpiredCertificates() && certificate.expirationClass === "text-danger");
-            const aboutToExpireMatch = !certificate || (this.showAboutToExpireCertificates() && certificate.expirationClass === "text-warning");
-
-            const adminMatch = !certificate || (this.showAdminCertificates() && (certificate.SecurityClearance === "ClusterAdmin" || certificate.SecurityClearance === "ClusterNode"));
-            const operatorMatch = !certificate || (this.showOperatorCertificates() && certificate.SecurityClearance === "Operator");
-            const userMatch = !certificate || (this.showUserCertificates() && certificate.SecurityClearance === "ValidUser");
-            
-            const dbToShow = this.databasesToShow();
-            const dbInCertificate = Object.keys(certificate.Permissions);
-            const found = dbToShow.some(dbItem => dbInCertificate.indexOf(dbItem) >= 0);
-            
-            const dbMatch = !certificate || this.allDatabasesSelected() || found ||
-                certificate.SecurityClearance === "Operator" || certificate.SecurityClearance === "ClusterAdmin" || certificate.SecurityClearance === "ClusterNode";
-            
-            certificate.Visible((nameMatch || thumbprintMatch) &&
-                (validMatch || expiredMatch || aboutToExpireMatch) &&
-                (adminMatch || operatorMatch || userMatch) &&
-                 dbMatch);
+            certificate.Visible(this.isMatchingTextFilter(certificate) &&
+                this.isMatchingClearance(certificate) &&
+                this.isMatchingState(certificate) &&
+                this.isMatchingDatabase(certificate));
         });
-        
+
         const wellKnownAdminCerts = this.wellKnownAdminCerts();
-        
+
         if (wellKnownAdminCerts.length && this.showAdminCertificates()) {
-            const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(filter));
+            const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(this.nameFilter().toLocaleLowerCase()));
             this.wellKnownAdminCertsVisible(thumbprintMatch);
         } else {
             this.wellKnownAdminCertsVisible(false);
         }
     }
     
-    clearAllFilters() {
+    private isMatchingTextFilter(certificate: unifiedCertificateDefinitionWithCache): boolean {
+        const textFilter = this.nameFilter().toLocaleLowerCase();
+        
+        const nameMatch = certificate.Name.toLocaleLowerCase().includes(textFilter);
+        const thumbprintMatch = _.some(certificate.Thumbprints, x => x.toLocaleLowerCase().includes(textFilter));
+        
+        return nameMatch || thumbprintMatch;
+    }
+    
+    private isMatchingClearance(certificate: unifiedCertificateDefinitionWithCache): boolean {
+        const clearance = certificate.SecurityClearance;
+        
+        const adminMatch = this.showAdminCertificates() && (clearance === "ClusterAdmin" || clearance === "ClusterNode");
+        const operatorMatch = this.showOperatorCertificates() && clearance === "Operator";
+        const userMatch = this.showUserCertificates() && clearance === "ValidUser";
+        
+        return adminMatch || operatorMatch || userMatch;
+    }
+
+    private isMatchingState(certificate: unifiedCertificateDefinitionWithCache): boolean {
+        const state = certificate.expirationClass;
+        
+        const validMatch = this.showValidCertificates() && !state;
+        const expiredMatch = this.showExpiredCertificates() && state === "text-danger";
+        const aboutToExpireMatch = this.showAboutToExpireCertificates() && state === "text-warning";
+        
+        return validMatch || expiredMatch || aboutToExpireMatch;
+    }
+    
+    private isMatchingDatabase(certificate: unifiedCertificateDefinitionWithCache): boolean {
+        const clearance = certificate.SecurityClearance;
+        
+        const dbToShow = this.databasesToShow();
+        const dbInCertificate = Object.keys(certificate.Permissions);
+        const found = dbToShow.some(dbItem => dbInCertificate.indexOf(dbItem) >= 0);
+
+        return this.allDatabasesSelected() || found ||
+            clearance === "Operator" || clearance === "ClusterAdmin" || clearance === "ClusterNode";
+    }
+    
+    clearAllFilters(): void {
         this.nameFilter("");
 
         this.showAdminCertificates(true);
@@ -213,7 +228,7 @@ class certificates extends viewModelBase {
         this.databasesToShow([]);
     }
     
-    private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
+    private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised): void {
         if (alert.AlertType === "Certificates_ReplaceError" ||
             alert.AlertType === "Certificates_ReplaceSuccess" ||
             alert.AlertType === "Certificates_EntireClusterReplaceSuccess") {
@@ -221,7 +236,7 @@ class certificates extends viewModelBase {
         }
     }
     
-    private initPopover() {
+    private initPopover(): void {
         popoverUtils.longWithHover($(".certificate-file-label small"),
             {
                 content: () => {
@@ -260,50 +275,38 @@ class certificates extends viewModelBase {
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
 
-        this.canAddPermission = ko.pureComputed(() => {
-            const databasePermissionToAdd = this.newPermissionDatabaseName();
-            return databasePermissionToAdd && !this.model().permissions().find(x => x.databaseName() === databasePermissionToAdd);
-        });
-        
-        this.canAddDatabase = ko.pureComputed(() => {
-            const databaseToAdd = this.inputDatabase();
-            return databaseToAdd && !this.databasesToShow().find(x => x === databaseToAdd);
-        });
-
         this.allDatabasesSelected = ko.pureComputed(() => !this.databasesToShow().length);
 
         this.hasAnyFilters = ko.pureComputed(() => !!this.filterAndSortDescription() || !!this.nameFilter());
         
         this.filterAndSortDescription = ko.pureComputed(() => {
-            const adminPart = this.showAdminCertificates() ? "Admin clearance, " : "";
-            const operatorPart = this.showOperatorCertificates() ? "Operator clearance, " : "";
-            const userPart = this.showUserCertificates() ? "User clearance, " : "";
-            
-            if (!adminPart && !operatorPart && !userPart) {
+            const clearanceItems: string[] = [];
+            if (this.showAdminCertificates()) { clearanceItems.push("Admin clearance"); }
+            if (this.showOperatorCertificates()) { clearanceItems.push("Operator clearance"); }
+            if (this.showUserCertificates()) { clearanceItems.push("User clearance"); }
+
+            if (!clearanceItems.length) {
                 return `<div class="bg-warning text-warning padding padding-xs">
                             <i class="icon-warning"></i><span>No security clearance is selected in Filter Options</span>
                         </div>`;
             }
-           
-            const validPart = this.showValidCertificates() ? "Valid, " : "";
-            const aboutToExpirePart = this.showAboutToExpireCertificates() ? "About to expire, " : "";
-            const expiredPart = this.showExpiredCertificates() ? "Expired, " : "";
+            
+            const stateItems: string[] = [];
+            if (this.showValidCertificates()) { stateItems.push("Valid"); }
+            if (this.showAboutToExpireCertificates()) { stateItems.push("About to expire"); }
+            if (this.showExpiredCertificates()) { stateItems.push("Expired"); }
 
-            if (!validPart && !aboutToExpirePart && !expiredPart) {
+            if (!stateItems.length) {
                 return `<div class="bg-warning text-warning padding padding-xs">
                             <i class="icon-warning"></i><span>No state is selected in Filter Options</span>
                         </div>`;
             }
 
-            const hasAllClearance = adminPart && operatorPart && userPart;
-            const clearancePart = hasAllClearance ? "" : `<strong>Clearance</strong>: ${adminPart}${operatorPart}${userPart}`.slice(0, -2);
-            
-            const hasAllStates = validPart && aboutToExpirePart && expiredPart;
-            const statePart = hasAllStates ? "" : `<strong>State</strong>: ${validPart}${aboutToExpirePart}${expiredPart}`.slice(0, -2);
-            
-            const databases = this.databasesToShow();
-            const databasesNames = databases.map(db => ` ${db}`);
-            const databasesPart = databases.length ? `<strong>Databases</strong>: ${databasesNames}` : "";
+            const clearancePart = clearanceItems.length === 3 ? "" : `<strong>Clearance</strong>: ${clearanceItems.join(", ")}`;
+            const statePart = stateItems.length === 3 ? "" : `<strong>State</strong>: ${stateItems.join(", ")}`;
+
+            const databases = this.databasesToShow().join(", ");
+            const databasesPart = databases.length ? `<strong>Databases</strong>: ${databases}` : "";
 
             const sortPart = this.sortCriteria() ? `<strong>Sorted by</strong>: ${this.sortCriteria()} <br />` : "";
             
@@ -313,12 +316,6 @@ class certificates extends viewModelBase {
         this.noCertificateIsVisible = ko.pureComputed(() => {
            const found = this.certificates().find(x => x.Visible());
            return !found; 
-        });
-    }
-    
-    private initValidation() {
-        this.newPermissionDatabaseName.extend({
-            required: true
         });
     }
     
@@ -425,8 +422,6 @@ class certificates extends viewModelBase {
     }
 
     save() {
-        this.newPermissionValidationGroup.errors.showAllMessages(false);
-
         const model = this.model();
         
         if (!this.isValid(model.validationGroup)) {
@@ -553,7 +548,7 @@ class certificates extends viewModelBase {
             });
     }
     
-    private updateCache(certificates: Array<unifiedCertificateDefinition>) {
+    private updateCache(certificates: Array<unifiedCertificateDefinition>): void {
         certificates.forEach((cert: unifiedCertificateDefinitionWithCache) => {
             const expirationDate = moment.utc(cert.NotAfter);
             const expirationDateFormatted = expirationDate.format("YYYY-MM-DD");
@@ -578,10 +573,14 @@ class certificates extends viewModelBase {
                 const validFromDate = moment.utc(cert.NotBefore);
                 cert.validFromText = validFromDate.format("YYYY-MM-DD");
             } else {
-                cert.validFromText = "Unavailable" // TODO.. RavenDB-18519
+                cert.validFromText = "Unavailable"
             }
+            
             cert.validFromIcon = "icon-clock"; // TODO.. RavenDB-18518
             cert.validFromClass = "";
+            
+            cert.expirationNumber = expirationDate.unix();
+            cert.validFromNumber = moment.utc(cert.NotBefore).unix();
         });
     }
     
@@ -589,30 +588,33 @@ class certificates extends viewModelBase {
         this.model(null);
     }
     
-    deletePermission(permission: certificatePermissionModel) {
+    deletePermission(permission: certificatePermissionModel): void {
         const model = this.model();
         model.permissions.remove(permission);
     }
 
-    useDatabase(databaseName: string) {
-        this.newPermissionDatabaseName(databaseName);
-        this.addNewPermission();
+    addPermission(): void {
+        const databaseNameToUse = this.newPermissionDatabaseName();
+        
+        if (!this.model().permissions().find(x => x.databaseName() === databaseNameToUse)) {
+            this.addPermissionWithBlink(databaseNameToUse);
+        } else {
+            this.newPermissionDatabaseName("");
+        }
     }
     
-    addNewPermission() {
-        if (!this.isValid(this.newPermissionValidationGroup)) {
-            return;
-        }
-        
+    addPermissionWithBlink(databaseName: string): void {
         const permission = new certificatePermissionModel();
-        permission.databaseName(this.newPermissionDatabaseName());
+        permission.databaseName(databaseName);
         permission.accessLevel("ReadWrite");
-        this.model().permissions.push(permission);
+        
+        this.model().permissions.unshift(permission);
+        $(".generate-certificate .collection-list li").first().addClass("blink-style");
+        
         this.newPermissionDatabaseName("");
-        this.newPermissionValidationGroup.errors.showAllMessages(false);
     }
 
-    createDatabaseNameAutocompleter() {
+    createDatabaseNameAutoCompleter() {
         return ko.pureComputed(() => {
             const key = this.newPermissionDatabaseName();
             
@@ -630,7 +632,7 @@ class certificates extends viewModelBase {
         });
     }
     
-    copyThumbprint(thumbprint: string) {
+    copyThumbprint(thumbprint: string): void {
         copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
     
@@ -672,7 +674,7 @@ class certificates extends viewModelBase {
         });
     }
     
-    sortByDefault() {
+    sortByDefault(): void {
         this.sortCriteria("");
         const orderedCertificates = this.sortByDefaultInternal(this.certificates());
         this.certificates(orderedCertificates);
@@ -696,25 +698,33 @@ class certificates extends viewModelBase {
         return orderedCertificates
     }
     
-    sortByName(mode: string) {
+    sortByName(mode: string): void {
         this.sortCriteria(`Name - ${this.getModeText(mode)}`);
         this.certificates.sort((a, b) =>
             generalUtils.sortAlphaNumeric(a.Name.toLocaleLowerCase(), b.Name.toLocaleLowerCase(), mode as sortMode));
     }
 
-    sortByExpiration(mode: string) {
+    sortByExpiration(mode: string): void {
         this.sortCriteria(`Expiration Date - ${this.getModeText(mode)}`);
+        
         this.certificates.sort((a, b) =>
-            generalUtils.sortUTC(a.NotAfter, b.NotAfter, mode as sortMode));
+        {
+            const result = (a as unifiedCertificateDefinitionWithCache).expirationNumber - (b as unifiedCertificateDefinitionWithCache).expirationNumber;
+            return mode === "asc" ? result : -result;
+        });
     }
 
-    sortByValidFrom(mode: string) {
+    sortByValidFrom(mode: string): void {
         this.sortCriteria(`Valid-From Date - ${this.getModeText(mode)}`);
+
         this.certificates.sort((a, b) =>
-            generalUtils.sortUTC(a.NotBefore, b.NotBefore, mode as sortMode));
+        {
+            const result = (a as unifiedCertificateDefinitionWithCache).validFromNumber - (b as unifiedCertificateDefinitionWithCache).validFromNumber;
+            return mode === "asc" ? result : -result;
+        });
     }
     
-    getModeText(mode: string) {
+    getModeText(mode: string): string {
         return mode === "asc" ? "Ascending" : "Descending";
     }
 
@@ -736,20 +746,26 @@ class certificates extends viewModelBase {
         });
     }
 
-    addDatabase() {
-        this.addWithBlink(this.inputDatabase());
+    addDatabase(): void {
+        const databaseToAdd = this.inputDatabase();
+        
+        if (!this.databasesToShow().find(x => x === databaseToAdd)) {
+            this.addDatabaseWithBlink(databaseToAdd);
+        } else {
+            this.inputDatabase("");
+        }
     }
 
-    removeDatabase(database: string) {
+    removeDatabase(database: string): void {
         this.databasesToShow.remove(database);
     }
 
-    addWithBlink(databaseName: string) {
+    addDatabaseWithBlink(databaseName: string): void {
         this.databasesToShow.unshift(databaseName);
         
-        this.inputDatabase("");
+        $(".filter-options-dropdown-container .collection-list li").first().addClass("blink-style");
         
-        $(".collection-list li").first().addClass("blink-style");
+        this.inputDatabase("");
     }
 }
 

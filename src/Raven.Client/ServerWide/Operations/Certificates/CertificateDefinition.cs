@@ -47,7 +47,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 [nameof(SecurityClearance)] = SecurityClearance,
                 [nameof(Permissions)] = permissions,
                 [nameof(NotAfter)] = NotAfter,
-                [nameof(NotBefore)] = NotBefore, // TODO - older certs will have null - see RavenDB-18519
+                [nameof(NotBefore)] = NotBefore,
                 [nameof(CollectionSecondaryKeys)] = CollectionSecondaryKeys,
                 [nameof(CollectionPrimaryKey)] = CollectionPrimaryKey,
                 [nameof(PublicKeyPinningHash)] = PublicKeyPinningHash
