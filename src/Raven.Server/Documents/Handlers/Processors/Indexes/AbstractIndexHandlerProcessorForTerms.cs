@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -21,10 +22,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         {
         }
 
-        protected abstract ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag);
+        protected abstract OperationCancelToken CreateTimeLimitedOperationToken();
+
+        protected abstract ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
+            using (var token = CreateTimeLimitedOperationToken())
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var field = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
@@ -33,7 +37,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
                 var resultEtag = RequestHandler.GetLongFromHeaders("If-None-Match");
 
-                var terms = await GetTermsAsync(indexName, field, fromValue, pageSize, resultEtag);
+                var terms = await GetTermsAsync(indexName, field, fromValue, pageSize, resultEtag, token);
 
                 if (terms.NotModified)
                 {
