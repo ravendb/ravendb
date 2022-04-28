@@ -5,7 +5,6 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Patch.Jint;
@@ -16,7 +15,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation, T> : IDisposable 
+    public interface IEtlTransformer<TExtracted, TTransformed, TStatsScope> : IDisposable
+    {
+        public IEnumerable<TTransformed> GetTransformedResults();
+        public void Transform(TExtracted item, TStatsScope stats, EtlProcessState state);
+        public void Initialize(bool debugMode);
+        public List<string> GetDebugOutput();
+    }
+    public abstract class EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation, T> : IEtlTransformer<TExtracted, TTransformed, TStatsScope>
         where TExtracted : ExtractedItem
         where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
         where TEtlPerformanceOperation : EtlPerformanceOperation
@@ -92,7 +98,7 @@ namespace Raven.Server.Documents.ETL
             //    lock (BehaviorsEngineHandle)
             //    {
             //        BehaviorsScript.SetContext();
-                    
+
             //        foreach (var collection in LoadToDestinations)
             //        {
             //            var name = Transformation.LoadTo + collection;
@@ -175,7 +181,7 @@ namespace Raven.Server.Documents.ETL
             return loadAttachmentReference;
         }
 
-        private  T CreateLoadAttachmentReference(string attachmentName)
+        private T CreateLoadAttachmentReference(string attachmentName)
         {
             return DocumentEngineHandle.CreateValue($"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}");
         }
@@ -240,7 +246,7 @@ namespace Raven.Server.Documents.ETL
             return loadTimeSeriesReference;
         }
 
-        private  T CreateLoadTimeSeriesReference(string timeSeriesName, DateTime from, DateTime to)
+        private T CreateLoadTimeSeriesReference(string timeSeriesName, DateTime from, DateTime to)
         {
             return DocumentEngineHandle.CreateValue(Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks);
         }
@@ -262,7 +268,7 @@ namespace Raven.Server.Documents.ETL
             {
                 attachments[i] = (T)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
             }
-            
+
             return DocumentEngineHandle.CreateArray(attachments);
         }
 
@@ -475,7 +481,7 @@ namespace Raven.Server.Documents.ETL
 
         protected override ScriptRunnerResult<JsHandleV8> CreateScriptRunnerResult(object obj)
         {
-            return new ScriptRunnerResultV8(DocumentScript, DocumentEngineHandle.FromObjectGen(obj, keepAlive:false)); //TODO: egor true/false?
+            return new ScriptRunnerResultV8(DocumentScript, DocumentEngineHandle.FromObjectGen(obj, keepAlive: false)); //TODO: egor true/false?
         }
     }
 }

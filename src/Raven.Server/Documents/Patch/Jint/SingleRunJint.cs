@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Patch.Jint
                 _refResolverJint.ExplodeArgsOn(null, boi);
         }
 
-        public override IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null,
+        public override ScriptRunnerResult<JsHandleJint> Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null,
             CancellationToken token = default)
         {
             lock (ScriptEngineHandle)

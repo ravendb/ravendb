@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Patch.V8
             }
         }
 
-        public override IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null,
+        public override ScriptRunnerResult<JsHandleV8> Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null,
             CancellationToken token = default)
         {
             lock (ScriptEngineHandle)

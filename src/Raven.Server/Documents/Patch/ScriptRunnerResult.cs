@@ -43,9 +43,16 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
         return o;
     }
 
-    public bool? BooleanValue => Instance.IsBoolean ? Instance.AsBoolean : (bool?)null;
+    public bool? BooleanValue
+    {
+        get => Instance.IsBoolean ? Instance.AsBoolean : (bool?)null;
+    }
 
-    public bool IsNull => Instance.IsEmpty || Instance.IsNull || Instance.IsUndefined;
+    public bool IsNull
+    {
+        get => Instance.IsEmpty || Instance.IsNull || Instance.IsUndefined;
+    }
+
     public string StringValue => Instance.IsStringEx ? Instance.AsString : null;
     public T RawJsValue => Instance;
     //public object RawJsValue
@@ -176,4 +183,7 @@ public interface IScriptRunnerResult : IDisposable
 {
     object TranslateRawJsValue(JsonOperationContext context, IResultModifier modifier = null,
         BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isRoot = true);
+
+    public bool? BooleanValue { get; }
+    public bool IsNull { get; }
 }

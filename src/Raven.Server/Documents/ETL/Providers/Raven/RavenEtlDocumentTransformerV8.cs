@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
-using Raven.Server.Config.Categories;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
@@ -12,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -22,17 +22,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public partial class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
+    public class RavenEtlDocumentTransformerV8 : EtlTransformerV8<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
     {
         private RavenEtlScriptRun _currentRun;
-
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
-        private JsHandle _addAttachmentMethod;
-        private JsHandle _addCounterMethod;
-        private JsHandle _addTimeSeriesMethod;
+        private JsHandleV8 _addAttachmentMethod;
+        private JsHandleV8 _addCounterMethod;
+        private JsHandleV8 _addTimeSeriesMethod;
 
-        public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
+        public RavenEtlDocumentTransformerV8(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
             : base(database, context, script.Transformation, script.BehaviorFunctions)
         {
             _transformation = transformation;
@@ -60,28 +59,140 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.IsAddingAttachments)
             {
-                _addAttachmentMethod = DocumentEngineHandle.CreateClrCallBack("addAttachment", (AddAttachmentJint, AddAttachmentV8), true);
+                _addAttachmentMethod = DocumentEngineHandle.CreateClrCallBack("addAttachment", AddAttachment, true);
                 _addAttachmentMethod.ThrowOnError();
             }
 
             if (_transformation.Counters.IsAddingCounters)
             {
                 const string addCounter = Transformation.CountersTransformation.Add;
-                _addCounterMethod = DocumentEngineHandle.CreateClrCallBack(addCounter, (AddCounterJint, AddCounterV8), true);
+                _addCounterMethod = DocumentEngineHandle.CreateClrCallBack(addCounter, AddCounter, true);
                 _addCounterMethod.ThrowOnError();
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
                 const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
-                _addTimeSeriesMethod = DocumentEngineHandle.CreateClrCallBack(addTimeSeries, (AddTimeSeriesJint, AddTimeSeriesV8), true);
+                _addTimeSeriesMethod = DocumentEngineHandle.CreateClrCallBack(addTimeSeries, AddTimeSeries, true);
                 _addTimeSeriesMethod.ThrowOnError();
             }
         }
 
-        protected override string[] LoadToDestinations { get; }
+        private JsHandleV8 AddAttachment(JsHandleV8 self, JsHandleV8[] args)
+        {
+            JsHandleV8? attachmentReference = null;
+            string name = null; // will preserve original name
 
-        protected override void LoadToFunction(string collectionName, ScriptRunnerResult document)
+            switch (args.Length)
+            {
+                case 2:
+                    if (args[0].IsStringEx == false)
+                        ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
+
+                    name = args[0].AsString;
+                    attachmentReference = args[1];
+                    break;
+                case 1:
+                    attachmentReference = args[0];
+                    break;
+                default:
+                    ThrowInvalidScriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
+                    break;
+            }
+
+            if (attachmentReference == null || attachmentReference.Value.IsNull)
+                return self;
+
+            if (attachmentReference.Value.IsStringEx == false || attachmentReference.Value.AsString.StartsWith(Transformation.AttachmentMarker) == false)
+            {
+                var message =
+                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.Value.ValueType}' type";
+
+                if (attachmentReference.Value.IsStringEx)
+                    message += $" (value: '{attachmentReference.Value.AsString}')";
+
+                ThrowInvalidScriptMethodCall(message);
+            }
+
+            _currentRun.AddAttachment(self, name, attachmentReference.Value);
+
+            return self;
+        }
+
+        private JsHandleV8 AddCounter(JsHandleV8 self, JsHandleV8[] args)
+        {
+            if (args.Length != 1)
+                ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
+
+            var counterReference = args[0];
+
+            if (counterReference.IsNull)
+                return self;
+
+            if (counterReference.IsStringEx == false || counterReference.AsString.StartsWith(Transformation.CountersTransformation.Marker) == false)
+            {
+                var message =
+                    $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.ValueType}' type";
+
+                if (counterReference.IsStringEx)
+                    message += $" (value: '{counterReference.AsString}')";
+
+                ThrowInvalidScriptMethodCall(message);
+            }
+
+            _currentRun.AddCounter(self, counterReference);
+
+            return self;
+        }
+
+        private JsHandleV8 AddTimeSeries(JsHandleV8 self, JsHandleV8[] args)
+        {
+            if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
+            {
+                ThrowInvalidScriptMethodCall(
+                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} must have {Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount} arguments. " +
+                    $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
+            }
+
+            var timeSeriesReference = args[0];
+
+            if (timeSeriesReference.IsNull)
+                return self;
+
+            if (timeSeriesReference.IsStringEx == false || timeSeriesReference.AsString.StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
+            {
+                var message =
+                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.ValueType}' type";
+
+                if (timeSeriesReference.IsStringEx)
+                    message += $" (value: '{timeSeriesReference.AsString}')";
+
+                message += $". Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`";
+                ThrowInvalidScriptMethodCall(message);
+            }
+
+            _currentRun.AddTimeSeries(self, timeSeriesReference);
+
+            return self;
+        }
+
+        protected override string[] LoadToDestinations { get; }
+        protected override void AddLoadedAttachment(JsHandleV8 reference, string name, Attachment attachment)
+        {
+            _currentRun.LoadAttachment(reference, attachment);
+        }
+
+        protected override void AddLoadedCounter(JsHandleV8 reference, string name, long value)
+        {
+            _currentRun.LoadCounter(reference, name, value);
+        }
+
+        protected override void AddLoadedTimeSeries(JsHandleV8 reference, string name, IEnumerable<SingleResult> entries)
+        {
+            _currentRun.LoadTimeSeries(reference, name, entries);
+        }
+
+        protected override void LoadToFunction(string collectionName, ScriptRunnerResult<JsHandleV8> document)
         {
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
@@ -99,7 +210,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 loadedToDifferentCollection = true;
             }
 
-            var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key).Handler;
+            var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
 
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
                 metadata.SetProperty(Constants.Documents.Metadata.Collection, DocumentEngineHandle.CreateValue(collectionName), throwOnError: true);
@@ -138,10 +249,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
 
-        private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName)
-        {
-            return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
-        }
 
         public override IEnumerable<ICommandData> GetTransformedResults()
         {
@@ -464,7 +571,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private bool ShouldFilterByScriptAndGetParams(string docId, string timeSeriesName, string function, out (DateTime From, DateTime To)? toLoad)
         {
             toLoad = null;
-            using (var scriptRunnerResult = (ScriptRunnerResult)BehaviorsScript.Run(Context, Context, function, new object[] {docId, timeSeriesName}))
+            using (ScriptRunnerResult<JsHandleV8> scriptRunnerResult = BehaviorsScript.Run(Context, Context, function, new object[] {docId, timeSeriesName}) as ScriptRunnerResult<JsHandleV8>)
             {
                 if (scriptRunnerResult.BooleanValue != null)
                 {
@@ -482,7 +589,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 else
                 {
                     var toLoadLocal = (From: DateTime.MinValue, To: DateTime.MaxValue);
-                    foreach ((string key, JsHandle property) in scriptRunnerResult.Instance.GetOwnProperties())
+                    foreach ((string key, JsHandleV8 property) in scriptRunnerResult.Instance.GetOwnProperties())
                     {
                         if (key.Equals("from", StringComparison.OrdinalIgnoreCase))
                         {
@@ -714,5 +821,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
             }
         }
-   }
+
+        private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName)
+        {
+            return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
+        }
+    }
 }

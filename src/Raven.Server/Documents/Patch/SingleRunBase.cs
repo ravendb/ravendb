@@ -1804,7 +1804,6 @@ public abstract class SingleRun<T> : ISingleRun
 
     public abstract IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args,
         QueryTimingsScope scope = null, CancellationToken token = default);
-    
 
     public object[] GetTimeSeriesFunctionArgs(string name, T[] args, out string docId, out List<IDisposable> lazyIds)
     {

@@ -448,12 +448,6 @@ namespace Raven.Server.Documents.Patch.V8
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(JsHandle other)
-        {
-            return Item.Equals(other.V8.Item);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override bool Equals(object obj)
         {
             return obj is JsHandleV8 other && Equals(other);
