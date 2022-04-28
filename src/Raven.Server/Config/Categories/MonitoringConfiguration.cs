@@ -23,9 +23,9 @@ namespace Raven.Server.Config.Categories
 
         [Description("The minimum interval between measures to calculate the disk stats")]
         [DefaultValue(1)]
-        [MinValue(1)]
-        [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Monitoring.MinDiskStatsInterval", ConfigurationEntryScope.ServerWideOnly)]
+        [MinValue(1000)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("Monitoring.MinDiskStatsIntervalInMilliseconds", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MinDiskStatsInterval { get; set; }
         
         public MonitoringConfiguration()
