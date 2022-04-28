@@ -1,5 +1,4 @@
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import saveExternalReplicationTaskCommand = require("commands/database/tasks/saveExternalReplicationTaskCommand");
 import ongoingTaskReplicationEditModel = require("models/database/tasks/ongoingTaskReplicationEditModel");
@@ -13,8 +12,10 @@ import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
-class editExternalReplicationTask extends viewModelBase {
+class editExternalReplicationTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editExternalReplicationTask.html");
     connectionStringView = require("views/database/settings/connectionStringRaven.html");
@@ -45,8 +46,8 @@ class editExternalReplicationTask extends viewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "setState");
     }
 
@@ -59,7 +60,7 @@ class editExternalReplicationTask extends viewModelBase {
             this.isAddingNewReplicationTask(false);
             this.taskId = args.taskId;
 
-            ongoingTaskInfoCommand.forExternalReplication(this.activeDatabase(), this.taskId)
+            ongoingTaskInfoCommand.forExternalReplication(this.db, this.taskId)
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) => { 
                     this.editedExternalReplication(new ongoingTaskReplicationEditModel(result));
@@ -68,7 +69,7 @@ class editExternalReplicationTask extends viewModelBase {
                 .fail(() => {
                     deferred.reject();
                     
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    router.navigate(appUrl.forOngoingTasks(this.db));
                 });
         } else {
             // 2. Creating a new task
@@ -82,13 +83,13 @@ class editExternalReplicationTask extends viewModelBase {
     }
     
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
 
     private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.activeDatabase())
+        return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
@@ -190,7 +191,7 @@ class editExternalReplicationTask extends viewModelBase {
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
-                .saveConnectionString(this.activeDatabase())
+                .saveConnectionString(this.db)
                 .done(() => {
                     savingNewStringAction.resolve();
                 })
@@ -208,7 +209,7 @@ class editExternalReplicationTask extends viewModelBase {
 
             eventsCollector.default.reportEvent("external-replication", "save");
                         
-            new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
+            new saveExternalReplicationTaskCommand(this.db, dto)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -223,7 +224,7 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
 
     useConnectionString(connectionStringToUse: string) {

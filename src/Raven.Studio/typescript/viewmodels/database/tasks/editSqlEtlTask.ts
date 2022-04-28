@@ -27,6 +27,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 class sqlTaskTestMode {
     
@@ -34,7 +35,7 @@ class sqlTaskTestMode {
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    db: KnockoutObservable<database>;
+    db: database;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
     connectionProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
     
@@ -66,7 +67,7 @@ class sqlTaskTestMode {
         return transformationCount + loadErrorCount + slowSqlCount;
     });
     
-    constructor(db: KnockoutObservable<database>, validateParent: () => boolean, 
+    constructor(db: database, validateParent: () => boolean, 
                 configurationProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration,
                 connectionProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString) {
         this.db = db;
@@ -87,7 +88,7 @@ class sqlTaskTestMode {
                 return;
             }
 
-            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db())
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db)
                 .execute()
                 .done(results => {
                     this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
@@ -113,7 +114,7 @@ class sqlTaskTestMode {
         viewHelpers.asyncValidationCompleted(this.validationGroup)
             .then(() => {
                 if (viewHelpers.isValid(this.validationGroup)) {
-                    new getDocumentWithMetadataCommand(documentId(), this.db())
+                    new getDocumentWithMetadataCommand(documentId(), this.db)
                         .execute()
                         .done((doc: document) => {
                             const docDto = doc.toDto(true);
@@ -148,7 +149,7 @@ class sqlTaskTestMode {
 
             eventsCollector.default.reportEvent("sql-etl", "test-replication");
             
-            new testSqlReplicationCommand(this.db(), dto)
+            new testSqlReplicationCommand(this.db, dto)
                 .execute()
                 .done((testResult: Raven.Server.Documents.ETL.Providers.SQL.Test.SqlEtlTestScriptResult) => {
                     this.testResults(_.flatMap(testResult.Summary, x => x.Commands));
@@ -170,7 +171,7 @@ class sqlTaskTestMode {
     }
 }
 
-class editSqlEtlTask extends viewModelBase {
+class editSqlEtlTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editSqlEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringSql.html");
@@ -214,8 +215,8 @@ class editSqlEtlTask extends viewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringSqlEtlModel>(); 
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("useConnectionString",
                                    "testConnection",
                                    "removeTransformationScript",
@@ -241,7 +242,7 @@ class editSqlEtlTask extends viewModelBase {
             // 1. Editing an Existing task
             this.isAddingNewSqlEtlTask(false);
 
-            getOngoingTaskInfoCommand.forSqlEtl(this.activeDatabase(), args.taskId)
+            getOngoingTaskInfoCommand.forSqlEtl(this.db, args.taskId)
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) => {
                     this.editedSqlEtl(new ongoingTaskSqlEtlEditModel(result));
@@ -249,7 +250,7 @@ class editSqlEtlTask extends viewModelBase {
                 })
                 .fail(() => {
                     deferred.reject();
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    router.navigate(appUrl.forOngoingTasks(this.db));
                 });
         } else {
             // 2. Creating a New task
@@ -269,7 +270,7 @@ class editSqlEtlTask extends viewModelBase {
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
@@ -290,7 +291,7 @@ class editSqlEtlTask extends viewModelBase {
     /***************************************************/
 
     private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.activeDatabase())
+        return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.SqlConnectionStrings);
@@ -369,7 +370,7 @@ class editSqlEtlTask extends viewModelBase {
             }
         };
         
-        this.test = new sqlTaskTestMode(this.activeDatabase, () => {
+        this.test = new sqlTaskTestMode(this.db, () => {
             const transformationValidationGroup = this.isValid(this.editedTransformationScriptSandbox().validationGroup);
             const connectionStringValid = this.connectionStringDefined();
             
@@ -450,18 +451,18 @@ class editSqlEtlTask extends viewModelBase {
         // New connection string
         if (this.createNewConnectionString()) {
             this.newConnectionString()
-                .testConnection(this.activeDatabase())
+                .testConnection(this.db)
                 .done((testResult) => this.testConnectionResult(testResult))
                 .always(()=> {
                     this.spinners.test(false);
                 });
         } else {
             // Existing connection string
-            getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
+            getConnectionStringInfoCommand.forSqlEtl(this.db, this.editedSqlEtl().connectionStringName())
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                        new connectionStringSqlEtlModel(result.SqlConnectionStrings[this.editedSqlEtl().connectionStringName()], true, [])
-                            .testConnection(this.activeDatabase())
+                            .testConnection(this.db)
                             .done((testResult) => this.testConnectionResult(testResult))
                             .always(() => {
                                 this.spinners.test(false);
@@ -516,7 +517,7 @@ class editSqlEtlTask extends viewModelBase {
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
-                .saveConnectionString(this.activeDatabase())
+                .saveConnectionString(this.db)
                 .done(() => {
                     savingNewStringAction.resolve();
                 })
@@ -537,7 +538,7 @@ class editSqlEtlTask extends viewModelBase {
                 .map(x => x.name());
             
             const dto = this.editedSqlEtl().toDto();
-            saveEtlTaskCommand.forSqlEtl(this.activeDatabase(), dto, scriptsToReset)
+            saveEtlTaskCommand.forSqlEtl(this.db, dto, scriptsToReset)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -552,7 +553,7 @@ class editSqlEtlTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
 
     syntaxHelp() {

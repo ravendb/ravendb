@@ -20,8 +20,10 @@ import prefixPathModel = require("models/database/tasks/prefixPathModel");
 import endpoints = require("endpoints");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
-class editReplicationSinkTask extends viewModelBase {
+class editReplicationSinkTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editReplicationSinkTask.html");
     connectionStringView = require("views/database/settings/connectionStringRaven.html")
@@ -52,8 +54,8 @@ class editReplicationSinkTask extends viewModelBase {
     exportCertificateUrl = endpoints.global.adminCertificates.adminCertificatesExport;
     private readonly serverCertificateName = "Server Certificate";
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "onConfigurationFileSelected",
                                    "certFileSelected", "removeCertificate", "downloadServerCertificate", "setState");
     }
@@ -72,7 +74,7 @@ class editReplicationSinkTask extends viewModelBase {
                             deferred.resolve({can: true});
                         })
                         .fail((response: JQueryXHR) => {
-                            deferred.resolve({ redirect: appUrl.forOngoingTasks(this.activeDatabase()) });
+                            deferred.resolve({ redirect: appUrl.forOngoingTasks(this.db) });
                         });
                 } else {
                     deferred.resolve({can: true});
@@ -91,7 +93,7 @@ class editReplicationSinkTask extends viewModelBase {
             this.isAddingNewTask(false);
             this.taskId = args.taskId;
 
-            getOngoingTaskInfoCommand.forPullReplicationSink(this.activeDatabase(), this.taskId)
+            getOngoingTaskInfoCommand.forPullReplicationSink(this.db, this.taskId)
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => {
                     
@@ -107,7 +109,7 @@ class editReplicationSinkTask extends viewModelBase {
                 })
                 .fail(() => {
                     deferred.reject();
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    router.navigate(appUrl.forOngoingTasks(this.db));
                 });
         } else {
             // 2. Creating a new task
@@ -121,13 +123,13 @@ class editReplicationSinkTask extends viewModelBase {
     }
     
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
 
     private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.activeDatabase())
+        return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
@@ -283,7 +285,7 @@ class editReplicationSinkTask extends viewModelBase {
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
-                .saveConnectionString(this.activeDatabase())
+                .saveConnectionString(this.db)
                 .done(() => {
                     savingNewStringAction.resolve();
                 })
@@ -307,7 +309,7 @@ class editReplicationSinkTask extends viewModelBase {
 
             eventsCollector.default.reportEvent("pull-replication-sink", "save");
             
-            new saveReplicationSinkTaskCommand(this.activeDatabase(), dto)
+            new saveReplicationSinkTaskCommand(this.db, dto)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -322,7 +324,7 @@ class editReplicationSinkTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
 
     useConnectionString(connectionStringToUse: string) {

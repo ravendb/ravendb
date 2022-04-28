@@ -26,6 +26,7 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 type resultItem = {
     header: string;
@@ -36,7 +37,7 @@ class ravenTaskTestMode {
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    db: KnockoutObservable<database>;
+    db: database;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
 
     validationGroup: KnockoutValidationGroup;
@@ -62,7 +63,7 @@ class ravenTaskTestMode {
         return this.transformationErrors().length;
     });
 
-    constructor(db: KnockoutObservable<database>,
+    constructor(db: database,
                 validateParent: () => boolean,
                 configurationProvider: () => Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration) {
         this.db = db;
@@ -82,7 +83,7 @@ class ravenTaskTestMode {
                 return;
             }
 
-            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db())
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db)
                 .execute()
                 .done(results => {
                     this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
@@ -108,7 +109,7 @@ class ravenTaskTestMode {
         viewHelpers.asyncValidationCompleted(this.validationGroup)
             .then(() => {
                 if (viewHelpers.isValid(this.validationGroup)) {
-                    new getDocumentWithMetadataCommand(documentId(), this.db())
+                    new getDocumentWithMetadataCommand(documentId(), this.db)
                         .execute()
                         .done((doc: document) => {
                             const docDto = doc.toDto(true);
@@ -139,7 +140,7 @@ class ravenTaskTestMode {
                 Configuration: this.configurationProvider()
             };
 
-            new testRavenEtlCommand(this.db(), dto)
+            new testRavenEtlCommand(this.db, dto)
                 .execute()
                 .done(simulationResult => {
                     this.testResults(simulationResult.Commands.map((command: Raven.Client.Documents.Commands.Batches.ICommandData): resultItem => {
@@ -168,7 +169,7 @@ class ravenTaskTestMode {
     }
 }
 
-class editRavenEtlTask extends viewModelBase {
+class editRavenEtlTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editRavenEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringRaven.html")
@@ -207,8 +208,8 @@ class editRavenEtlTask extends viewModelBase {
     usingHttps = location.protocol === "https:";
     certificatesUrl = appUrl.forCertificates();
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript",
@@ -224,7 +225,7 @@ class editRavenEtlTask extends viewModelBase {
             // 1. Editing an Existing task
             this.isAddingNewRavenEtlTask(false);
             
-            getOngoingTaskInfoCommand.forRavenEtl(this.activeDatabase(), args.taskId)
+            getOngoingTaskInfoCommand.forRavenEtl(this.db, args.taskId)
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) => {
                     this.editedRavenEtl(new ongoingTaskRavenEtlEditModel(result));
@@ -232,7 +233,7 @@ class editRavenEtlTask extends viewModelBase {
                 })
                 .fail(() => { 
                     deferred.reject();
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase())); 
+                    router.navigate(appUrl.forOngoingTasks(this.db)); 
                 });
         } else {
             // 2. Creating a New task
@@ -249,7 +250,7 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
@@ -266,7 +267,7 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.activeDatabase())
+        return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
@@ -323,7 +324,7 @@ class editRavenEtlTask extends viewModelBase {
             return dto;
         };
         
-        this.test = new ravenTaskTestMode(this.activeDatabase, () => {
+        this.test = new ravenTaskTestMode(this.db, () => {
             return this.isValid(this.editedRavenEtl().editedTransformationScriptSandbox().validationGroup);
         }, dtoProvider);
 
@@ -400,7 +401,7 @@ class editRavenEtlTask extends viewModelBase {
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
-                .saveConnectionString(this.activeDatabase())
+                .saveConnectionString(this.db)
                 .done(() => {
                     savingNewStringAction.resolve();
                 })
@@ -418,7 +419,7 @@ class editRavenEtlTask extends viewModelBase {
             const scriptsToReset = editedEtl.transformationScripts().filter(x => x.resetScript()).map(x => x.name());
 
             const dto = editedEtl.toDto();
-            saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto, scriptsToReset)
+            saveEtlTaskCommand.forRavenEtl(this.db, dto, scriptsToReset)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -484,7 +485,7 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
 
     createCollectionNameAutoCompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {

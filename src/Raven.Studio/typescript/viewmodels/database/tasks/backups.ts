@@ -15,8 +15,9 @@ import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListMode
 import manualBackupListModel = require("models/database/tasks/manualBackupListModel");
 import accessManager = require("common/shell/accessManager");
 import getManualBackupCommand = require("commands/database/tasks/getManualBackupCommand");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class backups extends viewModelBase {
+class backups extends shardViewModelBase {
 
     view = require("views/database/tasks/backups.html");
     legendView = require("views/partial/databaseGroupLegend.html");
@@ -38,8 +39,8 @@ class backups extends viewModelBase {
 
     private watchedBackups = new Map<number, number>();
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask",
                                    "toggleDetails", "createNewPeriodicBackupTask");
         this.initObservables();
@@ -48,7 +49,7 @@ class backups extends viewModelBase {
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideTasksUrl = appUrl.forServerWideTasks();
-        this.ongoingTasksUrl = appUrl.forOngoingTasks(this.activeDatabase());
+        this.ongoingTasksUrl = appUrl.forOngoingTasks(this.db);
         this.canNavigateToServerWideBackupTasks = accessManager.default.isClusterAdminOrClusterNode;
     }
 
@@ -64,11 +65,11 @@ class backups extends viewModelBase {
             .watchClusterTopologyChanges(() => this.refresh()));
         
         this.addNotification(this.changesContext.serverNotifications()
-            .watchDatabaseChange(this.activeDatabase()?.name, () => this.refresh()));
+            .watchDatabaseChange(this.db?.name, () => this.refresh()));
         
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
         
-        //this.updateUrl(appUrl.forBackups(this.activeDatabase()));
+        //this.updateUrl(appUrl.forBackups(this.db));
     }
 
     compositionComplete(): void {
@@ -85,7 +86,7 @@ class backups extends viewModelBase {
     createResponsibleNodeUrl(task: ongoingTaskListModel) {
         return ko.pureComputed(() => {
             const node = task.responsibleNode();
-            const db = this.activeDatabase();
+            const db = this.db;
             
             if (node && db) {
                 return node.NodeUrl + appUrl.forOngoingTasks(db);
@@ -96,14 +97,14 @@ class backups extends viewModelBase {
     }
     
     private refresh() {
-        if (!this.activeDatabase()) {
+        if (!this.db) {
             return;
         }
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks(), this.fetchManualBackup());
     }
     
     private fetchDatabaseInfo() {
-        return new getDatabaseCommand(this.activeDatabase().name)
+        return new getDatabaseCommand(this.db.name)
             .execute()
             .done(dbInfo => {
                 this.graph.onDatabaseInfoChanged(dbInfo);
@@ -111,7 +112,7 @@ class backups extends viewModelBase {
     }
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
-        const db = this.activeDatabase();
+        const db = this.db;
         return new ongoingTasksCommand(db)
             .execute()
             .done((info) => {
@@ -122,7 +123,7 @@ class backups extends viewModelBase {
     }
 
     private fetchManualBackup(): JQueryPromise<Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult> {
-        const db = this.activeDatabase().name;
+        const db = this.db.name;
         return new getManualBackupCommand(db)
             .execute()
             .done((manualBackupInfo) => {
@@ -219,7 +220,7 @@ class backups extends viewModelBase {
     }
 
     confirmEnableOngoingTask(model: ongoingTaskModel) {
-        const db = this.activeDatabase();
+        const db = this.db;
 
         this.confirmationMessage("Enable Task", "You're enabling task of type: " + model.taskType(), {
             buttons: ["Cancel", "Enable"]
@@ -235,7 +236,7 @@ class backups extends viewModelBase {
     }
 
     confirmDisableOngoingTask(model: ongoingTaskModel | ongoingTaskReplicationHubDefinitionListModel) {
-        const db = this.activeDatabase();
+        const db = this.db;
 
         this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), {
             buttons: ["Cancel", "Disable"]
@@ -251,7 +252,7 @@ class backups extends viewModelBase {
     }
 
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
-        const db = this.activeDatabase();
+        const db = this.db;
         
         this.confirmationMessage("Delete Task", "You're deleting task of type: " + model.taskType(), {
             buttons: ["Cancel", "Delete"]
@@ -270,12 +271,12 @@ class backups extends viewModelBase {
     }
     
     createNewPeriodicBackupTask() {
-        const url = appUrl.forEditPeriodicBackupTask(this.activeDatabase());
+        const url = appUrl.forEditPeriodicBackupTask(this.db);
         router.navigate(url); 
     }
 
     createManualBackup() {
-        const url = appUrl.forEditManualBackup(this.activeDatabase());
+        const url = appUrl.forEditManualBackup(this.db);
         router.navigate(url);
     }
 

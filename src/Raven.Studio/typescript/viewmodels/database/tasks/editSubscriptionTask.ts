@@ -23,6 +23,8 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -38,7 +40,7 @@ class perCollectionIncludes {
     }
 }
 
-class editSubscriptionTask extends viewModelBase {
+class editSubscriptionTask extends shardViewModelBase {
 
     languageService: rqlLanguageService;
     view = require("views/database/tasks/editSubscriptionTask.html");
@@ -70,12 +72,12 @@ class editSubscriptionTask extends viewModelBase {
         globalToggleDisable: ko.observable<boolean>(false)
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("setStartingPointType", "goToTab", "setState");
         aceEditorBindingHandler.install();
         
-        this.languageService = new rqlLanguageService(this.activeDatabase(), ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
+        this.languageService = new rqlLanguageService(this.db, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
     }
 
     activate(args: any) { 
@@ -88,7 +90,7 @@ class editSubscriptionTask extends viewModelBase {
             this.isAddingNewSubscriptionTask(false);
 
             // 1.1 Get general info
-            ongoingTaskInfoCommand.forSubscription(this.activeDatabase(), args.taskId, args.taskName)
+            ongoingTaskInfoCommand.forSubscription(this.db, args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
                     this.editedSubscription(new ongoingTaskSubscriptionEdit(result));
@@ -97,7 +99,7 @@ class editSubscriptionTask extends viewModelBase {
 
                     // 1.2 Check if connection is live
                     this.editedSubscription().liveConnection(false);
-                    new subscriptionConnectionDetailsCommand(this.activeDatabase(), args.taskId, args.taskName, this.editedSubscription().responsibleNode().NodeUrl)
+                    new subscriptionConnectionDetailsCommand(this.db, args.taskId, args.taskName, this.editedSubscription().responsibleNode().NodeUrl)
                         .execute()
                         .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails) => {
                             this.editedSubscription().liveConnection(!!result.Results.length);
@@ -105,7 +107,7 @@ class editSubscriptionTask extends viewModelBase {
                 })
                 .fail(() => { 
                     deferred.reject();
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    router.navigate(appUrl.forOngoingTasks(this.db));
                 });
         } else {
             // 2. Creating a new task
@@ -127,7 +129,7 @@ class editSubscriptionTask extends viewModelBase {
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
@@ -162,7 +164,7 @@ class editSubscriptionTask extends viewModelBase {
         // 2. Create/add the new replication task
         const dto = this.editedSubscription().toDto();
 
-        new saveSubscriptionTaskCommand(this.activeDatabase(), dto, this.editedSubscription().taskId)
+        new saveSubscriptionTaskCommand(this.db, dto, this.editedSubscription().taskId)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();
@@ -201,7 +203,7 @@ class editSubscriptionTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
 
     private validate(): boolean {
@@ -233,7 +235,7 @@ class editSubscriptionTask extends viewModelBase {
                 return documentItem.Exception ? "exception-row" : "";
             };
 
-            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), {
+            const documentsProvider = new documentBasedColumnsProvider(this.db, this.gridController(), {
                 showRowSelectionCheckbox: false,
                 showSelectAllCheckbox: false,
                 enableInlinePreview: true,
@@ -285,7 +287,7 @@ class editSubscriptionTask extends viewModelBase {
 
         this.spinners.globalToggleDisable(true);
 
-        return new testSubscriptionTaskCommand(this.activeDatabase(), dto, resultsLimit, timeLimit)
+        return new testSubscriptionTaskCommand(this.db, dto, resultsLimit, timeLimit)
             .execute()
             .done(result => {
                 this.resultsCount(result.items.length);

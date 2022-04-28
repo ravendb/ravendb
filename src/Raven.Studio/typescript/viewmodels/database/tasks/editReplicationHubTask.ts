@@ -26,8 +26,10 @@ import genUtils = require("common/generalUtils");
 import certificateUtils = require("common/certificateUtils");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
-class editReplicationHubTask extends viewModelBase {
+class editReplicationHubTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editReplicationHubTask.html");
     
@@ -59,8 +61,8 @@ class editReplicationHubTask extends viewModelBase {
     batchCounter = ko.observable<number>(0);
     showLoadMore: KnockoutComputed<boolean>;
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         this.bindToCurrentInstance("generateCertificate", "uploadCertificate", "downloadCertificate", "removeCertificate",
                                    "exportHubConfiguration", "exportAccessConfiguration",
@@ -80,13 +82,13 @@ class editReplicationHubTask extends viewModelBase {
             this.isNewTask(false);
             this.taskId = args.taskId;
             
-            new getReplicationHubTaskInfoCommand(this.activeDatabase(), this.taskId)
+            new getReplicationHubTaskInfoCommand(this.db, this.taskId)
                 .execute()
                 .done((hubResult: Raven.Client.Documents.Operations.Replication.PullReplicationDefinitionAndCurrentConnections) => {
                     this.editedHubTask(new ongoingTaskReplicationHubEditModel(hubResult.Definition));
                     deferredHubTaskInfo.resolve();
                     
-                    new getReplicationHubAccessCommand(this.activeDatabase(), this.editedHubTask().taskName())
+                    new getReplicationHubAccessCommand(this.db, this.editedHubTask().taskName())
                         .execute()
                         .done((accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) => {
                             this.processResults(accessResult);
@@ -94,12 +96,12 @@ class editReplicationHubTask extends viewModelBase {
                         })
                         .fail(() => {
                             deferredAccessInfo.reject();
-                            router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                            router.navigate(appUrl.forOngoingTasks(this.db));
                         });
                 })
                 .fail(() => {
                     deferredHubTaskInfo.reject();
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    router.navigate(appUrl.forOngoingTasks(this.db));
                 });
 
         } else {
@@ -153,7 +155,7 @@ class editReplicationHubTask extends viewModelBase {
     }
     
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
@@ -223,7 +225,7 @@ class editReplicationHubTask extends viewModelBase {
 
         eventsCollector.default.reportEvent("pull-replication-hub", "save");
 
-        new saveReplicationHubTaskCommand(this.activeDatabase(), dto)
+        new saveReplicationHubTaskCommand(this.db, dto)
             .execute()
             .done((result: Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult) => {
                 this.dirtyFlag().reset();
@@ -254,11 +256,11 @@ class editReplicationHubTask extends viewModelBase {
             this.editedReplicationAccessItem().sinkToHubPrefixes(this.editedReplicationAccessItem().hubToSinkPrefixes());
         }
              
-        new saveReplicationHubAccessConfigCommand(this.activeDatabase(), 
+        new saveReplicationHubAccessConfigCommand(this.db, 
             this.editedHubTask().taskName(), this.editedReplicationAccessItem().toDto())
             .execute()
             .done(() => {
-                new getReplicationHubAccessCommand(this.activeDatabase(), this.editedHubTask().taskName())
+                new getReplicationHubAccessCommand(this.db, this.editedHubTask().taskName())
                     .execute()
                     .done((accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) => {
                         this.processResults(accessResult);
@@ -350,11 +352,11 @@ class editReplicationHubTask extends viewModelBase {
             })
             .done(result => {
                 if (result.can) {
-                    new deleteReplicationHubAccessConfigCommand(this.activeDatabase(),
+                    new deleteReplicationHubAccessConfigCommand(this.db,
                         this.editedHubTask().taskName(), accessItemToDelete.certificate().thumbprint())
                         .execute()
                         .done(() => {
-                            new getReplicationHubAccessCommand(this.activeDatabase(), this.editedHubTask().taskName())
+                            new getReplicationHubAccessCommand(this.db, this.editedHubTask().taskName())
                                 .execute()
                                 .done((accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) => {
                                     this.processResults(accessResult);
@@ -365,7 +367,7 @@ class editReplicationHubTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
     
     private initTooltips() {
@@ -462,7 +464,7 @@ class editReplicationHubTask extends viewModelBase {
                     this.spinners.generateCertificate(true);
                     const editedItemBefore = this.editedReplicationAccessItem();
                     
-                    new generateCertificateForReplicationCommand(this.activeDatabase(), validity)
+                    new generateCertificateForReplicationCommand(this.db, validity)
                         .execute()
                         .done(result => {
                             const editedItemAfter = this.editedReplicationAccessItem();
@@ -505,7 +507,7 @@ class editReplicationHubTask extends viewModelBase {
     
     exportConfiguration(includeAccessInfo: boolean = false) {
         const hubTaskItem = this.editedHubTask();
-        const databaseName = this.activeDatabase().name;
+        const databaseName = this.db.name;
         const topologyUrls = clusterTopologyManager.default.topology().nodes().map(x => x.serverUrl());
 
         let configurationToExport = {
