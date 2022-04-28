@@ -12,12 +12,9 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandlerProcessorForStaticPut<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AdminIndexHandlerProcessorForStaticPut([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public AdminIndexHandlerProcessorForStaticPut([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
 
     protected override AbstractIndexCreateController GetIndexCreateProcessor() => RequestHandler.Database.IndexStore.Create;
 
@@ -25,7 +22,7 @@ internal class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandle
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
         await using (var stream = new ArrayStream(RequestHandler.RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
-        using (var source = new StreamSource(stream, jsonOperationContext, GetDatabaseName()))
+        using (var source = new StreamSource(stream, jsonOperationContext, RequestHandler.DatabaseName))
         {
             var destination = new DatabaseDestination(RequestHandler.Database);
             var options = new DatabaseSmugglerOptionsServerSide

@@ -7,19 +7,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisionsBin<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisionsBin<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public AbstractRevisionsHandlerProcessorForGetRevisionsBin([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractRevisionsHandlerProcessorForGetRevisionsBin([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
         protected abstract ValueTask GetAndWriteRevisionsBinAsync(TOperationContext context, int start, int pageSize);
         
-        protected abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-            long totalDocumentsSizeInBytes);
-
         public override async ValueTask ExecuteAsync()
         {
             if (RequestHandler.GetLongQueryString("etag", required: false).HasValue)

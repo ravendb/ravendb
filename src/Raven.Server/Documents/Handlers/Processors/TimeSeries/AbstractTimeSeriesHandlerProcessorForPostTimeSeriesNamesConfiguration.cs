@@ -12,14 +12,12 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
     internal abstract class AbstractTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration<TRequestHandler, TOperationContext> : AbstractTimeSeriesHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public AbstractTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        public AbstractTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected abstract string GetDatabaseName();
 
         public override async ValueTask ExecuteAsync()
         {
@@ -34,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 TimeSeriesConfiguration current;
                 using (context.OpenReadTransaction())
                 {
-                    current = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, GetDatabaseName()).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
+                    current = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
                 }
 
                 if (current.NamedValues == null)
@@ -53,7 +51,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     }
                     current.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
                 }
-                var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, GetDatabaseName(), RequestHandler.GetRaftRequestIdFromQuery());
+                var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
                 var (index, _) = await RequestHandler.ServerStore.SendToLeaderAsync(editTimeSeries);
 
                 await RequestHandler.WaitForIndexToBeAppliedAsync(context, index);

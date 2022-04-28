@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.CompareExchange;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors;
 using Raven.Server.Web.System.Processors.CompareExchange;
 
@@ -12,7 +13,7 @@ public class ShardedCompareExchangeHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/cmpxchg", "GET")]
     public async Task GetCompareExchangeValues()
     {
-        using (var processor = new ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues(this, DatabaseContext.DatabaseName))
+        using (var processor = new ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues(this))
             await processor.ExecuteAsync();
     }
 
@@ -26,7 +27,7 @@ public class ShardedCompareExchangeHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/cmpxchg", "DELETE")]
     public async Task DeleteCompareExchangeValue()
     {
-        using (var processor = new CompareExchangeHandlerProcessorForDeleteCompareExchangeValue(this, DatabaseContext.DatabaseName))
+        using (var processor = new CompareExchangeHandlerProcessorForDeleteCompareExchangeValue<TransactionOperationContext>(this))
             await processor.ExecuteAsync();
     }
 }

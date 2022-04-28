@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 {
     internal class ShardedTimeSeriesHandlerProcessorForGetTimeSeriesStats : AbstractTimeSeriesHandlerProcessorForGetTimeSeriesStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedTimeSeriesHandlerProcessorForGetTimeSeriesStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedTimeSeriesHandlerProcessorForGetTimeSeriesStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

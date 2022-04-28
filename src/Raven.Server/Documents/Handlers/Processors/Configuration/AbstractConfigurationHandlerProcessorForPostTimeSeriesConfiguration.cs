@@ -10,10 +10,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration
 {
-    internal abstract class AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<THandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject,THandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where THandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] TRequestHandler requestHandler)
+        protected AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] THandler requestHandler)
             : base(requestHandler)
         {
         }

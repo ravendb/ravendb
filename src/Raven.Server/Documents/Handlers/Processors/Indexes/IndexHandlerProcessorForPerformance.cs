@@ -14,8 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcessorForPerformance<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexHandlerProcessorForPerformance([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public IndexHandlerProcessorForPerformance([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

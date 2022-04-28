@@ -3,17 +3,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal class AdminConfigurationHandlerProcessorForPutClientConfiguration : AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+internal class AdminConfigurationHandlerProcessorForPutClientConfiguration : AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration<DocumentsOperationContext>
 {
-    public AdminConfigurationHandlerProcessorForPutClientConfiguration(DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public AdminConfigurationHandlerProcessorForPutClientConfiguration(DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override async ValueTask WaitForIndexNotificationAsync(long index)
-    {
-        await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
-    }
-
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
 }

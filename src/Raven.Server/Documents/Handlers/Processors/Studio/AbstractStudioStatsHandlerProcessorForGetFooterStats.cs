@@ -6,12 +6,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio
 {
-    internal abstract class AbstractStudioStatsHandlerProcessorForGetFooterStats<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractStudioStatsHandlerProcessorForGetFooterStats<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractStudioStatsHandlerProcessorForGetFooterStats([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+        protected AbstractStudioStatsHandlerProcessorForGetFooterStats([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

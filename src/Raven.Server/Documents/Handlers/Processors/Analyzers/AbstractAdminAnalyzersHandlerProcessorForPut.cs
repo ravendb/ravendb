@@ -5,27 +5,22 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 {
-    internal abstract class AbstractAdminAnalyzersHandlerProcessorForPut<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractAdminAnalyzersHandlerProcessorForPut<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+        where TOperationContext : JsonOperationContext 
     {
-        protected AbstractAdminAnalyzersHandlerProcessorForPut([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractAdminAnalyzersHandlerProcessorForPut([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected abstract string GetDatabaseName();
-
-        protected abstract ValueTask WaitForIndexNotificationAsync(long index);
-
         public override async ValueTask ExecuteAsync()
         {
-            var databaseName = GetDatabaseName();
+            var databaseName = RequestHandler.DatabaseName;
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -57,7 +52,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 
                 var index = (await RequestHandler.ServerStore.SendToLeaderAsync(command)).Index;
 
-                await WaitForIndexNotificationAsync(index);
+                await RequestHandler.WaitForIndexNotificationAsync(index);
 
                 RequestHandler.NoContentStatus(HttpStatusCode.Created);
             }

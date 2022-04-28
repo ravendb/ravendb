@@ -10,8 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 
 internal class ShardedAttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAttachmentHandlerProcessorForHeadAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedAttachmentHandlerProcessorForHeadAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

@@ -1,16 +1,13 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors;
-using Sparrow.Json;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal class StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin<TOperationContext> : AbstractHandlerProcessor<RequestHandler, TOperationContext>
-    where TOperationContext : JsonOperationContext
+internal class StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin : AbstractHandlerProcessor<RequestHandler>
 {
-    public StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin([NotNull] RequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    public StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin([NotNull] RequestHandler requestHandler)
+        : base(requestHandler)
     {
     }
 

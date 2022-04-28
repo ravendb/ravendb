@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
@@ -12,12 +13,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal abstract class AbstractStudioIndexHandlerForPostIndexFields<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractStudioIndexHandlerForPostIndexFields<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractStudioIndexHandlerForPostIndexFields([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractStudioIndexHandlerForPostIndexFields([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

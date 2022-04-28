@@ -6,10 +6,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Identities
 {
     internal class ShardedIdentityHandlerProcessorForPostIdentity : AbstractIdentityHandlerProcessorForPostIdentity<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedIdentityHandlerProcessorForPostIdentity([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedIdentityHandlerProcessorForPostIdentity([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
     }
 }

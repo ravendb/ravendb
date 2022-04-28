@@ -12,8 +12,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexProcessorForGenerateCSharpIndexDefinition : AbstractIndexProcessorForGenerateCSharpIndexDefinition<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexProcessorForGenerateCSharpIndexDefinition([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public IndexProcessorForGenerateCSharpIndexDefinition([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 {
     internal class ShardedCountersHandlerProcessorForPostCounters : AbstractCountersHandlerProcessorForPostCounters<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedCountersHandlerProcessorForPostCounters([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedCountersHandlerProcessorForPostCounters([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

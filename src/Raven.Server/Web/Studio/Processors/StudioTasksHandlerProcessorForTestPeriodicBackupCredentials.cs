@@ -14,13 +14,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio.Processors
 {
-    internal class StudioTasksHandlerProcessorForTestPeriodicBackupCredentials<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal class StudioTasksHandlerProcessorForTestPeriodicBackupCredentials : AbstractHandlerProcessor<RequestHandler>
     {
-        public StudioTasksHandlerProcessorForTestPeriodicBackupCredentials([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+        public StudioTasksHandlerProcessorForTestPeriodicBackupCredentials([NotNull] RequestHandler requestHandler) : base(requestHandler)
         {
         }
 

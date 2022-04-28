@@ -1,28 +1,24 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Analyzers;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Analyzers
 {
-    internal abstract class AbstractAdminAnalyzersHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractAdminAnalyzersHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+        where TOperationContext : JsonOperationContext 
     {
-        protected AbstractAdminAnalyzersHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractAdminAnalyzersHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected abstract string GetDatabaseName();
-
-        protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
         public override async ValueTask ExecuteAsync()
         {
             var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var databaseName = GetDatabaseName();
+            var databaseName = RequestHandler.DatabaseName;
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
@@ -35,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
             var command = new DeleteAnalyzerCommand(name, databaseName, RequestHandler.GetRaftRequestIdFromQuery());
             var index = (await RequestHandler.ServerStore.SendToLeaderAsync(command)).Index;
 
-            await WaitForIndexNotificationAsync(index);
+            await RequestHandler.WaitForIndexNotificationAsync(index);
 
             RequestHandler.NoContentStatus();
         }

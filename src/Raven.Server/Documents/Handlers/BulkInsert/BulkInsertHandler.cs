@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.BulkInsert
             await Database.Operations.AddOperation(Database, "Bulk Insert", Operations.Operations.OperationType.BulkInsert,
                 async progress =>
                 {
-                    using (var bulkInsertProcessor = new BulkInsertHandlerProcessor(this, ContextPool, Database, progress, skipOverwriteIfUnchanged, operationCancelToken.Token))
+                    using (var bulkInsertProcessor = new BulkInsertHandlerProcessor(this, Database, progress, skipOverwriteIfUnchanged, operationCancelToken.Token))
                     {
                         await bulkInsertProcessor.ExecuteAsync();
 

@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
 {
     internal class ShardedAttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedAttachmentHandlerProcessorForGetAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, requestHandler.ContextPool, requestHandler.Logger, isDocument)
+        public ShardedAttachmentHandlerProcessorForGetAttachment([NotNull] ShardedDatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, requestHandler.Logger, isDocument)
         {
         }
 
@@ -21,11 +21,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
             var cmd = new GetAttachmentOperation.GetAttachmentCommand(context, documentId, name, type, changeVector);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new  ProxyCommand<AttachmentResult>(cmd, RequestHandler.HttpContext.Response), shardNumber, token);
-        }
-        
-        protected override RavenTransaction OpenReadTransaction(TransactionOperationContext context)
-        {
-            return context.OpenReadTransaction();
         }
     }
 }

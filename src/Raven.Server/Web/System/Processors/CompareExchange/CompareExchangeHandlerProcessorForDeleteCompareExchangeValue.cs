@@ -1,23 +1,19 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors.CompareExchange;
 
-internal class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue : AbstractHandlerProcessor<RequestHandler, TransactionOperationContext>
+internal class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext> 
+    where TOperationContext : JsonOperationContext
 {
-    private readonly string _databaseName;
-
-    public CompareExchangeHandlerProcessorForDeleteCompareExchangeValue([NotNull] RequestHandler requestHandler, [NotNull] string databaseName)
-        : base(requestHandler, requestHandler.ServerStore.ContextPool)
+    public CompareExchangeHandlerProcessorForDeleteCompareExchangeValue([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler) : base(requestHandler)
     {
-        _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
     }
 
     public override async ValueTask ExecuteAsync()
@@ -30,13 +26,13 @@ internal class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue : Ab
 
         await RequestHandler.ServerStore.EnsureNotPassiveAsync();
 
-        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
-            var command = new RemoveCompareExchangeCommand(_databaseName, key, index, context, raftRequestId);
+            var command = new RemoveCompareExchangeCommand(RequestHandler.DatabaseName, key, index, context, raftRequestId);
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 (var raftIndex, var response) = await RequestHandler.ServerStore.SendToLeaderAsync(context, command);
-                await RequestHandler.ServerStore.Cluster.WaitForIndexNotification(raftIndex);
+                await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 
                 var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
                 context.Write(writer, new DynamicJsonValue

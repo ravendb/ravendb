@@ -19,7 +19,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexType()
         {
-            using (var processor = new StudioIndexHandlerForPostIndexType<DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new StudioIndexHandlerForPostIndexType<DocumentsOperationContext>(this))
                 await processor.ExecuteAsync();
         }
 

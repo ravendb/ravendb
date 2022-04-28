@@ -141,7 +141,7 @@ namespace SlowTests.Issues
 
             Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
 
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 Assert.Equal(0, Server.ServerStore.Cluster.GetIdentitiesFromPrefix(context, dbName1, 0, int.MaxValue).Count());

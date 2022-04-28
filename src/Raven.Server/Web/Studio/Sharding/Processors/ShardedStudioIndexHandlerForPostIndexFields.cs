@@ -8,8 +8,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors;
 
 internal class ShardedStudioIndexHandlerForPostIndexFields : AbstractStudioIndexHandlerForPostIndexFields<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedStudioIndexHandlerForPostIndexFields([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedStudioIndexHandlerForPostIndexFields([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

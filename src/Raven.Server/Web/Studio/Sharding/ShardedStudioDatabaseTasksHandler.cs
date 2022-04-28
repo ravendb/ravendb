@@ -12,7 +12,7 @@ public class ShardedStudioDatabaseTasksHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/admin/studio-tasks/folder-path-options", "POST")]
     public async Task GetFolderPathOptionsForDatabaseAdmin()
     {
-        using (var processor = new StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin<TransactionOperationContext>(this, ContextPool))
+        using (var processor = new StudioStudioDatabaseTasksHandlerProcessorForGetFolderPathOptionsForDatabaseAdmin(this))
             await processor.ExecuteAsync();
     }
 

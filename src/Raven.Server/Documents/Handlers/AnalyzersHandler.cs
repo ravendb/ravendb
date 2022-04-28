@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/analyzers", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            using (var processor = new AnalyzersHandlerProcessorForGet<DocumentsOperationContext>(this, ContextPool, Database.Name))
+            using (var processor = new AnalyzersHandlerProcessorForGet<DocumentsOperationContext>(this))
                 await processor.ExecuteAsync();
         }
     }

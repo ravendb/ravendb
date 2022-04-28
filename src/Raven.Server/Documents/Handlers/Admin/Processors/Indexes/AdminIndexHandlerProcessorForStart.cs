@@ -8,8 +8,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal class AdminIndexHandlerProcessorForStart : AbstractAdminIndexHandlerProcessorForStart<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AdminIndexHandlerProcessorForStart([NotNull] DatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public AdminIndexHandlerProcessorForStart([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

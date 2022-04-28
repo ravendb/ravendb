@@ -9,11 +9,11 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal abstract class AbstractAdminIndexHandlerProcessorForJavaScriptPut<TRequestHandler, TOperationContext> : AbstractAdminIndexHandlerProcessorForPut<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAdminIndexHandlerProcessorForJavaScriptPut([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool, validatedAsAdmin: false)
+    protected AbstractAdminIndexHandlerProcessorForJavaScriptPut([NotNull] TRequestHandler requestHandler)
+        : base(requestHandler, validatedAsAdmin: false)
     {
     }
 
@@ -23,7 +23,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForJavaScriptPut<TRequ
     {
         if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && GetDatabaseConfiguration().Indexing.RequireAdminToDeployJavaScriptIndexes)
         {
-            if (feature.CanAccess(GetDatabaseName(), requireAdmin: true, requireWrite: true) == false)
+            if (feature.CanAccess(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: true) == false)
                 throw new AuthorizationException("Deployments of JavaScript indexes has been restricted to admin users only");
         }
 

@@ -6,8 +6,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForSetLockMode : AbstractIndexHandlerProcessorForSetLockMode<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexHandlerProcessorForSetLockMode([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public IndexHandlerProcessorForSetLockMode([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

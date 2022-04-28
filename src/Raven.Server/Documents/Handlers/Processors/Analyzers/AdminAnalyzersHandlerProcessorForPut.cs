@@ -10,15 +10,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
     internal class AdminAnalyzersHandlerProcessorForPut : AbstractAdminAnalyzersHandlerProcessorForPut<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AdminAnalyzersHandlerProcessorForPut([NotNull] DatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName() => RequestHandler.Database.Name;
-
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
         }
     }
 }

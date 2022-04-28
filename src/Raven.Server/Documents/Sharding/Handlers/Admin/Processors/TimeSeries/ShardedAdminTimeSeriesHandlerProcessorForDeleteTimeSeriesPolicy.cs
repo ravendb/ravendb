@@ -7,13 +7,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.TimeSeries
 {
     internal class ShardedAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy : AbstractAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedAdminTimeSeriesHandlerProcessorForDeleteTimeSeriesPolicy([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.DatabaseContext.DatabaseName;
         }
     }
 }

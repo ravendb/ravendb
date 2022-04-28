@@ -9,15 +9,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Analyzers;
 
-internal class AnalyzersHandlerProcessorForGet<TOperationContext> : AbstractHandlerProcessor<RequestHandler, TOperationContext>
+internal class AnalyzersHandlerProcessorForGet<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    private readonly string _databaseName;
 
-    public AnalyzersHandlerProcessorForGet([NotNull] RequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
-        : base(requestHandler, contextPool)
+    public AnalyzersHandlerProcessorForGet([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler)
+        : base(requestHandler)
     {
-        _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
     }
 
     public override async ValueTask ExecuteAsync()
@@ -27,7 +25,7 @@ internal class AnalyzersHandlerProcessorForGet<TOperationContext> : AbstractHand
             Dictionary<string, AnalyzerDefinition> analyzers;
             using (context.OpenReadTransaction())
             {
-                var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, _databaseName);
+                var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName);
                 analyzers = rawRecord?.Analyzers;
             }
 

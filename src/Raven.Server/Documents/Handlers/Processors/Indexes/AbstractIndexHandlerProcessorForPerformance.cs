@@ -9,11 +9,10 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal abstract class AbstractIndexHandlerProcessorForPerformance<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<IndexPerformanceStats[], TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractIndexHandlerProcessorForPerformance([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractIndexHandlerProcessorForPerformance([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

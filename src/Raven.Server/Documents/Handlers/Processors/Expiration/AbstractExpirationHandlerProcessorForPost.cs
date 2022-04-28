@@ -7,8 +7,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Expiration
 {
-    internal abstract class AbstractExpirationHandlerProcessorForPost<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractExpirationHandlerProcessorForPost<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         protected AbstractExpirationHandlerProcessorForPost([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {

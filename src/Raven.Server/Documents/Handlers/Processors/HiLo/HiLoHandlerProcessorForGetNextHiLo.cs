@@ -19,8 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.HiLo;
 
 internal class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public HiLoHandlerProcessorForGetNextHiLo([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public HiLoHandlerProcessorForGetNextHiLo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

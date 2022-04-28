@@ -1,30 +1,23 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
     internal class
-        OngoingTasksHandlerProcessorForPutConnectionString<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+        OngoingTasksHandlerProcessorForPutConnectionString<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        private readonly string _databaseName;
-
-        public OngoingTasksHandlerProcessorForPutConnectionString([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] string databaseName)
-            : base(requestHandler, contextPool)
+        public OngoingTasksHandlerProcessorForPutConnectionString([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
-            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
         public override async ValueTask ExecuteAsync()
         {
             await DatabaseRequestHandler.DatabaseConfigurations(RequestHandler.ServerStore.PutConnectionString, "put-connection-string",
                 RequestHandler.GetRaftRequestIdFromQuery(),
-                _databaseName, RequestHandler);
+                RequestHandler.DatabaseName, RequestHandler);
         }
     }
 }

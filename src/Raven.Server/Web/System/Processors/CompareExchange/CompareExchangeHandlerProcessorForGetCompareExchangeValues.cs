@@ -1,19 +1,15 @@
 ﻿using JetBrains.Annotations;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.System.Processors.CompareExchange;
 
-internal class CompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<DatabaseRequestHandler>
+internal class CompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public CompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] DatabaseRequestHandler requestHandler, [NotNull] string databaseName) 
-        : base(requestHandler, databaseName)
+    public CompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] DatabaseRequestHandler requestHandler) 
+        : base(requestHandler)
     {
-    }
-
-    protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long durationInMs, long totalDocumentsSizeInBytes)
-    {
-        RequestHandler.AddPagingPerformanceHint(PagingOperationType.CompareExchange, action, details, numberOfResults, pageSize, durationInMs, totalDocumentsSizeInBytes);
     }
 
     internal class CompareExchangeListItem

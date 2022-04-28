@@ -7,12 +7,9 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal class AdminIndexHandlerProcessorForJavaScriptPut : AbstractAdminIndexHandlerProcessorForJavaScriptPut<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AdminIndexHandlerProcessorForJavaScriptPut([NotNull] DatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public AdminIndexHandlerProcessorForJavaScriptPut([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
 
     protected override AbstractIndexCreateController GetIndexCreateProcessor() => RequestHandler.Database.IndexStore.Create;
 

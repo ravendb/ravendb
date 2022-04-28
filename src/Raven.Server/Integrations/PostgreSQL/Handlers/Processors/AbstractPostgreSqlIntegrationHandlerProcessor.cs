@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Utils.Features;
 using Raven.Server.Web;
@@ -8,16 +9,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
-internal abstract class AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractPostgreSqlIntegrationHandlerProcessor([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractPostgreSqlIntegrationHandlerProcessor([NotNull] TRequestHandler requestHandler)
+        : base(requestHandler)
     {
     }
 
-    public static void AssertCanUsePostgreSqlIntegration(RequestHandler requestHandler)
+    public static void AssertCanUsePostgreSqlIntegration(TRequestHandler requestHandler)
     {
         if (requestHandler.ServerStore.LicenseManager.CanUsePowerBi(false, out _))
             return;

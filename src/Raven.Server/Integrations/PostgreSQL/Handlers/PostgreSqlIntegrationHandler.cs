@@ -11,7 +11,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         [RavenAction("/databases/*/admin/integrations/postgresql/server/status", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetServerStatus()
         {
-            using (var processor = new PostgreSqlIntegrationHandlerProcessorForGetServerStatus<DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new PostgreSqlIntegrationHandlerProcessorForGetServerStatus<DatabaseRequestHandler, DocumentsOperationContext>(this))
                 await processor.ExecuteAsync();
         }
 

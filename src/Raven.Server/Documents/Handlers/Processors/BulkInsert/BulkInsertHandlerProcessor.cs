@@ -19,9 +19,9 @@ internal class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProcessor<Ba
     private readonly Logger _logger;
     private int _databaseChangeVectorSize;
 
-    public BulkInsertHandlerProcessor([NotNull] BulkInsertHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool,
+    public BulkInsertHandlerProcessor([NotNull] BulkInsertHandler requestHandler,
         DocumentDatabase database, Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token) 
-        : base(requestHandler, contextPool, onProgress, skipOverwriteIfUnchanged, token)
+        : base(requestHandler, onProgress, skipOverwriteIfUnchanged, token)
     {
         _database = database;
         _logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(database.Name);

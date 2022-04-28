@@ -134,7 +134,7 @@ namespace Raven.Server.Web.System
                     return false;
 
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-                    using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))

@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly DocumentDatabase _database;
         public readonly DocumentsOperationContext Documents;
 
-        public TransactionOperationContext Server;
+        public ClusterOperationContext Server;
 
         private IDisposable _releaseDocuments;
         private IDisposable _releaseServer;
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes
                 _releaseDocuments = Documents;
 
             if (needsServerContext)
-                _releaseServer = database.ServerStore.ContextPool.AllocateOperationContext(out Server);
+                _releaseServer = database.ServerStore.Engine.ContextPool.AllocateOperationContext(out Server);
         }
 
         private QueryOperationContext(DocumentDatabase database, bool needsServerContext)
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes
             _releaseDocuments = database.DocumentsStorage.ContextPool.AllocateOperationContext(out Documents);
 
             if (needsServerContext)
-                _releaseServer = database.ServerStore.ContextPool.AllocateOperationContext(out Server);
+                _releaseServer = database.ServerStore.Engine.ContextPool.AllocateOperationContext(out Server);
         }
 
         internal void WithIndex(Index index)
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             if (index.Definition.HasCompareExchange)
-                _releaseServer = _database.ServerStore.ContextPool.AllocateOperationContext(out Server);
+                _releaseServer = _database.ServerStore.Engine.ContextPool.AllocateOperationContext(out Server);
         }
 
         internal void WithQuery(QueryMetadata metadata)
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             if (metadata.HasCmpXchg || metadata.HasCmpXchgSelect || metadata.HasCmpXchgIncludes)
-                _releaseServer = _database.ServerStore.ContextPool.AllocateOperationContext(out Server);
+                _releaseServer = _database.ServerStore.Engine.ContextPool.AllocateOperationContext(out Server);
         }
 
         public IDisposable OpenReadTransaction()

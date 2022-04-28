@@ -8,25 +8,25 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Executors;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Configuration;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public partial class ShardedDatabaseRequestHandler : AbstractDatabaseRequestHandler
+    public partial class ShardedDatabaseRequestHandler : AbstractDatabaseRequestHandler<TransactionOperationContext>
     {
         public ShardedDatabaseContext DatabaseContext;
-        public TransactionContextPool ContextPool;
         public Logger Logger;
 
         public HttpMethod Method;
         public string RelativeShardUrl;
         public string BaseShardUrl;
-
         public ShardExecutor ShardExecutor => DatabaseContext.ShardExecutor;
 
         public ShardedContinuationTokensHandler ContinuationTokens;
@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
+
 
         public Task CheckForChanges(RequestHandlerContext context)
         {
@@ -123,5 +124,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public override string DatabaseName => DatabaseContext.DatabaseName;
 
+        public override Task WaitForIndexNotificationAsync(long index) => ServerStore.Cluster.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+        public override bool ShouldAddPagingPerformanceHint(long numberOfResults)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "implement this");
+            return false;
+        }
+
+        public override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+            long totalDocumentsSizeInBytes)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "implement this");
+        }
     }
 }

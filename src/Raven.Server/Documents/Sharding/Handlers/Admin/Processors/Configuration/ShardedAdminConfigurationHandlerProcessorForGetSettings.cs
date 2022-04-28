@@ -7,12 +7,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Configuratio
 
 internal class ShardedAdminConfigurationHandlerProcessorForGetSettings : AbstractAdminConfigurationHandlerProcessorForGetSettings<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminConfigurationHandlerProcessorForGetSettings([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedAdminConfigurationHandlerProcessorForGetSettings([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 
     protected override RavenConfiguration GetDatabaseConfiguration() => RequestHandler.DatabaseContext.Configuration;
 }

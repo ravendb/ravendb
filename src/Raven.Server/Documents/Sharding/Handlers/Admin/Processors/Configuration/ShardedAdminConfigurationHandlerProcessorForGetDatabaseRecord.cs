@@ -4,12 +4,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Configuration;
 
-internal class ShardedAdminConfigurationHandlerProcessorForGetDatabaseRecord : AbstractHandlerProcessorForGetDatabaseRecord<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedAdminConfigurationHandlerProcessorForGetDatabaseRecord : AbstractHandlerDatabaseProcessorForGetDatabaseRecord<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminConfigurationHandlerProcessorForGetDatabaseRecord([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedAdminConfigurationHandlerProcessorForGetDatabaseRecord([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 }

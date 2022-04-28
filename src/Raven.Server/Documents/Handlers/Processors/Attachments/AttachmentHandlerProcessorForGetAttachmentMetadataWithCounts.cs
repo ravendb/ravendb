@@ -9,8 +9,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
 internal class AttachmentHandlerProcessorForGetAttachmentMetadataWithCounts : AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AttachmentHandlerProcessorForGetAttachmentMetadataWithCounts([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public AttachmentHandlerProcessorForGetAttachmentMetadataWithCounts([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

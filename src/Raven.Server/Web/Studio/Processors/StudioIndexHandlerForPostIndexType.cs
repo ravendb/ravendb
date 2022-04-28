@@ -1,17 +1,17 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal class StudioIndexHandlerForPostIndexType<TOperationContext> : AbstractHandlerProcessor<RequestHandler, TOperationContext>
+internal class StudioIndexHandlerForPostIndexType<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    public StudioIndexHandlerForPostIndexType([NotNull] RequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    public StudioIndexHandlerForPostIndexType([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler) : base(requestHandler)
     {
     }
 

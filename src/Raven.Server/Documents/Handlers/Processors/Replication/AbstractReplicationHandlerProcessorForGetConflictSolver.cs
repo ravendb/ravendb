@@ -9,16 +9,13 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication;
 
-internal abstract class AbstractReplicationHandlerProcessorForGetConflictSolver<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractReplicationHandlerProcessorForGetConflictSolver<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractReplicationHandlerProcessorForGetConflictSolver([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractReplicationHandlerProcessorForGetConflictSolver([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
 
     public override async ValueTask ExecuteAsync()
     {
@@ -26,7 +23,7 @@ internal abstract class AbstractReplicationHandlerProcessorForGetConflictSolver<
         using (context.OpenReadTransaction())
         {
             ConflictSolver solverConfig;
-            using (var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, GetDatabaseName()))
+            using (var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
                 solverConfig = rawRecord?.ConflictSolverConfiguration;
 
             if (solverConfig == null)

@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
     internal class ShardedAdminRevisionsHandlerProcessorForDeleteRevisions :  AbstractAdminRevisionsHandlerProcessorForDeleteRevisions<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedAdminRevisionsHandlerProcessorForDeleteRevisions([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedAdminRevisionsHandlerProcessorForDeleteRevisions([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

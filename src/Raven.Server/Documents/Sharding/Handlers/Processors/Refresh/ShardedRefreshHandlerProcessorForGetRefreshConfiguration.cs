@@ -7,8 +7,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Refresh;
 
 internal class ShardedRefreshHandlerProcessorForGetRefreshConfiguration : AbstractRefreshHandlerProcessorForGetRefreshConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedRefreshHandlerProcessorForGetRefreshConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedRefreshHandlerProcessorForGetRefreshConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

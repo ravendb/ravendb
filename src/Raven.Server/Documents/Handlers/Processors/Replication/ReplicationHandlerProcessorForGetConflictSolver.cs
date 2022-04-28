@@ -5,10 +5,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication;
 
 internal class ReplicationHandlerProcessorForGetConflictSolver : AbstractReplicationHandlerProcessorForGetConflictSolver<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public ReplicationHandlerProcessorForGetConflictSolver([NotNull] DatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ReplicationHandlerProcessorForGetConflictSolver([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
 }

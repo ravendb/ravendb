@@ -6,13 +6,8 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.TimeSeries
 {
     internal class AdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy : AbstractAdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public AdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public AdminTimeSeriesHandlerProcessorForPutTimeSeriesPolicy([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.Database.Name;
         }
     }
 }

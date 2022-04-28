@@ -1896,7 +1896,7 @@ namespace Raven.Server.Documents.Patch
                 if (string.IsNullOrEmpty(key))
                     return JsValue.Undefined;
 
-                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (_database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     var value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;

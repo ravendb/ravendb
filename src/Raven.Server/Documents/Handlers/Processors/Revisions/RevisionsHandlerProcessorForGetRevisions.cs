@@ -17,14 +17,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
     internal class RevisionsHandlerProcessorForGetRevisions : AbstractRevisionsHandlerProcessorForGetRevisions<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public RevisionsHandlerProcessorForGetRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public RevisionsHandlerProcessorForGetRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-            long totalDocumentsSizeInBytes)
-        {
-            RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
 
         protected override async ValueTask GetRevisionByChangeVectorAsync(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly, CancellationToken token)
@@ -71,7 +65,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 }
 
                 //using this function's legacy name GetRevisionByChangeVector
-                AddPagingPerformanceHint(PagingOperationType.Documents, "GetRevisionByChangeVector", HttpContext.Request.QueryString.Value, numberOfResults,
+                RequestHandler.AddPagingPerformanceHint(PagingOperationType.Documents, "GetRevisionByChangeVector", HttpContext.Request.QueryString.Value, numberOfResults,
                     revisions.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
         }
@@ -124,7 +118,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 }
 
                 //using this function's legacy name GetRevisions
-                AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisions", HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize,
+                RequestHandler.AddPagingPerformanceHint(PagingOperationType.Revisions, "GetRevisions", HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize,
                     sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
         }

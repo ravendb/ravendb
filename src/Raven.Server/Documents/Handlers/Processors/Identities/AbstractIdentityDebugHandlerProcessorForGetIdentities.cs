@@ -6,22 +6,20 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Identities
 {
-    internal abstract class AbstractIdentityDebugHandlerProcessorForGetIdentities<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractIdentityDebugHandlerProcessorForGetIdentities<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractIdentityDebugHandlerProcessorForGetIdentities([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractIdentityDebugHandlerProcessorForGetIdentities([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        protected abstract string GetDatabaseName();
 
         public override async ValueTask ExecuteAsync()
         {
             var start = RequestHandler.GetStart();
             var pageSize = RequestHandler.GetPageSize();
 
-            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -29,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Identities
                     writer.WriteStartObject();
 
                     var first = true;
-                    foreach (var identity in RequestHandler.ServerStore.Cluster.GetIdentitiesFromPrefix(context, GetDatabaseName(), start, pageSize))
+                    foreach (var identity in RequestHandler.ServerStore.Cluster.GetIdentitiesFromPrefix(context, RequestHandler.DatabaseName, start, pageSize))
                     {
                         if (first == false)
                             writer.WriteComma();

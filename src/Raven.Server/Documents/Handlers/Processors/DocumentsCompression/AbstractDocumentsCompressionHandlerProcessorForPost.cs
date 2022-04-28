@@ -7,8 +7,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.DocumentsCompression
 {
-    internal abstract class AbstractDocumentsCompressionHandlerProcessorForPost<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractDocumentsCompressionHandlerProcessorForPost<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         protected AbstractDocumentsCompressionHandlerProcessorForPost([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {

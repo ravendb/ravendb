@@ -8,24 +8,20 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Sorters;
 
-internal abstract class AbstractAdminSortersHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAdminSortersHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAdminSortersHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractAdminSortersHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler)
+        : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
-
-    protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
     public override async ValueTask ExecuteAsync()
     {
         var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-        var databaseName = GetDatabaseName();
+        var databaseName = RequestHandler.DatabaseName;
 
         if (LoggingSource.AuditLog.IsInfoEnabled)
         {
@@ -38,7 +34,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForDelete<TRequestHa
         var command = new DeleteSorterCommand(name, databaseName, RequestHandler.GetRaftRequestIdFromQuery());
         var index = (await RequestHandler.ServerStore.SendToLeaderAsync(command)).Index;
 
-        await WaitForIndexNotificationAsync(index);
+        await RequestHandler.WaitForIndexNotificationAsync(index);
 
         RequestHandler.NoContentStatus();
     }

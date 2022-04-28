@@ -189,7 +189,7 @@ namespace Raven.Server.Web
 
             using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate))
             {
-                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
+                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: AbortRequestToken);
             }
         }
 

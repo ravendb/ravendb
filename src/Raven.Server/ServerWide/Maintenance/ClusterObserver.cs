@@ -517,7 +517,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return false;
         }
 
-        internal async Task<CompareExchangeTombstonesCleanupState> CleanUpCompareExchangeTombstones(string databaseName, MergedDatabaseObservationState mergedState, TransactionOperationContext context)
+        internal async Task<CompareExchangeTombstonesCleanupState> CleanUpCompareExchangeTombstones<TRavenTransaction>(string databaseName, MergedDatabaseObservationState mergedState, TransactionOperationContext<TRavenTransaction> context) where TRavenTransaction : RavenTransaction
         {
             const int amountToDelete = 8192;
             var hasMore = false;
@@ -568,7 +568,7 @@ namespace Raven.Server.ServerWide.Maintenance
             NoMoreTombstones
         }
 
-        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(TransactionOperationContext context, string databaseName, DatabaseObservationState state, out long maxEtag)
+        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, DatabaseObservationState state, out long maxEtag) where TRavenTransaction : RavenTransaction
         {
             List<long> periodicBackupTaskIds;
             maxEtag = long.MaxValue;

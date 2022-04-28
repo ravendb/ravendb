@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 {
     internal class ShardedTimeSeriesHandlerProcessorForPostTimeSeries : AbstractTimeSeriesHandlerProcessorForPostTimeSeries<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedTimeSeriesHandlerProcessorForPostTimeSeries([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedTimeSeriesHandlerProcessorForPostTimeSeries([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

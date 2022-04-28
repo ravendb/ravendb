@@ -20,8 +20,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
     {
         private ShardedPagingContinuation _continuationToken;
 
-        public ShardedReplicationHandlerProcessorForGetConflicts([NotNull] ShardedDatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+        public ShardedReplicationHandlerProcessorForGetConflicts([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

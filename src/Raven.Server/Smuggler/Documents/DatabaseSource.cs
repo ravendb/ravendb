@@ -32,7 +32,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
         private DocumentsOperationContext _context;
-        private TransactionOperationContext _serverContext;
+        private ClusterOperationContext _serverContext;
 
         private readonly long _startDocumentEtag;
         private readonly long _startRaftIndex;
@@ -100,7 +100,7 @@ namespace Raven.Server.Smuggler.Documents
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Subscriptions) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.ReplicationHubCertificates))
             {
-                _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+                _returnServerContext = _database.ServerStore.Engine.ContextPool.AllocateOperationContext(out _serverContext);
                 _disposeServerTransaction = _serverContext.OpenReadTransaction();
 
                 using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(_serverContext, _database.Name))

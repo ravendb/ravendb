@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Raven.Client.Http;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Handlers.Processors;
 using Sparrow.Json;
@@ -7,10 +8,10 @@ using Sparrow.Json;
 namespace Raven.Server.Web.Studio.Processors;
 
 internal abstract class AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<GetIndexErrorsCountCommand.IndexErrorsCount[], TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+    protected AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

@@ -8,11 +8,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Expiration
 {
-    internal abstract class AbstractExpirationHandlerProcessorForGet<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractExpirationHandlerProcessorForGet<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractExpirationHandlerProcessorForGet([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractExpirationHandlerProcessorForGet([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

@@ -6,12 +6,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal abstract class AbstractAttachmentHandlerProcessorForHeadAttachment<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAttachmentHandlerProcessorForHeadAttachment<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAttachmentHandlerProcessorForHeadAttachment([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) 
-        : base(requestHandler, contextPool)
+    protected AbstractAttachmentHandlerProcessorForHeadAttachment([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

@@ -5,12 +5,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal abstract class AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) 
-        : base(requestHandler, contextPool)
+    protected AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

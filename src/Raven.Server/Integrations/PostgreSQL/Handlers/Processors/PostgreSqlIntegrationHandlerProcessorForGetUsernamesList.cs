@@ -7,9 +7,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 internal class PostgreSqlIntegrationHandlerProcessorForGetUsernamesList : AbstractPostgreSqlIntegrationHandlerProcessorForGetUsernamesList<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public PostgreSqlIntegrationHandlerProcessorForGetUsernamesList([NotNull] DatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+        : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
 }

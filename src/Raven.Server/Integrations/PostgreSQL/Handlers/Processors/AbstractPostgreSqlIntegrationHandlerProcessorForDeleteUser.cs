@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
@@ -12,8 +13,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 
-internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUser<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<PostgreSqlConfiguration, TRequestHandler>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUser<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<PostgreSqlConfiguration, TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     protected AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUser([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
@@ -26,7 +28,7 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUs
 
     protected override ValueTask AssertCanExecuteAsync(string databaseName)
     {
-        AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TransactionOperationContext>.AssertCanUsePostgreSqlIntegration(RequestHandler);
+        AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext>.AssertCanUsePostgreSqlIntegration(RequestHandler);
 
         return base.AssertCanExecuteAsync(databaseName);
     }

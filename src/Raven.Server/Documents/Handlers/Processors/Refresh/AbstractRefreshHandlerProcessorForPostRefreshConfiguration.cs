@@ -7,8 +7,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Refresh;
 
-internal abstract class AbstractRefreshHandlerProcessorForPostRefreshConfiguration<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractRefreshHandlerProcessorForPostRefreshConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     protected AbstractRefreshHandlerProcessorForPostRefreshConfiguration([NotNull] TRequestHandler requestHandler)
         : base(requestHandler)

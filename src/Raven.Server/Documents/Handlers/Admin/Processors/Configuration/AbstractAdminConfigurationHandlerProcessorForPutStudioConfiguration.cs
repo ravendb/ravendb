@@ -3,23 +3,19 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
 {
-    internal abstract class AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<TRequestHandler, TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
-        protected AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration(AbstractDatabaseRequestHandler<TOperationContext> requestHandler) : base(requestHandler)
         { }
-
-        protected abstract string GetDatabaseName();
 
         public override async ValueTask ExecuteAsync()
         {
-            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 var studioConfigurationJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), Constants.Configuration.StudioId);
                 var studioConfiguration = JsonDeserializationServer.StudioConfiguration(studioConfigurationJson);
@@ -27,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
                 await UpdateDatabaseRecordAsync(context, (record, _) =>
                 {
                     record.Studio = studioConfiguration;
-                }, RequestHandler.GetRaftRequestIdFromQuery(), GetDatabaseName());
+                }, RequestHandler.GetRaftRequestIdFromQuery(), RequestHandler.DatabaseName);
             }
 
             RequestHandler.NoContentStatus(HttpStatusCode.Created);

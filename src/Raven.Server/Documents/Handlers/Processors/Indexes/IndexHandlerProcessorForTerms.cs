@@ -16,8 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
     internal class IndexHandlerProcessorForTerms : AbstractIndexHandlerProcessorForTerms<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public IndexHandlerProcessorForTerms([NotNull] DatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+        public IndexHandlerProcessorForTerms([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

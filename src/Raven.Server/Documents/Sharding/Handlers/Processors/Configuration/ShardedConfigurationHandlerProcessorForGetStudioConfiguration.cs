@@ -5,16 +5,9 @@ using Raven.Server.ServerWide.Context;
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Configuration;
 internal class ShardedConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    private readonly ShardedDatabaseContext _context;
-
-    public ShardedConfigurationHandlerProcessorForGetStudioConfiguration(ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedConfigurationHandlerProcessorForGetStudioConfiguration(ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-        _context = requestHandler.DatabaseContext;
     }
 
-    protected override StudioConfiguration GetStudioConfiguration()
-    {
-        return _context.DatabaseRecord.Studio;
-    }
+    protected override StudioConfiguration GetStudioConfiguration() => RequestHandler.DatabaseContext.DatabaseRecord.Studio;
 }

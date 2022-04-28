@@ -8,11 +8,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Rachis
 {
-    internal abstract class AbstractRachisHandlerProcessorForWaitForIndexNotifications<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractRachisHandlerProcessorForWaitForIndexNotifications<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractRachisHandlerProcessorForWaitForIndexNotifications([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractRachisHandlerProcessorForWaitForIndexNotifications([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

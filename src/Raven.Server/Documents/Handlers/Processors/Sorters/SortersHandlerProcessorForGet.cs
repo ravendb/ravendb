@@ -1,13 +1,12 @@
 ﻿using JetBrains.Annotations;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Sorters;
 
-internal class SortersHandlerProcessorForGet : AbstractSortersHandlerProcessorForGet<DatabaseRequestHandler>
+internal class SortersHandlerProcessorForGet : AbstractSortersHandlerProcessorForGet<DocumentsOperationContext>
 {
     public SortersHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler) 
         : base(requestHandler)
     {
     }
-
-    protected override string GetDatabaseName() => RequestHandler.Database.Name;
 }

@@ -7,8 +7,7 @@ namespace Raven.Server.Web.Studio.Processors;
 
 internal class StudioIndexHandlerForPostIndexFields : AbstractStudioIndexHandlerForPostIndexFields<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public StudioIndexHandlerForPostIndexFields([NotNull] DatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public StudioIndexHandlerForPostIndexFields([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

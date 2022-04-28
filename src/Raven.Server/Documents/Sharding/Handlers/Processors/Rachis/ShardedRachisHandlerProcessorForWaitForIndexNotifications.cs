@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Rachis
 {
     internal class ShardedRachisHandlerProcessorForWaitForIndexNotifications : AbstractRachisHandlerProcessorForWaitForIndexNotifications<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedRachisHandlerProcessorForWaitForIndexNotifications([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedRachisHandlerProcessorForWaitForIndexNotifications([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

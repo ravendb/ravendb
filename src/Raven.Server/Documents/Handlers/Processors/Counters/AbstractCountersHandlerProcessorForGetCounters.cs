@@ -7,11 +7,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Counters
 {
-    internal abstract class AbstractCountersHandlerProcessorForGetCounters<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractCountersHandlerProcessorForGetCounters<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractCountersHandlerProcessorForGetCounters([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractCountersHandlerProcessorForGetCounters([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

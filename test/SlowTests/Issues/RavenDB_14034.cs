@@ -539,7 +539,7 @@ namespace SlowTests.Issues
                             .Max(cmpxchg => cmpxchg.Value.Index);
 
                         var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
-                        using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
+                        using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext transactionContext))
                         using (transactionContext.OpenReadTransaction())
                         {
                             var lastCmpXchgIndex = documentDatabase.ServerStore.Cluster

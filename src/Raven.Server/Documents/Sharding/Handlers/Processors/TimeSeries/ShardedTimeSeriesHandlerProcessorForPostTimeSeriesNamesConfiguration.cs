@@ -7,13 +7,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 {
     internal class ShardedTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration : AbstractTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedTimeSeriesHandlerProcessorForPostTimeSeriesNamesConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.DatabaseContext.DatabaseName;
         }
     }
 }

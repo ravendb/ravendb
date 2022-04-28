@@ -13,7 +13,7 @@ public class ShardedBulkInsertHandler : ShardedDatabaseRequestHandler
         var id = GetLongQueryString("id");
         var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 
-        await using (var processor = new ShardedBulkInsertHandlerProcessor(this, ContextPool, DatabaseContext, id, skipOverwriteIfUnchanged, operationCancelToken.Token))
+        await using (var processor = new ShardedBulkInsertHandlerProcessor(this, DatabaseContext, id, skipOverwriteIfUnchanged, operationCancelToken.Token))
         {
             await processor.ExecuteAsync();
         }

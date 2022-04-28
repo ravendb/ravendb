@@ -9,8 +9,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 
 internal class ShardedAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts : AbstractAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts([NotNull] ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedAttachmentHandlerProcessorForGetAttachmentMetadataWithCounts([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

@@ -11,21 +11,17 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAdminConfigurationHandlerProcessorForGetSettings([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-        : base(requestHandler, contextPool)
+    protected AbstractAdminConfigurationHandlerProcessorForGetSettings([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected abstract string GetDatabaseName();
 
     protected abstract RavenConfiguration GetDatabaseConfiguration();
 
@@ -48,7 +44,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
 
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
-            var dbId = Constants.Documents.Prefix + GetDatabaseName();
+            var dbId = Constants.Documents.Prefix + RequestHandler.DatabaseName;
             using (context.OpenReadTransaction())
             using (var dbDoc = RequestHandler.ServerStore.Cluster.Read(context, dbId, out long etag))
             {

@@ -11,10 +11,10 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
     internal abstract class AbstractTimeSeriesHandlerProcessorForPostTimeSeries<TRequestHandler, TOperationContext> : AbstractTimeSeriesHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractTimeSeriesHandlerProcessorForPostTimeSeries([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractTimeSeriesHandlerProcessorForPostTimeSeries([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

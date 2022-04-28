@@ -11,25 +11,22 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
-internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
-    where TOperationContext : JsonOperationContext
+internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext 
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     private readonly bool _validatedAsAdmin;
 
-    protected AbstractAdminIndexHandlerProcessorForPut([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool, bool validatedAsAdmin)
-        : base(requestHandler, contextPool)
+    protected AbstractAdminIndexHandlerProcessorForPut([NotNull] TRequestHandler requestHandler, bool validatedAsAdmin)
+        : base(requestHandler)
     {
         _validatedAsAdmin = validatedAsAdmin;
     }
-
-    protected abstract string GetDatabaseName();
 
     protected abstract AbstractIndexCreateController GetIndexCreateProcessor();
 
@@ -55,7 +52,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                 {
                     var clientCert = RequestHandler.GetCurrentCertificate();
 
-                    var auditLog = LoggingSource.AuditLog.GetLogger(GetDatabaseName(), "Audit");
+                    var auditLog = LoggingSource.AuditLog.GetLogger(RequestHandler.DatabaseName, "Audit");
                     auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
                 }
 

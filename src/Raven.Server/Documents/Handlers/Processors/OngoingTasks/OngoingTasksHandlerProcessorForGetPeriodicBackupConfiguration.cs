@@ -2,19 +2,17 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForGetPeriodicBackupConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal class OngoingTasksHandlerProcessorForGetPeriodicBackupConfiguration<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public OngoingTasksHandlerProcessorForGetPeriodicBackupConfiguration([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+        public OngoingTasksHandlerProcessorForGetPeriodicBackupConfiguration([NotNull] TRequestHandler requestHandler)
+            : base(requestHandler)
         {
         }
 

@@ -1,15 +1,16 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors
 {
-    internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext 
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractStudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

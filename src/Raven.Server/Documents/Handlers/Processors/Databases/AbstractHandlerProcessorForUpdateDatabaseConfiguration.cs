@@ -12,19 +12,18 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Databases;
 
-internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T, TRequestHandler> : AbstractHandlerProcessor<TRequestHandler, TransactionOperationContext>
-    where T : class
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T, TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+    where T : class 
 {
     private readonly bool _isBlittable;
 
     protected AbstractHandlerProcessorForUpdateDatabaseConfiguration([NotNull] TRequestHandler requestHandler)
-        : base(requestHandler, requestHandler.ServerStore.ContextPool)
+        : base(requestHandler)
     {
         _isBlittable = typeof(T) == typeof(BlittableJsonReaderObject);
     }
-
-    protected abstract string GetDatabaseName();
 
     protected virtual HttpStatusCode GetResponseStatusCode() => HttpStatusCode.OK;
 
@@ -49,8 +48,6 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
     {
     }
 
-    protected abstract ValueTask WaitForIndexNotificationAsync(long index);
-
     protected virtual async ValueTask AssertCanExecuteAsync(string databaseName)
     {
         var canAccessDatabase = await RequestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true);
@@ -62,7 +59,7 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
     {
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
-            var databaseName = GetDatabaseName();
+            var databaseName = RequestHandler.DatabaseName;
 
             await AssertCanExecuteAsync(databaseName);
 
@@ -81,7 +78,7 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
                 var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, RequestHandler.GetRaftRequestIdFromQuery());
 
-                await WaitForIndexNotificationAsync(index);
+                await RequestHandler.WaitForIndexNotificationAsync(index);
 
                 RequestHandler.HttpContext.Response.StatusCode = (int)GetResponseStatusCode();
 

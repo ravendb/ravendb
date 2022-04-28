@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
 {
     internal class ShardedSampleDataHandlerProcessorForGetSampleDataClasses : AbstractSampleDataHandlerProcessorForGetSampleDataClasses<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedSampleDataHandlerProcessorForGetSampleDataClasses([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedSampleDataHandlerProcessorForGetSampleDataClasses([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
     }

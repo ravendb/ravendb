@@ -4,17 +4,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Configuration;
 
-internal class ShardedAdminConfigurationHandlerProcessorForPutClientConfiguration : AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedAdminConfigurationHandlerProcessorForPutClientConfiguration : AbstractAdminConfigurationHandlerProcessorForPutClientConfiguration<TransactionOperationContext>
 {
-    public ShardedAdminConfigurationHandlerProcessorForPutClientConfiguration(ShardedDatabaseRequestHandler requestHandler) 
-        : base(requestHandler, requestHandler.ContextPool)
+    public ShardedAdminConfigurationHandlerProcessorForPutClientConfiguration(ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
-
-    protected override async ValueTask WaitForIndexNotificationAsync(long index)
-    {
-        await RequestHandler.ServerStore.Cluster.WaitForIndexNotification(index, RequestHandler.ServerStore.Engine.OperationTimeout);
-    }
-
-    protected override string GetDatabaseName() => RequestHandler.DatabaseContext.DatabaseName;
 }
