@@ -29,17 +29,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                IEnumerable<BlittableJsonReaderObject> results;
                 using (context.OpenReadTransaction())
                 {
-                    results = RequestHandler.Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, databaseName, hub, filter, start, pageSize);
-                }
+                    var results = RequestHandler.Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, databaseName, hub, filter, start, pageSize);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray(nameof(ReplicationHubAccessResult.Results), results);
-                    writer.WriteEndObject();
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        writer.WriteArray(nameof(ReplicationHubAccessResult.Results), results);
+                        writer.WriteEndObject();
+                    }
                 }
             }
         }

@@ -4,9 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -23,6 +21,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected AbstractPullReplicationHandlerProcessorForRegisterHubAccess([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
+        }
+
+        protected override ValueTask AssertCanExecuteAsync(string databaseName)
+        {
+            RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
+
+            return base.AssertCanExecuteAsync(databaseName);
         }
 
         protected override async ValueTask<BlittableJsonReaderObject> GetConfigurationAsync(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer)
@@ -46,14 +51,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             }
 
             return await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "register-hub-access");
-        }
-
-        protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
-        {
-            if (ResourceNameValidator.IsValidResourceName(GetDatabaseName(), RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
         }
 
         protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
