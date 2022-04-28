@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -19,6 +20,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Sparrow.Extensions;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
@@ -283,6 +285,9 @@ namespace RachisTests.DatabaseCluster
             var (nodes, leader) = await CreateRaftCluster(3);
             using var documentStore = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+
             var notDelete = $"TestObjs/{count}";
             using (var source = GetDocumentStore())
             {
@@ -327,9 +332,64 @@ namespace RachisTests.DatabaseCluster
                 return await session.LoadAsync<TestObj>(notDelete);
             });
 
-            var r = await AssertWaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")));
+            var r = await WaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")),timeout:500);
+            if (r.Count != 1)
+            {
+                // temp loggin to solve issue RavenDB-17890.
+                var logs = await socket.CloseAndGetLogsAsync();
+                Assert.True(false, $"Count is {r.Count} ,logs={logs}");
+            }
+
             Assert.EndsWith(notDelete, r.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
+
+        private class DummyWebSocket : WebSocket
+        {
+            private static WebSocketReceiveResult Result { get; } = new(1, WebSocketMessageType.Text, true);
+            private readonly TaskCompletionSource<WebSocketReceiveResult> _completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            private readonly MemoryStream _stream = new();
+            private int _isClosed;
+
+            public override WebSocketCloseStatus? CloseStatus { get; }
+            public override string CloseStatusDescription { get; }
+            public override WebSocketState State { get; }
+            public override string SubProtocol { get; }
+
+            public override async Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfMessage, CancellationToken cancellationToken)
+            {
+                if (_isClosed == 1)
+                    throw new Exception("Closed");
+
+                await _stream.WriteAsync(buffer.Array, 0, buffer.Count, cancellationToken);
+            }
+
+            public async Task<string> CloseAndGetLogsAsync()
+            {
+                Close();
+                _stream.Seek(0, SeekOrigin.Begin);
+                using StreamReader reader = new(_stream);
+                return await reader.ReadToEndAsync();
+            }
+
+            public override void Dispose()
+            {
+                Close();
+                _stream.Dispose();
+            }
+
+            public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken) => _completionSource.Task;
+
+            private void Close()
+            {
+                if (Interlocked.CompareExchange(ref _isClosed, 1, 0) == 0)
+                    _completionSource.SetResult(Result);
+            }
+
+            public override void Abort() { }
+            public override Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) => Task.CompletedTask;
+            public override Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
 
         [Theory]
         [InlineData(1)]
