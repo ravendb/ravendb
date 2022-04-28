@@ -24,10 +24,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
+        protected abstract void FillResponsibleNode(TransactionOperationContext context, DynamicJsonValue responseJson, PullReplicationAsSink pullReplication);
+
         protected override void OnBeforeResponseWrite(TransactionOperationContext context, DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
         {
-            var databaseName = GetDatabaseName();
-
             if (_pullReplication == null)
             {
                 if (configuration.TryGet(nameof(UpdatePullReplicationAsSinkCommand.PullReplicationAsSink), out BlittableJsonReaderObject pullReplicationBlittable) == false)
@@ -38,11 +38,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                 _pullReplication = JsonDeserializationClient.PullReplicationAsSink(pullReplicationBlittable);
             }
 
-            using (context.OpenReadTransaction())
-            {
-                var topology = RequestHandler.ServerStore.Cluster.ReadDatabaseTopology(context, databaseName);
-                responseJson[nameof(OngoingTask.ResponsibleNode)] = RequestHandler.ServerStore.WhoseTaskIsIt(topology, _pullReplication, null);
-            }
+            FillResponsibleNode(context, responseJson, _pullReplication);
 
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _pullReplication.TaskId == 0 ? index : _pullReplication.TaskId;
         }
