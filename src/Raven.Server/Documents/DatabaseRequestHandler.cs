@@ -157,7 +157,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public virtual OperationCancelToken CreateTimeLimitedOperationToken()
+        public override OperationCancelToken CreateTimeLimitedOperationToken()
         {
             return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }

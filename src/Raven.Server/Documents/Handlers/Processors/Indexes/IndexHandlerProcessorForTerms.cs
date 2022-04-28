@@ -21,8 +21,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         {
         }
 
-        protected override OperationCancelToken CreateTimeLimitedOperationToken() => RequestHandler.CreateTimeLimitedOperationToken();
-
         protected override ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag, OperationCancelToken token)
         {
             using (token)

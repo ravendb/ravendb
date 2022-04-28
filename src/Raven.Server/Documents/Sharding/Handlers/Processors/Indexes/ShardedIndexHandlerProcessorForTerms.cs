@@ -22,11 +22,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
         {
         }
 
-        protected override OperationCancelToken CreateTimeLimitedOperationToken()
-        {
-            return new OperationCancelToken(RequestHandler.DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan, RequestHandler.DatabaseContext.DatabaseShutdown, HttpContext.RequestAborted);
-        }
-
         protected override async ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag, OperationCancelToken token)
         {
             var op = new ShardedGetTermsOperation(RequestHandler, indexName, field, fromValue, pageSize, resultEtag);
@@ -97,7 +92,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
             }
         }
 
-        public class TermsComparer : Comparer<ShardStreamItem<string>>
+        private class TermsComparer : Comparer<ShardStreamItem<string>>
         {
             public override int Compare(ShardStreamItem<string> x,
                 ShardStreamItem<string> y)
@@ -105,7 +100,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
                 return string.CompareOrdinal(x?.Item, y?.Item);
             }
 
-            public static TermsComparer Instance = new();
+            public static readonly TermsComparer Instance = new();
         }
     }
 }

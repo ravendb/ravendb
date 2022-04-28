@@ -14,7 +14,7 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
     internal abstract class AbstractIndexHandlerProcessorForTerms<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
+        where TRequestHandler : AbstractDatabaseRequestHandler
         where TOperationContext : JsonOperationContext
     {
         protected AbstractIndexHandlerProcessorForTerms([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
@@ -22,13 +22,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         {
         }
 
-        protected abstract OperationCancelToken CreateTimeLimitedOperationToken();
-
         protected abstract ValueTask<TermsQueryResultServerSide> GetTermsAsync(string indexName, string field, string fromValue, int pageSize, long? resultEtag, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
-            using (var token = CreateTimeLimitedOperationToken())
+            using (var token = RequestHandler.CreateTimeLimitedOperationToken())
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var field = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
