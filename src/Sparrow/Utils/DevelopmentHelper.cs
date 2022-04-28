@@ -28,7 +28,8 @@ internal static class DevelopmentHelper
         Efrat,
         Marcin,
         Egor,
-        Stav
+        Stav,
+        Shiran
     }
 
     internal enum Severity
