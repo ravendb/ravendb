@@ -24,29 +24,24 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
             await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedEnforceRevisionsConfigurationOperation(HttpContext, operationId));
         }
 
-        protected override OperationCancelToken CreateTimeLimitedOperationToken()
+        private readonly struct ShardedEnforceRevisionsConfigurationOperation : IShardedOperation<OperationIdResult>
         {
-            return RequestHandler.CreateOperationToken(RequestHandler.DatabaseContext.Configuration.Databases.OperationTimeout.AsTimeSpan);
+            private readonly HttpContext _httpContext;
+            private readonly long _operationId;
+
+            public ShardedEnforceRevisionsConfigurationOperation(HttpContext httpContext, long operationId)
+            {
+                _httpContext = httpContext;
+                _operationId = operationId;
+            }
+
+            public HttpRequest HttpRequest => _httpContext.Request;
+            public OperationIdResult Combine(Memory<OperationIdResult> results)
+            {
+                return new OperationIdResult();
+            }
+
+            public RavenCommand<OperationIdResult> CreateCommandForShard(int shard) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(_operationId);
         }
-    }
-
-    internal readonly struct ShardedEnforceRevisionsConfigurationOperation : IShardedOperation<OperationIdResult>
-    {
-        private readonly HttpContext _httpContext;
-        private readonly long _operationId;
-
-        public ShardedEnforceRevisionsConfigurationOperation(HttpContext httpContext, long operationId)
-        {
-            _httpContext = httpContext;
-            _operationId = operationId;
-        }
-
-        public HttpRequest HttpRequest => _httpContext.Request;
-        public OperationIdResult Combine(Memory<OperationIdResult> results)
-        {
-            return new OperationIdResult();
-        }
-
-        public RavenCommand<OperationIdResult> CreateCommandForShard(int shard) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(_operationId);
     }
 }

@@ -24,10 +24,5 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
                 token: token);
             return ValueTask.CompletedTask;
         }
-
-        protected override OperationCancelToken CreateTimeLimitedOperationToken()
-        {
-            return RequestHandler.CreateTimeLimitedOperationToken();
-        }
     }
 }
