@@ -13,10 +13,12 @@ import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import manualBackupConfiguration = require("models/database/tasks/periodicBackup/manualBackupConfiguration");
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
-class editPeriodicBackupTask extends viewModelBase {
+class editPeriodicBackupTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editPeriodicBackupTask.html");
     setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
@@ -34,8 +36,8 @@ class editPeriodicBackupTask extends viewModelBase {
     possibleMentors = ko.observableArray<string>([]);
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         this.bindToCurrentInstance("testCredentials", "setState");
         
@@ -54,29 +56,29 @@ class editPeriodicBackupTask extends viewModelBase {
             if (args.taskId) {
                 // 1. Editing an existing task
                 this.isAddingNewBackupTask(false);
-                new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
+                new getPeriodicBackupConfigurationCommand(this.db, args.taskId)
                     .execute()
                     .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
                         if (this.serverConfiguration().LocalRootPath && configuration.LocalSettings.FolderPath && configuration.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
                             configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                         }
                         
-                        this.configuration(new periodicBackupConfiguration(dbName, configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                        this.configuration(new periodicBackupConfiguration(dbName, configuration, this.serverConfiguration(), this.db.isEncrypted(), false));
                         deferred.resolve();
                     })
                     .fail(() => {
                         deferred.reject();
 
-                        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                        router.navigate(appUrl.forOngoingTasks(this.db));
                     });
             } else if (args.manual) {
                     // 2. Create a one-time manual backup
-                    this.configuration(manualBackupConfiguration.empty(dbName, this.serverConfiguration(), this.activeDatabase().isEncrypted()));
+                    this.configuration(manualBackupConfiguration.empty(dbName, this.serverConfiguration(), this.db.isEncrypted()));
                     deferred.resolve();
             } else {
                     // 3. Add a new periodic backup task
                     this.isAddingNewBackupTask(true);
-                    this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                    this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), this.db.isEncrypted(), false));
                     deferred.resolve();
             }
 
@@ -93,7 +95,7 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 
     private loadServerSideConfiguration() {
-        return new getPeriodicBackupConfigCommand(this.activeDatabase())
+        return new getPeriodicBackupConfigCommand(this.db)
             .execute()
             .done(config => { 
                 this.serverConfiguration(config);
@@ -101,7 +103,7 @@ class editPeriodicBackupTask extends viewModelBase {
     }
     
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
@@ -165,7 +167,7 @@ class editPeriodicBackupTask extends viewModelBase {
             dto.LocalSettings.FolderPath = this.serverConfiguration().LocalRootPath + dto.LocalSettings.FolderPath;
         }
 
-        this.configuration().submit(this.activeDatabase(), dto).done(() => {
+        this.configuration().submit(this.db, dto).done(() => {
             this.dirtyFlag().reset();
             this.goToBackupsView();
         });
@@ -192,7 +194,7 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 
     private goToBackupsView() {
-        router.navigate(appUrl.forBackups(this.activeDatabase()));
+        router.navigate(appUrl.forBackups(this.db));
     }
 
     private validate(): boolean {

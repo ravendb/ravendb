@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
@@ -25,8 +24,9 @@ import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefini
 import ongoingTaskReplicationSinkListModel = require("models/database/tasks/ongoingTaskReplicationSinkListModel");
 import accessManager = require("common/shell/accessManager");
 import generalUtils = require("common/generalUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class ongoingTasks extends viewModelBase {
+class ongoingTasks extends shardViewModelBase {
 
     view = require("views/database/tasks/ongoingTasks.html");
     databaseGroupLegendView = require("views/partial/databaseGroupLegend.html");
@@ -76,8 +76,8 @@ class ongoingTasks extends viewModelBase {
     serverWideTasksUrl: string;
     backupsOnly = false;
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "toggleDetails", "showItemPreview");
 
         this.initObservables();
@@ -114,12 +114,10 @@ class ongoingTasks extends viewModelBase {
         this.addNotification(this.changesContext.serverNotifications()
             .watchClusterTopologyChanges(() => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications()
-            .watchDatabaseChange(this.activeDatabase()?.name, () => this.refresh()));
+            .watchDatabaseChange(this.db?.name, () => this.refresh()));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
         
-        const db = this.activeDatabase();
-        
-        //this.updateUrl(appUrl.forOngoingTasks(db));
+        //TODO: this.updateUrl(appUrl.forOngoingTasks(this.db));
 
         this.selectedTaskType("All tasks"); 
         this.selectedNode("All nodes"); 
@@ -133,13 +131,13 @@ class ongoingTasks extends viewModelBase {
             this.graph.onResize();
         });
 
-        this.definitionsCache = new etlScriptDefinitionCache(this.activeDatabase());
+        this.definitionsCache = new etlScriptDefinitionCache(this.db);
         
         this.graph.init($("#databaseGroupGraphContainer"));
     }
     
     private fetchEtlProcess() {
-        return new etlProgressCommand(this.activeDatabase())
+        return new etlProgressCommand(this.db)
             .execute()
             .done(results => {
                 results.Results.forEach(taskProgress => {
@@ -232,7 +230,7 @@ class ongoingTasks extends viewModelBase {
     createResponsibleNodeUrl(task: ongoingTaskListModel) {
         return ko.pureComputed(() => {
             const node = task.responsibleNode();
-            const db = this.activeDatabase();
+            const db = this.db;
             
             if (node && db) {
                 return node.NodeUrl + appUrl.forOngoingTasks(db);
@@ -243,14 +241,14 @@ class ongoingTasks extends viewModelBase {
     }
     
     private refresh() {
-        if (!this.activeDatabase()) {
+        if (!this.db) {
             return;
         }
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
     
     private fetchDatabaseInfo() {
-        return new getDatabaseCommand(this.activeDatabase().name)
+        return new getDatabaseCommand(this.db.name)
             .execute()
             .done(dbInfo => {
                 this.graph.onDatabaseInfoChanged(dbInfo);
@@ -258,7 +256,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
-        const db = this.activeDatabase();
+        const db = this.db;
         return new ongoingTasksCommand(db)
             .execute()
             .done((info) => {
@@ -478,7 +476,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     confirmEnableOngoingTask(model: ongoingTaskListModel) {
-        const db = this.activeDatabase();
+        const db = this.db;
 
         this.confirmationMessage("Enable Task",
             `You're enabling ${model.taskType()} task:<br><ul><li><strong>${model.taskName()}</strong></li></ul>`, {
@@ -496,7 +494,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     confirmDisableOngoingTask(model: ongoingTaskListModel | ongoingTaskReplicationHubDefinitionListModel) {
-        const db = this.activeDatabase();
+        const db = this.db;
 
         this.confirmationMessage("Disable Task",
             `You're disabling ${model.taskType()} task:<br><ul><li><strong>${model.taskName()}</strong></li></ul>`, {
@@ -514,7 +512,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     confirmRemoveOngoingTask(model: ongoingTaskListModel) {
-        const db = this.activeDatabase();
+        const db = this.db;
         
         const taskType = ongoingTaskModel.mapTaskType(model.taskType());
         
@@ -537,7 +535,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     addNewOngoingTask() {
-        const addOngoingTaskView = new createOngoingTask();
+        const addOngoingTaskView = new createOngoingTask(this.db);
         app.showBootstrapDialog(addOngoingTaskView);
     }
 

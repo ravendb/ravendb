@@ -27,13 +27,14 @@ import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
 import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 class elasticSearchTaskTestMode {
 
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    db: KnockoutObservable<database>;
+    db: database;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration;
 
     validationGroup: KnockoutValidationGroup;
@@ -59,7 +60,7 @@ class elasticSearchTaskTestMode {
         return this.transformationErrors().length;
     });
 
-    constructor(db: KnockoutObservable<database>,
+    constructor(db: database,
                 validateParent: () => boolean,
                 configurationProvider: () => Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration) {
         this.db = db;
@@ -79,7 +80,7 @@ class elasticSearchTaskTestMode {
                 return;
             }
 
-            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db())
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db)
                 .execute()
                 .done(results => {
                     this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
@@ -105,7 +106,7 @@ class elasticSearchTaskTestMode {
         viewHelpers.asyncValidationCompleted(this.validationGroup)
             .then(() => {
                 if (viewHelpers.isValid(this.validationGroup)) {
-                    new getDocumentWithMetadataCommand(documentId(), this.db())
+                    new getDocumentWithMetadataCommand(documentId(), this.db)
                         .execute()
                         .done((doc: document) => {
                             const docDto = doc.toDto(true);
@@ -138,7 +139,7 @@ class elasticSearchTaskTestMode {
 
             eventsCollector.default.reportEvent("elastic-search-etl", "test-replication");
 
-            new testElasticSearchEtlCommand(this.db(), dto)
+            new testElasticSearchEtlCommand(this.db, dto)
                 .execute()
                 .done(simulationResult => {
                     const summaryFormatted =  simulationResult.Summary.map(x => ({
@@ -164,7 +165,7 @@ class elasticSearchTaskTestMode {
     }
 }
 
-class editElasticSearchEtlTask extends viewModelBase {
+class editElasticSearchEtlTask extends shardViewModelBase {
     
     view = require("views/database/tasks/editElasticSearchEtlTask.html");
     connectionStringView = require("views/database/settings/connectionStringElasticSearch.html");
@@ -207,8 +208,8 @@ class editElasticSearchEtlTask extends viewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringElasticSearchEtlModel>();
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("useConnectionString",
             "removeTransformationScript",
             "cancelEditedTransformation",
@@ -232,7 +233,7 @@ class editElasticSearchEtlTask extends viewModelBase {
             // 1. Editing an Existing task
             this.isAddingNewElasticSearchEtlTask(false);
 
-            getOngoingTaskInfoCommand.forElasticSearchEtl(this.activeDatabase(), args.taskId)
+            getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, args.taskId)
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) => {
                     this.editedElasticSearchEtl(new ongoingTaskElasticSearchEtlEditModel(result));
@@ -240,7 +241,7 @@ class editElasticSearchEtlTask extends viewModelBase {
                 })
                 .fail(() => {
                     deferred.reject();
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    router.navigate(appUrl.forOngoingTasks(this.db));
                 });
         } else {
             // 2. Creating a New task
@@ -260,7 +261,7 @@ class editElasticSearchEtlTask extends viewModelBase {
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
@@ -281,7 +282,7 @@ class editElasticSearchEtlTask extends viewModelBase {
     /**************************************************************/
 
     private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.activeDatabase())
+        return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.ElasticSearchConnectionStrings);
@@ -351,7 +352,7 @@ class editElasticSearchEtlTask extends viewModelBase {
             }
         };
 
-        this.test = new elasticSearchTaskTestMode(this.activeDatabase, () => {
+        this.test = new elasticSearchTaskTestMode(this.db, () => {
             return this.isValid(this.editedTransformationScriptSandbox().validationGroup);
         }, dtoProvider);
                 
@@ -459,7 +460,7 @@ class editElasticSearchEtlTask extends viewModelBase {
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
-                .saveConnectionString(this.activeDatabase())
+                .saveConnectionString(this.db)
                 .done(() => {
                     savingNewStringAction.resolve();
                 })
@@ -480,7 +481,7 @@ class editElasticSearchEtlTask extends viewModelBase {
                 .map(x => x.name());
             
             const dto = this.editedElasticSearchEtl().toDto();
-            saveEtlTaskCommand.forElasticSearchEtl(this.activeDatabase(), dto, scriptsToReset)
+            saveEtlTaskCommand.forElasticSearchEtl(this.db, dto, scriptsToReset)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -495,7 +496,7 @@ class editElasticSearchEtlTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
 
     syntaxHelp() {

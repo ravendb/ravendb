@@ -33,6 +33,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 class partitionTable {
     key: string;
@@ -93,7 +94,7 @@ class olapTaskTestMode {
 
     documentId = ko.observable<string>();
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    db: KnockoutObservable<database>;
+    db: database;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration;
 
     validationGroup: KnockoutValidationGroup;
@@ -115,7 +116,7 @@ class olapTaskTestMode {
 
     warningsCount = ko.pureComputed(() => this.transformationErrors().length);
 
-    constructor(db: KnockoutObservable<database>, validateParent: () => boolean,
+    constructor(db: database, validateParent: () => boolean,
                 configurationProvider: () => Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration) {
         this.db = db;
         this.validateParent = validateParent;
@@ -134,7 +135,7 @@ class olapTaskTestMode {
                 return;
             }
 
-            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db())
+            new getDocumentsMetadataByIDPrefixCommand(item, 10, this.db)
                 .execute()
                 .done(results => {
                     this.docsIdsAutocompleteResults(results.map(x => x["@metadata"]["@id"]));
@@ -160,7 +161,7 @@ class olapTaskTestMode {
         viewHelpers.asyncValidationCompleted(this.validationGroup)
             .then(() => {
                 if (viewHelpers.isValid(this.validationGroup)) {
-                    new getDocumentWithMetadataCommand(documentId(), this.db())
+                    new getDocumentWithMetadataCommand(documentId(), this.db)
                         .execute()
                         .done((doc: document) => {
                             const docDto = doc.toDto(true);
@@ -192,7 +193,7 @@ class olapTaskTestMode {
 
             eventsCollector.default.reportEvent("olap-etl", "test-replication");
 
-            new testOlapEtlCommand(this.db(), dto)
+            new testOlapEtlCommand(this.db, dto)
                 .execute()
                 .done((testResult: Raven.Server.Documents.ETL.Providers.OLAP.Test.OlapEtlTestScriptResult) => {
                     this.testResults(testResult.ItemsByPartition.map(x => new partitionTable(x)));
@@ -212,7 +213,7 @@ class olapTaskTestMode {
     }
 }
 
-class editOlapEtlTask extends viewModelBase {
+class editOlapEtlTask extends shardViewModelBase {
 
     view = require("views/database/tasks/editOlapEtlTask.html");
     backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
@@ -260,8 +261,8 @@ class editOlapEtlTask extends viewModelBase {
 
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>(); // needed for olap local destination in connection string
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("useConnectionString",
                                    "testCredentials",
                                    "toggleTestArea",
@@ -286,7 +287,7 @@ class editOlapEtlTask extends viewModelBase {
             // 1. Editing an Existing task
             this.isAddingNewOlapEtlTask(false);
 
-            getOngoingTaskInfoCommand.forOlapEtl(this.activeDatabase(), args.taskId)
+            getOngoingTaskInfoCommand.forOlapEtl(this.db, args.taskId)
                 .execute()
                 .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails) => {
                     this.editedOlapEtl(new ongoingTaskOlapEtlEditModel(result));
@@ -294,7 +295,7 @@ class editOlapEtlTask extends viewModelBase {
                 })
                 .fail(() => {
                     deferred.reject();
-                    router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                    router.navigate(appUrl.forOngoingTasks(this.db));
                 });
         } else {
             // 2. Creating a New task
@@ -313,7 +314,7 @@ class editOlapEtlTask extends viewModelBase {
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
+        return new getPossibleMentorsCommand(this.db.name)
             .execute()
             .done(mentors => this.possibleMentors(mentors));
     }
@@ -355,7 +356,7 @@ class editOlapEtlTask extends viewModelBase {
     /****************************************************/
 
     private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.activeDatabase())
+        return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.OlapConnectionStrings);
@@ -418,7 +419,7 @@ class editOlapEtlTask extends viewModelBase {
             return dto;
         };
         
-        this.test = new olapTaskTestMode(this.activeDatabase, () => this.isValid(this.editedTransformationScriptSandbox().validationGroup), dtoProvider);
+        this.test = new olapTaskTestMode(this.db, () => this.isValid(this.editedTransformationScriptSandbox().validationGroup), dtoProvider);
 
         this.initDirtyFlag();
         
@@ -489,7 +490,7 @@ class editOlapEtlTask extends viewModelBase {
     }
 
     private loadServerSideConfiguration() {
-        return new getPeriodicBackupConfigCommand(this.activeDatabase())
+        return new getPeriodicBackupConfigCommand(this.db)
             .execute()
             .done(config => {
                 this.serverConfiguration(config);
@@ -542,7 +543,7 @@ class editOlapEtlTask extends viewModelBase {
         let savingNewStringAction = $.Deferred<void>();
         if (this.createNewConnectionString()) {
             this.newConnectionString()
-                .saveConnectionString(this.activeDatabase())
+                .saveConnectionString(this.db)
                 .done(() => {
                     savingNewStringAction.resolve();
                 })
@@ -563,7 +564,7 @@ class editOlapEtlTask extends viewModelBase {
                 .map(x => x.name());
             
             const dto = this.editedOlapEtl().toDto();
-            saveEtlTaskCommand.forOlapEtl(this.activeDatabase(), dto, scriptsToReset)
+            saveEtlTaskCommand.forOlapEtl(this.db, dto, scriptsToReset)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
@@ -613,7 +614,7 @@ class editOlapEtlTask extends viewModelBase {
     }
 
     private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+        router.navigate(appUrl.forOngoingTasks(this.db));
     }
 
     syntaxHelp() {
