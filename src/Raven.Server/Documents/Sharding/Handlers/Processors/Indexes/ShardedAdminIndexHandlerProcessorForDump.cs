@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
     internal class ShardedAdminIndexHandlerProcessorForDump : AbstractAdminIndexHandlerProcessorForDump<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedAdminIndexHandlerProcessorForDump([NotNull] ShardedDatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler)
         {
         }
 

@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
     internal class AdminIndexHandlerProcessorForDump : AbstractAdminIndexHandlerProcessorForDump<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AdminIndexHandlerProcessorForDump([NotNull] DatabaseRequestHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler)
         {
         }
 

@@ -2,17 +2,16 @@
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
 {
     internal abstract class AbstractAdminIndexHandlerProcessorForDump<TRequestHandler, TOperationContext> : AbstractHandlerProxyActionProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
-        protected AbstractAdminIndexHandlerProcessorForDump([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+        protected AbstractAdminIndexHandlerProcessorForDump([NotNull] TRequestHandler requestHandler)
+            : base(requestHandler)
         {
         }
 
