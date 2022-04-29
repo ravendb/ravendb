@@ -7,14 +7,14 @@ using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForUpdateExternalReplication<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractOngoingTasksHandlerProcessorForUpdateExternalReplication<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private ExternalReplication _watcher;
 

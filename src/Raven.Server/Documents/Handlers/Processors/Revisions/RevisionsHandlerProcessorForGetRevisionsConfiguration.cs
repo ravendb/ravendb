@@ -4,9 +4,10 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal class RevisionsHandlerProcessorForGetRevisionsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class RevisionsHandlerProcessorForGetRevisionsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration<DatabaseRequestHandler>
     {
-        public RevisionsHandlerProcessorForGetRevisionsConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public RevisionsHandlerProcessorForGetRevisionsConfiguration([NotNull] DatabaseRequestHandler requestHandler) 
+            : base(requestHandler)
         {
         }
 

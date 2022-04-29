@@ -1,22 +1,13 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 {
-    internal class AdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration : AbstractAdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration<DatabaseRequestHandler>
+    internal class AdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration : AbstractAdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public AdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+        public AdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration([NotNull] DatabaseRequestHandler requestHandler) 
+            : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.Database.Name;
-        }
-
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
         }
     }
 }

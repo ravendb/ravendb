@@ -2,15 +2,15 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 {
-    internal abstract class AbstractAdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractAdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        public AbstractAdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractAdminRevisionsHandlerProcessorForPostRevisionsConflictsConfiguration([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

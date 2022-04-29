@@ -6,7 +6,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

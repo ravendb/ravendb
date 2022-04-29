@@ -3,15 +3,16 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
+using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 {
-    internal abstract class AbstractAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : AbstractDatabaseRequestHandler
+    internal abstract class AbstractAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractAdminRevisionsHandlerProcessorForEnforceRevisionsConfiguration([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -23,8 +24,8 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             var operationId = RequestHandler.GetLongQueryString("operationId", false) ?? -RequestHandler.ServerStore.Operations.GetNextOperationId();
 
             await AddOperationAsync(operationId, token);
-            
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+
+            using (ClusterContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, RequestHandler.ServerStore.NodeTag);

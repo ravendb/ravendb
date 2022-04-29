@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents.Replication;
@@ -8,17 +7,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForUpdateExternalReplication : AbstractOngoingTasksHandlerProcessorForUpdateExternalReplication<DatabaseRequestHandler>
+    internal class OngoingTasksHandlerProcessorForUpdateExternalReplication : AbstractOngoingTasksHandlerProcessorForUpdateExternalReplication<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public OngoingTasksHandlerProcessorForUpdateExternalReplication([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+        public OngoingTasksHandlerProcessorForUpdateExternalReplication([NotNull] DatabaseRequestHandler requestHandler) 
+            : base(requestHandler)
         {
         }
 
-        protected override string GetDatabaseName() => RequestHandler.Database.Name;
-
         protected override void FillResponsibleNode(TransactionOperationContext context, DynamicJsonValue responseJson, ExternalReplication watcher)
         {
-            var databaseName = GetDatabaseName();
+            var databaseName = RequestHandler.DatabaseName;
 
             using (context.OpenReadTransaction())
             {
@@ -26,11 +24,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 var taskStatus = ReplicationLoader.GetExternalReplicationState(RequestHandler.ServerStore, databaseName, watcher.TaskId);
                 responseJson[nameof(OngoingTask.ResponsibleNode)] = RequestHandler.ServerStore.WhoseTaskIsIt(topology, watcher, taskStatus);
             }
-        }
-
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
         }
     }
 }

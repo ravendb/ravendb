@@ -7,11 +7,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration<TRequestHandler> : AbstractHandlerProcessor<TRequestHandler>
         where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
     {
-        public AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration([NotNull] TRequestHandler requestHandler) 
+            : base(requestHandler)
         {
         }
 
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
             if (revisionsForConflictsConfig != null)
             {
-                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (ClusterContextPool.AllocateOperationContext(out JsonOperationContext context))
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     context.Write(writer, revisionsForConflictsConfig.ToJson());

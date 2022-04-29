@@ -1,13 +1,13 @@
 ﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    internal class ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal class ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration : AbstractRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration<ShardedDatabaseRequestHandler>
     {
-        public ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration([NotNull] ShardedDatabaseRequestHandler requestHandler) 
+            : base(requestHandler)
         {
         }
 

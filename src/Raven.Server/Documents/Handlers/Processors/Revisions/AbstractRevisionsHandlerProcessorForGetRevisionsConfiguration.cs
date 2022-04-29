@@ -8,11 +8,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
-    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration<TRequestHandler> : AbstractHandlerProcessor<TRequestHandler>
         where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
     {
-        public AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractRevisionsHandlerProcessorForGetRevisionsConfiguration([NotNull] TRequestHandler requestHandler)
+            : base(requestHandler)
         {
         }
 
@@ -31,15 +31,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                     revisionsCollection[collection.Key] = collection.Value.ToJson();
                 }
 
-                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (ClusterContextPool.AllocateOperationContext(out JsonOperationContext context))
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
-                    context.Write(writer,
-                        new DynamicJsonValue
-                        {
-                            [nameof(revisionsConfig.Default)] = revisionsConfig.Default?.ToJson(),
-                            [nameof(revisionsConfig.Collections)] = revisionsCollection
-                        });
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(revisionsConfig.Default)] = revisionsConfig.Default?.ToJson(),
+                        [nameof(revisionsConfig.Collections)] = revisionsCollection
+                    });
                 }
             }
             else
