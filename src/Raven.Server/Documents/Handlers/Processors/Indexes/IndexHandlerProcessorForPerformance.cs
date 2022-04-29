@@ -49,6 +49,7 @@ internal class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcess
 
         return indexes;
     }
+
     private async ValueTask WriteResultAsync(IndexPerformanceStats[] result)
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))

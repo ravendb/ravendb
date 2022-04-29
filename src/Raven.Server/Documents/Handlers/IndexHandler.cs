@@ -8,20 +8,14 @@ using Jint.Native;
 using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
-using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -296,55 +290,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/total-time", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task TotalTime()
         {
-            var indexes = GetIndexesToReportOn();
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var dja = new DynamicJsonArray();
-
-                foreach (var index in indexes)
-                {
-                    DateTime baseLine = DateTime.MinValue;
-                    using (context.OpenReadTransaction())
-                    {
-                        foreach (var collection in index.Collections)
-                        {
-                            switch (index.SourceType)
-                            {
-                                case IndexSourceType.Documents:
-                                    var etag = Database.DocumentsStorage.GetLastDocumentEtag(context.Transaction.InnerTransaction, collection);
-                                    var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1, DocumentFields.Default).FirstOrDefault();
-                                    if (document != null && document.LastModified > baseLine)
-                                        baseLine = document.LastModified;
-                                    break;
-
-                                case IndexSourceType.Counters:
-                                case IndexSourceType.TimeSeries:
-                                    break;
-
-                                default:
-                                    throw new NotSupportedException($"Index with source type '{index.SourceType}' is not supported.");
-                            }
-                        }
-                    }
-                    var createdTimestamp = index.GetStats().CreatedTimestamp;
-                    if (createdTimestamp > baseLine)
-                        baseLine = createdTimestamp;
-
-                    var lastBatch = index.GetIndexingPerformance()
-                                    .LastOrDefault(x => x.Completed != null)
-                                    ?.Completed ?? DateTime.UtcNow;
-
-                    dja.Add(new DynamicJsonValue
-                    {
-                        ["Name"] = index.Name,
-                        ["TotalIndexingTime"] = index.TimeSpentIndexing.Elapsed.ToString("c"),
-                        ["LagTime"] = (lastBatch - baseLine).ToString("c")
-                    });
-                }
-
-                context.Write(writer, dja);
-            }
+            using (var processor = new IndexHandlerProcessorForTotalTime(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
