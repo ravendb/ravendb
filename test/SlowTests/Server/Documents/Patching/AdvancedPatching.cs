@@ -349,7 +349,6 @@ namespace SlowTests.Server.Documents.Patching
                     await commands.PutAsync(_test.Id, null, _test, null);
 
                     var command = new PatchOperation.PatchCommand(
-                        store.Conventions,
                         commands.Context,
                         _test.Id,
                         null,
@@ -396,7 +395,6 @@ namespace SlowTests.Server.Documents.Patching
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new PatchOperation.PatchCommand(
-                        store.Conventions,
                         context,
                         customType.Id,
                         null,

@@ -9,7 +9,7 @@ internal abstract class AbstractDocumentHandlerProcessorForPut
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    public AbstractDocumentHandlerProcessorForPut([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    protected AbstractDocumentHandlerProcessorForPut([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 

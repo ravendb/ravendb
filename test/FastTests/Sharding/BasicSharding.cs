@@ -173,7 +173,6 @@ namespace FastTests.Sharding
                 }, petId);
 
                 var command = new PatchOperation.PatchCommand(
-                    store.Conventions,
                     context,
                     id,
                     null,

@@ -29,7 +29,6 @@ namespace SlowTests.Issues
                     session.Advanced.Attachments.Store("users/1", "profile.png", profileStream, "image/png");
                     session.SaveChanges();
                     var command = new PatchOperation.PatchCommand(
-                        store.Conventions,
                         session.Advanced.Context,
                         "users/1",
                         null,

@@ -70,22 +70,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "PATCH")]
         public async Task Patch()
         {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var isTest = GetBoolValueQueryString("test", required: false) ?? false;
-            var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
-            var skipPatchIfChangeVectorMismatch = GetBoolValueQueryString("skipPatchIfChangeVectorMismatch", required: false) ?? false;
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var processor = new ShardedDocumentHandlerProcessorForPatch(this))
             {
-                var patch = await context.ReadForMemoryAsync(RequestBodyStream(), "ScriptedPatchRequest");
-
-                var index = DatabaseContext.GetShardNumber(context, id);
-
-                var cmd = new ShardedCommand(this, Headers.IfMatch, content: patch);
-
-                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
-                HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-                await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
+                await processor.ExecuteAsync();
             }
         }
 
