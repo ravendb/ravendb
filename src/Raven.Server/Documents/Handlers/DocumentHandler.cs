@@ -5,24 +5,16 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Documents;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Extensions;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
-using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -94,35 +86,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GenerateClassFromDocument()
         {
-            var id = GetStringQueryString("id");
-            var lang = (GetStringQueryString("lang", required: false) ?? "csharp")
-                .Trim().ToLowerInvariant();
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new DocumentHandlerProcessorForGenerateClassFromDocument(this))
             {
-                var document = Database.DocumentsStorage.Get(context, id);
-                if (document == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                switch (lang)
-                {
-                    case "csharp":
-                        break;
-
-                    default:
-                        throw new NotImplementedException($"Document code generator isn't implemented for {lang}");
-                }
-
-                await using (var writer = new StreamWriter(ResponseBodyStream()))
-                {
-                    var codeGenerator = new JsonClassGenerator(lang);
-                    var code = codeGenerator.Execute(document.Data);
-                    await writer.WriteAsync(code);
-                }
+                await processor.ExecuteAsync();
             }
         }
     }
