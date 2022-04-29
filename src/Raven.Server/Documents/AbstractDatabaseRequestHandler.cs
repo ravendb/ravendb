@@ -11,6 +11,8 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
 {
     public abstract string DatabaseName { get; }
 
+    public abstract char IdentityPartsSeparator { get; }
+
     public abstract OperationCancelToken CreateTimeLimitedOperationToken();
 
     public JsonContextPoolBase<TOperationContext> ContextPool;

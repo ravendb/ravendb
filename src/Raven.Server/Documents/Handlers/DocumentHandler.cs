@@ -76,43 +76,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var processor = new DocumentHandlerProcessorForPut(this))
             {
-                var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-                // We HAVE to read the document in full, trying to parallelize the doc read
-                // and the identity generation needs to take into account that the identity
-                // generation can fail and will leave the reading task hanging if we abort
-                // easier to just do in synchronously
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
-
-                if (id[id.Length - 1] == '|')
-                {
-                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, Database.IdentityPartsSeparator, Database.Name, GetRaftRequestIdFromQuery());
-                    id = clusterId;
-                }
-
-                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
-
-                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database, shouldValidateAttachments: true))
-                {
-                    await Database.TxMerger.Enqueue(cmd);
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(PutResult.Id));
-                        writer.WriteString(cmd.PutResult.Id);
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(PutResult.ChangeVector));
-                        writer.WriteString(cmd.PutResult.ChangeVector);
-
-                        writer.WriteEndObject();
-                    }
-                }
+                await processor.ExecuteAsync();
             }
         }
 

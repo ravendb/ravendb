@@ -61,26 +61,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "PUT")]
         public async Task Put()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var processor = new ShardedDocumentHandlerProcessorForPut(this))
             {
-                var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
-
-                if (id[^1] == '|')
-                {
-                    // note that we use the _overall_ database for this, not the specific shards
-                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, DatabaseContext.IdentityPartsSeparator, DatabaseContext.DatabaseName, GetRaftRequestIdFromQuery());
-                    id = clusterId;
-                }
-                
-                var index = DatabaseContext.GetShardNumber(context, id);
-                var cmd = new ShardedCommand(this, Headers.IfMatch, content: doc);
-                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
-                HttpContext.Response.StatusCode = (int)cmd.StatusCode;
-
-                HttpContext.Response.Headers[Constants.Headers.Etag] = cmd.Response?.Headers?.ETag?.Tag;
-
-                await cmd.Result.WriteJsonToAsync(ResponseBodyStream());
+                await processor.ExecuteAsync();
             }
         }
 
