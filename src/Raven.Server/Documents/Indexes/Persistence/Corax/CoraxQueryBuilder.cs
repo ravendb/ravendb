@@ -62,9 +62,9 @@ public static class CoraxQueryBuilder
         DocumentsOperationContext documentsContext,
         Query query,
         QueryExpression expression, QueryMetadata metadata, Index index,
-        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping,
+        BlittableJsonReaderObject parameters, QueryBuilderFactories factories, TScoreFunction scoreFunction, bool isNegated, IndexFieldsMapping indexMapping, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms,
         FieldsToFetch queryMapping, bool exact = false, int? proximity = null, bool secondary = false,
-        List<string> buildSteps = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null, int take = TakeAll)
+        List<string> buildSteps = null, int take = TakeAll)
         where TScoreFunction : IQueryScoreFunction
     {
         if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
@@ -86,33 +86,33 @@ public static class CoraxQueryBuilder
                     {
                         case (NegatedExpression ne1, NegatedExpression ne2):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne2.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
 
                             return indexSearcher.AndNot(indexSearcher.AllEntries(), indexSearcher.Or(left, right));
 
                         case (NegatedExpression ne1, _):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                                factories, scoreFunction, !isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, !isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
 
                             return indexSearcher.AndNot(right, left);
 
                         case (_, NegatedExpression ne1):
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne1.Expression, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
 
                             return indexSearcher.AndNot(left, right);
 
                         default:
                             left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                             right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                                factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
+                                factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
 
                             return isNegated == false
                                 ? indexSearcher.And(left, right)
@@ -122,9 +122,9 @@ public static class CoraxQueryBuilder
                 case OperatorType.Or:
                 {
                     var left = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Left, metadata, index, parameters,
-                        factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, highlightingTerms: highlightingTerms, take: take);
+                        factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: secondary, buildSteps: buildSteps, take: take);
                     var right = ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, @where.Right, metadata, index, parameters,
-                        factories, scoreFunction, isNegated, indexMapping, queryMapping, exact, secondary: true, buildSteps: buildSteps, highlightingTerms: highlightingTerms, take: take);
+                        factories, scoreFunction, isNegated, indexMapping, highlightingTerms, queryMapping, exact, secondary: true, buildSteps: buildSteps, take: take);
 
                     buildSteps?.Add(
                         $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
@@ -153,17 +153,6 @@ public static class CoraxQueryBuilder
 
                     var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
 
-                    if (operation is UnaryMatchOperation.Equals)
-                    {
-                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-                        var rawMatch = indexSearcher.TermQuery(fieldName, valueAsString, fieldId);
-                        // This is TermMatch case
-                        if (scoreFunction is not NullScoreFunction)
-                            return indexSearcher.Boost(rawMatch, scoreFunction);
-                        return rawMatch;
-
-                    }
-
                     CoraxHighlightingTermIndex highlightingTerm = null;
                     bool? isHighlighting = highlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
                     if (isHighlighting.HasValue && isHighlighting.Value == false)
@@ -171,6 +160,22 @@ public static class CoraxQueryBuilder
                         highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
                         highlightingTerms.TryAdd(fieldName, highlightingTerm);
                     }
+
+                    if (operation is UnaryMatchOperation.Equals)
+                    {
+                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+                        var rawMatch = indexSearcher.TermQuery(fieldName, valueAsString, fieldId);
+                        if (highlightingTerm is not null)
+                            highlightingTerm.Values = valueAsString;
+
+                        // This is TermMatch case
+                        if (scoreFunction is not NullScoreFunction)
+                            return indexSearcher.Boost(rawMatch, scoreFunction);
+                        
+                        
+                        return rawMatch;
+                    }
+                  
 
                     var match = valueType switch
                     {
@@ -226,12 +231,12 @@ public static class CoraxQueryBuilder
                 var newExpr = new BinaryExpression(new NegatedExpression(nbe.Left),
                     nbe.Right, nbe.Operator);
                 return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, newExpr, metadata, index, parameters, factories, scoreFunction, isNegated,
-                    indexMapping, queryMapping, exact,
+                    indexMapping, highlightingTerms, queryMapping, exact,
                     buildSteps: buildSteps, take: take);
             }
 
             return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, ne.Expression, metadata, index, parameters, factories, scoreFunction, !isNegated,
-                indexMapping, queryMapping, exact,
+                indexMapping, highlightingTerms, queryMapping, exact,
                 buildSteps: buildSteps, take: take);
         }
 
@@ -341,7 +346,7 @@ public static class CoraxQueryBuilder
         where TScoreFunction : IQueryScoreFunction
     {
         return ToCoraxQuery(indexSearcher, serverContext, documentsContext, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction,
-            isNegated, indexMapping, queryMapping, true, proximity, secondary, buildSteps, highlightingTerms, take);
+            isNegated, indexMapping, highlightingTerms, queryMapping, true, proximity, secondary, buildSteps);
     }
 
     private static IQueryMatch TranslateBetweenQuery<TScoreFunction>(IndexSearcher indexSearcher, Query query, QueryMetadata metadata, Index index,
@@ -521,9 +526,8 @@ public static class CoraxQueryBuilder
         var scoreFunction = new ConstantScoreFunction(boost);
 
         return ToCoraxQuery(indexSearcher, serverContext, context, query, expression.Arguments[0], metadata, index, parameters, factories, scoreFunction, isNegated,
-            indexMapping, queryMapping, exact,
+            indexMapping, highlightingTerms, queryMapping, exact,
             buildSteps: buildSteps,
-            highlightingTerms: highlightingTerms,
             take: take);
     }
 

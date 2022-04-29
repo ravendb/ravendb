@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
@@ -41,6 +42,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public string FieldName;
         public string DynamicFieldName;
+        public string GroupKey;
         public object Values;
         public string[] PreTags;
         public string[] PostTags;
