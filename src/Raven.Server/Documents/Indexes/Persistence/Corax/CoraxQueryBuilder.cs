@@ -564,22 +564,23 @@ public static class CoraxQueryBuilder
         Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-        if (highlightingTerms != null && !highlightingTerms.TryGetValue(fieldName, out var highlightingTerm))
+        if (highlightingTerms != null && highlightingTerms.TryGetValue(fieldName, out var highlightingTerm) == false)
         {
             highlightingTerm = new CoraxHighlightingTermIndex
             {
-                FieldName = fieldName,
                 Values = valueAsString,
             };
+            
+            highlightingTerm.FieldName = fieldName;
             highlightingTerms?.TryAdd(fieldName, highlightingTerm);
 
+            
             if (metadata.IsDynamic && isDocumentId == false)
             {
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
                 // We now add the dynamic field too. 
                 highlightingTerm.DynamicFieldName = fieldName;
-                highlightingTerms?.TryAdd(fieldName, highlightingTerm);
             }
         }
         else if (metadata.IsDynamic && isDocumentId == false)
