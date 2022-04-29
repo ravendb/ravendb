@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 
@@ -17,10 +18,10 @@ internal class ShardedIndexHandlerProcessorForGetAllNames : AbstractIndexHandler
 
     protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<string[]> command)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<string[]> command, OperationCancelToken token)
     {
         var shardNumber = GetShardNumber();
 
-        return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
+        return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
     }
 }

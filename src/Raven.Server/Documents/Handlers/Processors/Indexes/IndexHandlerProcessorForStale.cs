@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
@@ -40,7 +41,7 @@ internal class IndexHandlerProcessorForStale : AbstractIndexHandlerProcessorForS
         }
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetIndexStalenessCommand.IndexStaleness> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetIndexStalenessCommand.IndexStaleness> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     private async ValueTask WriteResultAsync(GetIndexStalenessCommand.IndexStaleness result)
     {

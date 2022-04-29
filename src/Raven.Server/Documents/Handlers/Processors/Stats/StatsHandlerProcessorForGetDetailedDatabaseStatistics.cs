@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
             }
         }
 
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<DetailedDatabaseStatistics> command) => RequestHandler.ExecuteRemoteAsync(command);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<DetailedDatabaseStatistics> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
         private async ValueTask WriteResultAsync(DetailedDatabaseStatistics result)
         {

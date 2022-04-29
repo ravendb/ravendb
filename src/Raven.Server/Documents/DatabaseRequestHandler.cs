@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
@@ -36,12 +37,12 @@ namespace Raven.Server.Documents
 
         public override string DatabaseName => Database.Name;
 
-        public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command)
+        public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command, CancellationToken token = default)
         {
             var requestExecutor = Database.RequestExecutor;
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                await requestExecutor.ExecuteAsync(command, ctx);
+                await requestExecutor.ExecuteAsync(command, ctx, token: token);
                 return command.Result;
             }
         }

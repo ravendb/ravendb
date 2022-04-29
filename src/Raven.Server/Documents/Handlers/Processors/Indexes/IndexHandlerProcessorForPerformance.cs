@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
@@ -33,7 +34,7 @@ internal class IndexHandlerProcessorForPerformance : AbstractIndexHandlerProcess
         return WriteResultAsync(stats);
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexPerformanceStats[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexPerformanceStats[]> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     private IEnumerable<Index> GetIndexesToReportOn()
     {

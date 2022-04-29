@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
@@ -49,7 +50,7 @@ internal class IndexHandlerProcessorForGetErrors : AbstractIndexHandlerProcessor
         return WriteResultAsync(indexErrors);
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexErrors[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexErrors[]> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     private async ValueTask WriteResultAsync(IndexErrors[] result)
     {
