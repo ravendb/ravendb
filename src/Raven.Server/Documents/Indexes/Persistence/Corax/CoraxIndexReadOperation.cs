@@ -192,12 +192,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             {
                                 // We get the actual highlight description. 
 
-                                var fieldName = query.Metadata.IsDynamic ? AutoIndexField.GetHighlightingAutoIndexFieldName(current.Field.Value) : current.Field.Value;
+                                var fieldName = current.Field.Value;
                                 if (highlightingTerms.TryGetValue(fieldName, out var fieldDescription) == false)
                                     continue;
 
+                                //We have to get analyzer so dynamic field have priority over normal name
                                 // We get the field binding to ensure that we are running the analyzer to find the actual tokens.
-                                if (_fieldMappings.TryGetByFieldName(fieldName, out var fieldBinding) == false)
+                                if (_fieldMappings.TryGetByFieldName(fieldDescription.DynamicFieldName ?? fieldDescription.FieldName, out var fieldBinding) == false)
                                     continue;
 
                                 // We will get the actual tokens dictionary for this field. If it exists we get it immediately, if not we create
