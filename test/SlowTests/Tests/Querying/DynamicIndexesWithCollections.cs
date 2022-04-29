@@ -485,7 +485,7 @@ namespace SlowTests.Tests.Querying
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void ExecutesQueryWithHighlightingsAndProjections(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         skippedResults.Value++;
                         continue;
                     }
-
+                    
                     var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key);
 
                     var filterResult = queryFilter?.Apply(ref retrieverInput, key);
@@ -191,11 +191,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             foreach (var current in query.Metadata.Highlightings)
                             {
                                 // We get the actual highlight description. 
-                                if (highlightingTerms.TryGetValue(current.Field.Value, out var fieldDescription) == false)
+
+                                var fieldName = query.Metadata.IsDynamic ? AutoIndexField.GetHighlightingAutoIndexFieldName(current.Field.Value) : current.Field.Value;
+                                if (highlightingTerms.TryGetValue(fieldName, out var fieldDescription) == false)
                                     continue;
 
                                 // We get the field binding to ensure that we are running the analyzer to find the actual tokens.
-                                var fieldName = fieldDescription.DynamicFieldName != null ? fieldDescription.DynamicFieldName : fieldDescription.FieldName;
                                 if (_fieldMappings.TryGetByFieldName(fieldName, out var fieldBinding) == false)
                                     continue;
 
@@ -207,12 +208,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 }
 
                                 List<string> fragments = new();
-                                
+
                                 // We need to get the actual field, not the dynamic field. 
                                 int propIdx = document.Data.GetPropertyIndex(fieldDescription.FieldName);
                                 BlittableJsonReaderObject.PropertyDetails property = default;
                                 document.Data.GetPropertyByIndex(propIdx, ref property);
-                                
+
                                 if (property.Token == BlittableJsonToken.String)
                                 {
                                     var fieldValue = ((LazyStringValue)property.Value).ToString();
@@ -236,8 +237,40 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 else continue;
 
                                 if (fragments.Count > 0)
-                                    tokensDictionary[document.Id] = fragments.ToArray();
-                            }                       
+                                {
+                                    string key;
+                                    if (string.IsNullOrWhiteSpace(fieldDescription.GroupKey) == false)
+                                    {
+                                        int groupKey;
+                                        if ((groupKey = document.Data.GetPropertyIndex(fieldDescription.GroupKey)) != -1)
+                                        {
+                                            document.Data.GetPropertyByIndex(groupKey, ref property);
+
+                                            key = property.Token switch
+                                            {
+                                                BlittableJsonToken.String => ((LazyStringValue)property.Value).ToString(),
+                                                BlittableJsonToken.CompressedString => ((LazyCompressedStringValue)property.Value).ToString(),
+                                                _ => throw new Exception("If this happens, we have a bug.")
+                                            };
+                                        }
+                                        else
+                                        {
+                                            key = document.Id;
+                                        }
+                                    }
+                                    else
+                                        key = document.Id;
+
+                                    
+                                    if (tokensDictionary.TryGetValue(key, out var existingHighlights))
+                                    {
+                                        throw new Exception("??? Please look at LuceneIndexReadOperation");
+                                    }
+
+                                    tokensDictionary[key] = fragments.ToArray();
+
+                                }
+                            }
                         }
                     }
 
@@ -352,7 +385,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     default:
                         throw new Exception("If this happens, we have a bug.");
                 }
-
+                
                 term.Value.Values = nls;
                 term.Value.PreTags = null;
                 term.Value.PostTags = null;
@@ -369,15 +402,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 if (numberOfPreTags != numberOfPostTags)
                     throw new InvalidOperationException("Number of pre-tags and post-tags must match.");
 
-                if (numberOfPreTags == 0)
-                    continue;
-
                 var fieldName = 
                     query.Metadata.IsDynamic 
                         ? AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value)
                         : highlighting.Field.Value;
+                
+                if (highlightingTerms.TryGetValue(fieldName, out var termIndex) == false)
+                {
+                    // the case when we have to create MapReduce highlighter
+                    termIndex = new();
+                    termIndex.FieldName = highlighting.Field.Value;
+                    termIndex.DynamicFieldName = AutoIndexField.GetHighlightingAutoIndexFieldName(highlighting.Field.Value);
+                    termIndex.GroupKey = options.GroupKey;
+                    highlightingTerms.Add(query.Metadata.IsDynamic ? termIndex.DynamicFieldName :  termIndex.FieldName, termIndex);
+                }
 
-                if (highlightingTerms.TryGetValue(fieldName, out var termIndex))
+                if (termIndex is not null)
+                    termIndex.GroupKey = options.GroupKey;
+                else
+                    continue;
+                
+                if (numberOfPreTags > 0)
                 {
                     termIndex.PreTags = options.PreTags;
                     termIndex.PostTags = options.PostTags;
