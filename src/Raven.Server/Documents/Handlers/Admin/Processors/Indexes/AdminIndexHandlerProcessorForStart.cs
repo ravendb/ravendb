@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
@@ -43,5 +44,5 @@ internal class AdminIndexHandlerProcessorForStart : AbstractAdminIndexHandlerPro
         return ValueTask.CompletedTask;
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(RavenCommand command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command) => RequestHandler.ExecuteRemoteAsync(command);
 }

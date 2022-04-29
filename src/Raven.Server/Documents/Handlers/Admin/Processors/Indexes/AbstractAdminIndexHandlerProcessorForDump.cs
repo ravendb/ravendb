@@ -27,7 +27,6 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             return (RequestHandler.GetStringQueryString("name"), RequestHandler.GetStringQueryString("path"));
         }
 
-
         internal class IndexesDumpCommand : RavenCommand
         {
             private readonly string _name;
@@ -43,7 +42,6 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             {
                 SelectedNodeTag = nodeTag;
             }
-
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

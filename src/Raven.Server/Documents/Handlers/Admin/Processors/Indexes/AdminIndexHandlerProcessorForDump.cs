@@ -5,6 +5,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
@@ -52,6 +53,6 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             }
         }
 
-        protected override Task ExecuteForRemoteNodeAsync(RavenCommand command) => RequestHandler.ExecuteRemoteAsync(command);
+        protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command) => RequestHandler.ExecuteRemoteAsync(command);
     }
 }
