@@ -129,7 +129,6 @@ namespace SlowTests.Issues
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CheckHighlighting(Options options)
         {
             using (var store = GetDocumentStore(options))
