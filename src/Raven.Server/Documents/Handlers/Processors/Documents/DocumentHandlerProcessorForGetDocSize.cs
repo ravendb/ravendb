@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
 internal class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<DocumentHandler, DocumentsOperationContext>
 {
-    public DocumentHandlerProcessorForGetDocSize([NotNull] DocumentHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(requestHandler, contextPool)
+    public DocumentHandlerProcessorForGetDocSize([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {
     }
 

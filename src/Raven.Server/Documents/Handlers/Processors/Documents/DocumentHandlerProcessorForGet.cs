@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
 internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessorForGet<DocumentHandler, DocumentsOperationContext, Document>
 {
-    public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(method, requestHandler, contextPool)
+    public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler) : base(method, requestHandler)
     {
     }
 

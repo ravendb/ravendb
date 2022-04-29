@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "HEAD")]
         public async Task Head()
         {
-            using (var processor = new ShardedDocumentHandlerProcessorForHead(this, ContextPool))
+            using (var processor = new ShardedDocumentHandlerProcessorForHead(this))
             {
                 await processor.ExecuteAsync();
             }
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs/size", "GET")]
         public async Task GetDocSize()
         {
-            using (var processor = new ShardedDocumentHandlerProcessorForGetDocSize(this, ContextPool))
+            using (var processor = new ShardedDocumentHandlerProcessorForGetDocSize(this))
             {
                 await processor.ExecuteAsync();
             }
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "GET")]
         public async Task Get()
         {
-            using (var processor = new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this, ContextPool))
+            using (var processor = new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this))
             {
                 await processor.ExecuteAsync();
             }
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "POST")]
         public async Task PostGet()
         {
-            using (var processor = new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this, ContextPool))
+            using (var processor = new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this))
             {
                 await processor.ExecuteAsync();
             }
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "DELETE")]
         public async Task Delete()
         {
-            using (var processor = new ShardedDocumentHandlerProcessorForDelete(this, ContextPool))
+            using (var processor = new ShardedDocumentHandlerProcessorForDelete(this))
             {
                 await processor.ExecuteAsync();
             }

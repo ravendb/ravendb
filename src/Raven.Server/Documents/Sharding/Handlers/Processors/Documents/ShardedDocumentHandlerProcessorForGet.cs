@@ -25,7 +25,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 {
     private readonly OperationCancelToken _operationCancelToken;
 
-    public ShardedDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] ShardedDocumentHandler requestHandler, [NotNull] JsonContextPoolBase<TransactionOperationContext> contextPool) : base(method, requestHandler, contextPool)
+    public ShardedDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] ShardedDocumentHandler requestHandler) : base(method, requestHandler)
     {
         _operationCancelToken = requestHandler.CreateOperationToken();
     }

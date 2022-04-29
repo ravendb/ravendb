@@ -2,13 +2,12 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
 internal class DocumentHandlerProcessorForDelete : AbstractDocumentHandlerProcessorForDelete<DocumentHandler, DocumentsOperationContext>
 {
-    public DocumentHandlerProcessorForDelete([NotNull] DocumentHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(requestHandler, contextPool)
+    public DocumentHandlerProcessorForDelete([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {
     }
 

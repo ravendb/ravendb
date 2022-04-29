@@ -4,13 +4,12 @@ using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
 internal class ShardedDocumentHandlerProcessorForDelete : AbstractDocumentHandlerProcessorForDelete<ShardedDocumentHandler, TransactionOperationContext>
 {
-    public ShardedDocumentHandlerProcessorForDelete([NotNull] ShardedDocumentHandler requestHandler, [NotNull] JsonContextPoolBase<TransactionOperationContext> contextPool) : base(requestHandler, contextPool)
+    public ShardedDocumentHandlerProcessorForDelete([NotNull] ShardedDocumentHandler requestHandler) : base(requestHandler)
     {
     }
 

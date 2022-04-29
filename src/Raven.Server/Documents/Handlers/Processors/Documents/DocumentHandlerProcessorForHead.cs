@@ -3,13 +3,12 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
 internal class DocumentHandlerProcessorForHead : AbstractDocumentHandlerProcessorForHead<DocumentHandler, DocumentsOperationContext>
 {
-    public DocumentHandlerProcessorForHead([NotNull] DocumentHandler requestHandler, [NotNull] JsonContextPoolBase<DocumentsOperationContext> contextPool) : base(requestHandler, contextPool)
+    public DocumentHandlerProcessorForHead([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {
     }
 
