@@ -71,7 +71,7 @@ namespace SlowTests.Issues
 
                 using (rq.ContextPool.AllocateOperationContext(out var ctx))
                 {
-                    var cmd = new PatchOperation.PatchCommand(store.Conventions, ctx, "users/1", changeVector:null,
+                    var cmd = new PatchOperation.PatchCommand(ctx, "users/1", changeVector:null,
                         new PatchRequest
                         {
                             Script = queryString

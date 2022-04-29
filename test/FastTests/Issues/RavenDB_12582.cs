@@ -26,7 +26,6 @@ namespace FastTests.Issues
                     session.SaveChanges();
 
                     var command = new PatchOperation.PatchCommand(
-                        store.Conventions,
                         session.Advanced.Context,
                         "users/1",
                         null,
@@ -62,7 +61,6 @@ namespace FastTests.Issues
                     session.SaveChanges();
 
                     var command = new PatchOperation.PatchCommand(
-                        store.Conventions,
                         session.Advanced.Context,
                         "users/1",
                         null,
