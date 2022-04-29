@@ -124,7 +124,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public override string DatabaseName => DatabaseContext.DatabaseName;
 
-        public override Task WaitForIndexNotificationAsync(long index) => ServerStore.Cluster.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+        public override async Task WaitForIndexNotificationAsync(long index) => await DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index).ConfigureAwait(false);
+
         public override bool ShouldAddPagingPerformanceHint(long numberOfResults)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "implement this");
