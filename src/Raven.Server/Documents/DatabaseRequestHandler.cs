@@ -37,6 +37,8 @@ namespace Raven.Server.Documents
 
         public override string DatabaseName => Database.Name;
 
+        public override char IdentityPartsSeparator => Database.IdentityPartsSeparator;
+
         public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command, CancellationToken token = default)
         {
             var requestExecutor = Database.RequestExecutor;
