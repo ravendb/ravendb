@@ -228,18 +228,21 @@ public partial class RavenTestBase
 
                             foreach (var index in indexes)
                             {
-                                if (index.Errors.Length > 0)
-                                {
-                                    shardsDict[name].Remove(index.Name);
-                                    errors.Add(index);
+                                if (index.Errors.Length <= 0)
+                                    continue;
 
-                                    if (shardsDict[name].Count == 0)
-                                        shardsDict.Remove(name);
-                                }
+                                if (shardsDict.TryGetValue(name, out var indexesToWait) == false)
+                                    continue;
 
-                                if (shardsDict.Count == 0)
-                                    return errors.ToArray();
+                                indexesToWait.Remove(index.Name);
+                                errors.Add(index);
+
+                                if (indexesToWait.Count == 0)
+                                    shardsDict.Remove(name);
                             }
+
+                            if (shardsDict.Count == 0)
+                                return errors.ToArray();
                         }
                     }
                     else
