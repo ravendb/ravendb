@@ -107,11 +107,9 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         }
     }
 
-    protected override async ValueTask<DocumentsResult> GetDocumentsImplAsync(TransactionOperationContext context, long? etag, StartsWithParams startsWith, string _)
+    protected override async ValueTask<DocumentsResult> GetDocumentsImplAsync(TransactionOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)
     {
         var token = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(context);
-
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Major, "Support returning Not Modified");
 
         if (etag != null)
             throw new NotSupportedException("Passing etag to a sharded database is not supported");
@@ -120,16 +118,16 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         
         if (startsWith != null)
         {
-            op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(HttpContext, startsWith.IdPrefix, startsWith.Matches, startsWith.Exclude,
+            op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(HttpContext, changeVector, startsWith.IdPrefix, startsWith.Matches, startsWith.Exclude,
                 startsWith.StartAfterId, token);
         }
         else // recent docs
         {
-            op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(HttpContext, token);
+            op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(HttpContext, changeVector, token);
         }
 
         var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, CancellationToken);
-        var streams = await results.InitializeAsync(RequestHandler.DatabaseContext, CancellationToken);
+        var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, CancellationToken);
 
         Disposables.Add(streams);
 
@@ -138,7 +136,8 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         return new DocumentsResult
         {
             DocumentsAsync = documents,
-            ContinuationToken = token
+            ContinuationToken = token,
+            Etag = results.CombinedEtag
         };
     }
 

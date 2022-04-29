@@ -52,9 +52,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var token = ContinuationTokens.GetOrCreateContinuationToken(context);
 
-                var op = new ShardedStreamDocumentsOperation(HttpContext, token);
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal,
+                    "See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
+
+                var op = new ShardedStreamDocumentsOperation(HttpContext, null, token);
                 var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
-                using var streams = await results.InitializeAsync(DatabaseContext, HttpContext.RequestAborted);
+                using var streams = await results.Result.InitializeAsync(DatabaseContext, HttpContext.RequestAborted);
 
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
@@ -98,7 +101,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             private readonly HttpContext _httpContext;
             private readonly ShardedPagingContinuation _token;
 
-            public ShardedStreamDocumentsOperation(HttpContext httpContext, ShardedPagingContinuation token)
+            public ShardedStreamDocumentsOperation(HttpContext httpContext, string etag, ShardedPagingContinuation token)
             {
                 _startsWith = null;
                 _matches = null;
@@ -106,9 +109,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _startAfter = null;
                 _httpContext = httpContext;
                 _token = token;
+                ExpectedEtag = etag;
             }
 
-            public ShardedStreamDocumentsOperation(HttpContext httpContext, string startsWith, string matches, string exclude, string startAfter, ShardedPagingContinuation token)
+            public ShardedStreamDocumentsOperation(HttpContext httpContext, string startsWith, string matches, string exclude, string startAfter, string etag, ShardedPagingContinuation token)
             {
                 _httpContext = httpContext;
                 _startsWith = startsWith;
@@ -116,12 +120,20 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _exclude = exclude;
                 _startAfter = startAfter;
                 _token = token;
+                ExpectedEtag = etag;
             }
 
             public HttpRequest HttpRequest => _httpContext.Request;
 
             public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>
                 StreamOperation.CreateStreamCommand(_startsWith, _matches, _token.Pages[shard].Start, _token.PageSize, _exclude, _startAfter);
+
+            public string ExpectedEtag { get; }
+
+            public CombinedStreamResult CombineResults(Memory<StreamResult> results)
+            {
+                return new CombinedStreamResult {Results = results};
+            }
         }
 
         internal readonly struct ShardedCollectionStatisticsOperation : IShardedOperation<CollectionStatistics>

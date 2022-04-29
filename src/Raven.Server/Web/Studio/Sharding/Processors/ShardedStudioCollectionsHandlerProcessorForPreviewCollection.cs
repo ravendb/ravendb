@@ -48,9 +48,9 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(_context);
 
-        var op = new ShardedCollectionPreviewOperation(RequestHandler, _continuationToken, _context);
+        var op = new ShardedCollectionPreviewOperation(RequestHandler, null, _continuationToken);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-        _combinedReadState = await result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
+        _combinedReadState = await result.Result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
     }
 
     protected override JsonOperationContext GetContext()
@@ -86,7 +86,8 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     protected override bool NotModified(out string etag)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to figure out the best way to combine ETags and send not modified");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
+            "Need to figure out the best way to combine ETags and send not modified. See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
 
         etag = null;
         return false;
@@ -123,10 +124,11 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         private readonly ShardedDatabaseRequestHandler _handler;
         private readonly ShardedPagingContinuation _token;
 
-        public ShardedCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, ShardedPagingContinuation token, JsonOperationContext context)
+        public ShardedCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string etag, ShardedPagingContinuation token)
         {
             _handler = handler;
             _token = token;
+            ExpectedEtag = etag;
         }
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
@@ -165,6 +167,13 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
                 queryString[Web.RequestHandler.PageSizeParameter] = pageSize.ToString();
                 Url = handler.BaseShardUrl + "?" + queryString;
             }
+        }
+
+        public string ExpectedEtag { get; }
+
+        public CombinedStreamResult CombineResults(Memory<StreamResult> results)
+        {
+            return new CombinedStreamResult {Results = results};
         }
     }
 }
