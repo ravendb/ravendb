@@ -16,9 +16,9 @@ internal class ShardedIndexHandlerProcessorForClearErrors : AbstractIndexHandler
 
     protected override bool SupportsCurrentNode => false;
 
-    protected override ValueTask ExecuteForCurrentNodeAsync() => throw new NotSupportedException();
+    protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command, OperationCancelToken token)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token)
     {
         var shardNumber = GetShardNumber();
 

@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
 
         protected override bool SupportsCurrentNode => true;
 
-        protected override async ValueTask ExecuteForCurrentNodeAsync()
+        protected override async ValueTask HandleCurrentNodeAsync()
         {
             var (name, path) = GetParameters();
 
@@ -53,6 +53,6 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             }
         }
 
-        protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
     }
 }

@@ -18,7 +18,7 @@ internal class AdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerPro
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask ExecuteForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var name = GetName();
         var index = RequestHandler.Database.IndexStore.GetIndex(name);
@@ -40,7 +40,7 @@ internal class AdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerPro
         return ValueTask.CompletedTask;
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     protected override AbstractIndexStateController GetIndexStateProcessor() => RequestHandler.Database.IndexStore.State;
 }

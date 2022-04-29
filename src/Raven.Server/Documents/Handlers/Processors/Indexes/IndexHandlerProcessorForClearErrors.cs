@@ -19,7 +19,7 @@ internal class IndexHandlerProcessorForClearErrors : AbstractIndexHandlerProcess
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask ExecuteForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var names = GetNames();
 
@@ -45,5 +45,5 @@ internal class IndexHandlerProcessorForClearErrors : AbstractIndexHandlerProcess
         return ValueTask.CompletedTask;
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 }

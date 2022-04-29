@@ -15,7 +15,7 @@ internal class IndexHandlerProcessorForReset : AbstractIndexHandlerProcessorForR
 
     protected override bool SupportsCurrentNode => true;
 
-    protected override ValueTask ExecuteForCurrentNodeAsync()
+    protected override ValueTask HandleCurrentNodeAsync()
     {
         var name = GetName();
         RequestHandler.Database.IndexStore.ResetIndex(name);
@@ -23,5 +23,5 @@ internal class IndexHandlerProcessorForReset : AbstractIndexHandlerProcessorForR
         return ValueTask.CompletedTask;
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 }
