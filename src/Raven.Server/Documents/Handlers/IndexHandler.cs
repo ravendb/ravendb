@@ -110,24 +110,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/has-changed", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task HasChanged()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/definition"))
-            {
-                var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
-
-                if (indexDefinition?.Name == null || indexDefinition.Maps.Count == 0)
-                    throw new BadRequestException("Index definition must contain name and at least one map.");
-
-                var changed = Database.IndexStore.HasChanged(indexDefinition);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Changed");
-                    writer.WriteBool(changed);
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new IndexHandlerProcessorForHasChanged(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/debug", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

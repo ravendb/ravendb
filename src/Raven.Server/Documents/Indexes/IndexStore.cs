@@ -87,6 +87,8 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly DatabaseIndexCreateController Create;
 
+        public readonly DatabaseIndexHasChangedController HasChanged;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -97,6 +99,7 @@ namespace Raven.Server.Documents.Indexes
             State = new DatabaseIndexStateController(documentDatabase);
             Delete = new DatabaseIndexDeleteController(documentDatabase);
             Create = new DatabaseIndexCreateController(documentDatabase);
+            HasChanged = new DatabaseIndexHasChangedController(documentDatabase);
 
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
@@ -961,24 +964,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 throw new ArgumentException(errorMessage);
             }
-        }
-
-        public bool HasChanged(IndexDefinition definition)
-        {
-            if (definition == null)
-                throw new ArgumentNullException(nameof(definition));
-
-            if (IsValidIndexName(definition.Name, true, out var errorMessage) == false)
-            {
-                throw new ArgumentException(errorMessage);
-            }
-
-            var existingIndex = GetIndex(definition.Name);
-            if (existingIndex == null)
-                return true;
-
-            var creationOptions = GetIndexCreationOptions(definition, existingIndex.ToIndexInformationHolder(), _documentDatabase.Configuration, out IndexDefinitionCompareDifferences _);
-            return creationOptions != IndexCreationOptions.Noop;
         }
 
         private void StartIndex(Index index)
