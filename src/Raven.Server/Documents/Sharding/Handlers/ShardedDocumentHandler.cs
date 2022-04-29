@@ -1,13 +1,7 @@
-﻿using System;
-using System.IO;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -79,37 +73,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs/class", "GET")]
         public async Task GenerateClassFromDocument()
         {
-            var id = GetStringQueryString("id");
-            var lang = (GetStringQueryString("lang", required: false) ?? "csharp")
-                .Trim().ToLowerInvariant();
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var processor = new ShardedDocumentHandlerProcessorForGenerateClassFromDocument(this))
             {
-                var index = DatabaseContext.GetShardNumber(context, id);
-
-                var cmd = new ShardedCommand(this, Headers.None);
-                await DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(context, cmd, index);
-                var document = cmd.Result;
-                if (document == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                switch (lang)
-                {
-                    case "csharp":
-                        break;
-                    default:
-                        throw new NotImplementedException($"Document code generator isn't implemented for {lang}");
-                }
-
-                await using (var writer = new StreamWriter(ResponseBodyStream()))
-                {
-                    var codeGenerator = new JsonClassGenerator(lang);
-                    var code = codeGenerator.Execute(document);
-                    await writer.WriteAsync(code);
-                }
+                await processor.ExecuteAsync();
             }
         }
     }
