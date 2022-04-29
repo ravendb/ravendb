@@ -22,7 +22,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
-using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
@@ -32,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Head()
         {
-            using (var processor = new DocumentHandlerProcessorForHead(this, ContextPool))
+            using (var processor = new DocumentHandlerProcessorForHead(this))
             {
                 await processor.ExecuteAsync();
             }
@@ -41,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs/size", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDocSize()
         {
-            using (var processor = new DocumentHandlerProcessorForGetDocSize(this, ContextPool))
+            using (var processor = new DocumentHandlerProcessorForGetDocSize(this))
             {
                 await processor.ExecuteAsync();
             }
@@ -50,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Get, this, ContextPool))
+            using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Get, this))
             {
                 await processor.ExecuteAsync();
             }
@@ -59,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostGet()
         {
-            using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Post, this, ContextPool))
+            using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Post, this))
             {
                 await processor.ExecuteAsync();
             }
@@ -68,7 +67,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Delete()
         {
-            using (var processor = new DocumentHandlerProcessorForDelete(this, ContextPool))
+            using (var processor = new DocumentHandlerProcessorForDelete(this))
             {
                 await processor.ExecuteAsync();
             }

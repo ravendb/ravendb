@@ -23,14 +23,13 @@ using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, TOperationContext, TDocumentType> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, TOperationContext, TDocumentType> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
     // ReSharper disable once StaticMemberInGenericType
@@ -40,7 +39,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected readonly List<IDisposable> Disposables = new();
 
-    protected AbstractDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+    protected AbstractDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
         if (method != HttpMethod.Get && method != HttpMethod.Post)
             throw new InvalidOperationException($"The processor is supposed to handle GET and POST methods while '{method}' was specified");

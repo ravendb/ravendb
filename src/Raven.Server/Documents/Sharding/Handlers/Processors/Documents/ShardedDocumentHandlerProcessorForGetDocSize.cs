@@ -1,17 +1,15 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
 
 internal class ShardedDocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerProcessorForGetDocSize<ShardedDocumentHandler, TransactionOperationContext>
 {
-    public ShardedDocumentHandlerProcessorForGetDocSize([NotNull] ShardedDocumentHandler requestHandler, [NotNull] JsonContextPoolBase<TransactionOperationContext> contextPool) : base(requestHandler, contextPool)
+    public ShardedDocumentHandlerProcessorForGetDocSize([NotNull] ShardedDocumentHandler requestHandler) : base(requestHandler)
     {
     }
 

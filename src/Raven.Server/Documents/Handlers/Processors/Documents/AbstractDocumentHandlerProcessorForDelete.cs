@@ -1,15 +1,14 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal abstract class AbstractDocumentHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : RequestHandler
+internal abstract class AbstractDocumentHandlerProcessorForDelete<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractDocumentHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+    protected AbstractDocumentHandlerProcessorForDelete([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
