@@ -7,6 +7,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void HasChangedWorkProperly()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void HasChangedWorkProperly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string initialIndexDef = "from doc in docs select new { doc.Date}";
                 Assert.True(store.Maintenance.Send(new IndexHasChangedOperation(new IndexDefinition

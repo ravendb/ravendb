@@ -38,6 +38,8 @@ public partial class ShardedDatabaseContext
 
         public readonly ShardedIndexCreateController Create;
 
+        public ShardedIndexHasChangedController HasChanged;
+
         public ShardedIndexesContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -48,6 +50,7 @@ public partial class ShardedDatabaseContext
             State = new ShardedIndexStateController(context, serverStore);
             Delete = new ShardedIndexDeleteController(context, serverStore);
             Create = new ShardedIndexCreateController(context, serverStore);
+            HasChanged = new ShardedIndexHasChangedController(context);
 
             ScriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
 

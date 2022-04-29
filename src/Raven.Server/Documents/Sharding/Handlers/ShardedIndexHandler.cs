@@ -1,13 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Indexes;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -118,6 +113,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task GetIndexHistory()
         {
             using (var processor = new IndexHandlerProcessorForGetIndexHistory<TransactionOperationContext>(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/indexes/has-changed", "POST")]
+        public async Task HasChanged()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForHasChanged(this))
                 await processor.ExecuteAsync();
         }
 
