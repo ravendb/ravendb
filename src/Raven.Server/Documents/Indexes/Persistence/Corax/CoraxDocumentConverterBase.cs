@@ -303,6 +303,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 scope.Write(field.Id, EmptyString.Span, ref entryWriter);
                 return;
             case ValueType.Stream:
+                throw new NotImplementedException();
+            case ValueType.Lucene:
+                throw new NotSupportedException("The Lucene value type is not supportes by Corax. You can change index type into Lucene.");
             default:
                 throw new NotImplementedException();
         }
