@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Indexes.Errors;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 
@@ -44,5 +45,5 @@ internal class IndexHandlerProcessorForOpenFaultyIndex : AbstractIndexHandlerPro
         return ValueTask.CompletedTask;
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 }

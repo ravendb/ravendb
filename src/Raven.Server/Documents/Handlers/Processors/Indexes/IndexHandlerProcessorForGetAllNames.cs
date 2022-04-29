@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
@@ -30,7 +31,7 @@ internal class IndexHandlerProcessorForGetAllNames : AbstractIndexHandlerProcess
         await WriteResultAsync(names);
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<string[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<string[]> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     private async ValueTask WriteResultAsync(string[] result)
     {

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 
@@ -37,7 +38,7 @@ internal class IndexProcessorForGenerateCSharpIndexDefinition : AbstractIndexPro
         return WriteResultAsync(new IndexDefinitionCodeGenerator(indexDefinition).Generate());
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<string> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<string> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     private async ValueTask WriteResultAsync(string result)
     {

@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Http;
@@ -126,7 +127,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
             }
         }
 
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexStats[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexStats[]> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
         private async ValueTask WriteResultAsync(IndexStats[] result)
         {

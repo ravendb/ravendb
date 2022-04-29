@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
@@ -28,7 +29,7 @@ internal class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorF
         return WriteResultAsync(indexesProgress);
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexProgress[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexProgress[]> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
     private IEnumerable<IndexProgress> GetIndexesProgress()
     {

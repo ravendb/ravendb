@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Raven.Server.Web.Studio.Processors;
@@ -20,10 +21,10 @@ internal class ShardedStudioIndexHandlerProcessorForGetIndexErrorsCount : Abstra
 
     protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetIndexErrorsCountCommand.IndexErrorsCount[]> command)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetIndexErrorsCountCommand.IndexErrorsCount[]> command, OperationCancelToken token)
     {
         var shardNumber = GetShardNumber();
 
-        return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
+        return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
     }
 }
