@@ -6,6 +6,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
@@ -39,7 +40,7 @@ internal class AdminIndexHandlerProcessorForState : AbstractAdminIndexHandlerPro
         return ValueTask.CompletedTask;
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(RavenCommand command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command) => RequestHandler.ExecuteRemoteAsync(command);
 
     protected override AbstractIndexStateController GetIndexStateProcessor() => RequestHandler.Database.IndexStore.State;
 }

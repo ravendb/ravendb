@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
@@ -20,7 +21,7 @@ internal class ShardedAdminIndexHandlerProcessorForStop : AbstractAdminIndexHand
         throw new NotSupportedException();
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(RavenCommand command)
+    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command)
     {
         var shardNumber = GetShardNumber();
 

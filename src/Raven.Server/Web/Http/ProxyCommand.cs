@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -10,6 +9,14 @@ using Raven.Server.Web.Http.Behaviors;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Http;
+
+public class ProxyCommand : ProxyCommand<object>
+{
+    public ProxyCommand(RavenCommand command, [NotNull] HttpResponse response)
+        : base(command, response)
+    {
+    }
+}
 
 public class ProxyCommand<T> : RavenCommand
 {

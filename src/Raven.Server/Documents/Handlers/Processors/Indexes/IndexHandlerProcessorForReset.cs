@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -21,5 +22,5 @@ internal class IndexHandlerProcessorForReset : AbstractIndexHandlerProcessorForR
         return ValueTask.CompletedTask;
     }
 
-    protected override Task ExecuteForRemoteNodeAsync(RavenCommand command) => RequestHandler.ExecuteRemoteAsync(command);
+    protected override Task ExecuteForRemoteNodeAsync(ProxyCommand command) => RequestHandler.ExecuteRemoteAsync(command);
 }

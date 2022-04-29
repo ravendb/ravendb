@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Web;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors;
@@ -17,7 +18,7 @@ internal abstract class AbstractHandlerProxyActionProcessor<TRequestHandler, TOp
 
     protected abstract ValueTask ExecuteForCurrentNodeAsync();
 
-    protected abstract Task ExecuteForRemoteNodeAsync(RavenCommand command);
+    protected abstract Task ExecuteForRemoteNodeAsync(ProxyCommand command);
 
     protected virtual RavenCommand CreateCommandForNode(string nodeTag) => throw new NotSupportedException($"Processor '{GetType().Name}' does not support creating commands.");
 
@@ -30,7 +31,8 @@ internal abstract class AbstractHandlerProxyActionProcessor<TRequestHandler, TOp
         else
         {
             var command = CreateCommandForNode(nodeTag);
-            await ExecuteForRemoteNodeAsync(command);
+            var proxyCommand = new ProxyCommand(command, RequestHandler.HttpContext.Response);
+            await ExecuteForRemoteNodeAsync(proxyCommand);
         }
 
         RequestHandler.NoContentStatus();
