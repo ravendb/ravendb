@@ -3,19 +3,9 @@ using JetBrains.Annotations;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
-
-internal class IndexHandlerProcessorForHasChanged : AbstractIndexHandlerProcessorForHasChanged<DatabaseRequestHandler, DocumentsOperationContext>
-{
-    public IndexHandlerProcessorForHasChanged([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
-    {
-    }
-
-    protected override AbstractIndexHasChangedController GetHasChangedController() => RequestHandler.Database.IndexStore.HasChanged;
-}
 
 internal abstract class AbstractIndexHandlerProcessorForHasChanged<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext

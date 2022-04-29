@@ -143,6 +143,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedIndexHandlerProcessorForTerms(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/indexes/total-time", "GET")]
+        public async Task TotalTime()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForTotalTime(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
 
