@@ -141,7 +141,7 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
         {
             return new ValueTask<DocumentsResult>(new DocumentsResult
             {
-                StatusCode = HttpStatusCode.NotModified
+                Etag = databaseChangeVector
             });
         }
 

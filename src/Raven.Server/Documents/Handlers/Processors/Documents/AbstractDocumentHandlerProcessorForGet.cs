@@ -239,9 +239,10 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     {
         var result = await GetDocumentsImplAsync(context, etag, startsWith, changeVector);
 
-        if (result.StatusCode == HttpStatusCode.NotModified)
+        if (changeVector == result.Etag)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+
             return NoResults;
         }
 
@@ -436,8 +437,6 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         public ShardedPagingContinuation ContinuationToken { get; set; }
 
         public string Etag { get; set; }
-
-        public HttpStatusCode StatusCode { get; set; }
     }
 
     protected class StartsWithParams

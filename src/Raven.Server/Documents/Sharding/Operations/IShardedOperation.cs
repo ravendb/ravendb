@@ -60,9 +60,9 @@ namespace Raven.Server.Documents.Sharding.Operations
         string ModifyUrl(string url) => url;
     }
 
-    public interface IShardedStreamableOperation : IShardedOperation<StreamResult, CombinedStreamResult>
+    public interface IShardedStreamableOperation : IShardedReadOperation<StreamResult, CombinedStreamResult>
     {
-        CombinedStreamResult IShardedOperation<StreamResult, CombinedStreamResult>.Combine(Memory<StreamResult> results) =>
-            new CombinedStreamResult { Results = results };
+        ShardedReadResult<CombinedStreamResult> IShardedOperation<StreamResult, ShardedReadResult<CombinedStreamResult>>.Combine(Memory<StreamResult> results) =>
+            new() {Result = new CombinedStreamResult {Results = results}};
     }
 }
