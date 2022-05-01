@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import saveReplicationHubTaskCommand = require("commands/database/tasks/saveReplicationHubTaskCommand");
 import ongoingTaskReplicationHubEditModel = require("models/database/tasks/ongoingTaskReplicationHubEditModel");
@@ -28,6 +27,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import shardedDatabase from "models/resources/shardedDatabase";
+import { shardingTodo } from "common/developmentHelper";
 
 class editReplicationHubTask extends shardViewModelBase {
 
@@ -113,11 +114,25 @@ class editReplicationHubTask extends shardViewModelBase {
 
         deferredHubTaskInfo.done(() => this.initObservables());
 
+        const isSharded = shardedDatabase.isSharded(this.db);
+        
         if (args.taskId) {
-            return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo, deferredAccessInfo);
+            shardingTodo("ANY", "loadPossibleMentors is Not implemented for sharded (all + single). Currently only implemented for non-sharded");
+            // return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo, deferredAccessInfo);
+            if (isSharded) {
+                return $.when<any>(deferredHubTaskInfo, deferredAccessInfo);
+            } else {
+                return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo, deferredAccessInfo);
+            }
         }
         
-        return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo);
+        // return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo);
+        if (isSharded) {
+            return $.when<any>(deferredHubTaskInfo);
+        } else {
+            return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo);
+        }
+        
     }
 
     private processResults(accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) {
