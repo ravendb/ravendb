@@ -1,5 +1,4 @@
 import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import saveReplicationSinkTaskCommand = require("commands/database/tasks/saveReplicationSinkTaskCommand");
 import ongoingTaskReplicationSinkEditModel = require("models/database/tasks/ongoingTaskReplicationSinkEditModel");

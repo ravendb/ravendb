@@ -27,8 +27,8 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     private getTaskInfo(): JQueryPromise<T> {
         const url = endpoints.databases.ongoingTasks.task;
-        const args = this.taskName ? { key: this.taskId, type: this.taskType, taskName: this.taskName } :
-            { key: this.taskId, type: this.taskType };
+       
+        const args = this.getArgsToUse();
 
         return this.query<T>(url, args, this.db);
     }
@@ -63,6 +63,21 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
 
     static forElasticSearchEtl(db: database, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>(db, "ElasticSearchEtl", taskId);
+    }
+
+    private getArgsToUse() {
+        if (this.taskName) {
+            return {
+                key: this.taskId,
+                type: this.taskType,
+                taskName: this.taskName
+            }
+        }
+
+        return {
+            key: this.taskId,
+            type: this.taskType
+        }
     }
 }
 
