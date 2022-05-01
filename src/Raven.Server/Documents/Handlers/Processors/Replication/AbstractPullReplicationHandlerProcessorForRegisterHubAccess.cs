@@ -8,7 +8,6 @@ using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
@@ -35,7 +34,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             _hubTaskName = RequestHandler.GetStringQueryString("name", true);
 
-            _hubDefinition = RequestHandler.Server.ServerStore.Cluster.ReadPullReplicationDefinition(databaseName, _hubTaskName, context);
+            using (context.OpenReadTransaction())
+            {
+                _hubDefinition = RequestHandler.Server.ServerStore.Cluster.ReadPullReplicationDefinition(databaseName, _hubTaskName, context);
+            }
+
             if (_hubDefinition == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
