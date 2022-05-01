@@ -3,20 +3,18 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal abstract class AbstractPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractPullReplicationHandlerProcessorForUpdatePullReplicationOnSinkNode<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private PullReplicationAsSink _pullReplication;
 
@@ -43,12 +41,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _pullReplication.TaskId == 0 ? index : _pullReplication.TaskId;
         }
 
-        protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
+        protected override ValueTask AssertCanExecuteAsync(string databaseName)
         {
-            if (ResourceNameValidator.IsValidResourceName(GetDatabaseName(), RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
             RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsSink();
+
+            return base.AssertCanExecuteAsync(databaseName);
         }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
