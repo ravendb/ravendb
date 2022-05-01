@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/pull-replication/generate-certificate", "POST")]
         public async Task GeneratePullReplicationCertificate()
         {
-            using (var processor = new PullReplicationHandlerProcessorForGenerateCertificate<ShardedDatabaseRequestHandler, TransactionOperationContext>(this, ContextPool))
+            using (var processor = new PullReplicationHandlerProcessorForGenerateCertificate<ShardedDatabaseRequestHandler>(this))
                 await processor.ExecuteAsync();
         }
 

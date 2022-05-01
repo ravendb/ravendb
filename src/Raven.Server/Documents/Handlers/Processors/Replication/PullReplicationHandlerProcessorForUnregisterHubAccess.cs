@@ -1,19 +1,12 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class PullReplicationHandlerProcessorForUnregisterHubAccess : AbstractPullReplicationHandlerProcessorForUnregisterHubAccess<DatabaseRequestHandler>
+    internal class PullReplicationHandlerProcessorForUnregisterHubAccess : AbstractPullReplicationHandlerProcessorForUnregisterHubAccess<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public PullReplicationHandlerProcessorForUnregisterHubAccess([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName() => RequestHandler.Database.Name;
-
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.Database.ServerStore.Engine.OperationTimeout);
         }
     }
 }

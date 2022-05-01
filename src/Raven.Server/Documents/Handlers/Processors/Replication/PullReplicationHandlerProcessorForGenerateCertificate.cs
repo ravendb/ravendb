@@ -10,13 +10,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal class PullReplicationHandlerProcessorForGenerateCertificate<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal class PullReplicationHandlerProcessorForGenerateCertificate<TRequestHandler> : AbstractHandlerProcessor<TRequestHandler>
         where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
     {
-        public PullReplicationHandlerProcessorForGenerateCertificate([NotNull] TRequestHandler requestHandler,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+        public PullReplicationHandlerProcessorForGenerateCertificate([NotNull] TRequestHandler requestHandler)
+            : base(requestHandler)
         {
         }
 
@@ -59,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                 Certificate = Convert.ToBase64String(certificateWithPrivateKey.Export(X509ContentType.Pfx))
             };
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();

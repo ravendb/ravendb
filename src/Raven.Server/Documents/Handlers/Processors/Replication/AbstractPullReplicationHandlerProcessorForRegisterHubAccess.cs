@@ -13,8 +13,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal abstract class AbstractPullReplicationHandlerProcessorForRegisterHubAccess<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractPullReplicationHandlerProcessorForRegisterHubAccess<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private string _hubTaskName;
         private PullReplicationDefinition _hubDefinition;
