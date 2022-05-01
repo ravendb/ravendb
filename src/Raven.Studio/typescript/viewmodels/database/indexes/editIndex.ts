@@ -838,7 +838,7 @@ class editIndex extends shardViewModelBase {
 
     openDumpDialog() {
         eventsCollector.default.reportEvent("index", "dump-index");
-        app.showBootstrapDialog(new dumpDialog(this.editedIndex().name()));
+        app.showBootstrapDialog(new dumpDialog(this.editedIndex().name(), this.db));
     }
 
     formatIndex(mapIndex: number) {
