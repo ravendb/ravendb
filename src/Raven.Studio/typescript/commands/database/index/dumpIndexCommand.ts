@@ -4,14 +4,15 @@ import endpoints = require("endpoints");
 
 class dumpIndexCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database, private dumpDirectoryPath: string) {
+    constructor(private indexName: string, private db: database, private dumpDirectoryPath: string, private location: databaseLocationSpecifier) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
             name: this.indexName,
-            path: this.dumpDirectoryPath
+            path: this.dumpDirectoryPath,
+            ...this.location
         };
         
         const url = endpoints.databases.adminIndex.adminIndexesDump + this.urlEncodeArgs(args);

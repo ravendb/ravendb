@@ -2,6 +2,8 @@ import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dumpIndexCommand = require("commands/database/index/dumpIndexCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
+import database from "models/resources/database";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 class dumpDialog extends dialogViewModelBase {
     
@@ -15,7 +17,7 @@ class dumpDialog extends dialogViewModelBase {
     
     validationGroup: KnockoutValidationGroup;
     
-    constructor(indexName: string) {
+    constructor(indexName: string, private db: database) {
         super();
 
         this.indexName(indexName);
@@ -66,7 +68,7 @@ class dumpDialog extends dialogViewModelBase {
             return;
         }
         
-        new dumpIndexCommand(this.indexName(), this.activeDatabase(), this.directoryPath())
+        new dumpIndexCommand(this.indexName(), this.db, this.directoryPath(), this.db.getFirstLocation(clusterTopologyManager.default.localNodeTag()))
             .execute();
     }
 
