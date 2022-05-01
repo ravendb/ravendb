@@ -18,7 +18,7 @@
             </span>
             <div class="margin-top">
                 <ul class="databases-list" data-bind="foreach: databasesToDelete">
-                    <li><i class="icon-database text-primary"></i>
+                    <li class="force-text-wrap"><i class="icon-database text-primary"></i>
                         <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
                         <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-muted"></i></small>
                         <strong data-bind="text: name"></strong>
