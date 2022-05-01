@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
             writer
                 .Append(" as ")
-                .Append(_projectedName);
+                .Append($"\'{_projectedName}\'");
         }
     }
 }

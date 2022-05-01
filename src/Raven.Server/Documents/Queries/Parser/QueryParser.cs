@@ -2392,28 +2392,8 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             return false;
         }
 
-        private static readonly string[] AsAliasKeyword = { "AS" };
-        enum AsState { NoAsAlias, IsAsAlias, AfterAsAlias };
-        private AsState tokenAsState = AsState.NoAsAlias;
-
         internal bool Field(out FieldExpression token)
         {
-            if (tokenAsState == AsState.NoAsAlias)
-            {
-                if (Scanner.CurrentTokenMatchesAnyOf(AsAliasKeyword))
-                {
-                    tokenAsState = AsState.IsAsAlias;
-                }
-            }
-            else if(tokenAsState == AsState.IsAsAlias)
-            {
-                tokenAsState = AsState.AfterAsAlias;
-            }
-            else if (tokenAsState == AsState.AfterAsAlias)
-            {
-                tokenAsState = AsState.NoAsAlias;
-            }
-
             var part = 0;
 
             var parts = new List<StringSegment>(1);
@@ -2439,13 +2419,10 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                 {
                     parts.Add(Scanner.Token);
                 }
-                //Shahar
                 if (part == 1)
                 {
-                    // need to ensure that this isn't a keyword (that isn't after 'AS' alias)
-                    // if the token is equal to some alias but it's placed after 'AS' - It's a field and no alias.
-                    if ( tokenAsState == AsState.NoAsAlias &&
-                         Scanner.CurrentTokenMatchesAnyOf(AliasKeywords))
+                    // need to ensure that this isn't a keyword
+                    if (Scanner.CurrentTokenMatchesAnyOf(AliasKeywords))
                     {
                         Scanner.GoBack();
                         token = null;
