@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task GeneratePullReplicationCertificate()
         {
-            using (var processor = new PullReplicationHandlerProcessorForGenerateCertificate<DatabaseRequestHandler, DocumentsOperationContext>(this, ContextPool))
+            using (var processor = new PullReplicationHandlerProcessorForGenerateCertificate<DatabaseRequestHandler>(this))
                 await processor.ExecuteAsync();
         }
 

@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
 using Raven.Server.Web.System;
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         private readonly OngoingTasksHandler _ongoingTasksHandler;
 
         public OngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo([NotNull] OngoingTasksHandler requestHandler)
-            : base(requestHandler, requestHandler.ContextPool)
+            : base(requestHandler)
         {
             _ongoingTasksHandler = requestHandler;
         }
@@ -68,7 +69,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             }
         }
 
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<PullReplicationDefinitionAndCurrentConnections> command) => RequestHandler.ExecuteRemoteAsync(command);
-
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<PullReplicationDefinitionAndCurrentConnections> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
     }
 }

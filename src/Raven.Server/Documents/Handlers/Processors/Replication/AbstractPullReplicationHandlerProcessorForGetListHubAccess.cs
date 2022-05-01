@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide.Context;
@@ -8,12 +7,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
-    internal abstract class AbstractPullReplicationHandlerProcessorForGetListHubAccess<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractPullReplicationHandlerProcessorForGetListHubAccess<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
         protected AbstractPullReplicationHandlerProcessorForGetListHubAccess([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
-            : base(requestHandler, contextPool)
+            : base(requestHandler)
         {
         }
 
@@ -27,18 +26,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             int pageSize = RequestHandler.GetPageSize();
             var start = RequestHandler.GetStart();
 
-            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                using (context.OpenReadTransaction())
-                {
-                    var results = RequestHandler.Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, databaseName, hub, filter, start, pageSize);
+                var results = RequestHandler.Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, databaseName, hub, filter, start, pageSize);
 
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WriteArray(nameof(ReplicationHubAccessResult.Results), results);
-                        writer.WriteEndObject();
-                    }
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WriteArray(nameof(ReplicationHubAccessResult.Results), results);
+                    writer.WriteEndObject();
                 }
             }
         }
