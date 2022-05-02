@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow.Json;
@@ -13,6 +14,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal string Hash;
 
         public BlittableJsonReaderObject Includes;
+        public List<string> MissingIncludes;
 
         [OnDeserialized]
         internal void OnNewtonSoftJsonDeserialized(StreamingContext context)

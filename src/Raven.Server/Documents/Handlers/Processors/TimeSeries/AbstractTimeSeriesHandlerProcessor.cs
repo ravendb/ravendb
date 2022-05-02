@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     Hash = hash
                 };
             }
-
+            
             includesCommand?.AddIncludesToResult(result);
 
             return result;
@@ -295,6 +295,13 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     writer.WritePropertyName(nameof(TimeSeriesRangeResult.Includes));
                     writer.WriteObject(rangeResult.Includes);
                     size += rangeResult.Includes.Size;
+                }
+
+                if (rangeResult.MissingIncludes != null)
+                {
+                    // add included documents to the response
+                    writer.WriteComma();
+                    writer.WriteArray(nameof(TimeSeriesRangeResult.MissingIncludes), rangeResult.MissingIncludes);
                 }
             }
 

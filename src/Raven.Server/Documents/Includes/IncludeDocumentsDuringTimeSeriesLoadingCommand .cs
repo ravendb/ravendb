@@ -49,13 +49,17 @@ namespace Raven.Server.Documents.Includes
 
         public void AddIncludesToResult(TimeSeriesRangeResult rangeResult)
         {
-            if (rangeResult == null || _includes?.Properties.Count > 0 == false)
+            if (rangeResult == null)
                 return;
 
+            rangeResult.MissingIncludes = GetMissingIncludes();
+
+            if (_includes?.Properties.Count > 0 == false)
+                return;
+            
             rangeResult.Includes = _context.ReadObject(_includes, "TimeSeriesRangeIncludes/" + _docId);
         }
-
-
+        
         private void IncludeDocument(string id)
         {
             if (_includesDictionary.ContainsKey(id))
@@ -71,6 +75,17 @@ namespace Raven.Server.Documents.Includes
                 return;
 
             _includes[id] = doc.Data;
+        }
+
+        private List<string> GetMissingIncludes()
+        {
+            var missingIncludes = new List<string>();
+            foreach (var (id, data) in _includesDictionary)
+            {
+                missingIncludes.Add(id);
+            }
+
+            return missingIncludes;
         }
     }
 }
