@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
-    internal abstract class AbstractTimeSeriesHandlerProcessorForGetDebugSegmentsSummary<TRequestHandler, TOperationContext> : AbstractTimeSeriesHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractTimeSeriesHandlerProcessorForGetDebugSegmentsSummary<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
-        public AbstractTimeSeriesHandlerProcessorForGetDebugSegmentsSummary([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        public AbstractTimeSeriesHandlerProcessorForGetDebugSegmentsSummary([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
