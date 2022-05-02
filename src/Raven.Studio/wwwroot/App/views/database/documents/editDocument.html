@@ -21,8 +21,7 @@
                             <!--</a>-->
                             <span class="obj-name on-base-background" data-bind="text: userSpecifiedId, attr: { title: userSpecifiedId }"></span>
                             <a href="#" class="copy-button-hidden inherit-position" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
-                            <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision flex-noshrink"> | REVISION</span>
-                            <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision flex-noshrink"> | DELETED REVISION</span>
+                            <span data-bind="visible: revisionText(), text: revisionText()" class="text-primary revision flex-noshrink"></span>
                             <a target="_blank" href="#" title="Show raw output" class="flex-noshrink margin-left margin-left-sm" data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i></a>
                         </div>
                     </div>

@@ -83,7 +83,11 @@ class editDocument extends viewModelBase {
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     rawJsonUrl: KnockoutComputed<string>;
+    
     isDeleteRevision: KnockoutComputed<boolean>;
+    isConflictRevision: KnockoutComputed<boolean>;
+    isResolvedRevision: KnockoutComputed<boolean>;
+    revisionText: KnockoutComputed<string>;
 
     createTimeSeriesUrl: KnockoutComputed<string>;
 
@@ -405,6 +409,44 @@ class editDocument extends viewModelBase {
             } else {
                 return false;
             }
+        });
+
+        this.isConflictRevision = ko.pureComputed(() => {
+            const doc = this.document();
+            if (doc) {
+                return doc.__metadata.hasFlag("Conflicted");
+            } else {
+                return false;
+            }
+        });
+
+        this.isResolvedRevision = ko.pureComputed(() => {
+            const doc = this.document();
+            if (doc) {
+                return doc.__metadata.hasFlag("Resolved");
+            } else {
+                return false;
+            }
+        });
+
+        this.revisionText = ko.pureComputed(() => {
+            if (!this.inReadOnlyMode()) {
+                return "";
+            }
+           
+            if (this.isDeleteRevision()) {
+                return "| DELETE REVISION";
+            }
+            
+            if (this.isConflictRevision()) {
+                return "| CONFLICT REVISION";
+            }
+
+            if (this.isResolvedRevision()) {
+                return "| RESOLVED REVISION";
+            }
+           
+            return "| REVISION";
         });
 
         this.document.subscribe(doc => {
