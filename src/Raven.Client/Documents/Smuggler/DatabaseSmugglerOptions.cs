@@ -39,7 +39,7 @@
                                                                                   DatabaseRecordItemType.ElasticSearchEtls |
                                                                                   DatabaseRecordItemType.PostgreSQLIntegration;
 
-        internal const DatabaseItemType OperateOnLastShardOnly = DatabaseItemType.Indexes |
+        internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |
                                                               DatabaseItemType.ReplicationHubCertificates |
                                                               DatabaseItemType.Identities |

@@ -20,7 +20,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly TransactionContextPool _serverContextPool;
         private readonly DatabaseRecord _shardedRecord;
         private readonly int _index;
-        protected bool _lastShard;
+        private bool _processCompareExchange;
 
         public SingleShardDatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, 
             JsonOperationContext context, DatabaseSmugglerOptionsServerSide options, SmugglerResult result = null, 
@@ -30,10 +30,16 @@ namespace Raven.Server.Smuggler.Documents
             _serverContextPool = database.ServerStore.ContextPool;
             _shardedRecord = _source.GetShardedDatabaseRecordAsync().Result;
             _index = ShardHelper.GetShardNumber(database.Name);
-            if (_index < _shardedRecord.Shards.Length - 1)
-                options.OperateOnTypes = options.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnLastShardOnly;
+    
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            if (_options.IsShard && _index > 0)
+                _options.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnFirstShardOnly;
             else
-                _lastShard = true;
+                _processCompareExchange = true;
         }
 
         protected override async Task InternalProcessCompareExchangeAsync(SmugglerResult result, (CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value) kvp,
@@ -66,7 +72,7 @@ namespace Raven.Server.Smuggler.Documents
                     return shardNumber != _index;
                 }
             }
-            return _lastShard == false;
+            return _processCompareExchange == false;
         }
     }
 }
