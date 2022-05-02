@@ -3,10 +3,9 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
@@ -16,9 +15,8 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected override async ValueTask GetTimeSeriesAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
-            int start, int pageSize, bool includeDoc,
-            bool includeTags, bool fullResults)
+        protected override ValueTask<TimeSeriesRangeResult> GetTimeSeriesAndWriteAsync(DocumentsOperationContext context, string docId, string name, DateTime @from, DateTime to,
+            int start, int pageSize, bool includeDoc, bool includeTags, bool fullResults)
         {
             using (context.OpenReadTransaction())
             {
@@ -26,9 +24,9 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 if (stats == default)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
+                    return ValueTask.FromResult<TimeSeriesRangeResult>(null);
                 }
-
+                
                 var includesCommand = includeDoc || includeTags
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, docId, includeDoc, includeTags)
                     : null;
@@ -38,28 +36,24 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 var rangeResult = incrementalTimeSeries
                     ? GetIncrementalTimeSeriesRange(context, docId, name, from, to, ref start, ref pageSize, includesCommand, fullResults)
                     : GetTimeSeriesRange(context, docId, name, from, to, ref start, ref pageSize, includesCommand);
-
+                
                 var hash = rangeResult?.Hash ?? string.Empty;
 
                 var etag = RequestHandler.GetStringFromHeaders("If-None-Match");
                 if (etag == hash)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
+                    return ValueTask.FromResult<TimeSeriesRangeResult>(null);
                 }
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + hash + "\"";
 
-                long? totalCount = null;
                 if (from <= stats.Start && to >= stats.End)
                 {
-                    totalCount = stats.Count;
+                    rangeResult.TotalResults = stats.Count;
                 }
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                {
-                    WriteRange(writer, rangeResult, totalCount);
-                }
+                return ValueTask.FromResult(rangeResult);
             }
         }
     }

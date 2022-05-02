@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Operations
     public readonly struct FetchDocumentsFromShardsOperation : IShardedReadOperation<GetDocumentsResult, GetShardedDocumentsResult>
     {
         private readonly TransactionOperationContext _context;
-        private readonly ShardedDocumentHandler _handler;
+        private readonly ShardedDatabaseRequestHandler _handler;
         private readonly ShardedDatabaseContext _databaseContext;
         private readonly Dictionary<int, ShardLocator.IdsByShard<string>> _idsByShards;
         private readonly string[] _includePaths;
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public FetchDocumentsFromShardsOperation(
             TransactionOperationContext context,
-            ShardedDocumentHandler handler,
+            ShardedDatabaseRequestHandler handler,
             Dictionary<int, ShardLocator.IdsByShard<string>> idsByShards,
             string[] includePaths,
             string etag,
@@ -75,6 +75,10 @@ namespace Raven.Server.Documents.Sharding.Operations
                             IncludeUtil.GetDocIdFromInclude(cmdResult, includePath, missingIncludes, _databaseContext.IdentityPartsSeparator);
                         }
                     }
+
+                    if(cmdResult == null)
+                        continue;
+
                     docs.Add(cmdResult.Clone(_context));
                 }
 

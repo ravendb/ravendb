@@ -8,8 +8,11 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,7 +26,7 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         [Fact]
-        public void SessionLoadWithIncludeTimeSeries()
+        public async Task SessionLoadWithIncludeTimeSeries()
         {
             using (var store = GetDocumentStore())
             {
@@ -46,7 +49,7 @@ namespace SlowTests.Client.TimeSeries.Session
                         "orders/1-A",
                         i => i.IncludeDocuments("Company")
                             .IncludeTimeSeries("Heartrate", DateTime.MinValue, DateTime.MaxValue));
-
+                    
                     var company = session.Load<Company>(order.Company);
                     Assert.Equal("HR", company.Name);
 
@@ -78,10 +81,58 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task AsyncSessionLoadWithIncludeTimeSeries()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SessionLoadWithIncludeTimeSeries2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Company = "companies/apple" }, "orders/1-A");
+                    session.Store(new Company { Name = "apple" }, "companies/apple");
+                    
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "companies/apple");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/apple");
+                    tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/google");
+
+                    session.SaveChanges();
+                }
+
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    Assert.NotEqual(Sharding.GetShardNumber(store, "companies/apple"), Sharding.GetShardNumber(store, "companies/google"));
+                }
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    var result = await store.Operations.SendAsync(new GetTimeSeriesOperation<TimeSeriesEntry>("orders/1-A", "Heartrate", null, null, 0, int.MaxValue,
+                        includes: i => i.IncludeDocument().IncludeTags(), returnFullResults: true));
+                    
+                    Assert.Contains("companies/google", result.MissingIncludes);
+
+                    await session.StoreAsync(new Company { Name = "google" }, "companies/google");
+
+                    var res = await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(null, null, i => i.IncludeDocument().IncludeTags());
+                    Assert.Equal(3, res.Length);
+                    
+                    // should not go to server
+                    var apple = await session.LoadAsync<Company>("companies/apple");
+                    var google = await session.LoadAsync<Company>("companies/google");
+                    Assert.NotNull(apple);
+                    Assert.NotNull(google);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionLoadWithIncludeTimeSeries(Options options)
+        {
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())

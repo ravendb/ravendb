@@ -38,18 +38,18 @@ namespace Raven.Server.Documents.Sharding.Executors
 
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token = default)
         {
-
-#if DEBUG
-            if (command.Result.ContainsBlittableObject())
-            {
-                throw new InvalidOperationException("The return type is unmanaged, please use the overload with the context");
-            }
-#endif
-
             var executor = GetRequestExecutorAt(shardNumber);
             using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 await executor.ExecuteAsync(command, ctx, token: token);
+
+#if DEBUG
+                if (command.Result.ContainsBlittableObject())
+                {
+                    throw new InvalidOperationException("The return type is unmanaged, please use the overload with the context");
+                }
+#endif
+
                 return command.Result;
             }
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Web;
 using Sparrow.Json;
 
@@ -14,9 +15,9 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
-        protected abstract ValueTask GetTimeSeriesAsync(TOperationContext context, string docId, string name, DateTime from, DateTime to, int start,
+        protected abstract ValueTask<TimeSeriesRangeResult> GetTimeSeriesAndWriteAsync(TOperationContext context, string docId, string name, DateTime from, DateTime to, int start,
             int pageSize, bool includeDoc, bool includeTags, bool fullResults);
-
+        
         public override async ValueTask ExecuteAsync()
         {
             var documentId = RequestHandler.GetStringQueryString("docId");
@@ -39,9 +40,15 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 ? DateTime.MaxValue
                 : ParseDate(toStr, name);
 
+            TimeSeriesRangeResult rangeResult;
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
-                await GetTimeSeriesAsync(context, documentId, name, from, to, start, pageSize, includeDoc, includeTags, fullResults);
+                rangeResult = await GetTimeSeriesAndWriteAsync(context, documentId, name, from, to, start, pageSize, includeDoc, includeTags, fullResults);
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    WriteRange(writer, rangeResult, rangeResult.TotalResults);
+                }
             }
         }
     }
