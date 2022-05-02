@@ -414,7 +414,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this))
+            using (var processor = new OngoingTasksHandlerProcessorForRemoveConnectionString(this))
                 await processor.ExecuteAsync();
         }
 
@@ -428,7 +428,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<DatabaseRequestHandler, DocumentsOperationContext>(this))
+            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString(this))
                 await processor.ExecuteAsync();
         }
 
