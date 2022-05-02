@@ -335,11 +335,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     tokenEnd += index; // Adjusting to absolute positioning
 
-                    int highlightingLength = preTag.Length + postTag.Length + (tokenEnd - tokenStart);
-
+                    int highlightingLength = tokenEnd - tokenStart;                    
                     int fragmentRestLength = Math.Min(current.FragmentLength - highlightingLength, fieldFragment.Length);
                     if (fragmentRestLength < 0)
+                    {
                         fragmentRestLength = 0;
+                    }                        
                     else if (fragmentRestLength != fieldFragment.Length)
                     {
                         // We may have a fragment we can find a space near the end. 
