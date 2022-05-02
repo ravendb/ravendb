@@ -8,12 +8,11 @@ using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
+    internal abstract class AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseTask<TRequestHandler>
         where TRequestHandler : RequestHandler
     {
         protected string TaskName;
@@ -27,12 +26,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void OnBeforeResponseWrite(DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
+        protected override void OnBeforeResponseWrite(DynamicJsonValue responseJson, object _, long index)
         {
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _taskId;
         }
 
-        protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, string databaseName, object _, string raftRequestId)
         {
             if (_type == OngoingTaskType.Subscription)
                 await RaiseNotificationForSubscriptionTaskRemoval();
@@ -42,14 +41,14 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected abstract ValueTask RaiseNotificationForSubscriptionTaskRemoval();
 
-        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, object _, string raftRequestId)
         {
             TaskName = RequestHandler.GetStringQueryString("taskName", required: false);
             _taskId = RequestHandler.GetLongQueryString("id");
 
             var typeStr = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            if (Enum.TryParse(typeStr, true, out _type) == false)
-                throw new ArgumentException($"Unknown task type: {_type}", "type");
+            if (Enum.TryParse(typeStr, true, out  _type) == false)
+                throw new ArgumentException($"Unknown task type: {typeStr}", "type");
 
             _action = new DeleteOngoingTaskAction(this, _taskId, _type, RequestHandler.ServerStore, databaseName, context);
 
