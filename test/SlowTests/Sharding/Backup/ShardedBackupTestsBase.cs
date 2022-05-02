@@ -188,7 +188,7 @@ namespace SlowTests.Sharding.Backup
             Assert.Equal(1, tombstonesCount);
 
             //revisions
-            Assert.Equal(26, revisionsCount);
+            Assert.Equal(28, revisionsCount);
 
             //Subscriptions
             var subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10);

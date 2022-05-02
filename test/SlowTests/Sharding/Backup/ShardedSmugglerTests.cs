@@ -80,7 +80,6 @@ namespace SlowTests.Sharding.Backup
                                 OperateOnTypes = DatabaseItemType.Documents
                             }, file2);
                             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-                            WaitForUserToContinueTheTest(store3);
                             var detailedStats = store3.Maintenance.Send(new GetDetailedStatisticsOperation());
                             //doc
                             Assert.Equal(12345, detailedStats.CountOfDocuments);
@@ -200,7 +199,6 @@ namespace SlowTests.Sharding.Backup
 
                             }, file2);
                             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
-                            WaitForUserToContinueTheTest(store3);
                             await CheckData(store3, names);
                         }
                     }
@@ -316,17 +314,12 @@ namespace SlowTests.Sharding.Backup
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                         WaitForUserToContinueTheTest(store2);
                         await CheckData(store2, names);
-
-
-
                     }
-
                 }
             }
             finally
             {
                 File.Delete(file);
-
             }
         }
 
@@ -388,7 +381,6 @@ namespace SlowTests.Sharding.Backup
                 using (var store2 = GetDocumentStore())
                 using (var store3 = Sharding.GetDocumentStore())
                 {
-                    // WaitForUserToContinueTheTest(store1);
                     var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
 
                     store1.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
@@ -499,7 +491,6 @@ namespace SlowTests.Sharding.Backup
                     , file2);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    WaitForUserToContinueTheTest(store2);
                     var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
                     var backups = periodicBackupRunner.PeriodicBackups;
 
@@ -645,14 +636,11 @@ namespace SlowTests.Sharding.Backup
 
                         var accesses = await store2.Maintenance.SendAsync(new GetReplicationHubAccessOperation(pullReplicationName));
                         Assert.NotEmpty(accesses[0].Certificate);
-
-                        //WaitForUserToContinueTheTest(store2, clientCert: hubCerts.ServerCertificate.Value);
                     }
-
                 }
-
             }
         }
+
         private static string GetCode(string name)
         {
             using (var stream = GetDump(name))
@@ -762,7 +750,6 @@ namespace SlowTests.Sharding.Backup
                             await CheckData(store3, names);
                         }
                     }
-
                 }
             }
             finally
