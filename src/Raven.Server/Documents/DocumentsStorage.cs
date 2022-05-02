@@ -1755,9 +1755,11 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (((flags & DocumentFlags.HasRevisions) == DocumentFlags.HasRevisions) &&
-                    (revisionsStorage.Configuration == null) &&
-                    ((flags & DocumentFlags.Resolved) != DocumentFlags.Resolved))
+                if (flags.Contain(DocumentFlags.HasRevisions) &&
+                    revisionsStorage.Configuration == null &&
+                    (flags & DocumentFlags.Resolved) != DocumentFlags.Resolved &&
+                    flags.Contain(DocumentFlags.Resolved) == false &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     revisionsStorage.DeleteRevisionsFor(context, id);
 
                 if (flags.Contain(DocumentFlags.HasRevisions) &&
