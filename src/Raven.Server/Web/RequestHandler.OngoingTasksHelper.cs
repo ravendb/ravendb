@@ -6,9 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
-using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -16,7 +13,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -30,7 +26,7 @@ namespace Raven.Server.Web
 
         protected internal delegate Task WaitForIndexFunc(TransactionOperationContext context, long index);
 
-        protected async Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
+        protected internal async Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
             string debug,
             string raftRequestId,
             string databaseName,
@@ -61,7 +57,7 @@ namespace Raven.Server.Web
             }
         }
 
-        protected async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, 
+        private async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, 
             TransactionOperationContext context, 
             string raftRequestId, 
             string databaseName, 
@@ -84,13 +80,6 @@ namespace Raven.Server.Web
 
             return (index, configurationJson);
         }
-
-        /*
-        protected async Task PutConnectionString(string databaseName)
-        {
-            await DatabaseConfigurations(ServerStore.PutConnectionString, "put-connection-string", GetRaftRequestIdFromQuery(), databaseName);
-        }
-        */
 
         protected async Task ResetEtl(string databaseName, WaitForIndexFunc waitForIndex)
         {
@@ -177,94 +166,6 @@ namespace Raven.Server.Web
             }
         }
 
-        protected async Task GetConnectionStrings(string databaseName)
-        {
-            if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            if (await CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: false) == false)
-                return;
-
-            var connectionStringName = GetStringQueryString("connectionStringName", false);
-            var type = GetStringQueryString("type", false);
-
-            await ServerStore.EnsureNotPassiveAsync();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                Dictionary<string, RavenConnectionString> ravenConnectionStrings;
-                Dictionary<string, SqlConnectionString> sqlConnectionStrings;
-                Dictionary<string, OlapConnectionString> olapConnectionStrings;
-                Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
-
-                using (context.OpenReadTransaction())
-                using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                {
-                    if (connectionStringName != null)
-                    {
-                        if (string.IsNullOrWhiteSpace(connectionStringName))
-                            throw new ArgumentException($"connectionStringName {connectionStringName}' must have a non empty value");
-
-                        if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
-                            throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-
-
-                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
-                    }
-                    else
-                    {
-                        ravenConnectionStrings = rawRecord.RavenConnectionStrings;
-                        sqlConnectionStrings = rawRecord.SqlConnectionStrings;
-                        olapConnectionStrings = rawRecord.OlapConnectionString;
-                        elasticSearchConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
-                    }
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var result = new GetConnectionStringsResult
-                    {
-                        RavenConnectionStrings = ravenConnectionStrings,
-                        SqlConnectionStrings = sqlConnectionStrings,
-                        OlapConnectionStrings = olapConnectionStrings,
-                        ElasticSearchConnectionStrings = elasticSearchConnectionStrings
-                    };
-                    context.Write(writer, result.ToJson());
-                }
-            }
-        }
-
-        protected async Task RemoveConnectionString(string databaseName, WaitForIndexFunc waitForIndex)
-        {
-            if (await CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
-                return;
-
-            if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            await ServerStore.EnsureNotPassiveAsync();
-
-            var (index, _) = await ServerStore.RemoveConnectionString(databaseName, connectionStringName, type, GetRaftRequestIdFromQuery());
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                await waitForIndex(context, index);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["RaftCommandIndex"] = index
-                    });
-                }
-            }
-        }
-
         protected async Task DeleteOngoingTask(string databaseName, DocumentDatabase database, WaitForIndexFunc waitForIndex)
         {
             if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -337,59 +238,6 @@ namespace Raven.Server.Web
                         taskId = index;
                     json[taskIdName] = taskId;
                 });
-        }
-
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
-            GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
-        {
-            var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
-            var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
-            var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
-            var elasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
-
-            switch (connectionStringType)
-            {
-                case ConnectionStringType.Raven:
-                    var recordRavenConnectionStrings = rawRecord.RavenConnectionStrings;
-                    if (recordRavenConnectionStrings != null && recordRavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
-                    {
-                        ravenConnectionStrings.TryAdd(connectionStringName, ravenConnectionString);
-                    }
-
-                    break;
-
-                case ConnectionStringType.Sql:
-                    var recordSqlConnectionStrings = rawRecord.SqlConnectionStrings;
-                    if (recordSqlConnectionStrings != null && recordSqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
-                    {
-                        sqlConnectionStrings.TryAdd(connectionStringName, sqlConnectionString);
-                    }
-
-                    break;
-
-                case ConnectionStringType.Olap:
-                    var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
-                    if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
-                    {
-                        olapConnectionStrings.TryAdd(connectionStringName, olapConnectionString);
-                    }
-
-                    break;
-
-                case ConnectionStringType.ElasticSearch:
-                    var recordElasticConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
-                    if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
-                    {
-                        elasticSearchConnectionStrings.TryAdd(connectionStringName, elasticConnectionString);
-                    }
-
-                    break;
-
-                default:
-                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-            }
-
-            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings);
         }
 
         private void AssertCanAddOrUpdateEtl(string databaseName, ref BlittableJsonReaderObject etlConfiguration, JsonOperationContext context)
