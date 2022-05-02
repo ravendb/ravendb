@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForAddEtl : AbstractOngoingTasksHandlerProcessorForResetEtl<DatabaseRequestHandler>
+    internal class OngoingTasksHandlerProcessorForAddEtl : AbstractOngoingTasksHandlerProcessorForAddEtl<DatabaseRequestHandler>
     {
         public OngoingTasksHandlerProcessorForAddEtl([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

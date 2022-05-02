@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Util;
@@ -73,31 +74,33 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
                 if (configuration == null)
                     return; // all validation should be handled internally
 
-                if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                    throw new BadRequestException(errorMessage);
+                await Update(context, databaseName, writer, configuration);
+            }
+        }
+    }
 
-                await RequestHandler.ServerStore.EnsureNotPassiveAsync();
+    protected async Task Update(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer, T configuration = null)
+    {
+        if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            throw new BadRequestException(errorMessage);
 
-                OnBeforeUpdateConfiguration(ref configuration, context);
+        await RequestHandler.ServerStore.EnsureNotPassiveAsync();
 
-                var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
-                var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, raftRequestId);
+        OnBeforeUpdateConfiguration(ref configuration, context);
 
-                await RequestHandler.WaitForIndexNotificationAsync(index);
+        var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
+        var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, raftRequestId);
 
-                RequestHandler.HttpContext.Response.StatusCode = (int)GetResponseStatusCode();
+        await WaitForIndexNotificationAsync(index);
 
-                var json = new DynamicJsonValue
-                {
-                    ["RaftCommandIndex"] = index
-                };
+        RequestHandler.HttpContext.Response.StatusCode = (int)GetResponseStatusCode();
 
                 OnBeforeResponseWrite(context, json, configuration, index);
 
-                context.Write(writer, json);
+        OnBeforeResponseWrite(json, configuration, index);
 
-                await OnAfterUpdateConfiguration(context, databaseName, configuration, raftRequestId);
-            }
-        }
+        context.Write(writer, json);
+
+        await OnAfterUpdateConfiguration(context, databaseName, configuration, raftRequestId);
     }
 }

@@ -5,12 +5,11 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForToggleTaskState<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
+    internal abstract class AbstractOngoingTasksHandlerProcessorForToggleTaskState<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseTask<TRequestHandler>
         where TRequestHandler : RequestHandler
     {
         private long _key;
@@ -20,12 +19,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void OnBeforeResponseWrite(DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
+        protected override void OnBeforeResponseWrite(DynamicJsonValue responseJson, object _, long index)
         {
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _key;
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, object _, string raftRequestId)
         {
             _key = RequestHandler.GetLongQueryString("key");
 
