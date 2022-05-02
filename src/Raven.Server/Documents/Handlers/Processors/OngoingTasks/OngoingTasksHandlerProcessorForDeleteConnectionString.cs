@@ -33,11 +33,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             await RequestHandler.ServerStore.EnsureNotPassiveAsync();
 
             var (index, _) = await RequestHandler.ServerStore.RemoveConnectionString(RequestHandler.DatabaseName, connectionStringName, type, RequestHandler.GetRaftRequestIdFromQuery());
-            await RequestHandler.ServerStore.Cluster.WaitForIndexNotification(index);
-            RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                await RequestHandler.WaitForIndexToBeAppliedAsync(context, index);
+                RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
