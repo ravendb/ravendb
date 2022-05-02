@@ -263,7 +263,7 @@ namespace SlowTests.Server.Replication
                     var stats1 = store1.Maintenance.Send(new GetStatisticsOperation());
                     var stats2 = store2.Maintenance.Send(new GetStatisticsOperation());
                     Assert.Equal(stats1.DatabaseChangeVector, stats2.DatabaseChangeVector);
-                    Assert.Equal(13, stats2.CountOfTombstones);
+                    Assert.Equal(2, stats2.CountOfTombstones);
                 }
             }
         }

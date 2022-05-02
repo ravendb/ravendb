@@ -1643,7 +1643,7 @@ namespace SlowTests.Smuggler
         }
 
         [Fact]
-        public async Task Smugller_WhenContainRevisionWithoutConfiguration_ShouldExportImportRevisions()
+        public async Task Smuggler_WhenContainRevisionWithoutConfiguration_ShouldExportImportRevisions()
         {
             using var src = GetDocumentStore();
             using var dest = GetDocumentStore();
