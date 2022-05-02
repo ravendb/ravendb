@@ -3,9 +3,9 @@ using JetBrains.Annotations;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForPutConnectionString : AbstractOngoingTasksHandlerProcessorForToggleTaskState<DatabaseRequestHandler>
+    internal class OngoingTasksHandlerProcessorForRemoveConnectionString : AbstractOngoingTasksHandlerProcessorForRemoveConnectionString<DatabaseRequestHandler>
     {
-        public OngoingTasksHandlerProcessorForPutConnectionString([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+        public OngoingTasksHandlerProcessorForRemoveConnectionString([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

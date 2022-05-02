@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/connection-strings", "PUT")]
         public async Task PutConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForPutConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForPutConnectionString(this))
                 await processor.ExecuteAsync();
         }
 
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/connection-strings", "DELETE")]
         public async Task RemoveConnectionString()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForDeleteConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForRemoveConnectionString(this))
                 await processor.ExecuteAsync();
         }
 
