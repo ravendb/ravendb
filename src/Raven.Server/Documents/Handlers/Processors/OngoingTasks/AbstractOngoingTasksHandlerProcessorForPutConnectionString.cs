@@ -2,22 +2,22 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForPutConnectionString<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractOngoingTasksHandlerProcessorForPutConnectionString<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         protected AbstractOngoingTasksHandlerProcessorForPutConnectionString([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            return RequestHandler.ServerStore.PutConnectionString(context, databaseName, configuration, raftRequestId);
+            return RequestHandler.ServerStore.PutConnectionString(context, RequestHandler.DatabaseName, configuration, raftRequestId);
         }
     }
 }

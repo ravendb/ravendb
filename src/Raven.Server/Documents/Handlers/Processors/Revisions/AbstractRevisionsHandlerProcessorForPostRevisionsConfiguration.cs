@@ -5,7 +5,6 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions;
@@ -19,9 +18,9 @@ internal abstract class AbstractRevisionsHandlerProcessorForPostRevisionsConfigu
     {
     }
 
-    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
     {
-        return RequestHandler.ServerStore.ModifyDatabaseRevisions(context, databaseName, configuration, raftRequestId);
+        return RequestHandler.ServerStore.ModifyDatabaseRevisions(context, RequestHandler.DatabaseName, configuration, raftRequestId);
     }
 
     protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)

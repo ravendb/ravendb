@@ -14,9 +14,9 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            return RequestHandler.ServerStore.ModifyRevisionsForConflicts(context, databaseName, configuration, raftRequestId);
+            return RequestHandler.ServerStore.ModifyRevisionsForConflicts(context, RequestHandler.DatabaseName, configuration, raftRequestId);
         }
     }
 }

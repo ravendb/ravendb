@@ -7,7 +7,6 @@ using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -21,19 +20,19 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUs
     {
     }
 
-    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, PostgreSqlConfiguration configuration, string raftRequestId)
+    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, PostgreSqlConfiguration configuration, string raftRequestId)
     {
-        return RequestHandler.ServerStore.ModifyPostgreSqlConfiguration(context, databaseName, configuration, raftRequestId);
+        return RequestHandler.ServerStore.ModifyPostgreSqlConfiguration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
     }
 
-    protected override ValueTask AssertCanExecuteAsync(string databaseName)
+    protected override ValueTask AssertCanExecuteAsync()
     {
         AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext>.AssertCanUsePostgreSqlIntegration(RequestHandler);
 
-        return base.AssertCanExecuteAsync(databaseName);
+        return base.AssertCanExecuteAsync();
     }
 
-    protected override ValueTask<PostgreSqlConfiguration> GetConfigurationAsync(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer)
+    protected override ValueTask<PostgreSqlConfiguration> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
         var username = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("username");
 
@@ -47,7 +46,7 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForDeleteUs
         DatabaseRecord databaseRecord;
 
         using (context.OpenReadTransaction())
-            databaseRecord = RequestHandler.ServerStore.Cluster.ReadDatabase(context, databaseName, out _);
+            databaseRecord = RequestHandler.ServerStore.Cluster.ReadDatabase(context, RequestHandler.DatabaseName, out _);
 
         var config = databaseRecord.Integrations?.PostgreSql;
 

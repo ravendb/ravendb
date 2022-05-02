@@ -5,23 +5,22 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Configuration
 {
-    internal abstract class AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<THandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject,THandler, TOperationContext>
+    internal abstract class AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext 
-        where THandler : AbstractDatabaseRequestHandler<TOperationContext>
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] THandler requestHandler)
+        protected AbstractConfigurationHandlerProcessorForPostTimeSeriesConfiguration([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            return RequestHandler.ServerStore.ModifyTimeSeriesConfiguration(context, databaseName, configuration, raftRequestId);
+            return RequestHandler.ServerStore.ModifyTimeSeriesConfiguration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
         }
 
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)

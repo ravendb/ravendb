@@ -1,23 +1,13 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
-    internal class ShardedOngoingTasksHandlerProcessorForPutConnectionString : AbstractOngoingTasksHandlerProcessorForPutConnectionString<ShardedDatabaseRequestHandler>
+    internal class ShardedOngoingTasksHandlerProcessorForPutConnectionString : AbstractOngoingTasksHandlerProcessorForPutConnectionString<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedOngoingTasksHandlerProcessorForPutConnectionString([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.DatabaseContext.DatabaseName;
-        }
-
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index);
         }
     }
 }

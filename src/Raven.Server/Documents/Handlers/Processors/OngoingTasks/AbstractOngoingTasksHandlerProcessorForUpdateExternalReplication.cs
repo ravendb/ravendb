@@ -41,9 +41,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _watcher.TaskId == 0 ? index : _watcher.TaskId;
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            return RequestHandler.ServerStore.UpdateExternalReplication(databaseName, configuration, raftRequestId, out _watcher);
+            return RequestHandler.ServerStore.UpdateExternalReplication(RequestHandler.DatabaseName, configuration, raftRequestId, out _watcher);
         }
     }
 }
