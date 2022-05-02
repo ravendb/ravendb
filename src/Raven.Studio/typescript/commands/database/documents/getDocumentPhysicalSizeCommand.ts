@@ -8,7 +8,7 @@ class getDocumentPhysicalSizeCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.Handlers.DocumentSizeDetails> {
+    execute(): JQueryPromise<Raven.Client.Documents.Commands.DocumentSizeDetails> {
 
         const args = {
             id: this.id
@@ -16,7 +16,7 @@ class getDocumentPhysicalSizeCommand extends commandBase {
         
         const url = endpoints.databases.document.docsSize + this.urlEncodeArgs(args);
 
-        return this.query<Raven.Server.Documents.Handlers.DocumentSizeDetails>(url, null, this.db)
+        return this.query<Raven.Client.Documents.Commands.DocumentSizeDetails>(url, null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to get the document physical size", response.responseText, response.statusText));
     }
 }
