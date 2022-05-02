@@ -261,7 +261,7 @@
 }
 
 .virtual-row {
-    .deleted-revision {
+    .typed-revision {
         a {
             color: lighten(desaturate(@link-color,60%),5%);
 
@@ -272,7 +272,30 @@
             &:after {
                 margin-left: 5px;
                 .icon-style;
+            }
+        }
+    }
+    
+    .deleted-revision {
+        a {
+            &:after {
                 content: @trash;
+            }
+        }
+    }
+
+    .conflict-revision {
+        a {
+            &:after {
+                content: @conflict;
+            }
+        }
+    }
+
+    .resolved-revision {
+        a {
+            &:after {
+                content: @tick-character;
             }
         }
     }
