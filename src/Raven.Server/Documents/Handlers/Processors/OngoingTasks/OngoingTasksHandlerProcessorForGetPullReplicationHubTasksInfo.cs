@@ -28,9 +28,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected override async ValueTask HandleCurrentNodeAsync()
         {
-            if (ResourceNameValidator.IsValidResourceName(RequestHandler.Database.Name, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
             var key = RequestHandler.GetLongQueryString("key");
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
