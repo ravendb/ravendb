@@ -49,7 +49,14 @@ namespace Voron.Data.CompactTrees
 
             public int Length => _state.Header->NumberOfEntries;
 
-            private unsafe ReadOnlySpan<byte> this[int i]
+            public bool IsNull(int i)
+            {
+                if (i < 0 || i >= Length)
+                    throw new IndexOutOfRangeException();
+                return false;
+            }
+
+            public unsafe ReadOnlySpan<byte> this[int i]
             {
                 get
                 {

@@ -114,6 +114,15 @@ namespace Micro.Benchmark.Benchmarks
 
             public int Length => _values.Length;
 
+            public bool IsNull(int i)
+            {
+                if (i < 0 || i >= Length)
+                    throw new IndexOutOfRangeException();
+                return false;
+            }
+
+            bool ISpanEnumerator.IsNull(int i) => IsNull(i);
+                
             public ReadOnlySpan<byte> this[int i] => new(_values[i]);
 
             Span<byte> ISpanIndexer.this[int i] => new(_values[i]);

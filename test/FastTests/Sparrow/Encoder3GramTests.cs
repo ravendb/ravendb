@@ -34,6 +34,14 @@ namespace FastTests.Sparrow
 
             public int Length => _values.Length;
 
+            public bool IsNull(int i)
+            {
+                if (i < 0 || i >= Length)
+                    throw new ArgumentOutOfRangeException();
+
+                return _values[i] == null;
+            }
+            
             public ReadOnlySpan<byte> this[int i] => new(_values[i]);
 
             Span<byte> ISpanIndexer.this[int i] => new(_values[i]);
@@ -83,6 +91,8 @@ namespace FastTests.Sparrow
             public int Length => 0;
 
             public ReadOnlySpan<byte> this[int i] => throw new NotImplementedException();
+
+            public bool IsNull(int i) => throw new NotImplementedException();
 
             public void Reset()
             {}
