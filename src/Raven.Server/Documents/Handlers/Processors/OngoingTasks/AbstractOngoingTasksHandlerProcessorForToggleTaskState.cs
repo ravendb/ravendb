@@ -4,13 +4,14 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForToggleTaskState<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseTask<TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractOngoingTasksHandlerProcessorForToggleTaskState<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseTask<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         private long _key;
 
@@ -19,12 +20,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void OnBeforeResponseWrite(DynamicJsonValue responseJson, object _, long index)
+        protected override void OnBeforeResponseWrite(TransactionOperationContext context, DynamicJsonValue responseJson, object _, long index)
         {
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _key;
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, object _, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, object _, string raftRequestId)
         {
             _key = RequestHandler.GetLongQueryString("key");
 
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", nameof(type));
 
-            return RequestHandler.ServerStore.ToggleTaskState(_key, taskName, type, disable, databaseName, raftRequestId);
+            return RequestHandler.ServerStore.ToggleTaskState(_key, taskName, type, disable, RequestHandler.DatabaseName, raftRequestId);
         }
     }
 }

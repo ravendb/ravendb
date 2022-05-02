@@ -7,13 +7,14 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseTask<TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseTask<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         protected string TaskName;
 
@@ -25,12 +26,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override void OnBeforeResponseWrite(DynamicJsonValue responseJson, object _, long index)
+        protected override void OnBeforeResponseWrite(TransactionOperationContext context, DynamicJsonValue responseJson, object _, long index)
         {
             responseJson[nameof(ModifyOngoingTaskResult.TaskId)] = _taskId;
         }
 
-        protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, string databaseName, object _, string raftRequestId)
+        protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, object _, string raftRequestId)
         {
             if (_type == OngoingTaskType.Subscription)
                 await RaiseNotificationForSubscriptionTaskRemoval();
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected abstract ValueTask RaiseNotificationForSubscriptionTaskRemoval();
 
-        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, object _, string raftRequestId)
+        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, object _, string raftRequestId)
         {
             TaskName = RequestHandler.GetStringQueryString("taskName", required: false);
             _taskId = RequestHandler.GetLongQueryString("id");
@@ -49,9 +50,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             if (Enum.TryParse(typeStr, true, out  _type) == false)
                 throw new ArgumentException($"Unknown task type: {typeStr}", "type");
 
-            _action = new DeleteOngoingTaskAction(this, _taskId, _type, RequestHandler.ServerStore, databaseName, context);
+            _action = new DeleteOngoingTaskAction(RequestHandler, _taskId, _type, RequestHandler.ServerStore, context);
 
-            return await RequestHandler.ServerStore.DeleteOngoingTask(_taskId, TaskName, _type, databaseName, $"{raftRequestId}/delete-ongoing-task");
+            return await RequestHandler.ServerStore.DeleteOngoingTask(_taskId, TaskName, _type, RequestHandler.DatabaseName, $"{raftRequestId}/delete-ongoing-task");
         }
 
         private class DeleteOngoingTaskAction
@@ -59,18 +60,16 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             private readonly ServerStore _serverStore;
             private readonly TransactionOperationContext _context;
             private readonly (string Name, List<string> Transformations) _deletingEtl;
-            private readonly string _databaseName;
-            private readonly AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<TRequestHandler> _parent;
+            private readonly TRequestHandler _requestHandler;
 
-            public DeleteOngoingTaskAction(AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<TRequestHandler> parent, long id, OngoingTaskType type, ServerStore serverStore, string databaseName, TransactionOperationContext context)
+            public DeleteOngoingTaskAction(TRequestHandler requestHandler, long id, OngoingTaskType type, ServerStore serverStore, TransactionOperationContext context)
             {
-                _parent = parent;
+                _requestHandler = requestHandler;
                 _serverStore = serverStore;
                 _context = context;
-                _databaseName = databaseName;
 
                 using (context.Transaction == null ? context.OpenReadTransaction() : null)
-                using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
+                using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _requestHandler.DatabaseName))
                 {
                     if (rawRecord == null)
                         return;
@@ -111,10 +110,10 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 {
                     foreach (var transformation in _deletingEtl.Transformations)
                     {
-                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _databaseName, _deletingEtl.Name, transformation,
+                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _requestHandler.DatabaseName, _deletingEtl.Name, transformation,
                             $"{raftRequestId}/{transformation}");
 
-                        await _parent.WaitForIndexNotificationAsync(index);
+                        await _requestHandler.WaitForIndexNotificationAsync(index);
                     }
                 }
             }

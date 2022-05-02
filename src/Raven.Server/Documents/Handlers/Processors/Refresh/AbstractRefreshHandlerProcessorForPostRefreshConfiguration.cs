@@ -2,7 +2,6 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Refresh;
@@ -16,8 +15,8 @@ internal abstract class AbstractRefreshHandlerProcessorForPostRefreshConfigurati
     {
     }
 
-    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
     {
-        return RequestHandler.ServerStore.ModifyDatabaseRefresh(context, databaseName, configuration, raftRequestId);
+        return RequestHandler.ServerStore.ModifyDatabaseRefresh(context, RequestHandler.DatabaseName, configuration, raftRequestId);
     }
 }

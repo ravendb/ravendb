@@ -2,7 +2,6 @@
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Util;
@@ -27,7 +26,7 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
     protected virtual HttpStatusCode GetResponseStatusCode() => HttpStatusCode.OK;
 
-    protected virtual async ValueTask<T> GetConfigurationAsync(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer)
+    protected virtual async ValueTask<T> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
         if (_isBlittable)
         {
@@ -42,20 +41,20 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
     {
     }
 
-    protected abstract Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, T configuration, string raftRequestId);
+    protected abstract Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, T configuration, string raftRequestId);
 
     protected virtual void OnBeforeResponseWrite(TransactionOperationContext context, DynamicJsonValue responseJson, T configuration, long index)
     {
     }
 
-    protected virtual async ValueTask AssertCanExecuteAsync(string databaseName)
+    protected virtual async ValueTask AssertCanExecuteAsync()
     {
-        var canAccessDatabase = await RequestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true);
+        var canAccessDatabase = await RequestHandler.CanAccessDatabaseAsync(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: true);
         if (canAccessDatabase == false)
-            throw new AuthorizationException($"Cannot modify configuration of '{databaseName}' database due to insufficient privileges.");
+            throw new AuthorizationException($"Cannot modify configuration of '{RequestHandler.DatabaseName}' database due to insufficient privileges.");
     }
 
-    protected virtual ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, string databaseName, T configuration, string raftRequestId)
+    protected virtual ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, T configuration, string raftRequestId)
     {
         return ValueTask.CompletedTask;
     }
@@ -64,24 +63,22 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
     {
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
-            var databaseName = RequestHandler.DatabaseName;
-
-            await AssertCanExecuteAsync(databaseName);
+            await AssertCanExecuteAsync();
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                var configuration = await GetConfigurationAsync(context, databaseName, writer);
+                var configuration = await GetConfigurationAsync(context, writer);
                 if (configuration == null)
                     return; // all validation should be handled internally
 
-                await Update(context, databaseName, writer, configuration);
+                await Update(context, writer, configuration);
             }
         }
     }
 
-    protected async Task Update(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer, T configuration = null)
+    protected async Task Update(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer, T configuration = null)
     {
-        if (ResourceNameValidator.IsValidResourceName(databaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+        if (ResourceNameValidator.IsValidResourceName(RequestHandler.DatabaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
             throw new BadRequestException(errorMessage);
 
         await RequestHandler.ServerStore.EnsureNotPassiveAsync();
@@ -89,18 +86,21 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
         OnBeforeUpdateConfiguration(ref configuration, context);
 
         var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
-        var (index, _) = await OnUpdateConfiguration(context, databaseName, configuration, raftRequestId);
+        var (index, _) = await OnUpdateConfiguration(context, configuration, raftRequestId);
 
-        await WaitForIndexNotificationAsync(index);
+        await RequestHandler.WaitForIndexNotificationAsync(index);
 
         RequestHandler.HttpContext.Response.StatusCode = (int)GetResponseStatusCode();
 
-                OnBeforeResponseWrite(context, json, configuration, index);
+        var json = new DynamicJsonValue
+        {
+            ["RaftCommandIndex"] = index
+        };
 
-        OnBeforeResponseWrite(json, configuration, index);
+        OnBeforeResponseWrite(context, json, configuration, index);
 
         context.Write(writer, json);
 
-        await OnAfterUpdateConfiguration(context, databaseName, configuration, raftRequestId);
+        await OnAfterUpdateConfiguration(context, configuration, raftRequestId);
     }
 }

@@ -10,7 +10,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,19 +23,19 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForAddUser<
     {
     }
 
-    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, PostgreSqlConfiguration configuration, string raftRequestId)
+    protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, PostgreSqlConfiguration configuration, string raftRequestId)
     {
-        return RequestHandler.ServerStore.ModifyPostgreSqlConfiguration(context, databaseName, configuration, raftRequestId);
+        return RequestHandler.ServerStore.ModifyPostgreSqlConfiguration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
     }
 
-    protected override ValueTask AssertCanExecuteAsync(string databaseName)
+    protected override ValueTask AssertCanExecuteAsync()
     {
         AbstractPostgreSqlIntegrationHandlerProcessor<TRequestHandler, TOperationContext>.AssertCanUsePostgreSqlIntegration(RequestHandler);
 
-        return base.AssertCanExecuteAsync(databaseName);
+        return base.AssertCanExecuteAsync();
     }
 
-    protected override async ValueTask<PostgreSqlConfiguration> GetConfigurationAsync(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer)
+    protected override async ValueTask<PostgreSqlConfiguration> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
         var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), GetType().Name);
         var dto = JsonDeserializationServer.PostgreSqlUser(json);
@@ -58,7 +57,7 @@ internal abstract class AbstractPostgreSqlIntegrationHandlerProcessorForAddUser<
         DatabaseRecord databaseRecord;
 
         using (context.OpenReadTransaction())
-            databaseRecord = RequestHandler.ServerStore.Cluster.ReadDatabase(context, databaseName, out _);
+            databaseRecord = RequestHandler.ServerStore.Cluster.ReadDatabase(context, RequestHandler.DatabaseName, out _);
 
         var newUser = new PostgreSqlUser
         {

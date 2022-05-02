@@ -1,22 +1,13 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForDeleteOngoingTask : AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<DatabaseRequestHandler>
+    internal class OngoingTasksHandlerProcessorForDeleteOngoingTask : AbstractOngoingTasksHandlerProcessorForDeleteOngoingTask<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public OngoingTasksHandlerProcessorForDeleteOngoingTask([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override string GetDatabaseName()
-        {
-            return RequestHandler.Database.Name;
-        }
-
-        protected override async ValueTask WaitForIndexNotificationAsync(long index)
-        {
-            await RequestHandler.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, RequestHandler.ServerStore.Engine.OperationTimeout);
         }
 
         protected override ValueTask RaiseNotificationForSubscriptionTaskRemoval()

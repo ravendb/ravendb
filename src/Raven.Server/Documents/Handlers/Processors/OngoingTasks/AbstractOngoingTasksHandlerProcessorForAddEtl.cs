@@ -5,21 +5,21 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal abstract class AbstractOngoingTasksHandlerProcessorForAddEtl<TRequestHandler> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler>
-        where TRequestHandler : RequestHandler
+    internal abstract class AbstractOngoingTasksHandlerProcessorForAddEtl<TRequestHandler, TOperationContext> : AbstractHandlerProcessorForUpdateDatabaseConfiguration<BlittableJsonReaderObject, TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
         protected AbstractOngoingTasksHandlerProcessorForAddEtl([NotNull] TRequestHandler requestHandler)
             : base(requestHandler)
         {
         }
 
-        protected override void OnBeforeResponseWrite(DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
+        protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
         {
             responseJson[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index;
         }
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             AssertCanAddOrUpdateEtl(ref configuration);
         }
 
-        protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             // Reset scripts if needed
             var scriptsToReset = HttpContext.Request.Query["reset"];
@@ -40,21 +40,21 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             {
                 foreach (var script in scriptsToReset)
                 {
-                    await RequestHandler.ServerStore.RemoveEtlProcessState(ctx, databaseName, etlConfigurationName, script, $"{raftRequestId}/{script}");
+                    await RequestHandler.ServerStore.RemoveEtlProcessState(ctx, RequestHandler.DatabaseName, etlConfigurationName, script, $"{raftRequestId}/{script}");
                 }
             }
         }
 
-        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             var id = RequestHandler.GetLongQueryString("id", required: false);
 
             if (id == null)
             {
-                return RequestHandler.ServerStore.AddEtl(context, databaseName, configuration, raftRequestId);
+                return RequestHandler.ServerStore.AddEtl(context, RequestHandler.DatabaseName, configuration, raftRequestId);
             }
 
-            return RequestHandler.ServerStore.UpdateEtl(context, databaseName, id.Value, configuration, raftRequestId);
+            return RequestHandler.ServerStore.UpdateEtl(context, RequestHandler.DatabaseName, id.Value, configuration, raftRequestId);
         }
 
         private void AssertCanAddOrUpdateEtl(ref BlittableJsonReaderObject etlConfiguration)
