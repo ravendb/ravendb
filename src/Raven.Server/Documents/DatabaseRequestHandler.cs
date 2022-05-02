@@ -79,11 +79,6 @@ namespace Raven.Server.Documents
             );
         }
 
-        protected Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context, string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
-        {
-            return DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, configurationJson, WaitForIndexToBeAppliedAsync, beforeSetupConfiguration);
-        }
-
         public override async Task WaitForIndexToBeAppliedAsync(TransactionOperationContext context, long index)
         {
             DatabaseTopology dbTopology;
