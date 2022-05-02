@@ -18,6 +18,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
@@ -25,6 +26,8 @@ using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Sdk;
 using Xunit.Abstractions;
@@ -35,6 +38,32 @@ namespace SlowTests.Server.Documents.Revisions
     {
         public RevisionsReplication(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [Fact]
+        public async Task RevisionsWillBeReplicatedEvenIfTheyAreNotConfiguredOnTheDestinationNode()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                //await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database); // not setting up revisions on purpose
+
+                var op = new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments);
+                await store1.Maintenance.SendAsync(op);
+
+                await SetupReplicationAsync(store1, store2);
+
+                WaitForMarker(store1, store2);
+                //WaitForUserToContinueTheTest(store1);
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var o = await session.LoadAsync<Order>("orders/830-A");
+                    Assert.NotNull(o);
+                    var orders = await session.Advanced.Revisions.GetForAsync<Order>("orders/830-A", pageSize: int.MaxValue);
+                    Assert.Equal(29, orders.Count);
+                }
+            }
         }
 
         private void WaitForMarker(DocumentStore store1, DocumentStore store2)
