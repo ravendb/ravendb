@@ -1023,7 +1023,7 @@ class editDocument extends shardViewModelBase {
             });
     }
     
-    private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Server.Documents.Handlers.DocumentSizeDetails> {
+    private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Client.Documents.Commands.DocumentSizeDetails> {
         return new getDocumentPhysicalSizeCommand(id, this.db)
             .execute()
             .done((size) => {
