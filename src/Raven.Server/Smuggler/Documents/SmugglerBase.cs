@@ -1012,7 +1012,7 @@ namespace Raven.Server.Smuggler.Documents
             CancellationToken token = default)
         {
             return database is ShardedDocumentDatabase ?
-                new SingleShardDatabaseSmugglerForBackup(database, source, destination, time, context, options, result, onProgress, token) :
+                new SingleShardDatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token) :
                 new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
         }
 

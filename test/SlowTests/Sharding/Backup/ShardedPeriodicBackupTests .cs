@@ -98,10 +98,12 @@ namespace SlowTests.Sharding.Backup
                     var dirs = Directory.GetDirectories(backupPath);
 
                     Assert.Equal(3, dirs.Length);
+                    var importOptions = new DatabaseSmugglerImportOptions();
 
                     foreach (var dir in dirs)
                     {
-                        await store3.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                        await store3.Smuggler.ImportIncrementalAsync(importOptions, dir);
+                        importOptions.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnFirstShardOnly;
                     }
                     
                     await CheckData(store3, names, options.DatabaseMode);
