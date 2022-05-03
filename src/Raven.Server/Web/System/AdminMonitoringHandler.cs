@@ -198,6 +198,12 @@ namespace Raven.Server.Web.System
                     result.TotalFreeSpaceInMb = totalFreeMb;
                     result.RemainingStorageSpacePercentage = percentage;
                 }
+                var diskStatsResult = Server.DiskStatsGetter.Get(ServerStore._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
+                if (diskStatsResult != null)
+                {
+                    result.ReadIos = diskStatsResult.ReadIos;
+                    result.WriteIos = diskStatsResult.WriteIos;
+                }
             }
 
             return result;
@@ -437,6 +443,13 @@ namespace Raven.Server.Web.System
                 if (diskSpaceResult != null)
                 {
                     result.TotalFreeSpaceInMb = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Megabytes);
+                }
+
+                var diskStatsResult = Server.DiskStatsGetter.Get(database.DocumentsStorage.Environment.Options.DriveInfoByPath?.Value.BasePath.DriveName);
+                if (diskStatsResult != null)
+                {
+                    result.ReadIos = diskStatsResult.ReadIos;
+                    result.WriteIos = diskStatsResult.WriteIos;
                 }
             }
 
