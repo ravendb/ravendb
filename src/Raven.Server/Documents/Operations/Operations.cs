@@ -402,9 +402,6 @@ namespace Raven.Server.Documents.Operations
 
         public enum OperationType
         {
-            [Description("Setup by RVN")]
-            SetupRvn,
-            
             [Description("Setup")]
             Setup,
 

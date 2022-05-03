@@ -578,7 +578,7 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandInfo(List<string> args, RavenCli cli)
         {
-            new ClusterMessage(Console.Out, cli._server.ServerStore).Print();
+            new ClusterMessage(Console.Out, cli._server.ServerStore.Engine.Tag, cli._server.ServerStore.Engine.ClusterId).Print();
 
             WriteText(GetInfoText(), ConsoleColor.Cyan, cli);
 

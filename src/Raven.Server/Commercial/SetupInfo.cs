@@ -150,7 +150,11 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(License)] = License.ToJson(), [nameof(Domain)] = Domain};
+            return new DynamicJsonValue
+            {
+                [nameof(License)] = License.ToJson(),
+                [nameof(Domain)] = Domain
+            };
         }
     }
 
@@ -202,7 +206,11 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(SubDomain)] = SubDomain, [nameof(Ips)] = new DynamicJsonArray(Ips)};
+            return new DynamicJsonValue
+            {
+                [nameof(SubDomain)] = SubDomain,
+                [nameof(Ips)] = new DynamicJsonArray(Ips)
+            };
         }
     }
 
@@ -263,7 +271,10 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(Status)] = Status};
+            return new DynamicJsonValue
+            {
+                [nameof(Status)] = Status
+            };
         }
     }
 
@@ -286,7 +297,6 @@ namespace Raven.Server.Commercial
         public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile; // not sent as part of the result
 
-        //private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         public Logger Logger { get; set; }
 
         public SetupProgressAndResult(Logger logger)

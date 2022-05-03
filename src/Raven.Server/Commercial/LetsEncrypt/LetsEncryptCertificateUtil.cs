@@ -87,7 +87,7 @@ public class LetsEncryptCertificateUtil
             yield return certHost.Name.ToString();
         }
     }
-    
+
     internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition) GenerateCertificate(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
     {
         if (certificateHolder == null)
@@ -95,8 +95,7 @@ public class LetsEncryptCertificateUtil
                 $"Cannot generate the client certificate '{certificateName}' because the server certificate is not loaded.");
 
         // this creates a client certificate which is signed by the current server certificate
-        var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificateName, certificateHolder, out var certBytes,
-            setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
+        var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificateName, certificateHolder, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
         var newCertDef = new CertificateDefinition
         {

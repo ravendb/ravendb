@@ -88,7 +88,7 @@ public class LetsEncryptValidationApiHelper
                 continue;
             }
 
-            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp, token))
             {
                 localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), port));
             }

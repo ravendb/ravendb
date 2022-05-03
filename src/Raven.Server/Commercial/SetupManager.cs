@@ -53,11 +53,7 @@ namespace Raven.Server.Commercial
         public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore,
             CancellationToken token)
         {
-            var progress = new SetupProgressAndResult(Logger)
-            {
-                Processed = 0,
-                Total = 2
-            };
+            var progress = new SetupProgressAndResult(Logger);
 
             try
             {
@@ -131,8 +127,7 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}",
-                    e);
+                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
             }
 
             if (Logger.IsOperationsEnabled)
@@ -253,7 +248,536 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string currentNodeTag, JsonOperationContext context,
+
+
+        public static async Task<LicenseStatus> GetUpdatedLicenseStatus(ServerStore serverStore, License currentLicense, Reference<License> updatedLicense = null)
+        {
+            var license = await serverStore.LicenseManager.GetUpdatedLicense(currentLicense).ConfigureAwait(false) ?? currentLicense;
+
+            var licenseStatus = LicenseManager.GetLicenseStatus(license);
+            if (licenseStatus.Expired)
+                throw new LicenseExpiredException($"The provided license for {license.Name} has expired ({licenseStatus.Expiration})");
+
+            if (updatedLicense != null)
+                updatedLicense.Value = license;
+
+            return licenseStatus;
+        }
+
+        private static void AssertNoClusterDefined(ServerStore serverStore)
+        {
+            var allNodes = serverStore.GetClusterTopology().AllNodes;
+            if (allNodes.Count > 1)
+            {
+                throw new InvalidOperationException("This node is part of an already configured cluster and cannot be setup automatically any longer." +
+                                                            Environment.NewLine +
+                                                            "Either setup manually by editing the 'settings.json' file or delete the existing cluster, restart the server and try running setup again." +
+                                                            Environment.NewLine +
+                                                            "Existing cluster nodes " + JsonConvert.SerializeObject(allNodes, Formatting.Indented)
+                );
+            }
+        }
+
+        private static void LogErrorAndThrow(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, string msg, Exception e)
+        {
+            progress.AddError(msg, e);
+            onProgress.Invoke(progress);
+            throw new InvalidOperationException(msg, e);
+        }
+
+
+   internal static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
+    {
+        var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
+        var localIps = new List<IPEndPoint>();
+
+        foreach (var hostnameOrIp in localNode.Addresses)
+        {
+            if (hostnameOrIp.Equals("0.0.0.0"))
+            {
+                localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
+                continue;
+            }
+
+            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+            {
+                localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+            }
+        }
+
+        var serverCert = setupInfo.GetX509Certificate();
+
+        var localServerUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
+
+        try
+        {
+            if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
+            {
+                var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
+
+                if (localIps.Count == 0 && currentIps.Count == 1 &&
+                    (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
+                    return; // listen to any ip in this
+
+                if (localIps.All(ip => currentIps.Contains(ip.Address)))
+                    return; // we already listen to all these IPs, no need to check
+            }
+
+            if (setupMode == SetupMode.LetsEncrypt)
+            {
+                // In case an external ip was specified, this is the ip we update in the dns records. (not the one we bind to)
+                var ips = localNode.ExternalIpAddress == null
+                    ? localIps.ToArray()
+                    : new[] {new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.ExternalPort)};
+
+                await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
+            }
+
+            // Here we send the actual ips we will bind to in the local machine.
+            await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, serverCert, localServerUrl, setupInfo.LocalNodeTag, localIps.ToArray(), localNode.Port,
+                serverStore.Configuration.ConfigPath, setupMode, token);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerUrl, e);
+        }
+    }
+
+    public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore,
+        CancellationToken token)
+    {
+        var progress = new SetupProgressAndResult(Logger)
+        {
+            Processed = 0,
+            Total = 4
+        };
+
+        try
+        {
+            var updatedLicense = new Reference<License>();
+            await GetUpdatedLicenseStatus(serverStore, setupInfo.License, updatedLicense).ConfigureAwait(false);
+            setupInfo.License = updatedLicense.Value;
+
+            AssertNoClusterDefined(serverStore);
+            progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
+            onProgress(progress);
+            try
+            {
+                await LetsEncryptValidationApiHelper.ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo, serverStore);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Validation of supplied settings failed.", e);
+            }
+
+            progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
+            onProgress(progress);
+
+            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
+            await acmeClient.Init(setupInfo.Email, token);
+
+            var challengeResult = await LetsEncryptByTools.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+
+            progress.Processed++;
+            progress.AddInfo(challengeResult.Challenge != null ? "Successfully received challenge(s) information from Let's Encrypt." : "Using cached Let's Encrypt certificate.");
+
+            progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
+
+            onProgress(progress);
+
+            try
+            {
+                await RavenDnsRecordHelper.UpdateDnsRecordsTask(new RavenDnsRecordHelper.UpdateDnsRecordParameters
+                {
+                    OnProgress = onProgress,
+                    Progress = progress,
+                    Challenge = challengeResult.Challenge,
+                    SetupInfo = setupInfo,
+                    Token = token
+                });
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
+            }
+
+            progress.Processed++;
+            progress.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
+            progress.AddInfo("Completing Let's Encrypt challenge(s)...");
+            onProgress(progress);
+
+            await ZipFileHelper.CompleteAuthorizationAndGetCertificate(new ZipFileHelper.CompleteAuthorizationAndGetCertificateParameters
+            {
+                OnValidationSuccessful = () =>
+                {
+                    progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
+                    progress.AddInfo("Acquiring certificate.");
+                    onProgress(progress);
+                },
+                SetupInfo = setupInfo,
+                Client = acmeClient,
+                ChallengeResult = challengeResult,
+                ExistingPrivateKey = serverStore.Server.Certificate?.Certificate?.GetRSAPrivateKey(),
+                Token = token
+            });
+
+
+            progress.Processed++;
+            progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
+            progress.AddInfo("Starting validation.");
+            onProgress(progress);
+
+            try
+            {
+                await ValidateServerCanRunWithSuppliedSettings(setupInfo, serverStore, SetupMode.LetsEncrypt, token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Validation failed.", e);
+            }
+
+            progress.Processed++;
+            progress.AddInfo("Validation is successful.");
+            progress.AddInfo("Creating new RavenDB configuration settings.");
+
+            onProgress(progress);
+
+            try
+            {
+                progress.SettingsZipFile = await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to create the configuration settings.", e);
+            }
+
+            progress.Processed++;
+            progress.AddInfo("Configuration settings created.");
+            progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode finished successfully.");
+            onProgress(progress);
+        }
+        catch (Exception e)
+        {
+            LogErrorAndThrow(onProgress, progress, "Setting up RavenDB in Let's Encrypt security mode failed.", e);
+        }
+
+        return progress;
+    }
+
+        private static async Task CompleteConfigurationForNewNode(
+            Action<IOperationProgress> onProgress,
+            SetupProgressAndResult progress,
+            ContinueSetupInfo continueSetupInfo,
+            BlittableJsonReaderObject settingsJsonObject,
+            byte[] serverCertBytes,
+            X509Certificate2 serverCert,
+            X509Certificate2 clientCert,
+            ServerStore serverStore,
+            string firstNodeTag,
+            Dictionary<string, string> otherNodesUrls,
+            License license,
+            JsonOperationContext context)
+        {
+            try
+            {
+                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
+            }
+
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePath), out string certificateFileName);
+
+            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup",
+                serverCert,
+                serverCertBytes,
+                certPassword,
+                serverStore.LicenseManager.LicenseStatus.Type,
+                true);
+
+            if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
+            {
+                await serverStore.EnsureNotPassiveAsync(publicServerUrl, firstNodeTag);
+
+                await DeleteAllExistingCertificates(serverStore);
+
+                if (setupMode == SetupMode.LetsEncrypt && license != null)
+                {
+                    await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
+                    await serverStore.LicenseManager.ActivateAsync(license, RaftIdGenerator.DontCareId);
+                }
+
+                // We already verified that leader's port is not 0, no need for it here.
+                serverStore.HasFixedPort = true;
+
+                foreach (var url in otherNodesUrls)
+                {
+                    progress.AddInfo($"Adding node '{url.Key}' to the cluster.");
+                    onProgress(progress);
+
+                    try
+                    {
+                        await serverStore.AddNodeToClusterAsync(url.Value, url.Key, validateNotInTopology: false);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to add node '{continueSetupInfo.NodeTag}' to the cluster.", e);
+                    }
+                }
+            }
+
+            progress.AddInfo("Registering client certificate in the local server.");
+            onProgress(progress);
+            var certDef = new CertificateDefinition
+            {
+                Name = $"{clientCert.SubjectName.Name}",
+                // this does not include the private key, that is only for the client
+                Certificate = Convert.ToBase64String(clientCert.Export(X509ContentType.Cert)),
+                Permissions = new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance = SecurityClearance.ClusterAdmin,
+                Thumbprint = clientCert.Thumbprint,
+                PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash(),
+                NotAfter = clientCert.NotAfter,
+                NotBefore = clientCert.NotBefore
+            };
+
+            try
+            {
+                if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
+                {
+                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(clientCert.Thumbprint, certDef, RaftIdGenerator.DontCareId));
+                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                }
+                else
+                {
+                    using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (var certificate = ctx.ReadObject(certDef.ToJson(), "Client/Certificate/Definition"))
+                    using (var tx = ctx.OpenWriteTransaction())
+                    {
+                        serverStore.Cluster.PutLocalState(ctx, clientCert.Thumbprint, certificate, certDef);
+                        tx.Commit();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to register client certificate in the local server.", e);
+            }
+
+            if (continueSetupInfo.RegisterClientCert)
+            {
+                RegisterClientCertInOs(onProgress, progress, clientCert);
+                progress.AddInfo("Registering admin client certificate in the OS personal store.");
+                onProgress(progress);
+            }
+
+            var certPath = serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
+
+            try
+            {
+                progress.AddInfo($"Saving server certificate at {certPath}.");
+                onProgress(progress);
+
+                await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
+                {
+                    var certBytes = serverCertBytes;
+                    await certFile.WriteAsync(certBytes, 0, certBytes.Length);
+                    await certFile.FlushAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to save server certificate at {certPath}.", e);
+            }
+
+            try
+            {
+                // During setup we use the System database to store cluster configurations as well as the trusted certificates.
+                // We need to make sure that the currently used data dir will be the one written (or not written) in the resulting settings.json
+                var dataDirKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                var currentDataDir = serverStore.Configuration.GetServerWideSetting(dataDirKey) ?? serverStore.Configuration.GetSetting(dataDirKey);
+                var currentHasKey = string.IsNullOrWhiteSpace(currentDataDir) == false;
+
+                if (currentHasKey)
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject) {[dataDirKey] = currentDataDir};
+                }
+                else if (settingsJsonObject.TryGet(dataDirKey, out string _))
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject);
+                    settingsJsonObject.Modifications.Remove(dataDirKey);
+                }
+
+                if (settingsJsonObject.Modifications != null)
+                    settingsJsonObject = context.ReadObject(settingsJsonObject, "settings.json");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to determine the data directory", e);
+            }
+
+            try
+            {
+                progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
+                onProgress(progress);
+
+                var indentedJson = ZipFileHelper.IndentJsonString(settingsJsonObject.ToString());
+                ZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to save configuration at {serverStore.Configuration.ConfigPath}.", e);
+            }
+
+            try
+            {
+                progress.Readme = ZipFileHelper.CreateReadmeText(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to create the readme text.", e);
+            }
+        }
+     private static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(
+            Action<IOperationProgress> onProgress,
+            SetupProgressAndResult progress,
+            SetupMode setupMode,
+            SetupInfo setupInfo,
+            ServerStore serverStore,
+            CancellationToken token)
+        {
+            return await ZipFileHelper.CompleteClusterConfigurationAndGetSettingsZip(new ZipFileHelper.CompleteClusterConfigurationParameters
+            {
+                OnProgress = onProgress,
+                Progress = progress,
+                SetupInfo = setupInfo,
+                SettingsPath = serverStore.Configuration.ConfigPath,
+                OnWriteSettingsJsonLocally = indentedJson =>
+                {
+                    return Task.Run(() => ZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson), token);
+                },
+                OnGetCertificatePath = certificateFileName =>
+                {
+                    return Task.Run(() => serverStore.Configuration.GetSetting(
+                                              RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath))
+                                          ?? Path.Combine(AppContext.BaseDirectory, certificateFileName), token);
+                },
+                OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
+                {
+                    var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
+                        new ServerWideStudioConfiguration {Disabled = false, Environment = studioEnvironment}, RaftIdGenerator.DontCareId));
+
+                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                },
+                OnBeforeAddingNodesToCluster = async (publicServerUrl, localNodeTag) =>
+                {
+                    try
+                    {
+                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
+                    }
+
+                    await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
+
+                    await DeleteAllExistingCertificates(serverStore);
+
+                    if (setupMode == SetupMode.LetsEncrypt)
+                    {
+                        await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
+                        await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
+                    }
+
+                    serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
+                },
+                AddNodeToCluster = async nodeTag =>
+                {
+                    try
+                    {
+                        await serverStore.AddNodeToClusterAsync(setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl, nodeTag, validateNotInTopology: false, token: token);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to add node '{nodeTag}' to the cluster.", e);
+                    }
+                },
+                RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) =>
+                {
+                    return Task.Run(() => RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert), token);
+                },
+            });
+        }
+
+        private static void RegisterClientCertInOs(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, X509Certificate2 clientCert)
+        {
+            using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
+            {
+                try
+                {
+                    userPersonalStore.Add(clientCert);
+                    progress.AddInfo($"Successfully registered the admin client certificate in the OS Personal CurrentUser Store '{userPersonalStore.Name}'.");
+                    onProgress(progress);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to register client certificate in the current user personal store '{userPersonalStore.Name}'.", e);
+                }
+            }
+        }
+        
+        public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore, SetupInfo setupInfo)
+        {
+            if (serverStore.Server.Certificate?.Certificate == null)
+                throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
+
+            // this creates a client certificate which is signed by the current server certificate
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes,
+                setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
+
+            var newCertDef = new CertificateDefinition
+            {
+                Name = name,
+                // this does not include the private key, that is only for the client
+                Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
+                Permissions = new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance = SecurityClearance.ClusterAdmin,
+                Thumbprint = selfSignedCertificate.Thumbprint,
+                PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
+                NotAfter = selfSignedCertificate.NotAfter,
+                NotBefore = selfSignedCertificate.NotBefore
+            };
+
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));
+            await serverStore.Cluster.WaitForIndexNotification(res.Index);
+
+            return certBytes;
+        }
+        internal static async Task DeleteAllExistingCertificates(ServerStore serverStore)
+        {
+            // If a user repeats the setup process, there might be certificate leftovers in the cluster
+
+            List<string> existingCertificateKeys;
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                existingCertificateKeys = serverStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
+            }
+
+            if (existingCertificateKeys.Count == 0)
+                return;
+
+            var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand(RaftIdGenerator.NewId()) {Names = existingCertificateKeys});
+
+            await serverStore.Cluster.WaitForIndexNotification(res.Index);
+        }
+            public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string currentNodeTag, JsonOperationContext context,
             out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out string firstNodeTag,
             out Dictionary<string, string> otherNodesUrls, out License license)
         {
@@ -261,7 +785,6 @@ namespace Raven.Server.Commercial
             byte[] clientCertBytes = null;
             BlittableJsonReaderObject currentNodeSettingsJson = null;
             license = null;
-
             otherNodesUrls = new Dictionary<string, string>();
 
             firstNodeTag = "A";
@@ -366,540 +889,5 @@ namespace Raven.Server.Commercial
 
             return currentNodeSettingsJson;
         }
-
-        public static async Task<LicenseStatus> GetUpdatedLicenseStatus(ServerStore serverStore, License currentLicense, Reference<License> updatedLicense = null)
-        {
-            var license = await serverStore.LicenseManager.GetUpdatedLicense(currentLicense).ConfigureAwait(false) ?? currentLicense;
-
-            var licenseStatus = LicenseManager.GetLicenseStatus(license);
-            if (licenseStatus.Expired)
-                throw new LicenseExpiredException($"The provided license for {license.Name} has expired ({licenseStatus.Expiration})");
-
-            if (updatedLicense != null)
-                updatedLicense.Value = license;
-
-            return licenseStatus;
-        }
-
-        private static void AssertNoClusterDefined(ServerStore serverStore)
-        {
-            var allNodes = serverStore.GetClusterTopology().AllNodes;
-            if (allNodes.Count > 1)
-            {
-                throw new InvalidOperationException("This node is part of an already configured cluster and cannot be setup automatically any longer." +
-                                                    Environment.NewLine +
-                                                    "Either setup manually by editing the 'settings.json' file or delete the existing cluster, restart the server and try running setup again." +
-                                                    Environment.NewLine +
-                                                    "Existing cluster nodes " + JsonConvert.SerializeObject(allNodes, Formatting.Indented)
-                );
-            }
-        }
-
-        private static void LogErrorAndThrow(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, string msg, Exception e)
-        {
-            progress.AddError(msg, e);
-            onProgress.Invoke(progress);
-            throw new InvalidOperationException(msg, e);
-        }
-
-
-   internal static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
-    {
-        var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
-        var localIps = new List<IPEndPoint>();
-
-        foreach (var hostnameOrIp in localNode.Addresses)
-        {
-            if (hostnameOrIp.Equals("0.0.0.0"))
-            {
-                localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
-                continue;
-            }
-
-            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
-            {
-                localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
-            }
-        }
-
-        var serverCert = setupInfo.GetX509Certificate();
-
-        var localServerUrl =
-            LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
-
-        try
-        {
-            if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
-            {
-                var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
-
-                if (localIps.Count == 0 && currentIps.Count == 1 &&
-                    (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
-                    return; // listen to any ip in this
-
-                if (localIps.All(ip => currentIps.Contains(ip.Address)))
-                    return; // we already listen to all these IPs, no need to check
-            }
-
-            if (setupMode == SetupMode.LetsEncrypt)
-            {
-                // In case an external ip was specified, this is the ip we update in the dns records. (not the one we bind to)
-                var ips = localNode.ExternalIpAddress == null
-                    ? localIps.ToArray()
-                    : new[] {new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.ExternalPort)};
-
-                await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
-            }
-
-            // Here we send the actual ips we will bind to in the local machine.
-            await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, serverCert, localServerUrl, setupInfo.LocalNodeTag, localIps.ToArray(), localNode.Port,
-                serverStore.Configuration.ConfigPath, setupMode, token);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerUrl, e);
-        }
-    }
-
-    public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore,
-        CancellationToken token)
-    {
-        var progress = new SetupProgressAndResult(Logger)
-        {
-            Processed = 0,
-            Total = 4
-        };
-
-        try
-        {
-            var updatedLicense = new Reference<License>();
-            await GetUpdatedLicenseStatus(serverStore, setupInfo.License, updatedLicense).ConfigureAwait(false);
-            setupInfo.License = updatedLicense.Value;
-
-            AssertNoClusterDefined(serverStore);
-            progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
-            onProgress(progress);
-            try
-            {
-                await LetsEncryptValidationApiHelper.ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo, serverStore);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Validation of supplied settings failed.", e);
-            }
-
-            progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
-            onProgress(progress);
-
-            var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
-            await acmeClient.Init(setupInfo.Email, token);
-
-            var challengeResult = await LetsEncryptByTools.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
-
-            progress.Processed++;
-            progress.AddInfo(challengeResult.Challenge != null
-                ? "Successfully received challenge(s) information from Let's Encrypt."
-                : "Using cached Let's Encrypt certificate.");
-
-            progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
-
-            onProgress(progress);
-
-            try
-            {
-                await RavenDnsRecordHelper.UpdateDnsRecordsTask(new RavenDnsRecordHelper.UpdateDnsRecordParameters
-                {
-                    OnProgress = onProgress,
-                    Progress = progress,
-                    Challenge = challengeResult.Challenge,
-                    SetupInfo = setupInfo,
-                    Token = token
-                });
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
-            }
-
-            progress.Processed++;
-            progress.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
-            progress.AddInfo("Completing Let's Encrypt challenge(s)...");
-            onProgress(progress);
-
-            await ZipFileHelper.CompleteAuthorizationAndGetCertificate(new ZipFileHelper.CompleteAuthorizationAndGetCertificateParameters
-            {
-                OnValidationSuccessful = () =>
-                {
-                    progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
-                    progress.AddInfo("Acquiring certificate.");
-                    onProgress(progress);
-                },
-                SetupInfo = setupInfo,
-                Client = acmeClient,
-                ChallengeResult = challengeResult,
-                ExistingPrivateKey = serverStore.Server.Certificate?.Certificate?.GetRSAPrivateKey(),
-                Token = token
-            });
-
-
-            progress.Processed++;
-            progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
-            progress.AddInfo("Starting validation.");
-            onProgress(progress);
-
-            try
-            {
-                await ValidateServerCanRunWithSuppliedSettings(setupInfo, serverStore, SetupMode.LetsEncrypt, token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Validation failed.", e);
-            }
-
-            progress.Processed++;
-            progress.AddInfo("Validation is successful.");
-            progress.AddInfo("Creating new RavenDB configuration settings.");
-
-            onProgress(progress);
-
-            try
-            {
-                progress.SettingsZipFile =
-                    await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to create the configuration settings.", e);
-            }
-
-            progress.Processed++;
-            progress.AddInfo("Configuration settings created.");
-            progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode finished successfully.");
-            onProgress(progress);
-        }
-        catch (Exception e)
-        {
-            LogErrorAndThrow(onProgress, progress, "Setting up RavenDB in Let's Encrypt security mode failed.", e);
-        }
-
-        return progress;
-    }
-
-        private static async Task CompleteConfigurationForNewNode(
-            Action<IOperationProgress> onProgress,
-            SetupProgressAndResult progress,
-            ContinueSetupInfo continueSetupInfo,
-            BlittableJsonReaderObject settingsJsonObject,
-            byte[] serverCertBytes,
-            X509Certificate2 serverCert,
-            X509Certificate2 clientCert,
-            ServerStore serverStore,
-            string firstNodeTag,
-            Dictionary<string, string> otherNodesUrls,
-            License license,
-            JsonOperationContext context)
-        {
-            try
-            {
-                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " +
-                                                                                                          "making sure there is no cluster from previous installation.");
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
-            }
-
-            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
-            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
-            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
-            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePath), out string certificateFileName);
-
-            serverStore.Server.Certificate =
-                SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, certPassword,
-                    serverStore.LicenseManager.LicenseStatus.Type, true);
-
-            if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
-            {
-                await serverStore.EnsureNotPassiveAsync(publicServerUrl, firstNodeTag);
-
-                await DeleteAllExistingCertificates(serverStore);
-
-                if (setupMode == SetupMode.LetsEncrypt && license != null)
-                {
-                    await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                    await serverStore.LicenseManager.ActivateAsync(license, RaftIdGenerator.DontCareId);
-                }
-
-                // We already verified that leader's port is not 0, no need for it here.
-                serverStore.HasFixedPort = true;
-
-                foreach (var url in otherNodesUrls)
-                {
-                    progress.AddInfo($"Adding node '{url.Key}' to the cluster.");
-                    onProgress(progress);
-
-                    try
-                    {
-                        await serverStore.AddNodeToClusterAsync(url.Value, url.Key, validateNotInTopology: false);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException($"Failed to add node '{continueSetupInfo.NodeTag}' to the cluster.", e);
-                    }
-                }
-            }
-
-            progress.AddInfo("Registering client certificate in the local server.");
-            onProgress(progress);
-            var certDef = new CertificateDefinition
-            {
-                Name = $"{clientCert.SubjectName.Name}",
-                // this does not include the private key, that is only for the client
-                Certificate = Convert.ToBase64String(clientCert.Export(X509ContentType.Cert)),
-                Permissions = new Dictionary<string, DatabaseAccess>(),
-                SecurityClearance = SecurityClearance.ClusterAdmin,
-                Thumbprint = clientCert.Thumbprint,
-                PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash(),
-                NotAfter = clientCert.NotAfter,
-                NotBefore = clientCert.NotBefore
-            };
-
-            try
-            {
-                if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
-                {
-                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(clientCert.Thumbprint, certDef, RaftIdGenerator.DontCareId));
-                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
-                }
-                else
-                {
-                    using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (var certificate = ctx.ReadObject(certDef.ToJson(), "Client/Certificate/Definition"))
-                    using (var tx = ctx.OpenWriteTransaction())
-                    {
-                        serverStore.Cluster.PutLocalState(ctx, clientCert.Thumbprint, certificate, certDef);
-                        tx.Commit();
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to register client certificate in the local server.", e);
-            }
-
-            if (continueSetupInfo.RegisterClientCert)
-            {
-                RegisterClientCertInOs(onProgress, progress, clientCert);
-                progress.AddInfo("Registering admin client certificate in the OS personal store.");
-                onProgress(progress);
-            }
-
-            var certPath = serverStore.Configuration.GetSetting(
-                               RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath))
-                           ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
-
-            try
-            {
-                progress.AddInfo($"Saving server certificate at {certPath}.");
-                onProgress(progress);
-
-                await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
-                {
-                    var certBytes = serverCertBytes;
-                    await certFile.WriteAsync(certBytes, 0, certBytes.Length);
-                    await certFile.FlushAsync();
-                }
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Failed to save server certificate at {certPath}.", e);
-            }
-
-            try
-            {
-                // During setup we use the System database to store cluster configurations as well as the trusted certificates.
-                // We need to make sure that the currently used data dir will be the one written (or not written) in the resulting settings.json
-                var dataDirKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
-                var currentDataDir = serverStore.Configuration.GetServerWideSetting(dataDirKey) ?? serverStore.Configuration.GetSetting(dataDirKey);
-                var currentHasKey = string.IsNullOrWhiteSpace(currentDataDir) == false;
-
-                if (currentHasKey)
-                {
-                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject) {[dataDirKey] = currentDataDir};
-                }
-                else if (settingsJsonObject.TryGet(dataDirKey, out string _))
-                {
-                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject);
-                    settingsJsonObject.Modifications.Remove(dataDirKey);
-                }
-
-                if (settingsJsonObject.Modifications != null)
-                    settingsJsonObject = context.ReadObject(settingsJsonObject, "settings.json");
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to determine the data directory", e);
-            }
-
-            try
-            {
-                progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
-                onProgress(progress);
-
-                var indentedJson = ZipFileHelper.IndentJsonString(settingsJsonObject.ToString());
-                ZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Failed to save configuration at {serverStore.Configuration.ConfigPath}.", e);
-            }
-
-            try
-            {
-                progress.Readme = ZipFileHelper.CreateReadmeText(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to create the readme text.", e);
-            }
-        }
-     private static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(
-            Action<IOperationProgress> onProgress,
-            SetupProgressAndResult progress,
-            SetupMode setupMode,
-            SetupInfo setupInfo,
-            ServerStore serverStore,
-            CancellationToken token)
-        {
-            return await ZipFileHelper.CompleteClusterConfigurationAndGetSettingsZip(new ZipFileHelper.CompleteClusterConfigurationParameters
-            {
-                OnProgress = onProgress,
-                Progress = progress,
-                SetupInfo = setupInfo,
-                SettingsPath = serverStore.Configuration.ConfigPath,
-                OnWriteSettingsJsonLocally = indentedJson =>
-                {
-                    return Task.Run(() => ZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson), token);
-                },
-                OnGetCertificatePath = certificateFileName =>
-                {
-                    return Task.Run(() => serverStore.Configuration.GetSetting(
-                                              RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath))
-                                          ?? Path.Combine(AppContext.BaseDirectory, certificateFileName), token);
-                },
-                OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
-                {
-                    var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
-                        new ServerWideStudioConfiguration {Disabled = false, Environment = studioEnvironment}, RaftIdGenerator.DontCareId));
-
-                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
-                },
-                OnBeforeAddingNodesToCluster = async (publicServerUrl, localNodeTag) =>
-                {
-                    try
-                    {
-                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " +
-                            "making sure there is no cluster from previous installation.");
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
-                    }
-
-                    await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
-
-                    await DeleteAllExistingCertificates(serverStore);
-
-                    if (setupMode == SetupMode.LetsEncrypt)
-                    {
-                        await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                        await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
-                    }
-
-                    serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
-                },
-                AddNodeToCluster = async nodeTag =>
-                {
-                    try
-                    {
-                        await serverStore.AddNodeToClusterAsync(setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl, nodeTag, validateNotInTopology: false, token: token);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException($"Failed to add node '{nodeTag}' to the cluster.", e);
-                    }
-                },
-                RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) =>
-                {
-                    return Task.Run(() => RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert), token);
-                },
-            });
-        }
-
-        private static void RegisterClientCertInOs(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, X509Certificate2 clientCert)
-        {
-            using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
-            {
-                try
-                {
-                    userPersonalStore.Add(clientCert);
-                    progress.AddInfo($"Successfully registered the admin client certificate in the OS Personal CurrentUser Store '{userPersonalStore.Name}'.");
-                    onProgress(progress);
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to register client certificate in the current user personal store '{userPersonalStore.Name}'.", e);
-                }
-            }
-        }
-        
-        public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore, SetupInfo setupInfo)
-        {
-            if (serverStore.Server.Certificate?.Certificate == null)
-                throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
-
-            // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes,
-                setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
-
-            var newCertDef = new CertificateDefinition
-            {
-                Name = name,
-                // this does not include the private key, that is only for the client
-                Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
-                Permissions = new Dictionary<string, DatabaseAccess>(),
-                SecurityClearance = SecurityClearance.ClusterAdmin,
-                Thumbprint = selfSignedCertificate.Thumbprint,
-                PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
-                NotAfter = selfSignedCertificate.NotAfter,
-                NotBefore = selfSignedCertificate.NotBefore
-            };
-
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));
-            await serverStore.Cluster.WaitForIndexNotification(res.Index);
-
-            return certBytes;
-        }
-        internal static async Task DeleteAllExistingCertificates(ServerStore serverStore)
-        {
-            // If a user repeats the setup process, there might be certificate leftovers in the cluster
-
-            List<string> existingCertificateKeys;
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                existingCertificateKeys = serverStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
-            }
-
-            if (existingCertificateKeys.Count == 0)
-                return;
-
-            var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand(RaftIdGenerator.NewId()) {Names = existingCertificateKeys});
-
-            await serverStore.Cluster.WaitForIndexNotification(res.Index);
-        }
-
     }
 }

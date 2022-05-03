@@ -44,20 +44,21 @@ namespace Raven.Server.Utils.Cli
 
     public class ClusterMessage : ConsoleMessage
     {
-        private readonly ServerStore _server;
-
-        public ClusterMessage(TextWriter tw, ServerStore server) : base(tw)
+        private string _nodeTag;
+        private string _clusterId;
+        
+        public ClusterMessage(TextWriter tw, string nodeTag, string clusterId) : base(tw)
         {
-            _server = server;
+            _nodeTag = nodeTag;
+            _clusterId = clusterId;
         }
          
         public override void Print()
         {
-            if (string.IsNullOrEmpty(_server.Engine.ClusterId))
+            if (string.IsNullOrEmpty(_clusterId))
                 return;
-            var nodeTag = _server.Engine.Tag;
-            var id = _server.Engine.ClusterId;
-            var clusterColor = Hashing.XXHash64.CalculateRaw(id) % (int)ConsoleColor.White + 1;//skip black
+
+            var clusterColor = Hashing.XXHash64.CalculateRaw(_clusterId) % (int)ConsoleColor.White + 1;//skip black
             ConsoleWriteWithColor(new ConsoleText
                 {
                     Message = "Node ",
@@ -65,7 +66,7 @@ namespace Raven.Server.Utils.Cli
                 },
                 new ConsoleText
                 {
-                    Message = nodeTag,
+                    Message = _nodeTag,
                     ForegroundColor = ConsoleColor.Green
                 }, new ConsoleText
                 {
@@ -74,7 +75,7 @@ namespace Raven.Server.Utils.Cli
                 },
                 new ConsoleText
                 {
-                    Message = $"{id}",
+                    Message = $"{_clusterId}",
                     ForegroundColor = (ConsoleColor)clusterColor
                 }
                 );

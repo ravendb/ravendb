@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
@@ -11,7 +12,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Server.Config;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Https;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
@@ -21,7 +21,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class LetsEncryptSimulationHelper
 {
-        internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+    internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
 
     internal class UniqueResponseResponder : IStartup
     {
@@ -115,7 +115,7 @@ public class LetsEncryptSimulationHelper
                 throw new InvalidOperationException(
                     $"Failed to start WebHost on node '{nodeTag}'. The specified ip address might not be reachable due to network issues. {linuxMsg}{Environment.NewLine}{externalIpMsg}{Environment.NewLine}" +
                     $"Settings file:{settingsPath}.{Environment.NewLine}" +
-                    $"IP addresses: {string.Join(", ", addresses.Select(address => address.ToString()))}.", e);
+                    $"IP addresses: {string.Join(", ", addresses.AsEnumerable().Select(address => address.ToString()))}.", e);
             }
 
             using (var httpMessageHandler = new HttpClientHandler())
@@ -163,7 +163,7 @@ public class LetsEncryptSimulationHelper
                         throw new InvalidOperationException($"Client failed to contact WebHost listening to '{serverUrl}'.{Environment.NewLine}" +
                                                             $"Are you blocked by a firewall? Make sure the port is open.{Environment.NewLine}" +
                                                             $"Settings file:{settingsPath}.{Environment.NewLine}" +
-                                                            $"IP addresses: {string.Join(", ", addresses.Select(address => address.ToString()))}.{Environment.NewLine}" +
+                                                            $"IP addresses: {string.Join(", ", addresses.AsEnumerable().Select(address => address.ToString()))}.{Environment.NewLine}" +
                                                             $"Response: {response?.StatusCode}.{Environment.NewLine}{result}", e);
                     }
                 }
