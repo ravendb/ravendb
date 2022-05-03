@@ -47,6 +47,9 @@ namespace Sparrow.Server.Utils
                 }
 
                 var prev = await prevTask.ConfigureAwait(false);
+                if (prev == null)
+                    return null;
+                
                 var diff = DateTime.UtcNow - prev.Raw.Time;
                 if (start < prev.Raw.Time || diff < _minInterval)
                     return prev.Calculated;
