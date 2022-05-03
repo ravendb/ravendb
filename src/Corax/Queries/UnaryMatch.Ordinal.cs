@@ -60,7 +60,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var intOffset);
                     var isMatch = false;
 
-                    if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
+                    if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.None))
                     {
                         var read = reader.Read(match._fieldId, out var resultX);
                         var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
@@ -70,7 +70,7 @@ namespace Corax.Queries
                             isMatch = true;
                         }
                     }
-                    else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
+                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
                         var iterator = reader.ReadMany(match._fieldId);
                         
@@ -132,13 +132,13 @@ namespace Corax.Queries
                     bool isMatch = false;
                     if (typeof(TValueType) == typeof(long))
                     {
-                        if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
+                        if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.None))
                         {
                             var read = reader.Read<long>(match._fieldId, out var resultX);
                             if (read)
                                 isMatch = comparer.Compare((long)(object)currentType, resultX);
                         }
-                        else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
+                        else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
                             var iterator = reader.ReadMany(match._fieldId);
                             var answer = match._distinct == false;
@@ -155,13 +155,13 @@ namespace Corax.Queries
                     }
                     else if (typeof(TValueType) == typeof(double))
                     {
-                        if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
+                        if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.None))
                         {
                             var read = reader.Read<double>(match._fieldId, out var resultX);
                             if (read)
                                 isMatch = comparer.Compare((double)(object)currentType, resultX);
                         }
-                        else if (type is IndexEntryFieldType.List or IndexEntryFieldType.TupleList)
+                        else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
                             var iterator = reader.ReadMany(match._fieldId);
                             var answer = match._distinct == false;

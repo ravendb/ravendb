@@ -66,7 +66,7 @@ namespace Corax
 
     // The rationale to use ref structs is not allowing to copy those around so easily. They should be cheap to construct
     // and cheaper to use. 
-    public ref struct IndexEntryWriter
+    public unsafe ref struct IndexEntryWriter
     {
         private static int Invalid = unchecked(~0);
         private static ushort MaxDynamicFields = byte.MaxValue;
@@ -232,9 +232,9 @@ namespace Corax
             // Write the pointer to the location
             MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
 
-            // We will include null values if there are nulls to be stored. 
-            int nullBitStreamSize = values.Length / (sizeof(long) * 8) + values.Length % (sizeof(long) * 8) == 0 ? 0 : 1;
-            long* nullStream = stackalloc long[nullBitStreamSize];
+            // We will include null values if there are nulls to be stored.           
+            int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1;
+            byte* nullStream = stackalloc byte[nullBitStreamSize];
             bool hasNull = false;
             for (int i = 0; i < values.Length; i++)
             {
@@ -251,8 +251,9 @@ namespace Corax
                 new ReadOnlySpan<byte>(nullStream, nullBitStreamSize * sizeof(long))
                     .CopyTo(_buffer.Slice(dataLocation));
 
+                dataLocation += nullBitStreamSize;
+
                 // Signal that we will have to deal with the nulls.
-                dataLocation += nullBitStreamSize * sizeof(long);
                 _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNull;
             }
 
@@ -311,8 +312,8 @@ namespace Corax
             MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
 
             // We will include null values if there are nulls to be stored.           
-            int nullBitStreamSize = values.Length / (sizeof(long) * 8) + values.Length % (sizeof(long) * 8) == 0 ? 0 : 1;
-            long* nullStream = stackalloc long[nullBitStreamSize];
+            int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1;
+            byte* nullStream = stackalloc byte[nullBitStreamSize];
             bool hasNull = false;
             for (int i = 0; i < values.Length; i++)
             {
@@ -329,7 +330,7 @@ namespace Corax
                 new ReadOnlySpan<byte>(nullStream, nullBitStreamSize * sizeof(long))
                     .CopyTo(_buffer.Slice(dataLocation));
 
-                dataLocation += nullBitStreamSize * sizeof(long);
+                dataLocation += nullBitStreamSize;
 
                 // Signal that we will have to deal with the nulls.
                 _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNull;
@@ -487,6 +488,7 @@ namespace Corax
         private readonly ReadOnlySpan<byte> _buffer;
         private int _spanOffset;
         private int _spanTableOffset;
+        private int _nullTableOffset;
         private int _longOffset;
         private int _doubleOffset;
         private readonly bool IsTuple => _doubleOffset != 0;
@@ -502,9 +504,10 @@ namespace Corax
             
             Unsafe.SkipInit(out _currentIdx);
             Unsafe.SkipInit(out _spanTableOffset);
+            Unsafe.SkipInit(out _nullTableOffset);
             Unsafe.SkipInit(out _spanOffset);
             Unsafe.SkipInit(out _longOffset);
-            Unsafe.SkipInit(out _doubleOffset);
+            Unsafe.SkipInit(out _doubleOffset);            
         }
 
         public IndexEntryFieldIterator(ReadOnlySpan<byte> buffer, int offset)
@@ -518,6 +521,7 @@ namespace Corax
                 IsValid = false;
                 Unsafe.SkipInit(out _currentIdx);
                 Unsafe.SkipInit(out _spanTableOffset);
+                Unsafe.SkipInit(out _nullTableOffset);
                 Unsafe.SkipInit(out _spanOffset);
                 Unsafe.SkipInit(out _longOffset);
                 Unsafe.SkipInit(out _doubleOffset);
@@ -528,7 +532,7 @@ namespace Corax
             Count = VariableSizeEncoding.Read<ushort>(_buffer, out var length, offset);
             offset += length;
 
-            _spanTableOffset = MemoryMarshal.Read<int>(_buffer[offset..]);
+            _nullTableOffset = MemoryMarshal.Read<int>(_buffer[offset..]);
             if (Type.HasFlag(IndexEntryFieldType.Tuple))
             {
                 _longOffset = MemoryMarshal.Read<int>(_buffer[(offset + sizeof(int))..]);
@@ -536,12 +540,15 @@ namespace Corax
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNull))
                 {
-                    throw new NotImplementedException();
+                    int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
+                    _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.                             
                 }
                 else
                 {
-                    _spanOffset = (_doubleOffset + Count * sizeof(double)); // Skip over the doubles array, and now we are sitting at the start of the sequences table.
+                    _spanTableOffset = _nullTableOffset;
                 }
+
+                _spanOffset = (_doubleOffset + Count * sizeof(double)); // Skip over the doubles array, and now we are sitting at the start of the sequences table.
             }
             else
             {
@@ -550,13 +557,15 @@ namespace Corax
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNull))
                 {
-                    throw new NotImplementedException();
+                    int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
+                    _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.         
                 }
                 else
                 {
-                    _spanOffset = (offset + sizeof(int));
+                    _spanTableOffset = _nullTableOffset;
                 }
 
+                _spanOffset = (offset + sizeof(int));
             }
 
             _currentIdx = -1;
@@ -641,7 +650,7 @@ namespace Corax
 
     // The rationale to use ref structs is not allowing to copy those around so easily. They should be cheap to construct
     // and cheaper to use. 
-    public readonly ref struct IndexEntryReader
+    public unsafe readonly ref struct IndexEntryReader
     {
         private const int Invalid = unchecked((int)0xFFFF_FFFF);
 
@@ -864,11 +873,10 @@ namespace Corax
                 type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
 
                 intOffset += length;
-                if ((type & IndexEntryFieldType.List) != 0)
-                {
-                    
-                    int totalSize = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
-                    if (elementIdx >= totalSize)
+                if (type.HasFlag(IndexEntryFieldType.List))
+                {                    
+                    int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
+                    if (elementIdx >= totalElements)
                     {
                         value = Span<byte>.Empty;
                         type = IndexEntryFieldType.Invalid;
@@ -877,18 +885,24 @@ namespace Corax
                     
                     intOffset += length;
                     var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
-                    if ((type & IndexEntryFieldType.Tuple) != 0)
+                    if (type.HasFlag(IndexEntryFieldType.Tuple))
                     {
-                        intOffset += 2 * sizeof(int) + totalSize * sizeof(double);
+                        intOffset += 2 * sizeof(int) + totalElements * sizeof(double);
                     }
                     else
                     {
                         intOffset += sizeof(int);
                     }
 
-                    // TODO: Check if the element in the list is actually NULL.
                     if (type.HasFlag(IndexEntryFieldType.HasNull))
-                        throw new NotImplementedException();
+                    {
+                        byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
+                        if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
+                            goto HasNull;
+
+                        int nullBitStreamSize = totalElements / (sizeof(long) * 8) + totalElements % (sizeof(long) * 8) == 0 ? 0 : 1;
+                        spanTableOffset += nullBitStreamSize; // Point after the null table.                             
+                    }
 
                     // Skip over the number of entries and jump to the string location.
                     for (int i = 0; i < elementIdx; i++)
@@ -902,9 +916,13 @@ namespace Corax
                 }
                 else if ((type & IndexEntryFieldType.Raw) != 0)
                 {
-                    // TODO: Check if the element in the list is actually NULL.
                     if (type.HasFlag(IndexEntryFieldType.HasNull))
-                        throw new NotImplementedException();
+                    {
+                        var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
+                        byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
+                        if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
+                            goto HasNull;
+                    }
 
                     stringLength = VariableSizeEncoding.Read<int>(_buffer, out int readOffset, intOffset);
                     intOffset += readOffset;
@@ -912,9 +930,13 @@ namespace Corax
                 }
                 else if ((type & IndexEntryFieldType.Tuple) != 0)
                 {
-                    // TODO: Check if the element in the list is actually NULL.
                     if (type.HasFlag(IndexEntryFieldType.HasNull))
-                        throw new NotImplementedException();
+                    {
+                        var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
+                        byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
+                        if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
+                            goto HasNull;
+                    }
 
                     VariableSizeEncoding.Read<long>(_buffer, out length, intOffset); // Skip
                     intOffset += length;
@@ -934,6 +956,11 @@ namespace Corax
 
             value = _buffer.Slice(intOffset, stringLength);            
             return true;
+
+        HasNull:
+            type = IndexEntryFieldType.HasNull;
+            value = Span<byte>.Empty;
+            return true;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -942,7 +969,7 @@ namespace Corax
             return Read(field, out var _, out longValue, out doubleValue, out sequenceValue);
         }
 
-        public bool Read(int field, out IndexEntryFieldType type, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
+        public unsafe bool Read(int field, out IndexEntryFieldType type, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
@@ -968,9 +995,15 @@ namespace Corax
                         var longTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
                         intOffset += sizeof(int);
 
-                        // TODO: Check if the first value in the list is actually NULL.
                         if (type.HasFlag(IndexEntryFieldType.HasNull))
-                            throw new NotImplementedException();
+                        {
+                            byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
+                            if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, 0) == true)
+                                goto HasNull;
+
+                            int nullBitStreamSize = totalElements / (sizeof(long) * 8) + totalElements % (sizeof(long) * 8) == 0 ? 0 : 1;
+                            spanTableOffset += nullBitStreamSize; // Point after the null table.                             
+                        }
 
                         doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
                         longValue = VariableSizeEncoding.Read<long>(_buffer, out length, longTableOffset); // Read
