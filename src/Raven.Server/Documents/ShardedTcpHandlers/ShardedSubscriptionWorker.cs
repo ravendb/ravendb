@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ShardedTcpHandlers
@@ -14,10 +15,12 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
     {
         private readonly RequestExecutor _shardRequestExecutor;
         private readonly ShardedSubscriptionConnection _parent;
+        private readonly int _shardNumber;
         public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, ShardedSubscriptionConnection parent) : base(options, dbName)
         {
             _shardRequestExecutor = re;
             _parent = parent;
+            _shardNumber = ShardHelper.GetShardNumber(dbName);
         }
 
         internal override RequestExecutor GetRequestExecutor()
@@ -39,6 +42,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             public TaskCompletionSource SendBatchToClientTcs;
             public TaskCompletionSource ConfirmFromShardSubscriptionConnectionTcs;
             public string LastSentChangeVectorInBatch;
+            public int ShardNumber;
         }
 
         public PublishedShardBatch PublishedShardBatchItem;
@@ -66,7 +70,8 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                     {
                         _batchFromServer = incomingBatch,
                         SendBatchToClientTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
-                        ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+                        ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
+                        ShardNumber = _shardNumber
                     };
 
                     // Set the start handling worker MRE on ShardedSubscriptionConnection

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
@@ -182,13 +183,14 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 {
                     Interlocked.Exchange(ref _mre, new AsyncManualResetEvent());
                     hasBatch = _mre.WaitAsync(CancellationTokenSource.Token);
-                    result = await TryHandleBatchFromWorkersAndCheckReconnectAsync(redirectBatch: true);
+                    await HandleBatchFromWorkersAsync();
                 }
                 else
                 {
                     await SendHeartBeatAsync("Waited for 3000ms for batch from shard workers");
-                    result = await TryHandleBatchFromWorkersAndCheckReconnectAsync(redirectBatch: false);
                 }
+
+                result = await CheckWorkersForErrorsAsync();
 
                 if (result.Stopping)
                     ThrowStoppingSubscriptionException(result);
@@ -229,7 +231,109 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             }
         }
 
-        private async Task<HandleBatchFromWorkersResult> TryHandleBatchFromWorkersAndCheckReconnectAsync(bool redirectBatch)
+        private async Task HandleBatchFromWorkersAsync()
+        {
+            var batchesFromShards = new List<ShardedSubscriptionWorker.PublishedShardBatch>();
+
+            foreach ((string shard, SubscriptionShardHolder shardHolder) in _shardWorkers)
+            {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                if (shardHolder.PullingTask.IsCompleted == false)
+                {
+                    var batch = shardHolder.Worker.PublishedShardBatchItem;
+                    if (batch == null)
+                        continue;
+
+                    batchesFromShards.Add(batch);
+                }
+            }
+
+            if (batchesFromShards.Count > 0)
+            {
+                await WriteBatchesAndConfirmAsync(batchesFromShards);
+            }
+        }
+
+        private async Task WriteBatchToClientAndAckAsync(List<ShardedSubscriptionWorker.PublishedShardBatch> batches)
+        {
+            var replyFromClientTask = GetReplyFromClientInternalAsync();
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to send documents."));
+            int docsToFlush = 0;
+
+            var shards = string.Join(", ", batches.Select(b => b.ShardNumber));
+            var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
+            using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (context.CheckoutMemoryStream(out var buffer))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, buffer))
+            {
+                foreach (ShardedSubscriptionWorker.PublishedShardBatch batch in batches)
+                {
+                    string lastReceivedChangeVector = null;
+                    foreach (var doc in batch._batchFromServer.Messages)
+                    {
+                        CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        (BlittableJsonReaderObject metadata, string id, string changeVector) = BatchFromServer.GetMetadataFromBlittable(doc.Data);
+                        lastReceivedChangeVector = changeVector;
+                        SubscriptionConnection.WriteDocumentOrException(context, writer, document: null, doc.Data, metadata, doc.Exception, id, null, null, null);
+                        docsToFlush++;
+
+                        if (await SubscriptionConnection.FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, CancellationTokenSource.Token))
+                            continue;
+
+                        docsToFlush = 0;
+                        sendingCurrentBatchStopwatch.Restart();
+                    }
+                    batch.LastSentChangeVectorInBatch = lastReceivedChangeVector;
+                    AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Flushing docs collected from shard '{batch.ShardNumber}'"));
+                }
+
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
+                SubscriptionConnection.WriteEndOfBatch(writer);
+
+                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Flushing docs collected from '{shards}'"));
+                await SubscriptionConnection.FlushDocsToClientAsync(SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
+            }
+
+            await WaitForClientAck(replyFromClientTask);
+            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Got ack for shards '{shards}' from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
+        }
+
+        private async Task WriteBatchesAndConfirmAsync(List<ShardedSubscriptionWorker.PublishedShardBatch> batches)
+        {
+            try
+            {
+                // Send to client
+                await WriteBatchToClientAndAckAsync(batches);
+
+                // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
+                foreach (var batch in batches)
+                {
+                    batch.SendBatchToClientTcs.SetResult();
+                }
+            }
+            catch (Exception e)
+            {
+                // need to fail the shard subscription worker
+                foreach (var batch in batches)
+                {
+                    batch.SendBatchToClientTcs.SetException(e);
+                }
+                throw;
+            }
+
+            // wait for sharded subscription worker to send ack to the shard subscription connection
+            // and receive the confirm from the shard subscription connection
+            foreach (var batch in batches)
+            {
+                await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
+            }
+
+            // send confirm to client and continue processing
+            await SendConfirmToClientAsync();
+        }
+
+        private async Task<HandleBatchFromWorkersResult> CheckWorkersForErrorsAsync()
         {
             var result = new HandleBatchFromWorkersResult
             {
@@ -237,6 +341,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 ShardsToReconnect = new List<string>(), 
                 Stopping = false
             };
+
             foreach ((string shard, SubscriptionShardHolder shardHolder) in _shardWorkers)
             {
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -244,28 +349,18 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 if (result.Stopping)
                     continue;
 
-                if (shardHolder.PullingTask.IsCompleted == false)
+                if (shardHolder.PullingTask.IsCompleted)
                 {
-                    if (redirectBatch == false)
-                        continue;
-
-                    var batch = shardHolder.Worker.PublishedShardBatchItem;
-                    if (batch == null)
-                        continue;
-
-                    await RedirectBatchAndConfirmAsync(batch, shard);
-                    continue;
-                }
-
-                try
-                {
-                    await shardHolder.PullingTask;
-                    Debug.Assert(false, $"The pulling task should be faulted or canceled. Should not reach this line");
-                }
-                catch (Exception e)
-                {
-                    result.Exceptions.Add(shard, e);
-                    result.ShardsToReconnect.Add(shard);
+                    try
+                    {
+                        await shardHolder.PullingTask;
+                        Debug.Assert(false, $"The pulling task should be faulted or canceled. Should not reach this line");
+                    }
+                    catch (Exception e)
+                    {
+                        result.Exceptions.Add(shard, e);
+                        result.ShardsToReconnect.Add(shard);
+                    }
                 }
 
                 if (CanContinueSubscription(shardHolder))
@@ -304,31 +399,6 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             return stopping;
         }
 
-        private async Task RedirectBatchAndConfirmAsync(ShardedSubscriptionWorker.PublishedShardBatch batch, string shard)
-        {
-            try
-            {
-                // Send to client
-                await WriteBatchToClientAndAckAsync(batch, shard);
-
-                // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
-                batch.SendBatchToClientTcs.SetResult();
-            }
-            catch (Exception e)
-            {
-                // need to fail the shard subscription worker
-                batch.SendBatchToClientTcs.TrySetException(e);
-                throw;
-            }
-
-            // wait for sharded subscription worker to send ack to the shard subscription connection
-            // and receive the confirm from the shard subscription connection
-            await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
-
-            // send confirm to client and continue processing
-            await SendConfirmToClientAsync();
-        }
-
         private bool CanContinueSubscription(SubscriptionShardHolder shardHolder)
         {
             if (shardHolder.LastErrorDateTime.HasValue == false)
@@ -341,45 +411,6 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 return true;
 
             return false;
-        }
-
-        private async Task WriteBatchToClientAndAckAsync(ShardedSubscriptionWorker.PublishedShardBatch batch, string shard)
-        {
-            var replyFromClientTask = GetReplyFromClientInternalAsync();
-            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to send documents."));
-            int docsToFlush = 0;
-            string lastReceivedChangeVector = null;
-
-            var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
-            using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (context.CheckoutMemoryStream(out var buffer))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, buffer))
-            {
-                foreach (var doc in batch._batchFromServer.Messages)
-                {
-                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                    (BlittableJsonReaderObject metadata, string id, string changeVector) = BatchFromServer.GetMetadataFromBlittable(doc.Data);
-                    lastReceivedChangeVector = changeVector;
-                    SubscriptionConnection.WriteDocumentOrException(context, writer, document: null, doc.Data, metadata, doc.Exception, id, null, null, null);
-                    docsToFlush++;
-
-                    if (await SubscriptionConnection.FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, CancellationTokenSource.Token) == false)
-                        continue;
-
-                    docsToFlush = 0;
-                    sendingCurrentBatchStopwatch.Restart();
-                }
-
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
-                SubscriptionConnection.WriteEndOfBatch(writer);
-
-                AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Flushing docs collected from shard '{shard}'"));
-                await SubscriptionConnection.FlushDocsToClientAsync(SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
-            }
-
-            batch.LastSentChangeVectorInBatch = lastReceivedChangeVector;
-            await WaitForClientAck(replyFromClientTask);
-            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Shard '{shard}' got ack from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
         }
 
         internal async Task SendConfirmToClientAsync()
