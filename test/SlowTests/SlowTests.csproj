@@ -133,7 +133,6 @@
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
     <ProjectReference Include="..\..\tools\Raven.Migrator\Raven.Migrator.csproj" />
-    <ProjectReference Include="..\..\tools\rvn\rvn.csproj" />
     <ProjectReference Include="..\..\tools\Voron.Recovery\Voron.Recovery.csproj" />
     <ProjectReference Include="..\EmbeddedTests\EmbeddedTests.csproj" />
     <ProjectReference Include="..\FastTests\FastTests.csproj" />

@@ -187,7 +187,7 @@ namespace Raven.Server
                             if (rerun == false && CommandLineSwitches.LaunchBrowser)
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.GetNodeHttpServerUrl());
 
-                            new ClusterMessage(Console.Out, server.ServerStore).Print();
+                            new ClusterMessage(Console.Out, server.ServerStore.Engine.Tag, server.ServerStore.Engine.ClusterId).Print();
 
                             var prevColor = Console.ForegroundColor;
                             Console.Write("Server available on: ");

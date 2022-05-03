@@ -45,6 +45,8 @@ namespace Raven.Server.Config
 
         public CoreConfiguration Core { get; }
 
+        public SecurityConfiguration Security { get; }
+
 #if !RVN
         public HttpConfiguration Http { get; }
 
@@ -56,7 +58,6 @@ namespace Raven.Server.Config
 
         public StorageConfiguration Storage { get; }
 
-        public SecurityConfiguration Security { get; }
 
         public BackupConfiguration Backup { get; }
 
