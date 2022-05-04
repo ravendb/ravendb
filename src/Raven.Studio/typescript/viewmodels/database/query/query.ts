@@ -947,7 +947,7 @@ class query extends viewModelBase {
 
     killQuery() {
         const db = this.activeDatabase();
-        this.confirmationMessage("Kill the query", "Do you want to kill currently running query?")
+        this.confirmationMessage("Abort the query", "Do you want to abort currently running query?")
             .done(result => {
                 if (result.can) {
                     this.showKillQueryButton(false);
