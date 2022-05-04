@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Highlighting)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseDifferentPreAndPostTagsPerField(Options options)
         {
             using (var store = GetDocumentStore(options))

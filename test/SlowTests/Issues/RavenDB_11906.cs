@@ -93,7 +93,7 @@ namespace SlowTests.Issues
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-18144")]
         public void SupportForCreateFieldWithOptions(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -129,6 +129,7 @@ namespace SlowTests.Issues
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-18144")]
         public void CheckHighlighting(Options options)
         {
             using (var store = GetDocumentStore(options))
