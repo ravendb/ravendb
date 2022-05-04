@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -29,11 +28,12 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
 
     protected override CancellationToken CancellationToken => RequestHandler.Database.DatabaseShutdown;
 
-    protected override void Initialize(DocumentsOperationContext context)
+    protected override async Task ExecuteInternalAsync(DocumentsOperationContext context)
     {
-        var txr = context.OpenReadTransaction();
-
-        Disposables.Add(txr);
+        using (context.OpenReadTransaction())
+        {
+            await base.ExecuteInternalAsync(context);
+        }
     }
 
     protected override ValueTask<DocumentsByIdResult<Document>> GetDocumentsByIdImplAsync(DocumentsOperationContext context, StringValues ids, StringValues includePaths,
