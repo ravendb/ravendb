@@ -1,22 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using FastTests.Graph;
+﻿using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Security;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,10 +25,7 @@ namespace SlowTests.Issues
                        AdminCertificate = certificates.ServerCertificate.Value,
                        Encrypted = true
                    }))
-            using (var store2 = GetDocumentStore(new Options
-                   {
-                       ClientCertificate = certificates.ServerCertificate.Value
-                   }))
+            using (var store2 = GetDocumentStore(new Options { ClientCertificate = certificates.ServerCertificate.Value }))
             {
                 var db = await GetDocumentDatabaseInstanceFor(encryptedStore);
                 db.Configuration.Replication.MaxSizeToSend = new Size(16, SizeUnit.Kilobytes);

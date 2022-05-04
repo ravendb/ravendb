@@ -385,6 +385,12 @@ namespace Raven.Server.Documents.Replication
 
         private bool CanContinueBatch(ReplicationState state, ref long next)
         {
+            if (state.NumberOfItemsSent == 0)
+            {
+                // always send at least one item
+                return true;
+            }
+
             if (MissingAttachmentsInLastBatch)
             {
                 // we do have missing attachments but we haven't gathered yet any of the missing hashes
