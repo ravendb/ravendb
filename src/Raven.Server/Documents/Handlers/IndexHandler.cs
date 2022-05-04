@@ -347,14 +347,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/suggest-index-merge", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task SuggestIndexMerge()
         {
-            var mergeIndexSuggestions = Database.IndexStore.ProposeIndexMergeSuggestions();
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, mergeIndexSuggestions.ToJson());
-            }
+            using (var processor = new IndexHandlerProcessorForSuggestIndexMerge(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/try", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
