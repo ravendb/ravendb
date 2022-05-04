@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using FastTests;
 using Raven.Client.Documents.Commands;
+using Raven.Server.Documents.Commands;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -71,6 +72,49 @@ namespace SlowTests.Sharding.Issues
                     session.Advanced.RequestExecutor.Execute(command2, context);
 
                     Assert.Equal(HttpStatusCode.NotModified, command2.StatusCode);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldGenerateCSharpClass(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var command = new GenerateClassFromDocumentCommand("users/1", "csharp");
+
+                    session.Advanced.RequestExecutor.Execute(command, context);
+
+                    string commandResult = command.Result;
+
+
+                    Assert.Equal(@"using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SlowTests.Core.Utils.Entities
+{
+	public class User
+	{
+		public object AddressId { get; set; } 
+		public int Count { get; set; } 
+		public object LastName { get; set; } 
+		public object Name { get; set; } 
+	}
+}", commandResult);
                 }
             }
         }
