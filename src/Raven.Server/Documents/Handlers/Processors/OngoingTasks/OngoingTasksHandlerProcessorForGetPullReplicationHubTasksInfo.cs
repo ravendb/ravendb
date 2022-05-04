@@ -1,20 +1,17 @@
-﻿using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
-using Raven.Client.Util;
-using Raven.Server.ServerWide;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.Http;
 using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
-    internal class OngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo : AbstractOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class OngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo : AbstractOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo<
+        DatabaseRequestHandler, DocumentsOperationContext>
     {
         private readonly OngoingTasksHandler _ongoingTasksHandler;
 
@@ -24,48 +21,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             _ongoingTasksHandler = requestHandler;
         }
 
-        protected override bool SupportsCurrentNode => true;
-
-        protected override async ValueTask HandleCurrentNodeAsync()
+        protected override IEnumerable<OngoingTaskPullReplicationAsHub> GetOngoingTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology,
+            long key)
         {
-            var key = RequestHandler.GetLongQueryString("key");
-
-            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                ClusterTopology clusterTopology;
-                PullReplicationDefinition def;
-                using (context.OpenReadTransaction())
-                {
-                    clusterTopology = RequestHandler.ServerStore.GetClusterTopology(context);
-                    using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.Database.Name))
-                    {
-                        if (rawRecord == null)
-                            throw new DatabaseDoesNotExistException(RequestHandler.Database.Name);
-
-                        def = rawRecord.GetHubPullReplicationById(key);
-                    }
-                }
-
-                if (def == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                var currentHandlers = RequestHandler.Database.ReplicationLoader.OutgoingHandlers.Where(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
-                    .Select(x => _ongoingTasksHandler.GetPullReplicationAsHubTaskInfo(clusterTopology, x.Destination as ExternalReplication))
-                    .ToList();
-
-                var response = new PullReplicationDefinitionAndCurrentConnections
-                {
-                    Definition = def,
-                    OngoingTasks = currentHandlers
-                };
-
-                await _ongoingTasksHandler.WriteResult(context, response.ToJson());
-            }
+            return RequestHandler.Database.ReplicationLoader.OutgoingHandlers.Where(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
+                .Select(x => _ongoingTasksHandler.GetPullReplicationAsHubTaskInfo(clusterTopology, x.Destination as ExternalReplication))
+                .ToList();
         }
-
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<PullReplicationDefinitionAndCurrentConnections> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
     }
 }
