@@ -16,6 +16,7 @@ public class GenerateClassFromDocumentCommand : RavenCommand<string>
     {
         _id = id ?? throw new ArgumentException(nameof(id));
         _lang = lang;
+        ResponseType = RavenCommandResponseType.Raw;
     }
 
     public override bool IsReadRequest => true;
