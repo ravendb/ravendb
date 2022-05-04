@@ -144,7 +144,7 @@ class runningQueries extends viewModelBase {
         })
             .done(result => {
                 if (result.can) {
-                    new killQueryCommand(db, query.IndexName, query.RunningQuery.QueryId)
+                    killQueryCommand.byIndexAndQueryId(db, query.IndexName, query.RunningQuery.QueryId)
                         .execute()
                         .done(() => messagePublisher.reportSuccess("Scheduled query kill"));
                 }
