@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Protobuf.WellKnownTypes;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
@@ -28,7 +29,7 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
 
     protected override CancellationToken CancellationToken => RequestHandler.Database.DatabaseShutdown;
 
-    protected override async Task ExecuteInternalAsync(DocumentsOperationContext context)
+    protected override async ValueTask ExecuteInternalAsync(DocumentsOperationContext context)
     {
         using (context.OpenReadTransaction())
         {

@@ -59,7 +59,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         }
     }
 
-    protected virtual async Task ExecuteInternalAsync(TOperationContext context)
+    protected virtual async ValueTask ExecuteInternalAsync(TOperationContext context)
     {
         var metadataOnly = RequestHandler.GetBoolValueQueryString("metadataOnly", required: false) ?? false;
         var includePaths = RequestHandler.GetStringValuesQueryString("include", required: false);

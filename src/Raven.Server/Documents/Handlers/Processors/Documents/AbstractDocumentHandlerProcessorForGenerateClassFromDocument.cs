@@ -18,8 +18,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGenerateClassFromDocu
         var lang = (RequestHandler.GetStringQueryString("lang", required: false) ?? "csharp")
             .Trim().ToLowerInvariant();
 
-        await HandleClassGeneration(id, lang);
+        await HandleClassGenerationAsync(id, lang);
     }
 
-    protected abstract ValueTask HandleClassGeneration(string id, string lang);
+    protected abstract ValueTask HandleClassGenerationAsync(string id, string lang);
 }

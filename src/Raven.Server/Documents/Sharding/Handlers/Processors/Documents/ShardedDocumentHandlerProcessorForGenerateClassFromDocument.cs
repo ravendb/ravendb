@@ -13,7 +13,7 @@ internal class ShardedDocumentHandlerProcessorForGenerateClassFromDocument : Abs
     {
     }
 
-    protected override async ValueTask HandleClassGeneration(string id, string lang)
+    protected override async ValueTask HandleClassGenerationAsync(string id, string lang)
     {
         var command = new GenerateClassFromDocumentCommand(id, lang);
 

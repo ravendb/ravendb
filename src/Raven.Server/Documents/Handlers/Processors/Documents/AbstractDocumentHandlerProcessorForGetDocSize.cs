@@ -12,12 +12,12 @@ internal abstract class AbstractDocumentHandlerProcessorForGetDocSize<TRequestHa
     {
     }
 
-    protected abstract ValueTask HandleDocSize(string docId);
+    protected abstract ValueTask HandleDocSizeAsync(string docId);
 
     public override async ValueTask ExecuteAsync()
     {
         var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-        await HandleDocSize(id);
+        await HandleDocSizeAsync(id);
     }
 }
