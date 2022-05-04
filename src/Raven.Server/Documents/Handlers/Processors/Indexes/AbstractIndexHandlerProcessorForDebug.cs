@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
-internal abstract class AbstractIndexHandlerProcessorForDebug<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractIndexHandlerProcessorForDebug<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<object, TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
