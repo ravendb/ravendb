@@ -27,8 +27,6 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
 
     protected override bool SupportsShowingRequestInTrafficWatch => true;
 
-    protected override bool SupportsHandlingOfMissingIncludes => false;
-
     protected override CancellationToken CancellationToken => RequestHandler.Database.DatabaseShutdown;
 
     protected override void Initialize(DocumentsOperationContext context)
@@ -126,11 +124,6 @@ internal class DocumentHandlerProcessorForGet : AbstractDocumentHandlerProcessor
         writer.WritePropertyName(propertyName);
 
         await writer.WriteIncludesAsync(context, includes, token);
-    }
-
-    protected override ValueTask HandleMissingIncludes(DocumentsOperationContext context, DocumentsByIdResult<Document> result, bool metadataOnly)
-    {
-        throw new NotSupportedException($"{nameof(HandleMissingIncludes)} is not supported by {nameof(DocumentHandlerProcessorForGet)}");
     }
 
     protected override ValueTask<DocumentsResult> GetDocumentsImplAsync(DocumentsOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)
