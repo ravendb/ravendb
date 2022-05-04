@@ -8,6 +8,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedIndexHandler : ShardedDatabaseRequestHandler
     {
+        [RavenShardedAction("/databases/*/indexes/replace", "POST")]
+        public async Task Replace()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForReplace(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/indexes", "GET")]
         public async Task GetAll()
         {
