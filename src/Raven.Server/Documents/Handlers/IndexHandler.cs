@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Jint.Native;
 using Jint.Native.Object;
@@ -13,7 +12,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
@@ -23,7 +21,6 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers
@@ -92,72 +89,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/debug", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Debug()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            var operation = GetStringQueryString("op");
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                if (string.Equals(operation, "map-reduce-tree", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (index.Type.IsMapReduce() == false)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["Error"] = $"{index.Name} is not map-reduce index"
-                        });
-
-                        return;
-                    }
-
-                    var docIds = GetStringValuesQueryString("docId", required: false);
-
-                    using (index.GetReduceTree(docIds.ToArray(), out IEnumerable<ReduceTree> trees))
-                    {
-                        writer.WriteReduceTrees(trees);
-                    }
-
-                    return;
-                }
-
-                if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
-                {
-                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out IEnumerable<string> ids))
-                    {
-                        writer.WriteArrayOfResultsAndCount(ids);
-                    }
-
-                    return;
-                }
-
-                if (string.Equals(operation, "entries-fields", StringComparison.OrdinalIgnoreCase))
-                {
-                    var fields = index.GetEntriesFields();
-
-                    writer.WriteStartObject();
-
-                    writer.WriteArray(nameof(fields.Static), fields.Static);
-                    writer.WriteComma();
-
-                    writer.WriteArray(nameof(fields.Dynamic), fields.Dynamic);
-
-                    writer.WriteEndObject();
-
-                    return;
-                }
-
-                throw new NotSupportedException($"{operation} is not supported");
-            }
+            using (var processor = new IndexHandlerProcessorForDebug(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
