@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,6 +8,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
@@ -46,16 +46,16 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Includes of revisions / counters / time series / compare exchanges");
 
         if (counters.Count > 0)
-            throw new NotSupportedException("Include of counters is not supported");
+            throw new NotSupportedInShardingException("Include of counters is not supported");
 
         if (revisions != null)
-            throw new NotSupportedException("Include of revisions is not supported");
+            throw new NotSupportedInShardingException("Include of revisions is not supported");
 
         if (timeSeries != null)
-            throw new NotSupportedException("Include of time series is not supported");
+            throw new NotSupportedInShardingException("Include of time series is not supported");
 
         if (compareExchangeValues.Count > 0)
-            throw new NotSupportedException("Include of compare exchange is not supported");
+            throw new NotSupportedInShardingException("Include of compare exchange is not supported");
 
         var idsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, ids);
         var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths, etag, metadataOnly);
