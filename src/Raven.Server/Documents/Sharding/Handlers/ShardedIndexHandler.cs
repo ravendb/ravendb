@@ -150,6 +150,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedIndexHandlerProcessorForTotalTime(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/indexes/suggest-index-merge", "GET")]
+        public async Task SuggestIndexMerge()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForSuggestIndexMerge(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
 

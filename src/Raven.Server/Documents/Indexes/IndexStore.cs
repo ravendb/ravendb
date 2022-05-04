@@ -2167,20 +2167,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexMergeResults ProposeIndexMergeSuggestions()
-        {
-            var dic = new Dictionary<string, IndexDefinition>();
-
-            foreach (var index in GetIndexes())
-            {
-                dic[index.Name] = index.GetIndexDefinition();
-            }
-
-            var indexMerger = new IndexMerger(dic);
-
-            return indexMerger.ProposeIndexMergeSuggestions();
-        }
-
         public static void ThrowIndexCreationException(string indexType, string indexName, Exception exception, string reason, ServerStore serverStore)
         {
             throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {serverStore.NodeTag} state is {serverStore.LastStateChangeReason()}", exception);
