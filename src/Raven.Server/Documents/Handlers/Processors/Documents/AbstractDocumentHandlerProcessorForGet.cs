@@ -49,8 +49,6 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected abstract bool SupportsShowingRequestInTrafficWatch { get; }
 
-    protected abstract bool SupportsHandlingOfMissingIncludes { get; }
-
     protected abstract CancellationToken CancellationToken { get; }
 
     protected abstract void Initialize(TOperationContext jsonOperationContext);
@@ -155,9 +153,6 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.Etag + "\"";
 
-        if (SupportsHandlingOfMissingIncludes)
-            await HandleMissingIncludes(context, result, metadataOnly);
-
         return await WriteDocumentsByIdResultAsync(context, metadataOnly, result);
     }
 
@@ -174,18 +169,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             
             writer.WriteComma();
 
-            string includesPropertyName = nameof(GetDocumentsResult.Includes);
-
-            if (result.Includes.Count > 0)
-            {
-                await WriteIncludesAsync(writer, context, includesPropertyName, result.Includes, CancellationToken);
-            }
-            else
-            {
-                writer.WritePropertyName(includesPropertyName);
-                writer.WriteStartObject();
-                writer.WriteEndObject();
-            }
+            await WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken);
 
             if (result.CounterIncludes?.Count > 0)
             {
@@ -231,8 +215,6 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected abstract ValueTask<DocumentsByIdResult<TDocumentType>> GetDocumentsByIdImplAsync(TOperationContext context, StringValues ids,
         StringValues includePaths, RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, string etag);
-
-    protected abstract ValueTask HandleMissingIncludes(TOperationContext context, DocumentsByIdResult<TDocumentType> result, bool metadataOnly);
 
     protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> GetDocumentsAsync(TOperationContext context, long? etag, StartsWithParams startsWith, bool metadataOnly, string changeVector)
     {

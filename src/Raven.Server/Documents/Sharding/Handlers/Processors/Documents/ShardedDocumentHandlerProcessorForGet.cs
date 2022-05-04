@@ -32,8 +32,6 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     protected override bool SupportsShowingRequestInTrafficWatch => false;
 
-    protected override bool SupportsHandlingOfMissingIncludes => true;
-
     protected override CancellationToken CancellationToken => _operationCancelToken.Token;
 
     protected override void Initialize(TransactionOperationContext context)
@@ -63,7 +61,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths, etag, metadataOnly);
         var shardedReadResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
 
-        return new DocumentsByIdResult<BlittableJsonReaderObject>
+        var result = new DocumentsByIdResult<BlittableJsonReaderObject>
         {
             Etag = shardedReadResult.CombinedEtag,
             Documents = shardedReadResult.Result?.Documents,
@@ -71,6 +69,27 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             MissingIncludes = shardedReadResult.Result?.MissingIncludes,
             StatusCode = (HttpStatusCode)shardedReadResult.StatusCode
         };
+
+        if (result.MissingIncludes?.Count > 0)
+        {
+            var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, result.MissingIncludes);
+            var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, missingIncludeIdsByShard, includePaths: null, etag: null, metadataOnly: metadataOnly);
+            var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, CancellationToken);
+
+            foreach (var missing in missingResult.Result.Documents)
+            {
+                if (missing == null)
+                    continue;
+
+                result.Includes ??= new List<BlittableJsonReaderObject>();
+
+                result.Includes.Add(missing);
+            }
+
+            result.Etag = ComputeHttpEtags.CombineEtags(new[] { result.Etag, missingResult.CombinedEtag });
+        }
+
+        return result;
     }
 
     protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer, TransactionOperationContext context, string propertyName, List<BlittableJsonReaderObject> documentsToWrite,
@@ -86,25 +105,6 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         writer.WritePropertyName(propertyName);
 
         await writer.WriteIncludesAsync(includes, token);
-    }
-
-    protected override async ValueTask HandleMissingIncludes(TransactionOperationContext context, DocumentsByIdResult<BlittableJsonReaderObject> result, bool metadataOnly)
-    {
-        if (result.MissingIncludes.Count > 0)
-        {
-            var ids = result.MissingIncludes;
-            var idsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, ids);
-            var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths: null, etag: null, metadataOnly: metadataOnly);
-            var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
-
-            foreach (var missing in missingResult.Result.Documents)
-            {
-                if (missing == null)
-                    continue;
-
-                result.Includes.Add(missing);
-            }
-        }
     }
 
     protected override async ValueTask<DocumentsResult> GetDocumentsImplAsync(TransactionOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)
