@@ -552,7 +552,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryFromStaticIndexWithLoadFromSelectAndProject(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -979,7 +979,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadWithStringParameterFromSelectWithoutProjection(Options options)
         {
             using (var store = GetDocumentStore(options))
