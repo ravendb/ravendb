@@ -34,10 +34,6 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     protected override CancellationToken CancellationToken => _operationCancelToken.Token;
 
-    protected override void Initialize(TransactionOperationContext context)
-    {
-    }
-
     protected override async ValueTask<DocumentsByIdResult<BlittableJsonReaderObject>> GetDocumentsByIdImplAsync(TransactionOperationContext context, StringValues ids,
         StringValues includePaths, RevisionIncludeField revisions, StringValues counters, HashSet<AbstractTimeSeriesRange> timeSeries, StringValues compareExchangeValues, bool metadataOnly, string etag)
     {

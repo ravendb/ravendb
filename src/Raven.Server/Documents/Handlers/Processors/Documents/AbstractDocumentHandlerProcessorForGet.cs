@@ -51,81 +51,82 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected abstract CancellationToken CancellationToken { get; }
 
-    protected abstract void Initialize(TOperationContext jsonOperationContext);
-
     public override async ValueTask ExecuteAsync()
+    {
+        using (ContextPool.AllocateOperationContext(out TOperationContext context))
+        {
+            await ExecuteInternalAsync(context);
+        }
+    }
+
+    protected virtual async Task ExecuteInternalAsync(TOperationContext context)
     {
         var metadataOnly = RequestHandler.GetBoolValueQueryString("metadataOnly", required: false) ?? false;
         var includePaths = RequestHandler.GetStringValuesQueryString("include", required: false);
 
-        using (ContextPool.AllocateOperationContext(out TOperationContext context))
+        var sw = Stopwatch.StartNew();
+
+        StringValues ids;
+
+        if (_method == HttpMethod.Get)
+            ids = RequestHandler.GetStringValuesQueryString("id", required: false);
+        else if (_method == HttpMethod.Post)
+            ids = await GetIdsFromRequestBody(context);
+        else
+            throw new NotSupportedException($"Unhandled method type: {_method}");
+
+        if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
+            RequestHandler.AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
+
+        (long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats;
+        int pageSize;
+        string actionName;
+
+        if (ids.Count > 0)
         {
-            var sw = Stopwatch.StartNew();
+            pageSize = ids.Count;
+            actionName = nameof(GetDocumentsByIdAsync);
 
-            StringValues ids;
+            var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-            if (_method == HttpMethod.Get)
-                ids = RequestHandler.GetStringValuesQueryString("id", required: false);
-            else if (_method == HttpMethod.Post)
-                ids = await GetIdsFromRequestBody(context);
-            else
-                throw new NotSupportedException($"Unhandled method type: {_method}");
+            // includes
+            var counters = RequestHandler.GetStringValuesQueryString("counter", required: false);
+            var revisions = GetRevisionsToInclude();
+            var timeSeries = GetTimeSeriesToInclude();
+            var compareExchangeValues = RequestHandler.GetStringValuesQueryString("cmpxchg", required: false);
 
-            if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
-                RequestHandler.AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
+            responseWriteStats = await GetDocumentsByIdAsync(context, ids, includePaths, revisions, counters, timeSeries, compareExchangeValues, metadataOnly, etag);
+        }
+        else
+        {
+            pageSize = RequestHandler.GetPageSize();
+            actionName = nameof(GetDocumentsAsync);
 
-            Initialize(context);
+            var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+            var etag = RequestHandler.GetLongQueryString("etag", false);
 
-            (long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats;
-            int pageSize;
-            string actionName;
+            var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
 
-            if (ids.Count > 0)
+            StartsWithParams startsWithParams = null;
+
+            if (isStartsWith)
             {
-                pageSize = ids.Count;
-                actionName = nameof(GetDocumentsByIdAsync);
-
-                var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-
-                // includes
-                var counters = RequestHandler.GetStringValuesQueryString("counter", required: false);
-                var revisions = GetRevisionsToInclude();
-                var timeSeries = GetTimeSeriesToInclude();
-                var compareExchangeValues = RequestHandler.GetStringValuesQueryString("cmpxchg", required: false);
-
-                responseWriteStats = await GetDocumentsByIdAsync(context, ids, includePaths, revisions, counters, timeSeries, compareExchangeValues, metadataOnly, etag);
-            }
-            else
-            {
-                pageSize = RequestHandler.GetPageSize();
-                actionName = nameof(GetDocumentsAsync);
-
-                var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-                var etag = RequestHandler.GetLongQueryString("etag", false);
-
-                var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
-
-                StartsWithParams startsWithParams = null;
-
-                if (isStartsWith)
+                startsWithParams = new StartsWithParams
                 {
-                    startsWithParams = new StartsWithParams
-                    {
-                        IdPrefix = HttpContext.Request.Query["startsWith"],
-                        Matches = HttpContext.Request.Query["matches"],
-                        Exclude = HttpContext.Request.Query["exclude"],
-                        StartAfterId = HttpContext.Request.Query["startAfter"],
-                    };
-                }
-
-                responseWriteStats = await GetDocumentsAsync(context, etag, startsWithParams, metadataOnly, changeVector);
+                    IdPrefix = HttpContext.Request.Query["startsWith"],
+                    Matches = HttpContext.Request.Query["matches"],
+                    Exclude = HttpContext.Request.Query["exclude"],
+                    StartAfterId = HttpContext.Request.Query["startAfter"],
+                };
             }
 
-            if (responseWriteStats != NoResults)
-            {
-                AddPagingPerformanceHint(PagingOperationType.Documents, actionName, HttpContext.Request.QueryString.Value, responseWriteStats.NumberOfResults,
-                    pageSize, sw.ElapsedMilliseconds, responseWriteStats.TotalDocumentsSizeInBytes);
-            }
+            responseWriteStats = await GetDocumentsAsync(context, etag, startsWithParams, metadataOnly, changeVector);
+        }
+
+        if (responseWriteStats != NoResults)
+        {
+            AddPagingPerformanceHint(PagingOperationType.Documents, actionName, HttpContext.Request.QueryString.Value, responseWriteStats.NumberOfResults,
+                pageSize, sw.ElapsedMilliseconds, responseWriteStats.TotalDocumentsSizeInBytes);
         }
     }
 
