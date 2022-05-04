@@ -130,6 +130,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/indexes/debug", "GET")]
+        public async Task Debug()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForDebug(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/indexes/source", "GET")]
         public async Task Source()
         {
