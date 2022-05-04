@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
-internal abstract class AbstractAdminIndexHandlerProcessorForState<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractAdminIndexHandlerProcessorForState<TRequestHandler, TOperationContext> : AbstractHandlerProxyNoContentProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext 
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
