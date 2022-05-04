@@ -1,11 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
@@ -15,15 +14,19 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override bool SupportsCurrentNode => false;
-
-        protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
-
-        protected override Task HandleRemoteNodeAsync(ProxyCommand<PullReplicationDefinitionAndCurrentConnections> command, OperationCancelToken token)
+        protected override IEnumerable<OngoingTaskPullReplicationAsHub> GetOngoingTasks(TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, long key)
         {
-            var shardNumber = GetShardNumber();
-
-            return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
+            if (databaseRecord.HubPullReplications != null)
+            {
+                foreach (var replicationDefinition in databaseRecord.HubPullReplications)
+                {
+                    yield return new OngoingTaskPullReplicationAsHub()
+                    {
+                        TaskId = replicationDefinition.TaskId,
+                        TaskName = replicationDefinition.Name,
+                    };
+                }
+            }
         }
     }
 }

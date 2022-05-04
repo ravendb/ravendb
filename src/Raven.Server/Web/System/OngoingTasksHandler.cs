@@ -305,16 +305,6 @@ namespace Raven.Server.Web.System
                 await processor.ExecuteAsync();
         }
 
-        internal async Task WriteResult(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
-        {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, dynamicJsonValue);
-            }
-        }
-
         [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ToggleSubscriptionTaskState()
         {
