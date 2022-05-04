@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                             {
                                                 BlittableJsonToken.String => ((LazyStringValue)property.Value).ToString(),
                                                 BlittableJsonToken.CompressedString => ((LazyCompressedStringValue)property.Value).ToString(),
-                                                _ => throw new Exception("If this happens, we have a bug.")
+                                                _ => throw new NotSupportedException($"The token type '{property.Token.ToString()}' is not supported.")
                                             };
                                         }
                                         else
@@ -264,9 +264,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                                     
                                     if (tokensDictionary.TryGetValue(key, out var existingHighlights))
-                                    {
-                                        throw new Exception("??? Please look at LuceneIndexReadOperation");
-                                    }
+                                        throw new NotSupportedException("Multiple highlightings for the same field and group key are not supported.");
 
                                     tokensDictionary[key] = fragments.ToArray();
 
@@ -385,7 +383,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     case string[] as1:
                         continue;
                     default:
-                        throw new Exception("If this happens, we have a bug.");
+                        throw new NotSupportedException($"The type '{term.Value.Values.GetType().FullName}' is not supported.");
                 }
                 
                 term.Value.Values = nls;
