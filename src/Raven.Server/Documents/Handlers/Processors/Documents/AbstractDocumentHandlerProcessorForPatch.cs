@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
@@ -17,7 +16,7 @@ internal abstract class AbstractDocumentHandlerProcessorForPatch<TRequestHandler
     public override async ValueTask ExecuteAsync()
     {
         var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-        var isTest = RequestHandler.GetBoolValueQueryString("isTest", required: false) ?? false;
+        var isTest = RequestHandler.GetBoolValueQueryString("test", required: false) ?? false;
         var debugMode = RequestHandler.GetBoolValueQueryString("debug", required: false) ?? isTest;
         var skipPatchIfChangeVectorMismatch = RequestHandler.GetBoolValueQueryString("skipPatchIfChangeVectorMismatch", required: false) ?? false;
         var changeVector = RequestHandler.GetStringFromHeaders("If-Match");
