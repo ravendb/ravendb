@@ -13,13 +13,13 @@ internal abstract class AbstractDocumentHandlerProcessorForHead<TRequestHandler,
     {
     }
 
-    protected abstract ValueTask HandleHeadRequest(string docId, string changeVector);
+    protected abstract ValueTask HandleHeadRequestAsync(string docId, string changeVector);
 
     public override async ValueTask ExecuteAsync()
     {
         var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
         var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-        await HandleHeadRequest(id, changeVector);
+        await HandleHeadRequestAsync(id, changeVector);
     }
 }

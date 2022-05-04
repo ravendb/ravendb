@@ -14,7 +14,7 @@ internal class DocumentHandlerProcessorForGetDocSize : AbstractDocumentHandlerPr
     {
     }
 
-    protected override async ValueTask HandleDocSize(string docId)
+    protected override async ValueTask HandleDocSizeAsync(string docId)
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())

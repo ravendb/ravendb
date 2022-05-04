@@ -13,7 +13,7 @@ internal class ShardedDocumentHandlerProcessorForDelete : AbstractDocumentHandle
     {
     }
 
-    protected override async ValueTask HandleDeleteDocument(string docId, string changeVector)
+    protected override async ValueTask HandleDeleteDocumentAsync(string docId, string changeVector)
     {
         var command = new DeleteDocumentCommand(docId, changeVector);
 

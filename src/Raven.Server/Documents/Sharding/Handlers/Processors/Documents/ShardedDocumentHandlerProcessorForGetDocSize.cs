@@ -13,7 +13,7 @@ internal class ShardedDocumentHandlerProcessorForGetDocSize : AbstractDocumentHa
     {
     }
 
-    protected override async ValueTask HandleDocSize(string docId)
+    protected override async ValueTask HandleDocSizeAsync(string docId)
     {
         var command = new GetDocumentSizeCommand(docId);
 

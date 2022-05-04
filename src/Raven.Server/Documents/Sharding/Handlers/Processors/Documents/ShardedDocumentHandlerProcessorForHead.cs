@@ -13,7 +13,7 @@ internal class ShardedDocumentHandlerProcessorForHead : AbstractDocumentHandlerP
     {
     }
 
-    protected override async ValueTask HandleHeadRequest(string docId, string changeVector)
+    protected override async ValueTask HandleHeadRequestAsync(string docId, string changeVector)
     {
         var command = new HeadDocumentCommand(docId, changeVector);
 

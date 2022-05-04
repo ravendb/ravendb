@@ -12,7 +12,7 @@ internal class DocumentHandlerProcessorForHead : AbstractDocumentHandlerProcesso
     {
     }
 
-    protected override ValueTask HandleHeadRequest(string docId, string changeVector)
+    protected override ValueTask HandleHeadRequestAsync(string docId, string changeVector)
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())

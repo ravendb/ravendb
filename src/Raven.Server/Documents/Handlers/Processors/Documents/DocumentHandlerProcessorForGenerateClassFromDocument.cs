@@ -13,7 +13,7 @@ internal class DocumentHandlerProcessorForGenerateClassFromDocument : AbstractDo
     {
     }
 
-    protected override async ValueTask HandleClassGeneration(string id, string lang)
+    protected override async ValueTask HandleClassGenerationAsync(string id, string lang)
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())

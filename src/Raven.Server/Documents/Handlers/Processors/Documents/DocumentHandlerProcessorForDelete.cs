@@ -11,7 +11,7 @@ internal class DocumentHandlerProcessorForDelete : AbstractDocumentHandlerProces
     {
     }
 
-    protected override async ValueTask HandleDeleteDocument(string docId, string changeVector)
+    protected override async ValueTask HandleDeleteDocumentAsync(string docId, string changeVector)
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
