@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new GetOngoingTaskInfoCommand(_taskId, _type);
         }
 
-        private class GetOngoingTaskInfoCommand : RavenCommand<OngoingTask>
+        internal class GetOngoingTaskInfoCommand : RavenCommand<OngoingTask>
         {
             private readonly string _taskName;
             private readonly long _taskId;

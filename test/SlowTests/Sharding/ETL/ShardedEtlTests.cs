@@ -673,7 +673,7 @@ person.addCounter(loadCounter('down'));
 
                 for (int i = 0; i < 3; i++)
                 {
-                    var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation($"{name}${i}", OngoingTaskType.RavenEtl));
+                    var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
                     Assert.Null(ongoingTask);
                 }
             }
@@ -715,7 +715,7 @@ person.addCounter(loadCounter('down'));
 
                 store.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration));
 
-                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name + "$0", OngoingTaskType.RavenEtl));
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
 
                 Assert.Equal(OngoingTaskState.PartiallyEnabled, ongoingTask.TaskState);
             }
@@ -753,7 +753,7 @@ person.addCounter(loadCounter('down'));
                 Assert.True(toggleResult.RaftCommandIndex > 0);
                 Assert.True(toggleResult.TaskId > 0);
 
-                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name + "$1", OngoingTaskType.RavenEtl));
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
                 Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
             }
         }
@@ -904,16 +904,13 @@ person.addCounter(loadCounter('down'));
 
                 for (int i = 0; i < 3; i++)
                 {
-                    var taskName = $"{name}${i}";
-                    var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskName, OngoingTaskType.RavenEtl));
+                    var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
 
                     Assert.NotNull(ongoingTask);
-                    Assert.Equal(taskName, ongoingTask.TaskName);
+                    Assert.Equal(name, ongoingTask.TaskName);
                     Assert.Equal("A", ongoingTask.ResponsibleNode.NodeTag);
                     Assert.Equal(OngoingTaskConnectionStatus.Active, ongoingTask.TaskConnectionStatus);
                 }
-
-
             }
         }
 
