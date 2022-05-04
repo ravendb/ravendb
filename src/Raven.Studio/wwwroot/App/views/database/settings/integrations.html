@@ -39,6 +39,14 @@
                         <span>.</span>
                     </small>
                 </div>
+                <div class="margin-top padding padding-xs text-warning bg-warning" data-bind="visible: needsLicenseUpgrade">
+                    <small>
+                        <i class="icon-warning"></i>
+                        <span>
+                            You cannot use this feature because your license doesn't allow neither PostgreSQL integration feature nor Power BI
+                        </span>
+                    </small>
+                </div>
             </div>
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedPostgreSqlCredentials()">
