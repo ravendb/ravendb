@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
+using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
@@ -302,6 +303,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 throw new NotSupportedException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
             case ValueType.EmptyString:
                 scope.Write(field.Id, EmptyString.Span, ref entryWriter);
+                return;
+            case ValueType.CoraxSpatialEntry:
+                scope.Write(field.Id, (CoraxSpatialEntry)value, ref entryWriter);
                 return;
             case ValueType.Stream:
                 throw new NotImplementedException();

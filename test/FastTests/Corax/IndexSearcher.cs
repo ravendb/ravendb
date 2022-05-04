@@ -1489,6 +1489,30 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void StartsWithSingle()
+        {
+            var entry = new IndexSingleEntry {Id = $"entry/1", Content = "tester"};
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            var analyzer = Analyzer.Create<WhitespaceTokenizer, LowerCaseTransformer>();
+            var mapping = new IndexFieldsMapping(ctx)
+                .AddBinding(IdIndex, idSlice, analyzer)
+                .AddBinding(ContentIndex, contentSlice, analyzer);
+
+            IndexEntries(ctx, new []{entry}, mapping);
+            using (var searcher = new IndexSearcher(Env, mapping))
+            {
+                var match = searcher.StartWithQuery("Content", "test");
+                var ids = new long[16];
+                var matchEq = searcher.TermQuery("Content", "tester");
+                Assert.Equal(1, matchEq.Fill(ids));
+                Assert.Equal(1, match.Fill(ids));
+            }
+        }
+        
+        [Fact]
         public void BigContainsTest()
         {
             var ids = ArrayPool<long>.Shared.Rent(2048);

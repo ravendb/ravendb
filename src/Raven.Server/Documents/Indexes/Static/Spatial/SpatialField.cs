@@ -1,16 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using GeoAPI;
 using Lucene.Net.Documents;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix.Tree;
+using Microsoft.Extensions.Azure;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow.Json;
 using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
+using Spatial4n.Util;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
@@ -71,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return null;
         }
 
-        public AbstractField[] CreateIndexableFields(object value)
+        public AbstractField[] LuceneCreateIndexableFields(object value)
         {
             var shape = value as IShape;
             if (shape != null || TryReadShape(value, out shape))
@@ -84,6 +90,26 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             }
 
             return Array.Empty<AbstractField>();
+        }
+
+        public CoraxSpatialEntry CoraxCreateIndexableFields(object value)
+        {
+            var shape = value as IShape;
+            if (shape != null || TryReadShape(value, out shape))
+            {
+                if (shape.HasArea)
+                    throw new IndexInvalidException("You cannot index area. Your data should be a point.");
+                // Notice its a point so bounding box is just Point
+               
+                var geohashRaw = Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(shape.Center.Y ,shape.Center.X, _options?.MaxTreeLevel ?? SpatialOptions.DefaultGeohashLevel);
+
+                var geohash = Enumerable.Range(1, geohashRaw.Length).Select(i => geohashRaw.Substring(0, i)).ToList();
+                
+                
+                return new CoraxSpatialEntry(shape.Center.Y, shape.Center.X, geohash);
+            }
+
+            return default;
         }
 
         private bool TryReadShape(object value, out IShape shape)

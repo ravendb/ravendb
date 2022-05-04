@@ -51,7 +51,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
         _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);
     }
     
-    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction) => new CoraxIndexReadOperation(_index, _logger, readTransaction);
+    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction) => new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories);
 
     public override bool ContainsField(string field)
     {

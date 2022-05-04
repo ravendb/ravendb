@@ -33,7 +33,6 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -55,7 +54,8 @@ namespace SlowTests.Issues
                         {
                             x.WaitForNonStaleResults();
                         });
-
+                    var qu = q.ToString();
+                    WaitForUserToContinueTheTest(store);
                     var matches = q.Any();
                     Assert.True(matches);
                 }

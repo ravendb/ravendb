@@ -8,13 +8,13 @@ using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server.Compression;
 using Sparrow.Server.Platform;
 using Voron;
 
 namespace Corax
 {
-
     /*
      *  format: <total_length:short> <dynamic_field_metadata_table_prt:short> <known_field_count:short> <data_section> <dynamic_field_metadata_table> <known_field_pointers:short>[count]
      *  data: if <known_field_pointer> > 0 then type is <content> else is tuple<long,double,string>
@@ -34,6 +34,7 @@ namespace Corax
         Tuple = 1 << 1,
         List = 1 << 2,
         Raw = 1 << 3,
+        Special = 1 << 5,
 
         EmptyList = 1 << 13, 
         HasNulls = 1 << 14, // Helper for list writer.
@@ -41,6 +42,14 @@ namespace Corax
 
         TupleList = List | Tuple,
         RawList = List | Raw
+    }
+
+    [Flags]
+    public enum SpecialEntryFieldType : byte
+    {
+        Null = 0,
+        SpatialLongLat = 1,
+        SpatialWkt = 1 << 2,
     }
 
     [StructLayout(LayoutKind.Explicit, Size = HeaderSize)]
@@ -77,8 +86,8 @@ namespace Corax
         private readonly IndexFieldsMapping _knownFields;
 
         // The usable part of the buffer, the metadata space will be removed from the usable space.
-        private readonly Span<byte> _buffer;        
-        
+        private readonly Span<byte> _buffer;
+
         // Temporary location for the pointers, these will eventually be encoded based on how big they are.
         // <256 bytes we could use a single byte
         // <65546 bytes we could use a single ushort
@@ -87,13 +96,13 @@ namespace Corax
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsEmpty() => Unsafe.SizeOf<IndexEntryHeader>() == _dataIndex;
-    
+
         // Current pointer.        
         private int _dataIndex;
-        
+
         // Dynamic fields will use a full integer to store the pointer location at the metadata table. They are supposed to be rare 
         // so we wont even try to make the process more complex just to deal with them efficienly.
-        private int _dynamicFieldIndex; 
+        private int _dynamicFieldIndex;
 
         public IndexEntryWriter(Span<byte> buffer, IndexFieldsMapping knownFields = null)
         {
@@ -106,7 +115,7 @@ namespace Corax
             else
             {
                 _knownFields = knownFields;
-            }                
+            }
 
             int knownFieldMetadataSize = _knownFields.Count * sizeof(uint);
             _knownFieldsLocations = MemoryMarshal.Cast<byte, int>(buffer[^knownFieldMetadataSize..]);
@@ -144,14 +153,14 @@ namespace Corax
 
             _dataIndex += length + value.Length;
         }
-        
+
         public void WriteRaw(int field, ReadOnlySpan<byte> binaryValue)
         {
             //STRUCT
             //<type><size_of_binary><binary>
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
-            
+
             if (binaryValue.Length == 0)
                 return;
 
@@ -166,6 +175,80 @@ namespace Corax
 
             binaryValue.CopyTo(_buffer.Slice(dataLocation));
             dataLocation += binaryValue.Length;
+
+            _dataIndex = dataLocation;
+        }
+
+
+        public unsafe struct RawSpatialEntry
+        {
+            public readonly double Latitude;
+            public readonly double Longitude;
+
+            public RawSpatialEntry(double latitude, double longitude)
+            {
+                Latitude = latitude;
+                Longitude = longitude;
+            }
+
+            // public RawSpatialEntry(string wkt, IReadOnlySpanEnumerator geohash)
+            // {
+            //     Latitude = null;
+            //     Longitude = null;
+            //     Wkt = wkt;
+            //     Geohash = geohash;
+            // }
+        }
+
+        public void WriteSpatialRaw<TEnumerator>(int field, double latitude, double longitude, TEnumerator geohash)
+            where TEnumerator : IReadOnlySpanEnumerator
+        {
+            //<type><lat><long>
+            //<type: List><amount_of_geohashes><pointer_to_string_length_table><geohash>
+            //Here we use a trick to get compatibility with the regular list :) 
+
+            Debug.Assert(field < _knownFields.Count);
+            Debug.Assert(_knownFieldsLocations[field] == Invalid);
+
+            if (geohash.Length == 0)
+                return;
+
+            int dataLocation = _dataIndex;
+
+            // Write known field pointer.
+            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.Special, dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)SpecialEntryFieldType.SpatialLongLat, dataLocation);
+
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], latitude);
+            dataLocation += sizeof(double);
+
+
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], longitude);
+            dataLocation += sizeof(double);
+
+            //We can just give _buffer[list_header..end] and read as normal list 
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.List, dataLocation);
+
+            dataLocation += VariableSizeEncoding.Write(_buffer, geohash.Length, dataLocation); // Size of list.
+
+            var stringPtrTableLocation = _buffer.Slice(dataLocation, sizeof(int));
+            dataLocation += sizeof(int);
+
+            int[] stringLengths = ArrayPool<int>.Shared.Rent(geohash.Length);
+            for (int i = 0; i < geohash.Length; i++)
+            {
+                var value = geohash[i];
+                value.CopyTo(_buffer[dataLocation..]);
+                dataLocation += value.Length;
+
+                stringLengths[i] = value.Length;
+            }
+
+            MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
+            dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..geohash.Length], dataLocation);
+            ArrayPool<int>.Shared.Return(stringLengths);
 
             _dataIndex = dataLocation;
         }
@@ -386,7 +469,7 @@ namespace Corax
         {
             // We need to know how big the metadata table is going to be.
             int maxOffset = 0;
-            for ( int i = 0; i < _knownFieldsLocations.Length; i++)
+            for (int i = 0; i < _knownFieldsLocations.Length; i++)
             {
                 int offset = _knownFieldsLocations[i];
                 if (offset != Invalid)
@@ -395,7 +478,7 @@ namespace Corax
 
             // We can't use the 'invalid' which is all ones.
             int encodeSize = 1;
-            if (maxOffset > short.MaxValue - 1) 
+            if (maxOffset > short.MaxValue - 1)
                 encodeSize = 4;
             else if (maxOffset > sbyte.MaxValue - 1)
                 encodeSize = 2;
@@ -424,10 +507,10 @@ namespace Corax
                 // From the offset to the end... move the data toward the closest position
                 var metadataTable = _buffer[dynamicMetadataSectionOffset..];
                 metadataTable.CopyTo(_buffer[_dataIndex..]);
-                
+
                 // Move the pointer to the end of the copied section.
                 _dataIndex += dynamicMetadataSection;
-            }            
+            }
 
             switch (encodeSize)
             {
@@ -482,7 +565,7 @@ namespace Corax
         }
     }
 
-    public ref struct IndexEntryFieldIterator 
+    public ref struct IndexEntryFieldIterator
     {
         public readonly IndexEntryFieldType Type;
         public readonly bool IsValid;
@@ -496,7 +579,7 @@ namespace Corax
         private int _longOffset;
         private int _doubleOffset;
         private readonly bool IsTuple => _doubleOffset != 0;
-        
+
 
         internal IndexEntryFieldIterator(IndexEntryFieldType type)
         {
@@ -505,7 +588,7 @@ namespace Corax
             Count = 0;
             _buffer = ReadOnlySpan<byte>.Empty;
             IsValid = false;
-            
+
             Unsafe.SkipInit(out _currentIdx);
             Unsafe.SkipInit(out _spanTableOffset);
             Unsafe.SkipInit(out _nullTableOffset);
@@ -644,7 +727,7 @@ namespace Corax
                 _spanOffset += VariableSizeEncoding.Read<int>(_buffer, out var length, _spanTableOffset);
                 _spanTableOffset += length;
 
-                if (IsTuple) 
+                if (IsTuple)
                 {
                     // This is a tuple, so we update these too.
                     _doubleOffset += sizeof(double);
@@ -696,6 +779,7 @@ namespace Corax
                 offset &= ~0x80;
                 goto End;
             }
+
             if (encodeSize == 2)
             {
                 offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
@@ -705,6 +789,7 @@ namespace Corax
                 offset &= ~0x8000;
                 goto End;
             }
+
             if (encodeSize == 4)
             {
                 offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
@@ -715,12 +800,14 @@ namespace Corax
                 goto End;
             }
 
-            Fail: return (Invalid, false);
+            Fail:
+            return (Invalid, false);
 
-            End: return (offset , isTyped);            
+            End:
+            return (offset, isTyped);
         }
 
-        
+
         public bool Read<T>(int field, out IndexEntryFieldType type, out T value) where T : unmanaged
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
@@ -803,10 +890,34 @@ namespace Corax
 
                     throw new NotSupportedException($"The type {nameof(T)} is unsupported.");
                 }
+
+                if ((type & IndexEntryFieldType.Special) != 0)
+                {
+                    //<type><lat><long><amount_of_geohashes><pointer_to_string_length_table><geohash>
+                    SpecialEntryFieldType specialEntryFieldType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
+                    intOffset += length;
+
+                    if (specialEntryFieldType.HasFlag(SpecialEntryFieldType.SpatialLongLat))
+                    {
+                        if (typeof(T) == typeof((double, double)))
+                        {
+                            var latitude = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
+                            intOffset += sizeof(double);
+                            var longitude = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
+                            value = (T)(object)(latitude, longitude);
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        throw new NotImplementedException($"{specialEntryFieldType} not implemented yet.");
+                    }
+                }
+
                 throw new NotSupportedException($"The type {nameof(T)} is unsupported.");
             }
 
-        Fail:
+            Fail:
             Unsafe.SkipInit(out value);
             type = IndexEntryFieldType.Invalid;
             return false;
@@ -822,6 +933,7 @@ namespace Corax
             return Read(field, out var _, out value);
         }
 
+
         public IndexEntryFieldType GetFieldType(int field, out int intOffset)
         {
             (intOffset, var isTyped) = GetMetadataFieldLocation(_buffer, field);
@@ -830,10 +942,20 @@ namespace Corax
 
             if (isTyped)
             {
-                return Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);                
+                var type =  Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
+                intOffset += Unsafe.SizeOf<IndexEntryFieldType>();
+                return type;
             }
 
             return IndexEntryFieldType.Simple;
+        }
+
+        public SpecialEntryFieldType GetSpecialFieldType(int fieldType, ref int intOffset)
+        {
+            var specialType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+            intOffset += length;
+
+            return specialType;
         }
 
         public IndexEntryFieldIterator ReadMany(int field)
@@ -842,10 +964,32 @@ namespace Corax
             if (intOffset == Invalid)
                 return new IndexEntryFieldIterator(IndexEntryFieldType.Invalid);
 
-            if (!isTyped)
-                throw new ArgumentException($"Field with index number '{field}' is untyped.");
+            if (isTyped)
+            {
+                var type = (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
 
-            return new IndexEntryFieldIterator(_buffer, intOffset);
+                if ((type & IndexEntryFieldType.Special) != 0)
+                {
+                    intOffset += length;
+
+                    var specialType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
+                    // We're moving our pointer to Geohash list. This is what we actually want to index.
+
+                    if ((specialType & SpecialEntryFieldType.SpatialLongLat) != 0)
+                    {
+                        intOffset += length + 2 * sizeof(double);
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("wkt arent done yet");
+                    }
+                }
+
+                return new IndexEntryFieldIterator(_buffer, intOffset);
+            }
+
+
+            throw new ArgumentException($"Field with index number '{field}' is untyped.");
         }
 
 
@@ -863,8 +1007,29 @@ namespace Corax
                 iterator = default;
                 return false;
             }
-            
+
+
+            var type = (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+
+            if ((type & IndexEntryFieldType.Special) != 0)
+            {
+                intOffset += length;
+
+                var specialType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
+                // We're moving our pointer to Geohash list. This is what we actually want to index.
+
+                if ((specialType & SpecialEntryFieldType.SpatialLongLat) != 0)
+                {
+                    intOffset += length + 2 * sizeof(double);
+                }
+                else
+                {
+                    throw new NotImplementedException("wkt arent done yet");
+                }
+            }
+
             iterator = new IndexEntryFieldIterator(_buffer, intOffset);
+
             return iterator.IsValid;
         }
 
@@ -983,7 +1148,7 @@ namespace Corax
                 type = IndexEntryFieldType.Simple;
             }
 
-            value = _buffer.Slice(intOffset, stringLength);            
+            value = _buffer.Slice(intOffset, stringLength);
             return true;
 
         EmptyList:
@@ -1004,7 +1169,7 @@ namespace Corax
         FailNull:
             throw new InvalidOperationException("Cannot request an internal value when the field is null.");
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read(int field, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
         {
@@ -1130,12 +1295,18 @@ namespace Corax
                     {
                         result += $"{name}: {Encodings.Utf8.GetString(iterator.Sequence)},";
                     }
+
                     result += $"{name}: [{result[0..^1]}]{Environment.NewLine}";
                 }
             }
 
 
             return $"{{{Environment.NewLine}{result}{Environment.NewLine}}}";
+        }
+
+        public IndexEntryFieldIterator ReadGeohashs(int tokenField)
+        {
+            throw new NotImplementedException();
         }
     }
 }

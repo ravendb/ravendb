@@ -273,7 +273,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
     }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     public void QueriesAsTicks(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -289,6 +289,8 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
                 .OrderBy(p => p.TimeOnly)
                 .ToList();
 
+            WaitForUserToContinueTheTest(store);
+            
             var testData = data
                 .Where(i => i.TimeOnly > after && i.TimeOnly < before)
                 .OrderBy(p => p.TimeOnly)
@@ -379,6 +381,16 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
             Assert.Equal(today.Year - 1947, q.Age);
         }
     }
+    
+    
+    
+    
+    /*Ticks 2143213423
+     *X -> 23432634737
+     *
+     * 2022 > 2021
+     * 2 > 1
+     */
 
     private List<DateAndTimeOnly> CreateDatabaseData(IDocumentStore store)
     {
@@ -415,15 +427,18 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         public int? Age { get; set; }
     }
 
+    
+    //
+    
     private class DateAndTimeOnlyIndex : AbstractIndexCreationTask<DateAndTimeOnly, DateAndTimeOnlyIndex.IndexEntry>
     {
         public class IndexEntry
         {
             public DateOnly DateOnly { get; set; }
             public int Year { get; set; }
-
             public TimeOnly TimeOnly { get; set; }
         }
+
 
         public DateAndTimeOnlyIndex()
         {

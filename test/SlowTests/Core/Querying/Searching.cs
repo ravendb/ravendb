@@ -159,8 +159,7 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)] 
         public void CanDoSpatialSearch(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -6,12 +6,15 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
 using Nest;
+using Lucene.Net.Spatial.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Spatial4n.Core.Shapes;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.IndexSearcher;
 using Query = Raven.Server.Documents.Queries.AST.Query;
@@ -334,6 +337,11 @@ public static class CoraxQueryBuilder
                     return HandleExists(indexSearcher, query, parameters, me, metadata, scoreFunction);
                 case MethodType.Exact:
                     return HandleExact(indexSearcher, serverContext, documentsContext, query, me, metadata, index, parameters, factories, scoreFunction, isNegated, indexMapping, queryMapping, proximity, secondary, buildSteps, highlightingTerms, take);
+                case MethodType.Spatial_Within:
+                case MethodType.Spatial_Contains:
+                case MethodType.Spatial_Disjoint:
+                case MethodType.Spatial_Intersects:
+                    return HandleSpatial(indexSearcher, query, me, metadata, parameters, methodType, factories.GetSpatialFieldFactory, index, indexMapping, queryMapping);
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                     return null; // never hit
@@ -621,6 +629,67 @@ public static class CoraxQueryBuilder
         return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated);
     }
 
+    private static IQueryMatch HandleSpatial(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
+            MethodType spatialMethod, Func<string, SpatialField> getSpatialField, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null)
+        {
+            string fieldName;
+            if (metadata.IsDynamic == false)
+                fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
+            else
+            {
+                var spatialExpression = (MethodExpression)expression.Arguments[0];
+                fieldName = metadata.GetSpatialFieldName(spatialExpression, parameters);
+            }
+
+            var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+
+            var shapeExpression = (MethodExpression)expression.Arguments[1];
+
+            var distanceErrorPct = RavenConstants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
+            if (expression.Arguments.Count == 3)
+            {
+                var distanceErrorPctValue = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
+                QueryBuilderHelper.AssertValueIsNumber(fieldName, distanceErrorPctValue.Type);
+
+                distanceErrorPct = Convert.ToDouble(distanceErrorPctValue.Value);
+            }
+
+            var spatialField = getSpatialField(fieldName);
+
+            var methodName = shapeExpression.Name;
+            var methodType = QueryMethod.GetMethodType(methodName.Value);
+
+            IShape shape = null;
+            switch (methodType)
+            {
+                case MethodType.Spatial_Circle:
+                    shape = QueryBuilderHelper.HandleCircle(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
+                    break;
+                case MethodType.Spatial_Wkt:
+                    shape = QueryBuilderHelper.HandleWkt(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
+                    break;
+                default:
+                    QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
+                    break;
+            }
+
+            Debug.Assert(shape != null);
+
+            var operation = spatialMethod switch
+            {
+                MethodType.Spatial_Within => SpatialRelation.WITHIN,
+                MethodType.Spatial_Disjoint => SpatialRelation.DISJOINT,
+                MethodType.Intersect => SpatialRelation.INTERSECTS,
+                MethodType.Spatial_Contains => SpatialRelation.CONTAINS,
+                _ => (SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters)
+            };
+            
+            
+            //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
+
+            return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, global::Corax.Utils.SpatialRelation.Within);
+        }
+    
     private static IQueryMatch OrderBy(IndexSearcher indexSearcher, IQueryMatch match,
         List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orders, Query query, BlittableJsonReaderObject parameters, Index index,
         QueryMetadata metadata, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, int take)

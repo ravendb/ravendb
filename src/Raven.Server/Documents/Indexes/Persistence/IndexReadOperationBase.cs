@@ -20,9 +20,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
 {
     public abstract class IndexReadOperationBase : IndexOperationBase
     {
+        protected readonly QueryBuilderFactories QueryBuilderFactories;
 
-        protected IndexReadOperationBase(Index index, Logger logger) : base(index, logger)
+        protected IndexReadOperationBase(Index index, Logger logger, QueryBuilderFactories queryBuilderFactories) : base(index, logger)
         {
+            QueryBuilderFactories = queryBuilderFactories;
         }
 
         public abstract long EntriesCount();

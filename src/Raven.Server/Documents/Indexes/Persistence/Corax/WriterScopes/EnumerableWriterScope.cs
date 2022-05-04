@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
 using K4os.Compression.LZ4.Internal;
+using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -87,6 +88,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         {
             _blittableJsonReaderObjects.Add(reader);
             _count.Raws++;
+        }
+
+        public void Write(int field, in CoraxSpatialEntry entry, ref IndexEntryWriter entryWriter)
+        {
+            throw new NotImplementedException();
         }
 
         public void Finish(int field, ref IndexEntryWriter entryWriter)

@@ -34,8 +34,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly ByteStringContext _allocator;
         private long _entriesCount = 0;
         private const int BufferSize = 4096;
-
-        public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
+        
+        public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories) : base(index, logger, queryBuilderFactories)
         {
             _allocator = readTransaction.Allocator;
             _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(_allocator, index);
@@ -75,10 +75,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = query.Metadata.HasHighlightings ? new() : null;
             using (coraxScope?.Start())
             {
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
-                        indexMapping: _fieldMappings,
-                        highlightingTerms: highlightingTerms, 
-                        queryMapping: fieldsToFetch)) is null)
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, QueryBuilderFactories,
+                    _fieldMappings, fieldsToFetch, highlightingTerms: highlightingTerms, take: take)) is null)
                     yield break;
             }
 
@@ -489,7 +487,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, null,
-                    _fieldMappings, null, take: take)) is null)
+                    _fieldMappings, take: take)) is null)
                 yield break;
 
             var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize, query));
@@ -529,8 +527,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     if (binding.FieldIndexingMode is FieldIndexingMode.No || binding.FieldNameAsString is Client.Constants.Documents.Indexing.Fields.AllStoredFields)
                         continue;
-                    var type = reader.GetFieldType(binding.FieldId, out _);
-                    if ((type & IndexEntryFieldType.List) != 0)
+                    var type = reader.GetFieldType(binding.FieldId, out var intOffset);
+                    bool isASpatialList = (type & IndexEntryFieldType.Special) != 0 && reader.GetSpecialFieldType(binding.FieldId, ref intOffset) is SpecialEntryFieldType.SpatialWkt or SpecialEntryFieldType.SpatialLongLat;
+                    
+                    
+                    if ((type & IndexEntryFieldType.List) != 0 || isASpatialList)
                     {
                         reader.TryReadMany(binding.FieldId, out var iterator);
                         var enumerableEntries = new List<object>();
