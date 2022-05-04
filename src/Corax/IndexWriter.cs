@@ -89,8 +89,20 @@ namespace Corax
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-
+            
             _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
+            
+            // //We are gonna read additional fields.
+            // var dynamicFieldsTree = Transaction.ReadTree(Constants.IndexWriter.DynamicFields);
+            // var iterator = dynamicFieldsTree.Iterate(false);
+            // while (iterator.MoveNext())
+            // {
+            //     if (_fieldsMapping.TryGetByFieldName(iterator.CurrentKey, out _) == false)
+            //     { 
+            //         //Found dynamic field
+            //         _fieldsMapping.AddBinding(_fieldsMapping.Count + 1, "test", fieldIndexingMode: FieldIndexingMode.Exact);
+            //     }
+            // }
         }
 
 
@@ -163,6 +175,12 @@ namespace Corax
 
             int tokenField = binding.FieldId;
             var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
+<<<<<<< HEAD
+           var writeAsList = fieldType.HasFlag(IndexEntryFieldType.Special) 
+                              && entryReader.GetSpecialFieldType(tokenField, ref intOffset) 
+                                  is SpecialEntryFieldType.SpatialWkt 
+                                  or SpecialEntryFieldType.SpatialLongLat;
+
             if (fieldType == IndexEntryFieldType.Null)
             {
                 if (field.TryGetValue(Constants.NullValueSlice, out var term) == false)
@@ -172,7 +190,7 @@ namespace Corax
 
                 AddMaybeAvoidDuplicate(term, entryId);
             }
-            else if (fieldType.HasFlag(IndexEntryFieldType.List))
+            else if (fieldType.HasFlag(IndexEntryFieldType.List || writeAsList)
             {
                 // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
                 //       that will ensure faster turnaround and more efficient execution. 
@@ -332,6 +350,7 @@ namespace Corax
         {
             int tokenField = binding.FieldId;
             var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
+<<<<<<< HEAD
 
             if (fieldType == IndexEntryFieldType.Null)
             {
@@ -341,6 +360,14 @@ namespace Corax
                 AddMaybeAvoidDuplicate(term, entryId);
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.List))
+=======
+            var writeAsList = fieldType.HasFlag(IndexEntryFieldType.Special) 
+                              && entryReader.GetSpecialFieldType(tokenField, ref intOffset) 
+                                  is SpecialEntryFieldType.SpatialWkt 
+                                  or SpecialEntryFieldType.SpatialLongLat;
+            
+            if (fieldType.HasFlag(IndexEntryFieldType.List) || writeAsList)
+>>>>>>> 7cdf930c5e (RavenDB-17601 [Corax] Spatial basic support)
             {
                 var iterator = entryReader.ReadMany(tokenField);
                 while (iterator.ReadNext())
@@ -370,6 +397,23 @@ namespace Corax
 
                     if (binding.HasSuggestions)
                         AddSuggestions(binding, slice);
+                }
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.Special))
+            {
+                var iterator = entryReader.ReadMany(tokenField);
+                
+                while (iterator.ReadNext())
+                {
+                    var value = iterator.Sequence;
+
+                    using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+                    if (field.TryGetValue(slice, out var term) == false)
+                    {
+                        var fieldName = slice.Clone(context);
+                        field[fieldName] = term = new List<long>();
+                    }
+                    AddMaybeAvoidDuplicate(term, entryId);
                 }
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
@@ -444,11 +488,20 @@ namespace Corax
                     Analyzer analyzer = binding.Analyzer;
 
                     var fieldType = entryReader.GetFieldType(fieldId, out var intOffset);
+<<<<<<< HEAD
                     if (fieldType == IndexEntryFieldType.Null)
                     {
                         DeleteField(id, fieldName, tmpBuf, Constants.NullValueSlice.AsReadOnlySpan());
                     }
                     else if (fieldType.HasFlag(IndexEntryFieldType.List))
+=======
+                    var indexedAsList = fieldType.HasFlag(IndexEntryFieldType.Special) 
+                                      && entryReader.GetSpecialFieldType(fieldId, ref intOffset) 
+                                          is SpecialEntryFieldType.SpatialLongLat 
+                                          or SpecialEntryFieldType.SpatialWkt;
+                    
+                    if (fieldType.HasFlag(IndexEntryFieldType.List) || indexedAsList)
+>>>>>>> 7cdf930c5e (RavenDB-17601 [Corax] Spatial basic support)
                     {
                         var it = entryReader.ReadMany(fieldId);
 

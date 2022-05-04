@@ -6,15 +6,18 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Spatial4n.Core.Shapes;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
 
@@ -576,4 +579,65 @@ public static class QueryBuilderHelper
         AscendingAlphanumeric,
         DescendingAlphanumeric
     }
+    
+    internal static IShape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
+            SpatialField spatialField, out SpatialUnits units)
+        {
+            var wktValue = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
+            QueryBuilderHelper.AssertValueIsString(fieldName, wktValue.Type);
+
+            SpatialUnits? spatialUnits = null;
+            if (expression.Arguments.Count == 2)
+                spatialUnits = GetSpatialUnits(query, expression.Arguments[1] as ValueExpression, metadata, parameters, fieldName);
+
+            units = spatialUnits ?? spatialField.Units;
+
+            var wkt = CoraxGetValueAsString(wktValue.Value);
+
+            try
+            {
+                return spatialField.ReadShape(wkt, spatialUnits);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidQueryException($"Value '{wkt}' is not a valid WKT value.", query.QueryText, parameters, e);
+            }
+        }
+
+        internal static IShape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
+            SpatialField spatialField, out SpatialUnits units)
+        {
+            var radius = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
+            QueryBuilderHelper.AssertValueIsNumber(fieldName, radius.Type);
+
+            var latitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            QueryBuilderHelper.AssertValueIsNumber(fieldName, latitude.Type);
+
+            var longitude = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
+            QueryBuilderHelper.AssertValueIsNumber(fieldName, longitude.Type);
+
+            SpatialUnits? spatialUnits = null;
+            if (expression.Arguments.Count == 4)
+                spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
+
+            units = spatialUnits ?? spatialField.Units;
+
+            return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitude.Value), Convert.ToDouble(longitude.Value), spatialUnits);
+        }
+
+        private static SpatialUnits? GetSpatialUnits(Query query, ValueExpression value, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            var spatialUnitsValue = QueryBuilderHelper.GetValue(query, metadata, parameters, value);
+            QueryBuilderHelper.AssertValueIsString(fieldName, spatialUnitsValue.Type);
+
+            var spatialUnitsValueAsString = CoraxGetValueAsString(spatialUnitsValue.Value);
+            if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
+                throw new InvalidOperationException(
+                    $"{nameof(SpatialUnits)} value must be either '{SpatialUnits.Kilometers}' or '{SpatialUnits.Miles}' but was '{spatialUnitsValueAsString}'.");
+
+            return (SpatialUnits)su;
+        }
 }

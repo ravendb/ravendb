@@ -60,13 +60,25 @@ namespace Voron.Data.CompactTrees
 
                 return next;
             }
-
+            
             public bool MoveNext(out Span<byte> key, out long value)
             {
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
                 {
-                    Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
+                    if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                    {
+                        if (state.LastSearchPosition >= state.Header->NumberOfEntries)
+                        {
+                            goto NotFound;
+                        }
+                        
+                        GetEntry(_tree, state.Page, state.EntriesOffsets[state.LastSearchPosition], out key, out value);
+                        state.LastSearchPosition++;
+                        return true;
+                    }
+                    
+                    
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
                         if (GetEntry(_tree, state.Page, state.EntriesOffsets[state.LastSearchPosition], out key, out value) == false)
@@ -77,11 +89,14 @@ namespace Voron.Data.CompactTrees
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
                     {
-                        key = default;
-                        value = default;
-                        return false;
+                        goto NotFound;
                     }
                 }
+                
+                NotFound:
+                    key = default;
+                    value = default;
+                    return false;
             }
 
             public bool Skip(long count)

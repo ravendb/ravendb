@@ -20,7 +20,7 @@ namespace FastTests.Corax
         {
         }
 
-        private readonly struct StringArrayIterator : IReadOnlySpanIndexer
+        internal readonly struct StringArrayIterator : IReadOnlySpanEnumerator
         {
             private readonly string[] _values;
 

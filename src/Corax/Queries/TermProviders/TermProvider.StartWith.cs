@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Sparrow.Server;
@@ -24,16 +25,18 @@ namespace Corax.Queries
             _field = field;
             _iterator = tree.Iterate();
             _startWith = startWith;
-            
+
             _iterator.Seek(_startWith);
         }
 
         public void Reset() => _iterator.Seek(_startWith);
 
-        public bool Next(out TermMatch term)
-        {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Next(out TermMatch term) => Next(out term, out _);
 
-            if (!_iterator.MoveNext(out Slice termSlice, out var _) || !termSlice.StartWith(_startWith))
+        public bool Next(out TermMatch term, out Slice termSlice)
+        {
+            if (_iterator.MoveNext(out termSlice, out var _) == false || termSlice.StartWith(_startWith) == false)
             {
                 term = TermMatch.CreateEmpty();
                 return false;

@@ -16,7 +16,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Test(Options options)
         {
             var myHouse = new DummyGeoDoc(44.757767, -93.355322);
@@ -37,14 +37,14 @@ namespace SlowTests.Tests.Spatial
                 }
 
                 Indexes.WaitForIndexing(store);
-
+//WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var km = session.Query<DummyGeoDoc, KmGeoIndex>()
                                          .Spatial(x => x.Location, x => x.WithinRadius(8, myHouse.Latitude, myHouse.Longitude))
                                          .Count();
                     Assert.Equal(1, km);
-
+//WaitForUserToContinueTheTest(store);
                     var miles = session.Query<DummyGeoDoc, MilesGeoIndex>()
                                          .Spatial(x => x.Location, x => x.WithinRadius(8, myHouse.Latitude, myHouse.Longitude))
                                          .Count();

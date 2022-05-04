@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return new RecursiveFunction(item, func).Execute();
         }
 
-        protected IEnumerable<AbstractField> CreateField(string name, object value, CreateFieldOptions options)
+        protected dynamic CreateField(string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return result;
         }
 
-        protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
+        protected dynamic CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
@@ -526,50 +526,72 @@ namespace Raven.Server.Documents.Indexes.Static
             throw new InvalidDataException($"Expected {nameof(TimeSpan)}, {nameof(TimeOnly)}, null, string or JSON value.");
         }
 
-        public IEnumerable<AbstractField> CreateSpatialField(string name, object lat, object lng)
+        public dynamic CreateSpatialField(string name, object lat, object lng)
         {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
             return CreateSpatialField(name, ConvertToDouble(lat), ConvertToDouble(lng));
         }
 
-        public IEnumerable<AbstractField> CreateSpatialField(string name, double? lat, double? lng)
+        public dynamic CreateSpatialField(string name, double? lat, double? lng)
         {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
             var spatialField = GetOrCreateSpatialField(name);
 
             return CreateSpatialField(spatialField, lat, lng);
         }
 
-        public IEnumerable<AbstractField> CreateSpatialField(string name, object shapeWkt)
+        public dynamic CreateSpatialField(string name, object shapeWkt)
         {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
             var spatialField = GetOrCreateSpatialField(name);
             return CreateSpatialField(spatialField, shapeWkt);
         }
 
-        internal static IEnumerable<AbstractField> CreateSpatialField(SpatialField spatialField, object lat, object lng)
+        internal static dynamic CreateSpatialField(SpatialField spatialField, object lat, object lng)
         {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
             return CreateSpatialField(spatialField, ConvertToDouble(lat), ConvertToDouble(lng));
         }
 
-        internal static IEnumerable<AbstractField> CreateSpatialField(SpatialField spatialField, double? lat, double? lng)
+        internal static dynamic CreateSpatialField(SpatialField spatialField, double? lat, double? lng)
         {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
             if (lng == null || double.IsNaN(lng.Value))
                 return Enumerable.Empty<AbstractField>();
             if (lat == null || double.IsNaN(lat.Value))
                 return Enumerable.Empty<AbstractField>();
 
             IShape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
-            return spatialField.CreateIndexableFields(shape);
+            return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
+                ? spatialField.LuceneCreateIndexableFields(shape)
+                : spatialField.CoraxCreateIndexableFields(shape);
         }
 
-        internal static IEnumerable<AbstractField> CreateSpatialField(SpatialField spatialField, object shapeWkt)
+        internal static dynamic CreateSpatialField(SpatialField spatialField, object shapeWkt)
         {
-            return spatialField.CreateIndexableFields(shapeWkt);
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
+            return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
+                ? spatialField.LuceneCreateIndexableFields(shapeWkt)
+                : spatialField.CoraxCreateIndexableFields(shapeWkt);
         }
 
         internal static SpatialField GetOrCreateSpatialField(string name)
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-
+            
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
         }
 

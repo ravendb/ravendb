@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,16 +15,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SpatialOnAutoIndex()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SpatialOnAutoIndex(Options options)
         {
             var databaseName = $"{nameof(SpatialOnAutoIndex)}-{Guid.NewGuid()}";
             var path = NewDataPath();
             using (var store = GetDocumentStore(new Options
             {
-                Path = path,
-                ModifyDatabaseName = s => databaseName,
-                DeleteDatabaseOnDispose = false
             }))
             {
                 using (var session = store.OpenSession())
@@ -68,6 +67,7 @@ namespace SlowTests.Issues
                         .Statistics(out var stats)
                         .Spatial(factory => factory.Point(x => x.Latitude, x => x.Longitude), factory => factory.WithinRadius(10, 10, 20))
                         .ToList();
+                    WaitForUserToContinueTheTest(store);
 
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)", stats.IndexName);

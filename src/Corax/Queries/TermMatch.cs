@@ -80,6 +80,7 @@ namespace Corax.Queries
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Empty]",
                     parameters: new Dictionary<string, string>()
                     {
+                        
                     { nameof(term.IsBoosting), term.IsBoosting.ToString() },
                     { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
                     });
