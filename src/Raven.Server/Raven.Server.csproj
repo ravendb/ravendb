@@ -193,13 +193,6 @@
       <Link>debug.Dockerfile</Link>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Dashboard\Server\" />
-    <Folder Include="Documents\Handlers\Processors\BulkInsert\" />
-    <Folder Include="Documents\Sharding\Handlers\Processors\BulkInsert\" />
-    <Folder Include="Documents\Handlers\Processors\Documents\" />
-    <Folder Include="Documents\Sharding\Handlers\Processors\Documents\" />
-  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
   </PropertyGroup>
