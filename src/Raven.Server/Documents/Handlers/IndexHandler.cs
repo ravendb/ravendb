@@ -31,29 +31,10 @@ namespace Raven.Server.Documents.Handlers
     public class IndexHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/indexes/replace", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task Replace()
+        public async Task Replace()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var replacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
-
-            var oldIndex = Database.IndexStore.GetIndex(name);
-            var newIndex = Database.IndexStore.GetIndex(replacementName);
-
-            if (oldIndex == null && newIndex == null)
-                throw new IndexDoesNotExistException($"Could not find '{name}' and '{replacementName}' indexes.");
-
-            if (newIndex == null)
-                throw new IndexDoesNotExistException($"Could not find side-by-side index for '{name}'.");
-
-            using (var token = CreateOperationToken(TimeSpan.FromMinutes(15)))
-            {
-                Database.IndexStore.ReplaceIndexes(name, newIndex.Name, token.Token);
-            }
-
-            NoContentStatus();
-
-            return Task.CompletedTask;
+            using (var processor = new IndexHandlerProcessorForReplace(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/finish-rolling", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
