@@ -260,6 +260,19 @@ class ongoingTasks extends shardViewModelBase {
         return new ongoingTasksCommand(db)
             .execute()
             .done((info) => {
+                
+                console.warn("USING TEMPORARY VALUES");
+                info.OngoingTasksList.forEach(task => {
+                    task.ResponsibleNode = { //TODO: temp!
+                        NodeTag: "A",
+                        NodeUrl: window.location.hostname,
+                        ResponsibleNode: "A"
+                    }
+                    
+                    if (task.TaskType === "OlapEtl") {
+                        (task as any).Destination = "TODO - temporary description";
+                    }
+                })
                 this.processTasksResult(info);
                 this.graph.onTasksChanged(info);
             });
