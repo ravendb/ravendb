@@ -98,8 +98,7 @@ namespace SlowTests.Sharding.Issues
 
                     string commandResult = command.Result;
 
-
-                    Assert.Equal(@"using System;
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
