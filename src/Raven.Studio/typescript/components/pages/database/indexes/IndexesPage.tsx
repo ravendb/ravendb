@@ -517,11 +517,13 @@ export function IndexesPage(props: IndexesPageProps) {
     useTimeout(loadMissing, 3_000);
 
     const toggleSelection = (index: IndexSharedInfo) => {
-        if (selectedIndexes.includes(index.name)) {
-            setSelectedIndexes((s) => s.filter((x) => x !== index.name));
-        } else {
-            setSelectedIndexes((s) => s.concat(index.name));
-        }
+        setSelectedIndexes(s => {
+            if (s.includes(index.name)) {
+                return s.filter((x) => x !== index.name);
+            } else {
+                return s.concat(index.name);
+            }
+        })
     };
 
     const openFaulty = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {

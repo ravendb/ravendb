@@ -161,7 +161,7 @@ class conflicts extends shardViewModelBase {
                     this.itemsSoFar(this.itemsSoFar() + results.items.length);
 
                     if (this.itemsSoFar() === results.totalResultCount) {
-                        results.totalResultCount = this.itemsSoFar()
+                        results.totalResultCount = this.itemsSoFar();
                     } else {
                         results.totalResultCount = this.itemsSoFar() + 1;
                     }

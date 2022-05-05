@@ -1,5 +1,5 @@
 <div data-bind="compose: { model: usingExternalContext ? null : context }, visible: !usingExternalContext"></div>
 <div 
     class="shard-aware-container" 
-    data-bind="css: { pinned: context.pinned }, compose: { model: child, activationData: activationData, activate: false }">
+    data-bind="css: { pinned: context.pinned }, compose: { model: child, activationData: activationData, activate: false }, visible: child">
 </div>

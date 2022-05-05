@@ -40,7 +40,7 @@ class collectionsTracker {
 
     configureRevisions(db: database) {
         if (db.hasRevisionsConfiguration()) {
-            this.revisionsBin(new collection(collection.revisionsBinCollectionName, db));
+            this.revisionsBin(new collection(collection.revisionsBinCollectionName));
         } else {
             this.revisionsBin(null);
         }
@@ -52,7 +52,7 @@ class collectionsTracker {
         _.remove(collections, c => !c.documentCount());
         collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
 
-        const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
+        const allDocsCollection = collection.createAllDocumentsCollection(collectionsStats.numberOfDocuments());
         this.collections([allDocsCollection].concat(collections));
 
         this.conflictsCount(collectionsStats.numberOfConflicts);
@@ -150,7 +150,7 @@ class collectionsTracker {
     }
 
     private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection, db: database) {
-        const newCollection = new collection(incomingItem.Name, db, incomingItem.Count);
+        const newCollection = new collection(incomingItem.Name, incomingItem.Count);
         this.collections.push(newCollection);
         this.collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
 

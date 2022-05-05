@@ -589,7 +589,7 @@ class editDocument extends shardViewModelBase {
 
         if (collectionForNewDocument) {
             this.userSpecifiedId(this.defaultNameForNewDocument(collectionForNewDocument));
-            new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.db), 0, 3)
+            new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument), this.db, 0, 3)
                 .execute()
                 .done((documents: pagedResult<document>) => {
                     const schemaDoc = documentHelpers.findSchema(documents.items);
