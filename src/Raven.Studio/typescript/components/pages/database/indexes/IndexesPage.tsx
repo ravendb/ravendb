@@ -734,17 +734,26 @@ export function IndexesPage(props: IndexesPageProps) {
                             <div className="distribution-legend">
                                 <div className="top"></div>
                                 <div className="node"><i className="icon-node" /> Node </div>
+                                <div> <i className="icon-list" /> Entries </div>
+                                <div> <i className="icon-warning" /> Errors </div>
+                                <div> <i />Status </div>
                             </div>
                             <div className="distribution-summary">
                                 <div className="top">
                                     <i className="icon-sum" />
                                 </div>
+                                <div> </div>
+                                <div> 4 802 809 </div>
+                                <div> 0 </div>
+                                <div></div>
                             </div>
+
                             <div className="distribution-item">
-                                <div className="top shard">1</div>
+                                <div className="top shard"><i className="icon-shard"/>1</div>
                                 <div className="node">A</div>
-                                <div className="entries">A</div>
-                                <div className="state">
+                                <div className="entries">20 000 000 000 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
                                     <div className='state-desc'>up to date</div>
                                     <div className="state-indicator"><i className="icon-check" /></div>
 
@@ -752,32 +761,227 @@ export function IndexesPage(props: IndexesPageProps) {
                             </div>
 
                             <div className="distribution-item">
-                                <div className="top shard">1</div>
+                                <div className="top shard"><i className="icon-shard" />2</div>
                                 <div className="node">A</div>
-                                <div className="entries">A</div>
-                                <div className="state">
-                                    <div className='state-desc'>up to date</div>
-                                    <div className="state-indicator"><i className="icon-check" /></div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state pending">
+                                    <div className='state-desc'>pending</div>
+                                    <div className="state-indicator"><i className="icon-waiting" /></div>
 
                                 </div>
                             </div>
 
                             <div className="distribution-item">
-                                <div className="top shard">1</div>
+                                <div className="top shard"><i className="icon-shard" />3</div>
                                 <div className="node">A</div>
-                                <div className="entries">A</div>
-                                <div className="state">
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state running">
+                                    <div className='state-desc'><strong>60%</strong> running</div>
+                                    <div className="state-indicator">
+                                        <svg className="progress-ring">
+                                            <circle stroke-dashoffset="35" />  {/* 81.68 - 0 */}
+                                            {/* https://codepen.io/jeremenichelli/pen/vegymB */}
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="distribution-item ">
+                                <div className="top shard"><i className="icon-shard" />4</div>
+                                <div className="node">A</div>
+                                <div className="entries text-danger">×</div>
+                                <div className="errors text-danger">×</div>
+                                <div className="state failed">
+                                    <div className='state-desc'>error</div>
+                                    <div className="state-indicator"><i className="icon-cancel" /></div>
+
+                                </div>
+                            </div>
+
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />5</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
                                     <div className='state-desc'>up to date</div>
                                     <div className="state-indicator"><i className="icon-check" /></div>
 
                                 </div>
                             </div>
-
-                            <div className="distribution-item">
-                                <div className="top shard">1</div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />6</div>
                                 <div className="node">A</div>
-                                <div className="entries">A</div>
-                                <div className="state">
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />7</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />8</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />9</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />10</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />11</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />12</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />13</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />14</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />15</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />16</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />17</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />18</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />19</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />20</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />21</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
                                     <div className='state-desc'>up to date</div>
                                     <div className="state-indicator"><i className="icon-check" /></div>
 
