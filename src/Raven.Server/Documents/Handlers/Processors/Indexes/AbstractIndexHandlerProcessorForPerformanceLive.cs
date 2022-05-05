@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Sparrow.Json;
 
@@ -8,13 +9,29 @@ internal abstract class AbstractIndexHandlerProcessorForPerformanceLive<TRequest
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
+    private const string IncludeSideBySideQueryString = "includeSideBySide";
+
+    private const string NameQueryString = "name";
+
     protected AbstractIndexHandlerProcessorForPerformanceLive([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected override string GetRemoteEndpointUrl(string databaseName) => $"/databases/{databaseName}/indexes/performance/live";
+    protected override string GetRemoteEndpointUrl(string databaseName)
+    {
+        var url = $"/databases/{databaseName}/indexes/performance/live?{IncludeSideBySideQueryString}={IncludeSideBySide}";
 
-    protected bool GetIncludeSideBySide() => RequestHandler.GetBoolValueQueryString("includeSideBySide", false) ?? false;
+        var names = GetNames();
+        if (names.Count > 0)
+        {
+            foreach (var name in names)
+                url += $"&{NameQueryString}={Uri.EscapeDataString(name)}";
+        }
 
-    protected StringValues GetNames() => RequestHandler.GetStringValuesQueryString("name", required: false);
+        return url;
+    }
+
+    protected bool IncludeSideBySide => RequestHandler.GetBoolValueQueryString(IncludeSideBySideQueryString, false) ?? false;
+
+    protected StringValues GetNames() => RequestHandler.GetStringValuesQueryString(NameQueryString, required: false);
 }

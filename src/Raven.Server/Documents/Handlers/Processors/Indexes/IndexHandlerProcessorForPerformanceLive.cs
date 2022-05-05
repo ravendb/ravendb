@@ -24,7 +24,7 @@ internal class IndexHandlerProcessorForPerformanceLive : AbstractIndexHandlerPro
     protected override async ValueTask HandleCurrentNodeAsync(WebSocket webSocket, OperationCancelToken token)
     {
         var indexNames = GetIndexesToReportOn().Select(x => x.Name).ToList();
-        if (GetIncludeSideBySide())
+        if (IncludeSideBySide)
         {
             // user requested to track side by side indexes as well
             // add extra names to indexNames list
