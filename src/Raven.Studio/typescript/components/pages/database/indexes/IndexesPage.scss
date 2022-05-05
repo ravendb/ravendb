@@ -1,8 +1,11 @@
+@use 'sass:math';
 @use "src/variables";
 @use "src/colors";
 @use "src/sizes";
 
 .indexes-list {
+    font-family: 'BR Cobane';
+
     .index-item {
         background-color: colors.$gray-900;
 
@@ -18,43 +21,239 @@
         }
 
         .index-details {
-            padding: sizes.$gutter-sm;
+            padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+            padding-left: sizes.$gutter-md;
+            margin-left: - math.div(sizes.$gutter, 2);
+            display: flex;
+            border-bottom: 1px solid variables.$hr-border;
+
+            .index-detail-item {
+                padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+
+                i {
+                    margin-right: sizes.$gutter-xxs;
+                }
+            }
         }
 
         .index-distribution {
             padding: sizes.$gutter-sm;
+            padding-left: sizes.$gutter-md;
             display: grid;
-            grid-template-columns: repeat(auto-fit, 100px);
-            grid-gap: sizes.$gutter-xs;
+            grid-template-columns: 100px repeat(auto-fill, minmax(120px, max-content));
+            margin: sizes.$gutter-xs/-2;
+
 
 
             .distribution-legend, .distribution-summary, .distribution-item {
+                font-size: 12px;
+                margin: sizes.$gutter-xs/2;
+
+                .top {
+                    font-size: 18px;
+                    font-weight: bold;
+                }
 
                 & > div {
                     height: 30px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+
+                    & + div {
+                        border-top: 2px solid colors.$black;
+                    }
 
                     &:first-of-type {
                         height: 50px;
                     }
 
                     &:last-of-type {
-                        height: 75px;
+                        height: auto;
                     }
                 }
             }
 
-            .distribution-summary, .distribution-item {
+            .distribution-legend > div {
+                justify-content: flex-start;
+
+                i {
+                    width: sizes.$gutter;
+                    text-align: center;
+                }
+            }
+
+            .distribution-summary {
+                grid-column: 2;
+                font-weight: bold;
                 text-align: center;
             }
 
+            .distribution-summary, .distribution-legend {
+                grid-row-end: span 50;
+            }
+
             .distribution-item {
-                max-width: 100px;
+                //max-width: 100px;
                 background-color: colors.$gray-800;
                 border-radius: sizes.$gutter-xs;
+                border: 1px solid transparent;
+                transition: background-color .2s;
 
                 & > div {
-                    & + div {
-                        border-top: 2px solid colors.$gray-900;
+                    padding: 0 sizes.$gutter-xs;
+                    line-height: 1em;
+                    transition: opacity .2s ease-in;
+                }
+
+                .shard {
+                    --icon-color: #{colors.$sharding-color};
+                }
+
+                .node {
+                    --icon-color: #{colors.$node-color};
+                    font-weight: bold;
+                    font-size: 14px;
+                }
+
+                .top {
+                    color: colors.$white;
+
+                    i {
+                        color: var(--icon-color);
+                    }
+                }
+
+                .state {
+                    flex-direction: column;
+                    padding-bottom: sizes.$gutter-sm;
+
+                    $state-indicator-size: 30px;
+                    $state-indicator-progress-radius: 13px;
+
+                    .state-desc {
+                        font-size: 9px;
+                        color: colors.$gray-300;
+                        text-transform: uppercase;
+                        font-weight: bold;
+                        margin-bottom: sizes.$gutter-xxs;
+                        letter-spacing: .15em;
+                        height: 25px;
+                        display: flex;
+                        align-items: flex-end;
+                    }
+
+                    .state-indicator {
+                        display: block;
+                        height: $state-indicator-size;
+                        width: $state-indicator-size;
+                        border-radius: $state-indicator-size;
+                        color: colors.$black;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background-color: colors.$gray-300;
+
+                        i {
+                            font-size: 22px;
+                        }
+
+                        .progress-ring {
+                            display: none;
+                        }
+                    }
+
+                    &.up-to-date {
+                        .state-desc {
+                            color: colors.$gray-500;
+                        }
+
+                        .state-indicator {
+                            background-color: colors.$brand-success;
+                        }
+                    }
+
+                    &.failed {
+                        .state-desc {
+                            color: colors.$gray-500;
+                        }
+
+                        .state-indicator {
+                            background-color: colors.$brand-danger;
+                        }
+                    }
+
+                    &.running {
+                        .state-desc {
+                            color: colors.$gray-300;
+                            display: flex;
+                            align-items: flex-end;
+
+                            strong {
+                                font-size: 14px;
+                                color: colors.$gray-100;
+                                margin-right: sizes.$gutter-xxs;
+                            }
+                        }
+
+                        .state-indicator {
+                            background-color: colors.$black;
+                        }
+
+                        .progress-ring {
+                            width: 100%;
+                            height: 100%;
+                            display: block;
+
+                            circle {
+                                cx: math.div($state-indicator-size, 2);
+                                cy: math.div($state-indicator-size, 2);
+                                r: $state-indicator-progress-radius;
+                                transition: stroke-dashoffset 0.35s;
+                                transform: rotate(-90deg);
+                                transform-origin: math.div($state-indicator-size, 2) math.div($state-indicator-size, 2);
+                                stroke-linecap: round;
+                                stroke-width: 4;
+                                fill: transparent;
+                                stroke: colors.$color-2-3;
+                                stroke-dasharray: 81.68 81.68; // 2 * pi * r / r = 13
+                                //stroke-dashoffset: 30; // offset = circumference - percent / 100 * circumference
+                            }
+                        }
+                    }
+                }
+
+                @keyframes loadingAnimation {
+                    0% {
+                        background-position: 150% 0
+                    }
+
+                    100% {
+                        background-position: -150% 0
+                    }
+                }
+
+                $loading-animation-duration: 2s;
+                $delay-steps: 10;
+
+                &.loading {
+                    border-color: colors.$gray-800;
+                    background: linear-gradient(45deg, colors.$gray-900 40%, colors.$gray-800 50%, colors.$gray-900 60%);
+                    background-repeat: no-repeat;
+                    background-size: 350% 100%;
+                    animation: loadingAnimation $loading-animation-duration linear infinite;
+
+                    .entries, .errors, .state {
+                        opacity: 0;
+                    }
+                }
+
+
+
+                @for $i from 0 through ($delay-steps - 1) {
+
+                    &:nth-of-type(#{$delay-steps - 1}n - #{$i}) {
+                        animation-delay: -$loading-animation-duration/($delay-steps - 1) * $i;
                     }
                 }
             }
