@@ -1,7 +1,4 @@
 import database = require("models/resources/database");
-import document = require("models/database/documents/document");
-import getCollectionFieldsCommand = require("commands/database/documents/getCollectionFieldsCommand");
-import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import generalUtils = require("common/generalUtils");
 
 class collection {
@@ -15,11 +12,8 @@ class collection {
     countPrefix: KnockoutComputed<string>;
     hasBounceClass = ko.observable<boolean>(false);
 
-    private db: database;
-
-    constructor(name: string, ownerDatabase: database, docCount: number = 0) {
+    constructor(name: string, docCount: number = 0) {
         this.name = name;
-        this.db = ownerDatabase;
         this.documentCount(docCount);
 
         this.sizeClass = ko.pureComputed(() => {
@@ -51,28 +45,12 @@ class collection {
         return this.name === collection.revisionsBinCollectionName;
     }
 
-    get database() {
-        return this.db;
-    }
-    
     get collectionNameForQuery() {
         return this.isAllDocuments ? "@all_docs" : this.name;
     }
 
-    fetchDocuments(skip: number, take: number, previewColumns?: string[], fullColumns?: string[], continuationToken?: string): JQueryPromise<pagedResultWithAvailableColumns<document>> {
-        const collection = this.isAllDocuments ? undefined : this.name;
-        return new getDocumentsPreviewCommand(this.db, skip, take, collection, previewColumns, fullColumns, continuationToken)
-            .execute();
-    }
-
-    fetchFields(prefix: string): JQueryPromise<dictionary<string>> {
-        const collection = this.isAllDocuments ? undefined : this.name;
-        return new getCollectionFieldsCommand(this.db, collection, prefix)
-            .execute();
-    }
-
-    static createAllDocumentsCollection(ownerDatabase: database, documentsCount: number): collection {
-        return new collection(collection.allDocumentsCollectionName, ownerDatabase, documentsCount);
+    static createAllDocumentsCollection(documentsCount: number): collection {
+        return new collection(collection.allDocumentsCollectionName, documentsCount);
     }
 
 }

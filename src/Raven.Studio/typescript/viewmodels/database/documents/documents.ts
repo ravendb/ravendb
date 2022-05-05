@@ -33,7 +33,7 @@ import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database = require("models/resources/database");
 import { highlight, languages } from "prismjs";
-import shardedDatabase from "models/resources/shardedDatabase";
+import getDocumentsPreviewCommand from "commands/database/documents/getDocumentsPreviewCommand";
 
 class documents extends shardViewModelBase {
     
@@ -95,12 +95,11 @@ class documents extends shardViewModelBase {
         });
         
         this.selectedItemsCount = ko.pureComputed(() => {
-            let selectedDocsCount = 0;
-            const controll = this.gridController();
-            if (controll) {
-                selectedDocsCount = controll.selection().count;
+            const controller = this.gridController();
+            if (controller) {
+                return controller.selection().count;
             }
-            return selectedDocsCount;
+            return 0;
         });
         
         this.deleteEnabled = ko.pureComputed(() => {
@@ -192,8 +191,14 @@ class documents extends shardViewModelBase {
 
         const documentsProvider = this.getDocumentsProvider();
         this.tryInitializeColumns(documentsProvider);
-
-        this.gridController().reset(true);
+        
+        this.resetGrid();
+    }
+    
+    private resetGrid(hard: boolean = true) {
+        this.itemsSoFar(0);
+        this.continuationToken = undefined;
+        this.gridController().reset(hard);
         this.setCurrentAsNotDirty();
     }
 
@@ -202,7 +207,9 @@ class documents extends shardViewModelBase {
     }
 
     fetchDocs(skip: number, take: number, previewColumns: string[], fullColumns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
-        return this.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns, this.continuationToken)
+        const collection = this.currentCollection().isAllDocuments ? undefined : this.currentCollection().name;
+        return new getDocumentsPreviewCommand(this.db, skip, take, collection, previewColumns, fullColumns, this.continuationToken)
+            .execute()
             .done((results => {
                 this.continuationToken = results.continuationToken;
                 // results.continuationToken will be null if there are no more results
@@ -211,7 +218,7 @@ class documents extends shardViewModelBase {
                     this.itemsSoFar(this.itemsSoFar() + results.items.length);
                     
                     if (this.itemsSoFar() === results.totalResultCount) {
-                        results.totalResultCount = this.itemsSoFar()
+                        results.totalResultCount = this.itemsSoFar();
                     } else {
                         results.totalResultCount = this.itemsSoFar() + 1;
                     }
@@ -293,8 +300,7 @@ class documents extends shardViewModelBase {
     private onCollectionSelected(newCollection: collection) {
         this.updateUrl(appUrl.forDocuments(newCollection.name, this.db));
         this.columnsSelector.reset();
-        this.gridController().reset();
-        this.setCurrentAsNotDirty();
+        this.resetGrid(false);
     }
 
     newDocument(docs: documents, $event: JQueryEventObject) {
@@ -377,8 +383,7 @@ class documents extends shardViewModelBase {
 
     private onDeleteCompleted() {
         this.spinners.delete(false);
-        this.gridController().reset(false);
-        this.setCurrentAsNotDirty();
+        this.resetGrid(false);
     }
 
     copySelectedDocs() {

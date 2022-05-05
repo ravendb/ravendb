@@ -2,10 +2,11 @@ import commandBase = require("commands/commandBase");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
+import database from "models/resources/database";
 
 class getDocumentsFromCollectionCommand extends commandBase {
 
-    constructor(private collection: collection, private skip: number, private take: number) {
+    constructor(private collection: collection, private db: database, private skip: number, private take: number) {
         super();
     }
 
@@ -21,7 +22,7 @@ class getDocumentsFromCollectionCommand extends commandBase {
         };
         const url = endpoints.databases.collections.collectionsDocs;
 
-        return this.query(url, args, this.collection.database, resultsSelector);
+        return this.query(url, args, this.db, resultsSelector);
     }
 }
 

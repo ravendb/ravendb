@@ -1,6 +1,7 @@
 import database = require("models/resources/database");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
+import getCollectionFieldsCommand from "commands/database/documents/getCollectionFieldsCommand";
 
 class remoteMetadataProvider implements queryCompleterProviders {
     
@@ -30,7 +31,9 @@ class remoteMetadataProvider implements queryCompleterProviders {
         }
         const matchedCollection = collectionsTracker.default.collections().find(x => x.name === collectionName);
         if (matchedCollection) {
-            matchedCollection.fetchFields(prefix)
+            const collectionName = matchedCollection.isAllDocuments ? undefined : matchedCollection.name;
+            new getCollectionFieldsCommand(this.db, collectionName, prefix)
+                .execute()
                 .done(result => {
                     if (result) {
                         if (!prefix) {

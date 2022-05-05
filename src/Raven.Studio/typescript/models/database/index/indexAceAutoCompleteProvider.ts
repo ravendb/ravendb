@@ -4,6 +4,7 @@ import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats");
+import getDocumentsPreviewCommand from "commands/database/documents/getDocumentsPreviewCommand";
 
 class indexAceAutoCompleteProvider {
     constructor(private activeDatabase: database, private editedIndex: KnockoutObservable<indexDefinition>) {
@@ -99,8 +100,8 @@ class indexAceAutoCompleteProvider {
             if (!!matchingAliasKeyValue) {
                 // get list of fields according to it's collection's first row
                 if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {
-                    new collection(matchingAliasKeyValue.aliasValueSuffix, this.activeDatabase)
-                        .fetchDocuments(0, 1)
+                    new getDocumentsPreviewCommand(this.activeDatabase, 0, 1, matchingAliasKeyValue.aliasValueSuffix)
+                        .execute()
                         .done((result: pagedResult<any>) => {
                             if (!!result && result.items.length > 0) {
                                 const documentPattern: document = new document(result.items[0]);
