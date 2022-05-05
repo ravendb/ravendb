@@ -218,44 +218,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
-            {
-                var indexNames = GetIndexesToReportOn().Select(x => x.Name).ToList();
-                if (GetBoolValueQueryString("includeSideBySide", false) ?? false)
-                {
-                    // user requested to track side by side indexes as well
-                    // add extra names to indexNames list
-                    var complementaryIndexes = new HashSet<string>();
-                    foreach (var indexName in indexNames)
-                    {
-                        if (indexName.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
-                            complementaryIndexes.Add(indexName.Substring(Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length));
-                        else
-                            complementaryIndexes.Add(Constants.Documents.Indexing.SideBySideIndexNamePrefix + indexName);
-                    }
-
-                    indexNames.AddRange(complementaryIndexes);
-                }
-
-                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
-
-                await using (var ms = new MemoryStream())
-                using (var collector = new LiveIndexingPerformanceCollector(Database, indexNames))
-                {
-                    // 1. Send data to webSocket without making UI wait upon opening webSocket
-                    await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 100);
-
-                    // 2. Send data to webSocket when available
-                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
-                    {
-                        if (await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 4000) == false)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
+            using (var processor = new IndexHandlerProcessorForPerformanceLive(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/suggest-index-merge", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

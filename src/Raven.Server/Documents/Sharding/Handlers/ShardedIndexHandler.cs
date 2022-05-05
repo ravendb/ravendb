@@ -151,6 +151,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/indexes/performance/live", "GET")]
+        public async Task PerformanceLive()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForPerformanceLive(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/indexes/terms", "GET")]
         public async Task Terms()
         {
