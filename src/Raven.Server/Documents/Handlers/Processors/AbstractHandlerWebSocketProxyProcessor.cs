@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -7,6 +8,9 @@ using Raven.Server.NotificationCenter.Handlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors;
 
@@ -14,6 +18,8 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
+    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AbstractHandlerWebSocketProxyProcessor<TRequestHandler, TOperationContext>>("Server");
+
     protected AbstractHandlerWebSocketProxyProcessor([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
@@ -46,11 +52,22 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
 
     private async ValueTask HandleRemoteNodeAsync(WebSocket webSocket, string remoteNodeUrl, string remoteEndpointUrl, OperationCancelToken token)
     {
-        using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, remoteEndpointUrl, ServerStore.ContextPool, token.Token))
+        try
         {
-            await connection.Establish(RequestHandler.Server.Certificate?.Certificate);
+            using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, remoteEndpointUrl, ServerStore.ContextPool, token.Token))
+            {
+                await connection.Establish(RequestHandler.Server.Certificate?.Certificate);
 
-            await connection.RelayData();
+                await connection.RelayData();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // ignored 
+        }
+        catch (Exception ex)
+        {
+            await HandleException(ex, webSocket);
         }
     }
 
@@ -72,5 +89,28 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
         }
 
         return remoteNodeUrl;
+    }
+
+    private async Task HandleException(Exception ex, WebSocket webSocket)
+    {
+        try
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var ms = new MemoryStream())
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ms))
+                {
+                    context.Write(writer, new DynamicJsonValue { ["Type"] = "Error", ["Exception"] = ex.ToString() });
+                }
+
+                ms.TryGetBuffer(out ArraySegment<byte> bytes);
+                await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
+            }
+        }
+        catch (Exception)
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info("Failed to send the error in cluster dashboard handler to the client", ex);
+        }
     }
 }
