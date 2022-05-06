@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CloudNative.CloudEvents;
+using CloudNative.CloudEvents.Amqp;
 using CloudNative.CloudEvents.Extensions;
 using CloudNative.CloudEvents.Kafka;
 using Confluent.Kafka;
@@ -40,6 +41,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
     protected override bool ShouldTrackAttachmentTombstones() => false;
     protected override bool ShouldFilterOutHiLoDocument() => true;
     private IProducer<string, byte[]> _kafkaProducer;
+    private IProducer<string, byte[]> _rabbitMqProducer;
 
     protected override IEnumerator<QueueItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs,
         string collection)
@@ -94,7 +96,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
                 count = ProcessKafka(items, Configuration, context);
                 break;
             case QueueProvider.RabbitMq:
-                ProcessRabbitMq();
+                ProcessRabbitMq(items, context);
                 break;
         }
 
@@ -161,13 +163,16 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
                 }
             }
 
+
             try
             {
                 _kafkaProducer.BeginTransaction();
-
-                foreach (var @event in events)
+                for (int i = 0; i < 3; i++)
                 {
-                    _kafkaProducer.Produce(@event.Topic, @event.Message, ReportHandler);
+                    foreach (var @event in events)
+                    {
+                        _kafkaProducer.Produce(@event.Topic, @event.Message, ReportHandler);
+                    }
                 }
 
                 _kafkaProducer.CommitTransaction();
@@ -182,8 +187,49 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
         return count;
     }
 
-    private void ProcessRabbitMq()
+    private int ProcessRabbitMq(IEnumerable<QueueWithEvents> items, DocumentsOperationContext context)
     {
+        int count = 0;
+
+        using (var jsonSerializer = new BlittableEventBinaryFormatter(context))
+        {
+            var events = new List<RabbitMqMessageEvent>();
+
+            foreach (QueueWithEvents queueItem in items)
+            {
+                var topicName = queueItem.Name;
+
+                foreach (var insertItem in queueItem.Inserts)
+                {
+                    var eventMessage = new CloudEvent
+                    {
+                        Id = DefaultCloudEventId,
+                        DataContentType = "application/json",
+                        Type = string.IsNullOrWhiteSpace(queueItem.Type) ? DefaultType : queueItem.Type,
+                        Source = new Uri(string.IsNullOrWhiteSpace(queueItem.Source) ? DefaultSource : queueItem.Source),
+                        Data = insertItem.TransformationResult
+                    };
+
+                    eventMessage.SetPartitionKey(insertItem.ChangeVector);
+
+                    events.Add(new RabbitMqMessageEvent
+                    {
+                        Topic = topicName, Message = eventMessage.ToAmqpMessage(ContentMode.Binary, jsonSerializer)
+                    });
+                }
+            }
+
+            if (events.Count == 0) return count;
+
+            if (_rabbitMqProducer == null)
+            {
+                _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId,
+                    Database.ServerStore.Server.Certificate.Certificate);
+                //_kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
+            }
+        }
+
+        return count;
     }
 
     public QueueEtlTestScriptResult RunTest(IEnumerable<QueueWithEvents> records, DocumentsOperationContext context)

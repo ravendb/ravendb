@@ -72,15 +72,20 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
 
-            var consumeResult = consumer.Consume();
-            var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
-            var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
+            var counter = 0;
+            while (counter < 3)
+            {
+                var consumeResult = consumer.Consume();
+                var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
+                var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
 
-            Assert.NotNull(order);
-            Assert.Equal(order.Id, "orders/1-A");
-            Assert.Equal(order.OrderLinesCount, 2);
-            Assert.Equal(order.TotalCost, 10);
-
+                Assert.NotNull(order);
+                Assert.Equal(order.Id, "orders/1-A");
+                Assert.Equal(order.OrderLinesCount, 2);
+                Assert.Equal(order.TotalCost, 10); 
+                counter++;
+            }
+            
             consumer.Close();
             
             etlDone.Reset();
@@ -230,7 +235,10 @@ loadToOrders" + TopicSuffix + @"(orderData);
                 Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"this.TotalCost = 10;" } }
             };
 
-            config.Initialize(new QueueConnectionString { Name = "Foo", KafkaConnectionOptions = new Dictionary<string, string> { } });
+            config.Initialize(new QueueConnectionString
+            {
+                Name = "Foo", KafkaConnectionOptions = new Dictionary<string, string> { }, Url = DefaultKafkaUrl
+            });
 
             List<string> errors;
             config.Validate(out errors);
@@ -311,8 +319,6 @@ output('test output')"
 
                     Assert.Equal(1, result.Summary.Count);
 
-                    Assert.StartsWith("./start-producer-console.sh", result.Summary.First(x => x.TopicName == "Orders").Commands[0]);
-
                     Assert.Equal("test output", result.DebugOutput[0]);
                 }
             }
@@ -324,7 +330,6 @@ output('test output')"
         string transformationName = null,
         Dictionary<string, string> configuration = null, string url = null)
     {
-        //CleanupTopic(DefaultTopics.Select(x => x.Name));
         var connectionStringName = $"{store.Database}@{store.Urls.First()} to Queue";
 
         var config = new QueueEtlConfiguration
