@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
@@ -106,6 +107,8 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, OlapConnectionString> OlapConnectionStrings = new Dictionary<string, OlapConnectionString>();
 
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
+        
+        public Dictionary<string, QueueConnectionString> QueueConnectionStrings = new Dictionary<string, QueueConnectionString>();
 
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
@@ -114,6 +117,8 @@ namespace Raven.Client.ServerWide
         public List<ElasticSearchEtlConfiguration> ElasticSearchEtls = new List<ElasticSearchEtlConfiguration>();
 
         public List<OlapEtlConfiguration> OlapEtls = new List<OlapEtlConfiguration>();
+        
+        public List<QueueEtlConfiguration> QueueEtls = new List<QueueEtlConfiguration>();
 
         public ClientConfiguration Client;
 

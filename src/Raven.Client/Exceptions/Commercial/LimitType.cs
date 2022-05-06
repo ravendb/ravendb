@@ -46,6 +46,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("ElasticSearch ETL")]
         ElasticSearchEtl,
 
+        [Description("Queue ETL")]
+        QueueEtl,
+
         [Description("Cores Limit")]
         Cores,
 

@@ -105,6 +105,18 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 }
             }
 
+            var queueEtls = record.QueueEtls;
+            if (queueEtls != null)
+            {
+                for (var i = 0; i < queueEtls.Count; i++)
+                {
+                    if (queueEtls[i].Name == ConfigurationName)
+                    {
+                        return queueEtls[i];
+                    }
+                }
+            }
+
             return null;
         }
 

@@ -48,6 +48,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         Raven,
         Sql,
         Olap,
-        ElasticSearch
+        ElasticSearch,
+        Queue
     }
 }

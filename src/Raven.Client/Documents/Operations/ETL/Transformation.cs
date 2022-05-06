@@ -389,6 +389,9 @@ namespace Raven.Client.Documents.Operations.ETL
                             case EtlType.ElasticSearch:
                                 targetName = "Index";
                                 break;
+                            case EtlType.Queue:
+                                targetName = "Queue";
+                                break;
                             default:
                                 throw new ArgumentException($"Unknown ETL type: {type}");
 

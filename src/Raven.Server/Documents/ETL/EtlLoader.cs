@@ -10,10 +10,12 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
+using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
@@ -69,9 +71,11 @@ namespace Raven.Server.Documents.ETL
 
         public List<ElasticSearchEtlConfiguration> ElasticSearchDestinations;
 
+        public List<QueueEtlConfiguration> QueueDestinations;
+
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, toRemove: null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, toRemove: null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -93,6 +97,7 @@ namespace Raven.Server.Documents.ETL
             List<SqlEtlConfiguration> newSqlDestinations,
             List<OlapEtlConfiguration> newOlapDestinations,
             List<ElasticSearchEtlConfiguration> newElasticSearchDestinations,
+            List<QueueEtlConfiguration> newQueueDestinations,
             List<EtlProcess> toRemove)
         {
             lock (_loadProcessedLock)
@@ -102,6 +107,7 @@ namespace Raven.Server.Documents.ETL
                 SqlDestinations = _databaseRecord.SqlEtls;
                 OlapDestinations = _databaseRecord.OlapEtls;
                 ElasticSearchDestinations = _databaseRecord.ElasticSearchEtls;
+                QueueDestinations = _databaseRecord.QueueEtls;
 
                 var processes = new List<EtlProcess>(_processes);
 
@@ -130,6 +136,9 @@ namespace Raven.Server.Documents.ETL
 
                 if (newElasticSearchDestinations != null && newElasticSearchDestinations.Count > 0)
                     newProcesses.AddRange(GetRelevantProcesses<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>(newElasticSearchDestinations, ensureUniqueConfigurationNames));
+
+                if (newQueueDestinations != null && newQueueDestinations.Count > 0)
+                    newProcesses.AddRange(GetRelevantProcesses<QueueEtlConfiguration, QueueConnectionString>(newQueueDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -211,6 +220,7 @@ namespace Raven.Server.Documents.ETL
                 RavenEtlConfiguration ravenConfig = null;
                 OlapEtlConfiguration olapConfig = null;
                 ElasticSearchEtlConfiguration elasticSearchConfig = null;
+                QueueEtlConfiguration queueConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -246,7 +256,13 @@ namespace Raven.Server.Documents.ETL
                             elasticSearchConfig.Initialize(elasticSearchConnection);
                         else
                             connectionStringNotFound = true;
-
+                        break;
+                    case EtlType.Queue:
+                        queueConfig = config as QueueEtlConfiguration;
+                        if (_databaseRecord.QueueConnectionStrings.TryGetValue(config.ConnectionStringName, out var queueConnection))
+                            queueConfig.Initialize(queueConnection);
+                        else
+                            connectionStringNotFound = true;
                         break;
 
                     default:
@@ -283,9 +299,10 @@ namespace Raven.Server.Documents.ETL
                         process = new RavenEtl(transform, ravenConfig, _database, _serverStore);
                     if (olapConfig != null)
                         process = new OlapEtl(transform, olapConfig, _database, _serverStore);
-
                     if (elasticSearchConfig != null)
                         process = new ElasticSearchEtl(transform, elasticSearchConfig, _database, _serverStore);
+                    if(queueConfig != null)
+                        process = new QueueEtl(transform, queueConfig, _database, _serverStore);
 
                     yield return process;
                 }
@@ -352,7 +369,7 @@ namespace Raven.Server.Documents.ETL
                         $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use authentication, but ETL is allowed."
                     });
                 return true;
-            }
+            }            
 
             if (uniqueNames.Add(config.Name) == false)
             {
@@ -452,6 +469,7 @@ namespace Raven.Server.Documents.ETL
             var mySqlEtl = new List<SqlEtlConfiguration>();
             var myOlapEtl = new List<OlapEtlConfiguration>();
             var myElasticSearchEtl = new List<ElasticSearchEtlConfiguration>();
+            var myQueueEtl = new List<QueueEtlConfiguration>();
 
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -485,6 +503,14 @@ namespace Raven.Server.Documents.ETL
                 if (IsMyEtlTask<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>(record, config, ref responsibleNodes))
                 {
                     myElasticSearchEtl.Add(config);
+                }
+            }
+
+            foreach (var config in record.QueueEtls)
+            {
+                if (IsMyEtlTask<QueueEtlConfiguration, QueueConnectionString>(record, config, ref responsibleNodes))
+                {
+                    myQueueEtl.Add(config);
                 }
             }
 
@@ -586,6 +612,29 @@ namespace Raven.Server.Documents.ETL
 
                             break;
                         }
+                    case QueueEtl queueEtl:
+                        {
+                            QueueEtlConfiguration existing = null;
+
+                            foreach (var config in myQueueEtl)
+                            {
+                                var diff = queueEtl.Configuration.Compare(config);
+
+                                if (diff == EtlConfigurationCompareDifferences.None && queueEtl.Configuration.Equals(config))
+                                {
+                                    existing = config;
+                                    break;
+                                }
+                            }
+
+                            if (existing != null)
+                            {
+                                toRemove.Remove(processesPerConfig.Key);
+                                myQueueEtl.Remove(existing);
+                            }
+
+                            break;
+                        }
                     default:
                         throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
@@ -599,7 +648,7 @@ namespace Raven.Server.Documents.ETL
 
                     try
                     {
-                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myElasticSearchEtl, responsibleNodes);
+                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
 
                         process.Stop(reason);
                     }
@@ -611,7 +660,7 @@ namespace Raven.Server.Documents.ETL
                 }
             });
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, toRemove.SelectMany(x => x.Value).ToList());
+            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, toRemove.SelectMany(x => x.Value).ToList());
 
             Parallel.ForEach(toRemove, x =>
             {
@@ -633,7 +682,7 @@ namespace Raven.Server.Documents.ETL
         }
 
         private static string GetStopReason(EtlProcess process, List<RavenEtlConfiguration> myRavenEtl, List<SqlEtlConfiguration> mySqlEtl,
-            List<ElasticSearchEtlConfiguration> myElasticSearchEtl, Dictionary<string, string> responsibleNodes)
+            List<ElasticSearchEtlConfiguration> myElasticSearchEtl, List<QueueEtlConfiguration> myQueueEtl, Dictionary<string, string> responsibleNodes)
         {
             EtlConfigurationCompareDifferences? differences = null;
             var transformationDiffs = new List<(string TransformationName, EtlConfigurationCompareDifferences Difference)>();
@@ -660,6 +709,13 @@ namespace Raven.Server.Documents.ETL
 
                 if (existing != null)
                     differences = elasticSearchEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is QueueEtl queueEtl)
+            {
+                var existing = myQueueEtl.FirstOrDefault(x => x.Name.Equals(queueEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = queueEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {

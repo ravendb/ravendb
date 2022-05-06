@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
@@ -491,6 +492,29 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private List<QueueEtlConfiguration> _queueEtls;
+
+        public List<QueueEtlConfiguration> QueueEtls
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.QueueEtls;
+
+                if (_queueEtls == null)
+                {
+                    _queueEtls = new List<QueueEtlConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.QueueEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _queueEtls.Add(JsonDeserializationCluster.QueueEtlConfiguration(element));
+                    }
+                }
+
+                return _queueEtls;
+            }
+        }
+
         private Dictionary<string, string> _settings;
 
         public Dictionary<string, string> Settings
@@ -909,6 +933,38 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _olapConnectionStrings;
+            }
+        }
+
+        private Dictionary<string, QueueConnectionString> _queueConnectionStrings;
+
+        public Dictionary<string, QueueConnectionString> QueueConnectionStrings
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.QueueConnectionStrings;
+
+                if (_queueConnectionStrings == null)
+                {
+                    _queueConnectionStrings = new Dictionary<string, QueueConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.QueueConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _queueConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.QueueConnectionString(bjro);
+                        }
+                    }
+                }
+
+                return _queueConnectionStrings;
             }
         }
 

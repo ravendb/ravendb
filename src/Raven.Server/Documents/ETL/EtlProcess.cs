@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -21,6 +22,7 @@ using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
+using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -173,6 +175,8 @@ namespace Raven.Server.Documents.ETL
         protected abstract IEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
+        
+        //todo: ShouldTrackTombstones
 
         public override long TaskId => Configuration.TaskId;
 
@@ -1210,6 +1214,24 @@ namespace Raven.Server.Documents.ETL
 
                             return tx;
                         }
+
+                    case EtlType.Queue:
+                        using (var queueEtl = new QueueEtl(testScript.Configuration.Transforms[0], testScript.Configuration as QueueEtlConfiguration, database, database.ServerStore))
+                        using (queueEtl.EnterTestMode(out debugOutput))
+                        {
+                            queueEtl.EnsureThreadAllocationStats();
+
+                            var queueItem = new QueueItem(document, docCollection);
+
+                            var results = queueEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                new EtlProcessState());
+
+                            result = queueEtl.RunTest(results, context);
+                            result.DebugOutput = debugOutput;
+
+                            return tx;
+                        }
+
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
                 }

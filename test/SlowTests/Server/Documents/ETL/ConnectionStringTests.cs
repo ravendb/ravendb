@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -49,6 +50,15 @@ namespace SlowTests.Server.Documents.ETL
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<ElasticSearchConnectionString>(elasticSearchConnectionString));
                 Assert.NotNull(result2.RaftCommandIndex);
+                
+                var queueConnectionString = new QueueConnectionString
+                {
+                    Name = "ElasticSearchConnectionString",
+                    Url = "http://127.0.0.1:8080"
+                };
+
+                var resultQueue = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(queueConnectionString));
+                Assert.NotNull(resultQueue.RaftCommandIndex);
 
                 DatabaseRecord record;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -69,6 +79,10 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.True(record.ElasticSearchConnectionStrings.ContainsKey("ElasticSearchConnectionString"));
                 Assert.Equal(elasticSearchConnectionString.Name , record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Name);
                 Assert.Equal(elasticSearchConnectionString.Nodes, record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Nodes);
+                
+                Assert.True(record.QueueConnectionStrings.ContainsKey("QueueConnectionString"));
+                Assert.Equal(queueConnectionString.Name , record.QueueConnectionStrings["QueueConnectionString"].Name);
+                Assert.Equal(queueConnectionString.Url, record.QueueConnectionStrings["QueueConnectionString"].Url);
 
                 var result3 = store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
                 Assert.NotNull(result3.RaftCommandIndex);
@@ -76,6 +90,8 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.NotNull(result4.RaftCommandIndex);
                 var result5 = store.Maintenance.Send(new RemoveConnectionStringOperation<ElasticSearchConnectionString>(elasticSearchConnectionString));
                 Assert.NotNull(result5.RaftCommandIndex);
+                var result6 = store.Maintenance.Send(new RemoveConnectionStringOperation<QueueConnectionString>(queueConnectionString));
+                Assert.NotNull(result6.RaftCommandIndex);
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -86,6 +102,7 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.False(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
                 Assert.False(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
                 Assert.False(record.ElasticSearchConnectionStrings.ContainsKey("ElasticSearchConnectionString"));
+                Assert.False(record.QueueConnectionStrings.ContainsKey("QueueConnectionString"));
 
             }
         }
