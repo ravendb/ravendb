@@ -445,19 +445,23 @@ namespace Raven.Server.ServerWide
                     case nameof(AddSqlEtlCommand):
                     case nameof(AddOlapEtlCommand):
                     case nameof(AddElasticSearchEtlCommand):
+                    case nameof(AddQueueEtlCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
                     case nameof(UpdateOlapEtlCommand):
                     case nameof(UpdateElasticSearchEtlCommand):
+                    case nameof(UpdateQueueEtlCommand):
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
                     case nameof(PutOlapConnectionStringCommand):
                     case nameof(PutElasticSearchConnectionStringCommand):
+                    case nameof(PutQueueConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
                     case nameof(RemoveOlapConnectionStringCommand): 
                     case nameof(RemoveElasticSearchConnectionStringCommand):
+                    case nameof(RemoveQueueConnectionStringCommand):
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
                     case nameof(EditDatabaseClientConfigurationCommand):
@@ -2451,19 +2455,23 @@ namespace Raven.Server.ServerWide
                 case nameof(AddSqlEtlCommand):
                 case nameof(AddOlapEtlCommand):
                 case nameof(AddElasticSearchEtlCommand):
+                case nameof(AddQueueEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
                 case nameof(UpdateOlapEtlCommand):
                 case nameof(UpdateElasticSearchEtlCommand):
+                case nameof(UpdateQueueEtlCommand):
                 case nameof(DeleteOngoingTaskCommand):
                 case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
                 case nameof(PutOlapConnectionStringCommand):
                 case nameof(PutElasticSearchConnectionStringCommand):
+                case nameof(PutQueueConnectionStringCommand):
                 case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
                 case nameof(RemoveOlapConnectionStringCommand):
                 case nameof(RemoveElasticSearchConnectionStringCommand):
+                case nameof(RemoveQueueConnectionStringCommand):
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):

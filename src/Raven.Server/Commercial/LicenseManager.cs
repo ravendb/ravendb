@@ -1449,6 +1449,18 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
         }
 
+        public void AssertCanAddQueueEtl()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasQueueEtl)
+                return;
+
+            const string message = "Your current license doesn't include the Queue ETL feature";
+            throw GenerateLicenseLimit(LimitType.QueueEtl, message);
+        }
+
         public void AssertCanAddConcurrentDataSubscriptions()
         {
             if (IsValid(out var licenseLimit) == false)
