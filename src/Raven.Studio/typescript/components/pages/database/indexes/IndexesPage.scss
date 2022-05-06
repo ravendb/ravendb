@@ -8,12 +8,69 @@
 
     .index-item {
         background-color: colors.$gray-900;
+        margin-bottom: sizes.$gutter;
 
         .index-header {
             background-color: colors.$gray-800;
             padding: sizes.$gutter-sm;
             display: flex;
             align-items: center;
+
+            .index-select {
+                width: sizes.$gutter;
+                height: sizes.$gutter;
+                margin-right: sizes.$gutter-sm;
+
+                .checkbox {
+                    width: 100%;
+                    height: 100%;
+                    padding: 0;
+                    position: relative;
+
+                    input.styled {
+                        margin: 0 !important;
+                        top: 0;
+                        width: 100%;
+                        height: 100%;
+                    }
+
+                    label {
+                        position: absolute;
+                        padding: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        width: 100%;
+                        height: 100%;
+                        top: 0;
+
+                        &::before {
+                            width: 100%;
+                            height: 100%;
+                            left: 0;
+                            top: 0;
+                            margin-left: 0;
+                        }
+
+                        &:after {
+                            display: inline;
+                            position: relative;
+                            width: auto;
+                            height: auto;
+                            left: auto;
+                            top: auto;
+                            margin-left: 0;
+                            padding-left: 0;
+                            padding-top: 0;
+                            font-size: 17px;
+                        }
+                    }
+                }
+            }
+
+            .index-name {
+                margin: 0;
+            }
 
             .actions {
                 flex-grow: 1;
