@@ -680,11 +680,151 @@ export function IndexesPage(props: IndexesPageProps) {
                     <div className="index-item">
                         <div className="index-header">
                             <div className="flex-horizontal">
+                                <div className="index-select">
+                                    <div className="checkbox">
+                                        <input type="checkbox" className="styled" /><label></label>
+                                    </div>
+                                </div>
+                                <h3 className="index-name flex-grow"><a href="" title="Companies/StockPrices/TradeVolumeByMonth">Companies/StockPrices/TradeVolumeByMonth</a></h3>
+                            </div>
+
+                            <div className="actions">
+                                <div className="btn-toolbar pull-right-sm" role="toolbar">
+                                    <div className="btn-group properties-value">
+                                        <button type="button" className="btn btn-default" data-toggle="dropdown" data-bind="">Set State <span className="caret"></span> </button>
+                                        <ul className="dropdown-menu">
+                                            <li data-bind="visible: canBeEnabled()"><a href="#" title="Enable indexing on ALL cluster nodes"><i className="icon-play"></i><span>Enable indexing</span></a></li>
+                                            <li data-bind="visible: canBeDisabled()"><a href="#" title="Disable indexing on ALL cluster nodes"><i className="icon-cancel"></i><span>Disable indexing</span></a></li>
+                                            <li data-bind="visible: canBePaused()"><a href="#" className="text-warning" title="Pause until restart"><i className="icon-pause"></i><span>Pause indexing until restart</span></a></li>
+                                            <li data-bind="visible: canBeResumed()"><a href="#" className="text-success" title="Resume indexing"><i className="icon-play"></i><span>Resume indexing</span></a></li>
+                                        </ul>
+                                    </div>
+                                    <div className="btn-group" role="group">
+                                        <a className="btn btn-default" href="#databases/query/index/Companicon-timeseriesies%2FStockPrices%2FTradeVolumeByMonth?&amp;database=asdasd"><i className="icon-search"></i><span>Query</span></a>
+                                        <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span className="caret"></span> <span className="sr-only">Toggle Dropdown</span></button>
+                                        <ul className="dropdown-menu">
+                                            <li><a href="#databases/indexes/terms/Companies%2FStockPrices%2FTradeVolumeByMonth?&amp;database=asdasd"><i className="icon-terms"></i> Terms</a></li>
+                                        </ul>
+                                    </div>
+                                    <div className="btn-group" role="group">
+                                        <a className="btn btn-default" href="#databases/indexes/edit/Companies%2FStockPrices%2FTradeVolumeByMonth?&amp;database=asdasd" title="Edit index"><i className="icon-edit"></i></a>
+                                    </div>
+                                    <div className="btn-group" role="group">
+                                        <button className="btn btn-warning" type="button" title="Reset index (rebuild)"><i className="icon-reset-index"></i></button>
+                                        <button className="btn btn-danger" title="Delete the index"><i className="icon-trash"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="">
+                            <div className="index-details">
+                                <div className="index-detail-item">
+                                    <i className="icon-map-reduce" /> MapReduce
+                                </div>
+                                <div className="index-detail-item">
+                                    <i className="icon-search" /> Lucene
+                                </div>
+                                <div className="index-detail-item">
+                                    <i className="icon-documents" /> Documents
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div className="index-distribution">
+                            <div className="distribution-legend">
+                                <div className="top"></div>
+                                <div className="node"><i className="icon-node" /> Node </div>
+                                <div> <i className="icon-list" /> Entries </div>
+                                <div> <i className="icon-warning" /> Errors </div>
+                                <div> <i />Status </div>
+                            </div>
+                            <div className="distribution-summary">
+                                <div className="top">
+                                    <i className="icon-sum" />
+                                </div>
+                                <div> </div>
+                                <div> 4 802 809 </div>
+                                <div> 0 </div>
+                                <div></div>
+                            </div>
+
+                            <div className="distribution-item">
+                                <div className="top shard"><i className="icon-shard" />1</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000 000 000 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+
+                            <div className="distribution-item">
+                                <div className="top shard"><i className="icon-shard" />2</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state pending">
+                                    <div className='state-desc'>pending</div>
+                                    <div className="state-indicator"><i className="icon-waiting" /></div>
+
+                                </div>
+                            </div>
+
+                            <div className="distribution-item">
+                                <div className="top shard"><i className="icon-shard" />3</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state running">
+                                    <div className='state-desc'><strong>60%</strong> running</div>
+                                    <div className="state-indicator">
+                                        <svg className="progress-ring">
+                                            <circle stroke-dashoffset="35" />  {/* 81.68 - 0 */}
+                                            {/* https://codepen.io/jeremenichelli/pen/vegymB */}
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="distribution-item ">
+                                <div className="top shard"><i className="icon-shard" />4</div>
+                                <div className="node">A</div>
+                                <div className="entries text-danger">×</div>
+                                <div className="errors text-danger">×</div>
+                                <div className="state failed">
+                                    <div className='state-desc'>error</div>
+                                    <div className="state-indicator"><i className="icon-cancel" /></div>
+
+                                </div>
+                            </div>
+
+                            <div className="distribution-item loading">
+                                <div className="top shard"><i className="icon-shard" />5</div>
+                                <div className="node">A</div>
+                                <div className="entries">20 000</div>
+                                <div className="errors">0</div>
+                                <div className="state up-to-date">
+                                    <div className='state-desc'>up to date</div>
+                                    <div className="state-indicator"><i className="icon-check" /></div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="index-item">
+                        <div className="index-header">
+                            
+                            <div className="index-select">
                                 <div className="checkbox">
                                     <input type="checkbox" className="styled" /><label></label>
                                 </div>
-                                <h3 className="index-name flex-grow"><a href="" title="Companies/StockPrices/TradeVolumeByMonth">Companies/StockPrices/TradeVolumeByMonth</a></h3>                                
                             </div>
+                            <h3 className="index-name flex-grow"><a href="" title="Companies/StockPrices/TradeVolumeByMonth">Companies/StockPrices/TradeVolumeByMonth</a></h3>                                
+                            
 
                             <div className="actions">
                                 <div className="btn-toolbar pull-right-sm" role="toolbar">
