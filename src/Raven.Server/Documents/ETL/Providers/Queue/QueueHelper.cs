@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using Amqp;
 using Confluent.Kafka;
 using Raven.Client.Documents.Operations.ETL.Queue;
 
@@ -37,5 +38,16 @@ public static class QueueHelper
             .Build();
 
         return producer;
+    }
+    
+    public static IProducer<string, byte[]> CreateRabbitMqClient(QueueConnectionString connectionString, string transactionalId, X509Certificate2 certificate = null)
+    {
+        /*var factory = new ConnectionFactory { AMQP = { HostName = "localhost" } };
+        var connection = factory.CreateAsync()
+        using var channel = connection.CreateModel();
+
+        return producer;*/
+
+        return null;
     }
 }
