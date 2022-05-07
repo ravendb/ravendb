@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Changes;
 
-internal class ShardedDatabaseChanges : DatabaseChangesBase<ShardedDatabaseConnectionState>
+internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseConnectionState>
 {
     public ShardedDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag) 
         : base(requestExecutor, databaseName, onDispose, nodeTag)

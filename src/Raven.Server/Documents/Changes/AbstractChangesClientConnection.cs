@@ -12,7 +12,7 @@ using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Changes;
 
-public abstract class ChangesClientConnectionBase<TOperationContext> : IDisposable
+public abstract class AbstractChangesClientConnection<TOperationContext> : IDisposable
     where TOperationContext : JsonOperationContext
 {
     private static long _counter;
@@ -30,7 +30,7 @@ public abstract class ChangesClientConnectionBase<TOperationContext> : IDisposab
 
     protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
 
-    protected ChangesClientConnectionBase(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken databaseShutdown, bool fromStudio)
+    protected AbstractChangesClientConnection(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken databaseShutdown, bool fromStudio)
     {
         IsChangesConnectionOriginatedFromStudio = fromStudio;
         ContextPool = contextPool;
