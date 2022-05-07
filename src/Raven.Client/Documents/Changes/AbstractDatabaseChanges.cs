@@ -16,8 +16,8 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Changes;
 
-internal abstract class DatabaseChangesBase<TDatabaseConnectionState>
-    where TDatabaseConnectionState : DatabaseConnectionStateBase
+internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState>
+    where TDatabaseConnectionState : AbstractDatabaseConnectionState
 {
     private int _commandId;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -31,7 +31,7 @@ internal abstract class DatabaseChangesBase<TDatabaseConnectionState>
 
     private readonly Task _task;
     private readonly CancellationTokenSource _cts;
-    private TaskCompletionSource<DatabaseChangesBase<TDatabaseConnectionState>> _tcs;
+    private TaskCompletionSource<AbstractDatabaseChanges<TDatabaseConnectionState>> _tcs;
 
     private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new();
 
@@ -42,12 +42,12 @@ internal abstract class DatabaseChangesBase<TDatabaseConnectionState>
     private int _nodeIndex;
     private Uri _url;
 
-    protected DatabaseChangesBase(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag)
+    protected AbstractDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag)
     {
         RequestExecutor = requestExecutor;
         _database = databaseName;
 
-        _tcs = new TaskCompletionSource<DatabaseChangesBase<TDatabaseConnectionState>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _tcs = new TaskCompletionSource<AbstractDatabaseChanges<TDatabaseConnectionState>>(TaskCreationOptions.RunContinuationsAsynchronously);
         _cts = new CancellationTokenSource();
         _client = CreateClientWebSocket(RequestExecutor);
 
@@ -95,7 +95,7 @@ internal abstract class DatabaseChangesBase<TDatabaseConnectionState>
             }
 
             if (_tcs.Task.Status == TaskStatus.RanToCompletion)
-                _tcs = new TaskCompletionSource<DatabaseChangesBase<TDatabaseConnectionState>>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _tcs = new TaskCompletionSource<AbstractDatabaseChanges<TDatabaseConnectionState>>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
         finally
         {
@@ -105,7 +105,7 @@ internal abstract class DatabaseChangesBase<TDatabaseConnectionState>
 
     public bool Connected => _client?.State == WebSocketState.Open;
 
-    protected Task<DatabaseChangesBase<TDatabaseConnectionState>> EnsureConnectedNowAsync()
+    protected Task<AbstractDatabaseChanges<TDatabaseConnectionState>> EnsureConnectedNowAsync()
     {
         return _tcs.Task;
     }

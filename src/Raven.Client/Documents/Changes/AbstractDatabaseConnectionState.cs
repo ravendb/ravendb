@@ -5,7 +5,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Changes;
 
-internal abstract class DatabaseConnectionStateBase
+internal abstract class AbstractDatabaseConnectionState
 {
     public event Action<Exception> OnError;
 
@@ -17,7 +17,7 @@ internal abstract class DatabaseConnectionStateBase
     private readonly TaskCompletionSource<object> _firstSet = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task _connected;
 
-    protected DatabaseConnectionStateBase(Func<Task> onConnect, Func<Task> onDisconnect)
+    protected AbstractDatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
     {
         OnConnect = onConnect;
         _onDisconnect = onDisconnect;

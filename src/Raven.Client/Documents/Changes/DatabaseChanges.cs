@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseChanges : DatabaseChangesBase<DatabaseConnectionState>, IDatabaseChanges
+    internal class DatabaseChanges : AbstractDatabaseChanges<DatabaseConnectionState>, IDatabaseChanges
     {
         public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag) 
             : base(requestExecutor, databaseName, onDispose, nodeTag)

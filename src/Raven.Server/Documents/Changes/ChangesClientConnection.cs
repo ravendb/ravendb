@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Changes
 {
-    public class ChangesClientConnection : ChangesClientConnectionBase<DocumentsOperationContext>
+    public class ChangesClientConnection : AbstractChangesClientConnection<DocumentsOperationContext>
     {
         private readonly ConcurrentSet<string> _matchingDocuments = new(StringComparer.OrdinalIgnoreCase);
 
