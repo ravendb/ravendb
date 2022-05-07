@@ -8,6 +8,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;

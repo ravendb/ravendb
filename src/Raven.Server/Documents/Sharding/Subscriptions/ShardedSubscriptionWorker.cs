@@ -8,7 +8,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ShardedTcpHandlers
+namespace Raven.Server.Documents.Sharding.Subscriptions
 {
     public class ShardedSubscriptionWorker : AbstractSubscriptionWorker<dynamic>
     {

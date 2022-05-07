@@ -38,15 +38,18 @@ namespace Raven.Client.Documents.Changes
 
         public void Send(T msg)
         {
-            try
+            if (_filter != null)
             {
-                if (_filter(msg) == false)
+                try
+                {
+                    if (_filter(msg) == false)
+                        return;
+                }
+                catch (Exception e)
+                {
+                    Error(e);
                     return;
-            }
-            catch (Exception e)
-            {
-                Error(e);
-                return;
+                }
             }
 
             foreach (var subscriber in _subscribers)

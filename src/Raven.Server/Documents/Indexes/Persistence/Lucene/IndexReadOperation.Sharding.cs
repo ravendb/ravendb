@@ -3,6 +3,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Sharding;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene;

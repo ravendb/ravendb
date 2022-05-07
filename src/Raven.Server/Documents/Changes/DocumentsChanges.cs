@@ -2,13 +2,13 @@
 using System.Collections.Concurrent;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Changes
 {
-    public class DocumentsChanges
+    public class DocumentsChanges : DocumentsChangesBase<ChangesClientConnection, DocumentsOperationContext>
     {
-        public readonly ConcurrentDictionary<long, ChangesClientConnection> Connections = new ConcurrentDictionary<long, ChangesClientConnection>();
-
         public event Action<DocumentChange> OnDocumentChange;
 
         public event Action<CounterChange> OnCounterChange;
@@ -79,15 +79,22 @@ namespace Raven.Server.Documents
                 connection.Value.SendOperationStatusChangeNotification(operationStatusChange);
             }
         }
+    }
 
-        public void Connect(ChangesClientConnection connection)
+    public abstract class DocumentsChangesBase<TChangesClientConnection, TOperationContext>
+        where TChangesClientConnection : ChangesClientConnectionBase<TOperationContext>
+        where TOperationContext : JsonOperationContext
+    {
+        public readonly ConcurrentDictionary<long, TChangesClientConnection> Connections = new ConcurrentDictionary<long, TChangesClientConnection>();
+
+        public void Connect(TChangesClientConnection connection)
         {
             Connections.TryAdd(connection.Id, connection);
         }
 
         public void Disconnect(long id)
         {
-            if (Connections.TryRemove(id, out ChangesClientConnection connection))
+            if (Connections.TryRemove(id, out TChangesClientConnection connection))
                 connection.Dispose();
         }
     }
