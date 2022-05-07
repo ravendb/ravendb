@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
-namespace Raven.Server.Documents;
+namespace Raven.Server.Documents.Sharding;
 
 public class ShardedDocumentDatabase : DocumentDatabase
 {

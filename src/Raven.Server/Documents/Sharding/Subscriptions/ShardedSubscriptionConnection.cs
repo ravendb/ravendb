@@ -22,7 +22,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.ShardedTcpHandlers
+namespace Raven.Server.Documents.Sharding.Subscriptions
 {
     public class ShardedSubscriptionConnection : SubscriptionConnectionBase
     {

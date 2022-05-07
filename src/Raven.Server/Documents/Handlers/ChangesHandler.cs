@@ -10,6 +10,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Changes;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents.Handlers
 
             var connection = new ChangesClientConnection(webSocket, Database, fromStudio);
             Database.Changes.Connect(connection);
-            var sendTask = connection.StartSendingNotifications(throttleConnection);
+            var sendTask = connection.StartSendingNotificationsAsync(throttleConnection);
             var debugTag = "changes/" + connection.Id;
             using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment1))
             using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment2))
@@ -148,7 +149,7 @@ namespace Raven.Server.Documents.Handlers
                                     reader.TryGet("Param", out string commandParameter);
                                     reader.TryGet("Params", out BlittableJsonReaderArray commandParameters);
 
-                                    connection.HandleCommand(command, commandParameter, commandParameters);
+                                    await connection.HandleCommandAsync(command, commandParameter, commandParameters);
 
                                     if (reader.TryGet("CommandId", out int commandId))
                                     {

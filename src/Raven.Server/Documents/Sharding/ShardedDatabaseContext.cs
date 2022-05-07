@@ -5,10 +5,9 @@ using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.Documents.Sharding.Executors;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -59,6 +58,7 @@ namespace Raven.Server.Documents.Sharding
 
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
+            Changes = new ShardedDocumentsChanges(this);
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
         }
 

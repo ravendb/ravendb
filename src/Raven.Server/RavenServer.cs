@@ -39,7 +39,7 @@ using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.ShardedTcpHandlers;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
 using Raven.Server.Integrations.PostgreSQL;

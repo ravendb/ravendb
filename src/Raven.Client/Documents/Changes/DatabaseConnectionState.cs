@@ -1,65 +1,49 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>
+    public class DatabaseConnectionState : DatabaseConnectionStateBase, IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>
     {
-        public event Action<Exception> OnError;
+        private event Action<DocumentChange> OnDocumentChangeNotification;
 
-        private readonly Func<Task> _onDisconnect;
-        public readonly Func<Task> OnConnect;
-        private int _value;
-        public Exception LastException;
+        private event Action<CounterChange> OnCounterChangeNotification;
 
-        private readonly TaskCompletionSource<object> _firstSet = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private Task _connected;
+        private event Action<IndexChange> OnIndexChangeNotification;
 
-        public void Set(Task connection)
+        private event Action<OperationStatusChange> OnOperationStatusChangeNotification;
+
+        private event Action<TimeSeriesChange> OnTimeSeriesChangeNotification;
+
+        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect) 
+            : base(onConnect, onDisconnect)
         {
-            if (_firstSet.Task.IsCompleted == false)
-            {
-                var task = _firstSet.Task.IgnoreUnobservedExceptions();
-
-                connection.ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                        _firstSet.TrySetException(t.Exception);
-                    else if (t.IsCanceled)
-                        _firstSet.TrySetCanceled();
-                    else
-                        _firstSet.TrySetResult(null);
-                });
-            }
-            _connected = connection;
         }
 
-        public void Inc()
+        public void Send(DocumentChange documentChange)
         {
-            Interlocked.Increment(ref _value);
+            OnDocumentChangeNotification?.Invoke(documentChange);
         }
 
-        public void Dec()
+        public void Send(CounterChange counterChange)
         {
-            if (Interlocked.Decrement(ref _value) == 0)
-            {
-                Set(_onDisconnect());
-            }
+            OnCounterChangeNotification?.Invoke(counterChange);
         }
 
-        public void Error(Exception e)
+        public void Send(TimeSeriesChange timeSeriesChange)
         {
-            Set(Task.FromException(e));
-            LastException = e;
-            OnError?.Invoke(e);
+            OnTimeSeriesChangeNotification?.Invoke(timeSeriesChange);
         }
 
-        public Task EnsureSubscribedNow()
+        public void Send(IndexChange indexChange)
         {
-            return _connected ?? _firstSet.Task;
+            OnIndexChangeNotification?.Invoke(indexChange);
+        }
+
+        public void Send(OperationStatusChange operationStatusChange)
+        {
+            OnOperationStatusChangeNotification?.Invoke(operationStatusChange);
         }
 
         event Action<TimeSeriesChange> IChangesConnectionState<TimeSeriesChange>.OnChangeNotification
@@ -92,57 +76,15 @@ namespace Raven.Client.Documents.Changes
             remove => OnDocumentChangeNotification -= value;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
-            Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
+            base.Dispose();
+
             OnDocumentChangeNotification = null;
             OnCounterChangeNotification = null;
             OnTimeSeriesChangeNotification = null;
             OnIndexChangeNotification = null;
             OnOperationStatusChangeNotification = null;
-            OnError = null;
-        }
-
-        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
-        {
-            OnConnect = onConnect;
-            _onDisconnect = onDisconnect;
-            _value = 0;
-        }
-
-        private event Action<DocumentChange> OnDocumentChangeNotification;
-
-        private event Action<CounterChange> OnCounterChangeNotification;
-
-        private event Action<IndexChange> OnIndexChangeNotification;
-
-        private event Action<OperationStatusChange> OnOperationStatusChangeNotification;
-
-        private event Action<TimeSeriesChange> OnTimeSeriesChangeNotification;
-
-        public void Send(DocumentChange documentChange)
-        {
-            OnDocumentChangeNotification?.Invoke(documentChange);
-        }
-
-        public void Send(CounterChange counterChange)
-        {
-            OnCounterChangeNotification?.Invoke(counterChange);
-        }
-
-        public void Send(TimeSeriesChange timeSeriesChange)
-        {
-            OnTimeSeriesChangeNotification?.Invoke(timeSeriesChange);
-        }
-
-        public void Send(IndexChange indexChange)
-        {
-            OnIndexChangeNotification?.Invoke(indexChange);
-        }
-
-        public void Send(OperationStatusChange operationStatusChange)
-        {
-            OnOperationStatusChangeNotification?.Invoke(operationStatusChange);
         }
     }
 }

@@ -306,22 +306,6 @@ namespace Raven.Client.Documents
             return new DatabaseChanges(GetRequestExecutor(node.DatabaseName), node.DatabaseName, () => _databaseChanges.TryRemove(node, out var _), node.NodeTag);
         }
 
-        public Exception GetLastDatabaseChangesStateException(string database = null, string nodeTag = null)
-        {
-            var node = new DatabaseChangesOptions
-            {
-                DatabaseName = database ?? Database,
-                NodeTag = nodeTag
-            };
-
-            if (_databaseChanges.TryGetValue(node, out IDatabaseChanges databaseChanges))
-            {
-                return ((DatabaseChanges)databaseChanges).GetLastConnectionStateException();
-            }
-
-            return null;
-        }
-
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>

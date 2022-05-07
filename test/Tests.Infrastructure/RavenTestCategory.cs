@@ -52,4 +52,6 @@ public enum RavenTestCategory : long
     CompareExchange = 1L << 37,
     Embedded = 1L << 38,
     ClusterTransactions = 1L << 39,
+    [Description("Changes API")]
+    ChangesApi = 1L << 40
 }

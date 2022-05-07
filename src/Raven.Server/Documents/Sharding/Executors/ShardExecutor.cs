@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Executors
     public class ShardExecutor : AbstractExecutor
     {
         private readonly ShardedDatabaseContext _databaseContext;
-        public RequestExecutor[] _requestExecutors;
+        private readonly RequestExecutor[] _requestExecutors;
         private readonly int[] _fullRange;
 
         public ShardExecutor(ServerStore store, ShardedDatabaseContext databaseContext) : base(store)
