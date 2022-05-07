@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Client.Documents.Changes
 {
-    public class DatabaseChangesOptions
+    internal class DatabaseChangesOptions
     {
         public string DatabaseName { get; set; }
 

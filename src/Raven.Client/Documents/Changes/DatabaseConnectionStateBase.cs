@@ -5,7 +5,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Changes;
 
-public abstract class DatabaseConnectionStateBase
+internal abstract class DatabaseConnectionStateBase
 {
     public event Action<Exception> OnError;
 
