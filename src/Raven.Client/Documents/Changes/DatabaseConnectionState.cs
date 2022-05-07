@@ -4,7 +4,7 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Changes
 {
-    public class DatabaseConnectionState : DatabaseConnectionStateBase, IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>
+    internal class DatabaseConnectionState : DatabaseConnectionStateBase, IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>
     {
         private event Action<DocumentChange> OnDocumentChangeNotification;
 

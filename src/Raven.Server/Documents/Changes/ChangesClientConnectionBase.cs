@@ -492,4 +492,10 @@ public abstract class ChangesClientConnectionBase<TOperationContext> : IDisposab
             };
         }
     }
+
+    protected class SendQueueItem
+    {
+        public object ValueToSend;
+        public bool AllowSkip;
+    }
 }

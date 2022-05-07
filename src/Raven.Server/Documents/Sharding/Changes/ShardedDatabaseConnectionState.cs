@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Changes;
 
-public class ShardedDatabaseConnectionState : DatabaseConnectionStateBase, IChangesConnectionState<BlittableJsonReaderObject>
+internal class ShardedDatabaseConnectionState : DatabaseConnectionStateBase, IChangesConnectionState<BlittableJsonReaderObject>
 {
     private event Action<BlittableJsonReaderObject> _onChangeNotification;
 
