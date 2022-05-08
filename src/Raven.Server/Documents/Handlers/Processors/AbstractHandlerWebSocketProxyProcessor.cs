@@ -64,7 +64,7 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
         }
         catch (Exception ex)
         {
-            await HandleException(ex, webSocket);
+            await HandleExceptionAsync(ex, webSocket);
         }
     }
 
@@ -88,7 +88,7 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
         return remoteNodeUrl;
     }
 
-    private async Task HandleException(Exception ex, WebSocket webSocket)
+    private async ValueTask HandleExceptionAsync(Exception ex, WebSocket webSocket)
     {
         try
         {
