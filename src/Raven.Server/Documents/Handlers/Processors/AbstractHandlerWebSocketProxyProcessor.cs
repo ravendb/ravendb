@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors;
 
@@ -18,8 +17,6 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AbstractHandlerWebSocketProxyProcessor<TRequestHandler, TOperationContext>>("Server");
-
     protected AbstractHandlerWebSocketProxyProcessor([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }

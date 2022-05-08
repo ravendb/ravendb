@@ -18,10 +18,9 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public partial class ShardedDatabaseRequestHandler : AbstractDatabaseRequestHandler<TransactionOperationContext>
+    public abstract partial class ShardedDatabaseRequestHandler : AbstractDatabaseRequestHandler<TransactionOperationContext>
     {
         public ShardedDatabaseContext DatabaseContext;
-        public Logger Logger;
 
         public HttpMethod Method;
         public string RelativeShardUrl;
@@ -32,7 +31,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public static List<string> HeadersToCopy = new List<string> { Constants.Headers.LastKnownClusterTransactionIndex };
 
-        public ShardedDatabaseRequestHandler()
+        protected ShardedDatabaseRequestHandler()
         {
             ContinuationTokens = new ShardedContinuationTokensHandler(this);
         }
