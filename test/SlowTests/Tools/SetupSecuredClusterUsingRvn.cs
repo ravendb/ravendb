@@ -62,7 +62,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             }
         };
         
-        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
+        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
 
         var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
@@ -236,7 +236,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             }
         };
         
-        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
+        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
 
         var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
@@ -340,7 +340,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {"A", new SetupInfo.NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
             }
         };
-        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
+        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
         var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
             {
@@ -474,7 +474,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {"C", new SetupInfo.NodeInfo {Port = 446, TcpPort = 38888, Addresses = new List<string> {"127.0.0.1"}}}
             }
         };
-        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
+        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
         var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
             {
