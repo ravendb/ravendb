@@ -44,7 +44,7 @@ public class BasicChangesTests : RavenTestBase
                     }
                 }
 
-                Assert.True(cde.Wait(TimeSpan.FromSeconds(30)), $"Missed {cde.CurrentCount} events.");
+                Assert.True(cde.Wait(TimeSpan.FromSeconds(60)), $"Missed {cde.CurrentCount} events.");
             }
         }
     }
@@ -76,7 +76,7 @@ public class BasicChangesTests : RavenTestBase
                     }
                 }
 
-                Assert.True(cde.Wait(TimeSpan.FromSeconds(30)), $"Missed {cde.CurrentCount} events.");
+                Assert.True(cde.Wait(TimeSpan.FromSeconds(60)), $"Missed {cde.CurrentCount} events.");
             }
         }
     }

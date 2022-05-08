@@ -3,10 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
@@ -14,12 +11,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         where TOperationContext : JsonOperationContext 
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected Logger Logger;
         private readonly bool _isDocument;
 
-        protected AbstractAttachmentHandlerProcessorForGetAttachment([NotNull] TRequestHandler requestHandler, Logger logger, bool isDocument) : base(requestHandler)
+        protected AbstractAttachmentHandlerProcessorForGetAttachment([NotNull] TRequestHandler requestHandler, bool isDocument) : base(requestHandler)
         {
-            Logger = logger;
             _isDocument = isDocument;
         }
 
