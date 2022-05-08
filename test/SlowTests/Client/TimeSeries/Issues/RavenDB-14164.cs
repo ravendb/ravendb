@@ -64,13 +64,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var getResultsFunc = () => session.TimeSeriesFor(documentId, "HeartRate").Get(baseline, baseline.AddHours(2), 
                             includes: builder => builder.IncludeTags());
 
-                    if (options.DatabaseMode == RavenDatabaseMode.Sharded)
-                    {
-                        var ex = Assert.Throws<NotSupportedInShardingException>(getResultsFunc);
-                        Assert.Contains("Include tags of time series is not supported in sharding", ex.Message);
-                        return;
-                    }
-
                     var getResults = getResultsFunc.Invoke();
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
