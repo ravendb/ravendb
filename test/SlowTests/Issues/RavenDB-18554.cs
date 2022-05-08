@@ -6,129 +6,178 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
+using NuGet.ContentModel;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_18554 : RavenTestBase
+    public class RavenDB_18554 : ClusterTestBase
     {
         public RavenDB_18554(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task QueriesShouldFailoverIfIndexIsCompacting()
-        {
-            int n = 500;
-            int m = 5;
 
-            using (var store = GetDocumentStore(new Options { RunInMemory = false }))
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task QueriesShouldFailoverIfDatabaseIsCompacting(bool cluster = false)
+        {
+            Options storeOptions;
+            RavenServer leader = null;
+            if (cluster)
+            {
+                List<RavenServer> nodes;
+                (nodes, leader) = await CreateRaftCluster(2);
+                storeOptions = new Options {Server = leader, ReplicationFactor = nodes.Count, RunInMemory = false};
+            }
+            else
+            {
+                storeOptions = new Options {RunInMemory = false};
+            }
+            
+            using (var store = GetDocumentStore(storeOptions))
             {
                 // Prepare Server For Test
+                string categoryId;
                 using (var session = store.OpenAsyncSession())
                 {
-                    for (int i = 0; i < n; i++)
-                    {
-                        Category c = new Category {Name = $"n{i}", Description = $"d{i}"};
-                        await session.StoreAsync(c);
-                    }
+                    Category c = new Category {Name = $"n0", Description = $"d0"};
+                    await session.StoreAsync(c);
                     await session.SaveChangesAsync();
+                    categoryId = c.Id;
                 }
-                var indexName = await CreateIndex(store);
-                string[] indexNames = {indexName};
-                CompactSettings settings = new CompactSettings {DatabaseName = "QueriesShouldFailoverIfIndexIsCompacting_1", Documents = true, Indexes = indexNames};
+                
+                var index = new Categoroies_Details();
+                index.Execute(store);
+                Indexes.WaitForIndexing(store);
 
-                var cs = new CancellationTokenSource();
-                var t1 = Task.Run(async () =>
-                {
-                     for (int i = 0; i < m; i++)
-                     {
-                         if (cs.IsCancellationRequested)
-                             return;
-                         var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings), cs.Token);
-                         await operation.WaitForCompletionAsync();
-                     }
-                }, cs.Token);
+                string[] indexNames = { index.IndexName };
+                CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = indexNames};
 
-                for (int i = 0; i < m; i++)
+                var database = cluster ? await GetDatabase(leader, store.Database) : await GetDatabase(store.Database);
+
+                // Test
+                Exception e = null;
+                database.ForTestingPurposesOnly().CompactionAfterDatabaseUnloadAction = () =>
                 {
-                    using (var session = store.OpenAsyncSession())
+                    try
                     {
-                        var curId = $"categories/{i + 1}-A";
-                        var l = await session.Query<Categoroies_Details.Entitiy, Categoroies_Details>()
-                            .Where(x => x.Id == curId)
-                            .ProjectInto<Categoroies_Details.Entitiy>()
-                            .ToListAsync();
-
-                        //Console.WriteLine("***" + (l.Count > 0 ? l[0] : "Empty List"));
+                        using (var session = store.OpenSession())
+                        {
+                            session.Query<Categoroies_Details.Entitiy, Categoroies_Details>()
+                                .Where(x => x.Id == categoryId)
+                                .ProjectInto<Categoroies_Details.Entitiy>()
+                                .ToList();
+                        }
                     }
+                    catch (Exception e1)
+                    {
+                        e = e1;
+                    }
+                };
+
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                await operation.WaitForCompletionAsync();
+
+                if (!cluster)
+                {
+                    Assert.NotNull(e);
+                    Assert.True(e is DatabaseDisabledException);
                 }
-
-                cs.Cancel();
-                await t1;
-                //WaitForUserToContinueTheTest(store);
+                else
+                {
+                    Assert.Null(e); // Faliover
+                }
             }
-
         }
 
-        async Task<string> CreateIndex(DocumentStore store)
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task QueriesShouldFailoverIfIndexIsCompacting(bool cluster = false)
         {
-            //Create Index
-            var index = new Categoroies_Details();
-            index.Execute(store);
-
-            //Wait for indexing
-            using (var session = store.OpenAsyncSession())
+            Options storeOptions;
+            RavenServer leader = null;
+            if (cluster)
             {
-                await session.Query<Categoroies_Details.Entitiy, Categoroies_Details>()
-                    .Customize(c => c.WaitForNonStaleResults())
-                    .Where(x => x.Id == "categories/1-A")
-                    .Select(x => x.Id)
-                    .ToListAsync();
+                List<RavenServer> nodes;
+                (nodes, leader) = await CreateRaftCluster(2);
+                storeOptions = new Options { Server = leader, ReplicationFactor = nodes.Count, RunInMemory = false };
             }
-            return index.IndexName;
+            else
+            {
+                storeOptions = new Options { RunInMemory = false };
+            }
 
-            // Wait for indexing
-            //var indexName = index.IndexName;
-            // DatabaseStatistics? stats = store.Maintenance.Send(new GetStatisticsOperation());
-            // while (stats.Indexes.Where(x => x.Name == indexName).Where(x => x.IsStale == false).ToList().Count > 0)
-            // {
-            //     await Task.Delay(100);
-            // }
-            //
+            using (var store = GetDocumentStore(storeOptions))
+            {
+                // Prepare Server For Test
+                string categoryId;
+                using (var session = store.OpenAsyncSession())
+                {
+                    Category c = new Category { Name = $"n0", Description = $"d0" };
+                    await session.StoreAsync(c);
+                    await session.SaveChangesAsync();
+                    categoryId = c.Id;
+                }
 
-            // using (var session = store.OpenSession())
-            // {
-            //     QueryStatistics stats = null;
-            //     bool firstIteration = true;
-            //     do
-            //     {
-            //         if (firstIteration)
-            //         {
-            //             firstIteration = false;
-            //         }
-            //         else
-            //         {
-            //             await Task.Delay(100);
-            //         }
-            //         session.Query<Product>()
-            //             .Statistics(out stats)
-            //             .Where(x => x.Id == "aaa")
-            //             .ToList();
-            //     } while (stats!=null && stats.IsStale);
-            // }
-            //return indexName;
+                var index = new Categoroies_Details();
+                index.Execute(store);
+                Indexes.WaitForIndexing(store);
+
+                string[] indexNames = { index.IndexName };
+                CompactSettings settings = new CompactSettings { DatabaseName = store.Database, Documents = true, Indexes = indexNames };
+                var database = cluster ? await GetDatabase(leader, store.Database) : await GetDatabase(store.Database);
+
+                // Test
+                Exception e = null;
+                database.ForTestingPurposesOnly().IndexCompaction = () =>
+                {
+                    try
+                    {
+                        using (var session = store.OpenSession())
+                        {
+                            session.Query<Categoroies_Details.Entitiy, Categoroies_Details>()
+                                .Where(x => x.Id == categoryId)
+                                .ProjectInto<Categoroies_Details.Entitiy>()
+                                .ToList();
+                        }
+                    }
+                    catch (Exception e1)
+                    {
+                        e = e1;
+                    }
+                };
+
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                await operation.WaitForCompletionAsync();
+
+
+                if (!cluster)
+                {
+                    Assert.NotNull(e);
+                    Assert.True(e is IndexCompactionInProgressException);
+                }
+                else
+                {
+                    Assert.Null(e); // Faliover
+                }
+            }
         }
 
         class Categoroies_Details : AbstractMultiMapIndexCreationTask<Categoroies_Details.Entitiy>
