@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
-using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -26,16 +21,48 @@ using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
-internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<DatabaseRequestHandler, DocumentsOperationContext>
+
+internal class OngoingTasksHandlerProcessorForGetOngoingTaskInfo : OngoingTasksHandlerProcessorForGetOngoingTasksInfo
+{
+    public OngoingTasksHandlerProcessorForGetOngoingTaskInfo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    {
+    }
+
+    public override async ValueTask ExecuteAsync()
+    {
+        await GetOngoingTaskInfoInternal();
+    }
+}
+
+internal class OngoingTasksHandlerProcessorForGetOngoingTasks : OngoingTasksHandlerProcessorForGetOngoingTasksInfo
+{
+    public OngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    {
+    }
+
+    public override async ValueTask ExecuteAsync()
+    {
+        var result = GetOngoingTasksInternal();
+
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            context.Write(writer, result.ToJson());
+        }
+    }
+}
+
+internal abstract class OngoingTasksHandlerProcessorForGetOngoingTasksInfo : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<DatabaseRequestHandler, DocumentsOperationContext>
 {
     [NotNull]
     private readonly DocumentDatabase _database;
     private readonly ServerStore _server;
 
-    public OngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    protected OngoingTasksHandlerProcessorForGetOngoingTasksInfo([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
         _database = requestHandler.Database;
         _server = requestHandler.ServerStore;
@@ -54,7 +81,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
 
         foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
         {
-            yield return GetOngoingTaskBackupAsync(backupConfiguration.TaskId, databaseRecord, backupConfiguration, clusterTopology).Result;
+            yield return GetOngoingTaskBackup(backupConfiguration.TaskId, databaseRecord, backupConfiguration, clusterTopology);
         }
     }
 
@@ -70,7 +97,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
 
                 var process = _database.EtlLoader.Processes.OfType<RavenEtl>().FirstOrDefault(x => x.ConfigurationName == ravenEtl.Name);
 
-                var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, ravenEtl, out var tag, out var error);
+                var connectionStatus = GetEtlTaskConnectionStatusAsync(databaseRecord, ravenEtl, out var tag, out var error).Result;
 
                 yield return new OngoingTaskRavenEtlListView()
                 {
@@ -108,7 +135,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
                     (database, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlConnection.FactoryName, sqlConnection.ConnectionString);
                 }
 
-                var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, sqlEtl, out var tag, out var error);
+                var connectionStatus = GetEtlTaskConnectionStatusAsync(databaseRecord, sqlEtl, out var tag, out var error).Result;
 
                 var taskState = OngoingTasksHandler.GetEtlTaskState(sqlEtl);
 
@@ -146,7 +173,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
                     destination = olapConnection.GetDestination();
                 }
 
-                var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, olapEtl, out var tag, out var error);
+                var connectionStatus = GetEtlTaskConnectionStatusAsync(databaseRecord, olapEtl, out var tag, out var error).Result;
 
                 var taskState = OngoingTasksHandler.GetEtlTaskState(olapEtl);
 
@@ -178,7 +205,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
             {
                 databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
 
-                var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
+                var connectionStatus = GetEtlTaskConnectionStatusAsync(databaseRecord, elasticSearchEtl, out var tag, out var error).Result;
                 var taskState = OngoingTasksHandler.GetEtlTaskState(elasticSearchEtl);
 
                 yield return new OngoingTaskElasticSearchEtlListView
@@ -209,8 +236,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
         return base.CollectEtlTasks(context, clusterTopology, databaseRecord);
     }
 
-    private OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
-        where T : ConnectionString
+    protected override ValueTask<OngoingTaskConnectionStatus> GetEtlTaskConnectionStatusAsync<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
     {
         var connectionStatus = OngoingTaskConnectionStatus.None;
         error = null;
@@ -238,7 +264,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
             connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
         }
 
-        return connectionStatus;
+        return ValueTask.FromResult(connectionStatus);
     }
 
     protected override IEnumerable<OngoingTaskPullReplicationAsSink> CollectPullReplicationAsSinkTasks(TransactionOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
@@ -246,10 +272,9 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
         if (databaseRecord.Topology == null)
             yield break;
 
-        var handlers = _database.ReplicationLoader.IncomingHandlers.ToList();
         foreach (var edgeReplication in databaseRecord.SinkPullReplications)
         {
-            yield return GetPullReplicationAsSinkInfoAsync(databaseRecord.Topology, clusterTopology, databaseRecord.RavenConnectionStrings, edgeReplication, handlers).Result;
+            yield return GetPullReplicationAsSinkInfo(databaseRecord.Topology, clusterTopology, databaseRecord, edgeReplication);
         }
     }
 
@@ -260,7 +285,7 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
 
         foreach (var externalReplication in databaseRecord.ExternalReplications)
         {
-            yield return GetExternalReplicationInfoAsync(databaseRecord.Topology, clusterTopology, externalReplication, databaseRecord.RavenConnectionStrings).Result;
+            yield return GetExternalReplicationInfo(databaseRecord.Topology, clusterTopology, externalReplication, databaseRecord.RavenConnectionStrings);
         }
     }
 
@@ -315,190 +340,61 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
         }
     }
 
-    protected override ValueTask<OngoingTaskReplication> GetExternalReplicationInfoAsync(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
-        ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
+    protected override ValueTask<(string Url, OngoingTaskConnectionStatus Status)> GetReplicationTaskConnectionStatusAsync<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
+        T replication, Dictionary<string, RavenConnectionString> connectionStrings, out string tag, out RavenConnectionString connection)
     {
-        connectionStrings.TryGetValue(watcher.ConnectionStringName, out var connection);
-        watcher.Database = connection?.Database;
-        watcher.ConnectionString = connection;
+        connectionStrings.TryGetValue(replication.ConnectionStringName, out connection);
+        replication.Database = connection?.Database;
+        replication.ConnectionString = connection;
 
-        var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, RequestHandler.DatabaseName, watcher.TaskId);
-        var tag = _database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
+        var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, RequestHandler.DatabaseName, replication.TaskId);
+        tag = _database.WhoseTaskIsIt(databaseTopology, replication, taskStatus);
 
         (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
-        if (tag == _server.NodeTag)
+
+        if (replication is ExternalReplication)
         {
-            res = _database.ReplicationLoader.GetExternalReplicationDestination(watcher.TaskId);
+            if (tag == _server.NodeTag)
+                res = _database.ReplicationLoader.GetExternalReplicationDestination(replication.TaskId);
+            else
+                res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
         }
-        else
-        {
-            res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
-        }
 
-        var taskInfo = new OngoingTaskReplication
+        else if (replication is PullReplicationAsSink sinkReplication)
         {
-            TaskId = watcher.TaskId,
-            TaskName = watcher.Name,
-            ResponsibleNode = new NodeId
+            res.Status = OngoingTaskConnectionStatus.NotActive;
+            var handlers = GetIncomingHandlers();
+            if (tag == ServerStore.NodeTag)
             {
-                NodeTag = tag,
-                NodeUrl = clusterTopology.GetUrlFromTag(tag)
-            },
-            ConnectionStringName = watcher.ConnectionStringName,
-            TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-            DestinationDatabase = connection?.Database,
-            DestinationUrl = res.Url,
-            TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
-            MentorNode = watcher.MentorNode,
-            TaskConnectionStatus = res.Status,
-            DelayReplicationFor = watcher.DelayReplicationFor
-        };
-
-        return ValueTask.FromResult(taskInfo);
-    }
-
-    protected override ValueTask<OngoingTaskPullReplicationAsSink> GetPullReplicationAsSinkInfoAsync(DatabaseTopology dbTopology, ClusterTopology clusterTopology,
-        Dictionary<string, RavenConnectionString> connectionStrings, PullReplicationAsSink sinkReplication, List<IncomingReplicationHandler> handlers)
-    {
-        connectionStrings.TryGetValue(sinkReplication.ConnectionStringName, out var connection);
-        sinkReplication.Database = connection?.Database;
-        sinkReplication.ConnectionString = connection;
-
-        var tag = RequestHandler.Database.WhoseTaskIsIt(dbTopology, sinkReplication, null);
-
-        (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.NotActive);
-        if (tag == ServerStore.NodeTag)
-        {
-            foreach (var incoming in handlers)
-            {
-                if (incoming is IncomingPullReplicationHandler pullHandler &&
-                    pullHandler._incomingPullReplicationParams?.Name == sinkReplication.HubName)
+                foreach (var incoming in handlers)
                 {
-                    res = (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);
-                    break;
+                    if (incoming is IncomingPullReplicationHandler pullHandler &&
+                        pullHandler._incomingPullReplicationParams?.Name == sinkReplication.HubName)
+                    {
+                        res = (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);
+                        break;
+                    }
                 }
             }
-        }
-        else
-        {
-            res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
-        }
-
-        var sinkInfo = new OngoingTaskPullReplicationAsSink
-        {
-            TaskId = sinkReplication.TaskId,
-            TaskName = sinkReplication.Name,
-            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
-            ConnectionStringName = sinkReplication.ConnectionStringName,
-            TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-            DestinationDatabase = connection?.Database,
-            HubName = sinkReplication.HubName,
-            Mode = sinkReplication.Mode,
-            DestinationUrl = res.Url,
-            TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
-            MentorNode = sinkReplication.MentorNode,
-            TaskConnectionStatus = res.Status,
-            AccessName = sinkReplication.AccessName,
-            AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
-            AllowedSinkToHubPaths = sinkReplication.AllowedSinkToHubPaths
-        };
-
-        if (sinkReplication.CertificateWithPrivateKey != null)
-        {
-            // fetch public key of certificate
-            var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
-            var certificate = new X509Certificate2(certBytes,
-                sinkReplication.CertificatePassword,
-                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
-            sinkInfo.CertificatePublicKey = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
-        }
-
-        return ValueTask.FromResult(sinkInfo);
-    }
-
-    protected override ValueTask<OngoingTaskSqlEtlDetails> GetSqlEtlTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, SqlEtlConfiguration config)
-    {
-        return ValueTask.FromResult(new OngoingTaskSqlEtlDetails
-        {
-            TaskId = config.TaskId,
-            TaskName = config.Name,
-            MentorNode = config.MentorNode,
-            Configuration = config,
-            TaskState = OngoingTasksHandler.GetEtlTaskState(config),
-            TaskConnectionStatus = GetEtlTaskConnectionStatus(record, config, out var sqlNode, out var sqlEtlError),
-            ResponsibleNode = new NodeId
+            else
             {
-                NodeTag = sqlNode,
-                NodeUrl = clusterTopology.GetUrlFromTag(sqlNode)
-            },
-            Error = sqlEtlError
-        });
+                res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
+            }
+        }
+
+        return ValueTask.FromResult(res);
     }
 
-    protected override ValueTask<OngoingTaskOlapEtlDetails> GetOlapEtlTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, OlapEtlConfiguration config)
-    {
-        return ValueTask.FromResult(new OngoingTaskOlapEtlDetails
-        {
-            TaskId = config.TaskId,
-            TaskName = config.Name,
-            MentorNode = config.MentorNode,
-            Configuration = config,
-            TaskState = OngoingTasksHandler.GetEtlTaskState(config),
-            TaskConnectionStatus = GetEtlTaskConnectionStatus(record, config, out var sqlNode, out var sqlEtlError),
-            ResponsibleNode = new NodeId
-            {
-                NodeTag = sqlNode,
-                NodeUrl = clusterTopology.GetUrlFromTag(sqlNode)
-            },
-            Error = sqlEtlError
-        });
-    }
-
-    protected override ValueTask<OngoingTaskRavenEtlDetails> GetRavenEtlTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, RavenEtlConfiguration config)
+    protected override ValueTask<RavenEtl> GetProcess(RavenEtlConfiguration config)
     {
         var process = RequestHandler.Database.EtlLoader.Processes.OfType<RavenEtl>().FirstOrDefault(x => x.ConfigurationName == config.Name);
-
-        return ValueTask.FromResult(new OngoingTaskRavenEtlDetails
-        {
-            TaskId = config.TaskId,
-            TaskName = config.Name,
-            Configuration = config,
-            TaskState = OngoingTasksHandler.GetEtlTaskState(config),
-            MentorNode = config.MentorNode,
-            DestinationUrl = process?.Url,
-            TaskConnectionStatus = GetEtlTaskConnectionStatus(record, config, out var node, out var ravenEtlError),
-            ResponsibleNode = new NodeId
-            {
-                NodeTag = node,
-                NodeUrl = clusterTopology.GetUrlFromTag(node)
-            },
-            Error = ravenEtlError
-        });
+        return ValueTask.FromResult(process);
     }
 
-    protected override ValueTask<OngoingTaskElasticSearchEtlDetails> GetElasticSearchEtTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, ElasticSearchEtlConfiguration config)
+    protected override ValueTask<OngoingTaskConnectionStatus> GetSubscriptionConnectionStatusAsync(DatabaseRecord record, SubscriptionState subscriptionState, long key,
+        out string tag)
     {
-        return ValueTask.FromResult(new OngoingTaskElasticSearchEtlDetails
-        {
-            TaskId = config.TaskId,
-            TaskName = config.Name,
-            Configuration = config,
-            TaskState = OngoingTasksHandler.GetEtlTaskState(config),
-            MentorNode = config.MentorNode,
-            TaskConnectionStatus = GetEtlTaskConnectionStatus(record, config, out var nodeES, out var elasticSearchEtlError),
-            ResponsibleNode = new NodeId
-            {
-                NodeTag = nodeES,
-                NodeUrl = clusterTopology.GetUrlFromTag(nodeES)
-            },
-            Error = elasticSearchEtlError
-        });
-    }
-
-    protected override ValueTask<OngoingTaskSubscription> GetSubscriptionTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, SubscriptionState subscriptionState, long key)
-    {
-        var tag = RequestHandler.Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
+        tag = RequestHandler.Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
         OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
         if (tag != ServerStore.NodeTag)
         {
@@ -509,29 +405,10 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
             connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
         }
 
-        return ValueTask.FromResult(new OngoingTaskSubscription
-        {
-            TaskName = subscriptionState.SubscriptionName,
-            TaskId = subscriptionState.SubscriptionId,
-            Query = subscriptionState.Query,
-            ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
-            ChangeVectorForNextBatchStartingPointPerShard = subscriptionState.ChangeVectorForNextBatchStartingPointPerShard,
-            SubscriptionId = subscriptionState.SubscriptionId,
-            SubscriptionName = subscriptionState.SubscriptionName,
-            LastBatchAckTime = subscriptionState.LastBatchAckTime,
-            Disabled = subscriptionState.Disabled,
-            LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
-            MentorNode = subscriptionState.MentorNode,
-            ResponsibleNode = new NodeId
-            {
-                NodeTag = tag,
-                NodeUrl = clusterTopology.GetUrlFromTag(tag)
-            },
-            TaskConnectionStatus = connectionStatus
-        });
+        return ValueTask.FromResult(connectionStatus);
     }
 
-    protected override List<IncomingReplicationHandler> GetIncomingHandlers() => RequestHandler.Database.ReplicationLoader.IncomingHandlers.ToList();
+    protected List<IncomingReplicationHandler> GetIncomingHandlers() => RequestHandler.Database.ReplicationLoader.IncomingHandlers.ToList();
 
     protected override int SubscriptionsCount => (int)_database.SubscriptionStorage.GetAllSubscriptionsCount();
 
@@ -554,39 +431,15 @@ internal class OngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingT
         };
     }
 
-    protected override ValueTask<OngoingTaskBackup> GetOngoingTaskBackupAsync(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, ClusterTopology clusterTopology)
+    protected override ValueTask<PeriodicBackupStatus> GetBackupStatusAsync(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration,
+        out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
         var backupStatus = RequestHandler.Database.PeriodicBackupRunner.GetBackupStatus(taskId);
-        var responsibleNodeTag = RequestHandler.Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
-        var nextBackup = RequestHandler.Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
-        var onGoingBackup = RequestHandler.Database.PeriodicBackupRunner.OnGoingBackup(taskId);
-        var backupDestinations = backupConfiguration.GetFullBackupDestinations();
+        responsibleNodeTag = RequestHandler.Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
+        nextBackup = RequestHandler.Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
+        onGoingBackup = RequestHandler.Database.PeriodicBackupRunner.OnGoingBackup(taskId);
+        isEncrypted = BackupTask.IsBackupEncrypted(RequestHandler.Database, backupConfiguration);
 
-        return ValueTask.FromResult(new OngoingTaskBackup
-        {
-            TaskId = backupConfiguration.TaskId,
-            BackupType = backupConfiguration.BackupType,
-            TaskName = backupConfiguration.Name,
-            TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-            MentorNode = backupConfiguration.MentorNode,
-            LastExecutingNodeTag = backupStatus.NodeTag,
-            LastFullBackup = backupStatus.LastFullBackup,
-            LastIncrementalBackup = backupStatus.LastIncrementalBackup,
-            OnGoingBackup = onGoingBackup,
-            NextBackup = nextBackup,
-            TaskConnectionStatus = backupConfiguration.Disabled
-                ? OngoingTaskConnectionStatus.NotActive
-                : responsibleNodeTag == ServerStore.NodeTag
-                    ? OngoingTaskConnectionStatus.Active
-                    : OngoingTaskConnectionStatus.NotOnThisNode,
-            ResponsibleNode = new NodeId
-            {
-                NodeTag = responsibleNodeTag,
-                NodeUrl = clusterTopology.GetUrlFromTag(responsibleNodeTag)
-            },
-            BackupDestinations = backupDestinations,
-            RetentionPolicy = backupConfiguration.RetentionPolicy,
-            IsEncrypted = BackupTask.IsBackupEncrypted(RequestHandler.Database, backupConfiguration)
-        });
+        return ValueTask.FromResult(backupStatus);
     }
 }

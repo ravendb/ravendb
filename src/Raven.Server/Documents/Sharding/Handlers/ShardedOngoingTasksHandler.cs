@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/task", "GET")]
         public async Task GetOngoingTaskInfo()
         {
-            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(this))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForGetOngoingTaskInfo(this))
                 await processor.ExecuteAsync();
         }
 
