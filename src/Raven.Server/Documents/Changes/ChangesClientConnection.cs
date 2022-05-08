@@ -194,11 +194,7 @@ namespace Raven.Server.Documents.Changes
 
         private void Send(OperationStatusChange change)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = nameof(OperationStatusChange),
-                ["Value"] = change.ToJson()
-            };
+            var value = CreateValueToSend(nameof(OperationStatusChange), change.ToJson());
 
             AddToQueue(new SendQueueItem
             {
@@ -209,11 +205,7 @@ namespace Raven.Server.Documents.Changes
 
         private void Send(TopologyChange change)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = nameof(TopologyChange),
-                ["Value"] = change.ToJson()
-            };
+            var value = CreateValueToSend(nameof(TopologyChange), change.ToJson());
 
             AddToQueue(new SendQueueItem
             {
@@ -224,11 +216,7 @@ namespace Raven.Server.Documents.Changes
 
         private void Send(CounterChange change)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = nameof(CounterChange),
-                ["Value"] = change.ToJson()
-            };
+            var value = CreateValueToSend(nameof(CounterChange), change.ToJson());
 
             AddToQueue(new SendQueueItem
             {
@@ -239,11 +227,7 @@ namespace Raven.Server.Documents.Changes
 
         private void Send(TimeSeriesChange change)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = nameof(TimeSeriesChange),
-                ["Value"] = change.ToJson()
-            };
+            var value = CreateValueToSend(nameof(TimeSeriesChange), change.ToJson());
 
             AddToQueue(new SendQueueItem
             {
@@ -254,11 +238,7 @@ namespace Raven.Server.Documents.Changes
 
         private void Send(DocumentChange change)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = nameof(DocumentChange),
-                ["Value"] = change.ToJson()
-            };
+            var value = CreateValueToSend(nameof(DocumentChange), change.ToJson());
 
             AddToQueue(new SendQueueItem
             {
@@ -269,11 +249,7 @@ namespace Raven.Server.Documents.Changes
 
         private void Send(IndexChange change)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = nameof(IndexChange),
-                ["Value"] = change.ToJson()
-            };
+            var value = CreateValueToSend(nameof(IndexChange), change.ToJson());
 
             AddToQueue(new SendQueueItem
             {
@@ -524,6 +500,15 @@ namespace Raven.Server.Documents.Changes
         {
             Interlocked.Decrement(ref _watchAllOperations);
             return ValueTask.CompletedTask;
+        }
+
+        private static DynamicJsonValue CreateValueToSend(string type, DynamicJsonValue value)
+        {
+            return new DynamicJsonValue
+            {
+                ["Type"] = type,
+                ["Value"] = value
+            };
         }
     }
 }
