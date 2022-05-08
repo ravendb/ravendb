@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Changes;
 
 public class ShardedChangesClientConnection : AbstractChangesClientConnection<TransactionOperationContext>, IObserver<BlittableJsonReaderObject>
 {
-    private readonly ConcurrentDictionary<string, IDisposable> _matchingDocuments = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Task<IDisposable>> _matchingDocuments = new(StringComparer.OrdinalIgnoreCase);
 
     private int _watchAllDocuments;
     private IDisposable _watchAllDocumentsUnsubscribe;
@@ -55,16 +55,17 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     {
         await EnsureConnectedAsync();
 
-        _matchingDocuments.GetOrAdd(docId, id => WatchInternal(changes => changes.ForDocument(id)));
+        await _matchingDocuments.GetOrAdd(docId, id => WatchInternalAsync(changes => changes.ForDocument(id)));
     }
 
     protected override async ValueTask UnwatchDocumentAsync(string docId)
     {
         await EnsureConnectedAsync();
 
-        if (_matchingDocuments.TryRemove(docId, out var unsubscribe) == false)
+        if (_matchingDocuments.TryRemove(docId, out var unsubscribeTask) == false)
             return;
 
+        var unsubscribe = await unsubscribeTask;
         unsubscribe.Dispose();
     }
 
@@ -74,7 +75,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
         var value = Interlocked.Increment(ref _watchAllDocuments);
         if (value == 1)
-            _watchAllDocumentsUnsubscribe = WatchInternal(changes => changes.ForAllDocuments());
+            _watchAllDocumentsUnsubscribe = await WatchInternalAsync(changes => changes.ForAllDocuments());
     }
 
     protected override async ValueTask UnwatchAllDocumentsAsync()
@@ -272,13 +273,16 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         _releaseQueueContext = null;
     }
 
-    private IDisposable WatchInternal(Func<ShardedDatabaseChanges, IChangesObservable<BlittableJsonReaderObject>> factory)
+    private async Task<IDisposable> WatchInternalAsync(Func<ShardedDatabaseChanges, IChangesObservable<BlittableJsonReaderObject>> factory)
     {
         var toDispose = new IDisposable[_changes.Length];
         for (int i = 0; i < _changes.Length; i++)
         {
-            toDispose[i] = factory(_changes[i])
+            var observable = factory(_changes[i]);
+            toDispose[i] = observable
                 .Subscribe(this);
+
+            await observable.EnsureSubscribedNow();
         }
 
         return new MultiDispose(toDispose);
