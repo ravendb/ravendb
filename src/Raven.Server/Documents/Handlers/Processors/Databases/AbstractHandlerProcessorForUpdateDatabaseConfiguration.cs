@@ -54,9 +54,9 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
             throw new AuthorizationException($"Cannot modify configuration of '{RequestHandler.DatabaseName}' database due to insufficient privileges.");
     }
 
-    protected virtual ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, T configuration, string raftRequestId)
+    protected virtual async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, T configuration, string raftRequestId)
     {
-        return ValueTask.CompletedTask;
+        await ValueTask.CompletedTask;
     }
 
     public override async ValueTask ExecuteAsync()
@@ -71,12 +71,12 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
                 if (configuration == null)
                     return; // all validation should be handled internally
 
-                await Update(context, writer, configuration);
+                await UpdateConfigurationAsync(context, writer, configuration);
             }
         }
     }
 
-    protected async Task Update(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer, T configuration = null)
+    protected async ValueTask UpdateConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer, T configuration = null)
     {
         if (ResourceNameValidator.IsValidResourceName(RequestHandler.DatabaseName, RequestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
             throw new BadRequestException(errorMessage);
