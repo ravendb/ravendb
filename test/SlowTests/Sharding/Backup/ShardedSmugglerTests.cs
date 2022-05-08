@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
@@ -27,7 +28,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Backup
 {
-    public class ShardedSmugglerTests : ShardedBackupTestsBase
+    public class ShardedSmugglerTests : RavenTestBase
     {
         public ShardedSmugglerTests(ITestOutputHelper output) : base(output)
         {
@@ -109,7 +110,7 @@ namespace SlowTests.Sharding.Backup
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1, names);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         OperateOnTypes = DatabaseItemType.Documents
@@ -199,7 +200,7 @@ namespace SlowTests.Sharding.Backup
 
                             }, file2);
                             await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
-                            await CheckData(store3, names);
+                            await Sharding.Backup.CheckData(store3, names);
                         }
                     }
                 }
@@ -273,7 +274,7 @@ namespace SlowTests.Sharding.Backup
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1, names);
                     WaitForUserToContinueTheTest(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
@@ -313,7 +314,7 @@ namespace SlowTests.Sharding.Backup
                         }, file);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                         WaitForUserToContinueTheTest(store2);
-                        await CheckData(store2, names);
+                        await Sharding.Backup.CheckData(store2, names);
                     }
                 }
             }
@@ -671,7 +672,7 @@ namespace SlowTests.Sharding.Backup
             {
                 using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
                 {
-                    await InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1, names);
                     //WaitForUserToContinueTheTest(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
@@ -747,7 +748,7 @@ namespace SlowTests.Sharding.Backup
                             }, file2);
                             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                             WaitForUserToContinueTheTest(store3);
-                            await CheckData(store3, names);
+                            await Sharding.Backup.CheckData(store3, names);
                         }
                     }
                 }
@@ -777,7 +778,7 @@ namespace SlowTests.Sharding.Backup
                     ModifyDatabaseName = s => $"{s}_2",
                 }))
                 {
-                    await InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1, names);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         OperateOnTypes = DatabaseItemType.Documents

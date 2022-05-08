@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
@@ -16,7 +17,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Backup
 {
-    public class ShardedPeriodicBackupTests : ShardedBackupTestsBase
+    public class ShardedPeriodicBackupTests : RavenTestBase
     {
         public ShardedPeriodicBackupTests(ITestOutputHelper output) : base(output)
         {
@@ -42,7 +43,7 @@ namespace SlowTests.Sharding.Backup
                 using (var store2 = Sharding.GetDocumentStore())
                 using (var store3 = GetDocumentStore(options))
                 {
-                    await InsertData(store1, names);
+                    await Sharding.Backup.InsertData(store1, names);
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
@@ -86,10 +87,10 @@ namespace SlowTests.Sharding.Backup
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    var waitHandles = await WaitForBackupToComplete(store2);
+                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store2);
 
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
-                    await UpdateConfigurationAndRunBackupAsync(Server, store2, config);
+                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store2, config);
 
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
@@ -106,7 +107,7 @@ namespace SlowTests.Sharding.Backup
                         importOptions.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnFirstShardOnly;
                     }
                     
-                    await CheckData(store3, names, options.DatabaseMode);
+                    await Sharding.Backup.CheckData(store3, names, options.DatabaseMode);
                 }
             }
             finally
@@ -151,10 +152,10 @@ namespace SlowTests.Sharding.Backup
                     await session.SaveChangesAsync();
                 }
 
-                var waitHandles = await WaitForBackupToComplete(store1);
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
 
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
-                await UpdateConfigurationAndRunBackupAsync(Server, store1, config);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
@@ -188,9 +189,9 @@ namespace SlowTests.Sharding.Backup
                     await session.SaveChangesAsync();
                 }
 
-                waitHandles = await WaitForBackupToComplete(store1);
+                waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
 
-                await UpdateConfigurationAndRunBackupAsync(Server, store1, config);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
