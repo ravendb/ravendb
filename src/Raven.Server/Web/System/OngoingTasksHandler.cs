@@ -294,7 +294,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/task", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetOngoingTaskInfo()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForGetOngoingTasks(this))
+            using (var processor = new OngoingTasksHandlerProcessorForGetOngoingTaskInfo(this))
                 await processor.ExecuteAsync();
         }
 

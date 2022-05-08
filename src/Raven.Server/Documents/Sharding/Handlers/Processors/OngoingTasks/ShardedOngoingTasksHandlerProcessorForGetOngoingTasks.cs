@@ -1,33 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
-using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
-using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Server.Web.Http;
 using Raven.Server.Web.System.Processors.OngoingTasks;
+using Sparrow.Json;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 
-internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTasks : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTaskInfo : ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo
+{
+    public ShardedOngoingTasksHandlerProcessorForGetOngoingTaskInfo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    {
+    }
+
+    public override async ValueTask ExecuteAsync()
+    {
+        await GetOngoingTaskInfoInternal();
+    }
+}
+
+internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTasks : ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo
 {
     public ShardedOngoingTasksHandlerProcessorForGetOngoingTasks([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    {
+    }
+
+    public override async ValueTask ExecuteAsync()
+    {
+        var result = GetOngoingTasksInternal();
+
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            context.Write(writer, result.ToJson());
+        }
+    }
+}
+internal abstract class ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo : AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<ShardedDatabaseRequestHandler, TransactionOperationContext>
+{
+    protected ShardedOngoingTasksHandlerProcessorForGetOngoingTasksInfo([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -176,99 +198,65 @@ internal class ShardedOngoingTasksHandlerProcessorForGetOngoingTasks : AbstractO
         }
     }
 
-    private ProxyCommand<OngoingTask> CreateProxyCommandForShard()
+    protected override ValueTask<(string Url, OngoingTaskConnectionStatus Status)> GetReplicationTaskConnectionStatusAsync<T>(DatabaseTopology databaseTopology,
+        ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings,
+        out string tag, out RavenConnectionString connection)
     {
-        var (key, taskName, type) = TryGetParameters();
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13110");
 
-        var command = taskName == null ? 
-            new GetOngoingTaskInfoOperation.GetOngoingTaskInfoCommand(key, type) : 
-            new GetOngoingTaskInfoOperation.GetOngoingTaskInfoCommand(taskName, type);
+        (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
 
-        return new ProxyCommand<OngoingTask>(command, RequestHandler.HttpContext.Response);
+        if (replication is PullReplicationAsSink)
+        {
+            res.Status = OngoingTaskConnectionStatus.NotActive;
+        }
+
+        tag = null;
+        connection = null;
+
+        return ValueTask.FromResult(res);
     }
 
-    protected override async ValueTask<OngoingTaskSubscription> GetSubscriptionTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology,
-        SubscriptionState subscriptionState, long key)
+    protected override ValueTask<PeriodicBackupStatus> GetBackupStatusAsync(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
+        out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13113");
 
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
+        responsibleNodeTag = null;
+        nextBackup = null;
+        onGoingBackup = null;
+        isEncrypted = false;
 
-        return (OngoingTaskSubscription)proxyCommand.Result;
+        PeriodicBackupStatus res = null;
+        return ValueTask.FromResult(res);
     }
 
-    protected override async ValueTask<OngoingTaskReplication> GetExternalReplicationInfoAsync(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
-        ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
+    protected override ValueTask<OngoingTaskConnectionStatus> GetSubscriptionConnectionStatusAsync(DatabaseRecord record, SubscriptionState subscriptionState, long key,
+        out string tag)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13110");
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13113");
 
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
-
-        return (OngoingTaskReplication)proxyCommand.Result;
+        tag = null;
+        OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
+        return ValueTask.FromResult(connectionStatus);
     }
 
-    protected override List<IncomingReplicationHandler> GetIncomingHandlers() => null;
-
-    protected override async ValueTask<OngoingTaskPullReplicationAsSink> GetPullReplicationAsSinkInfoAsync(DatabaseTopology dbTopology, ClusterTopology clusterTopology,
-        Dictionary<string, RavenConnectionString> connectionStrings, PullReplicationAsSink sinkReplication, List<IncomingReplicationHandler> handlers)
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13110");
-
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
-
-        return (OngoingTaskPullReplicationAsSink)proxyCommand.Result;
-    }
-
-    protected override async ValueTask<OngoingTaskBackup> GetOngoingTaskBackupAsync(long taskId, DatabaseRecord databaseRecord, PeriodicBackupConfiguration backupConfiguration, ClusterTopology clusterTopology)
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding - https://issues.hibernatingrhinos.com/issue/RavenDB-13112");
-
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
-
-        return (OngoingTaskBackup)proxyCommand.Result;
-    }
-
-    protected override async ValueTask<OngoingTaskSqlEtlDetails> GetSqlEtlTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, SqlEtlConfiguration config)
+    protected override ValueTask<OngoingTaskConnectionStatus> GetEtlTaskConnectionStatusAsync<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding");
 
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
+        var connectionStatus = OngoingTaskConnectionStatus.None;
+        error = null;
+        tag = null;
 
-        return (OngoingTaskSqlEtlDetails)proxyCommand.Result;
+        return ValueTask.FromResult(connectionStatus);
     }
 
-    protected override async ValueTask<OngoingTaskOlapEtlDetails> GetOlapEtlTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, OlapEtlConfiguration config)
+    protected override ValueTask<RavenEtl> GetProcess(RavenEtlConfiguration config)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding");
 
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
-
-        return (OngoingTaskOlapEtlDetails)proxyCommand.Result;
-    }
-
-    protected override async ValueTask<OngoingTaskRavenEtlDetails> GetRavenEtlTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, RavenEtlConfiguration config)
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding");
-
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
-
-        return (OngoingTaskRavenEtlDetails)proxyCommand.Result;
-    }
-
-    protected override async ValueTask<OngoingTaskElasticSearchEtlDetails> GetElasticSearchEtTaskInfoAsync(DatabaseRecord record, ClusterTopology clusterTopology, ElasticSearchEtlConfiguration config)
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "implement for sharding");
-
-        var proxyCommand = CreateProxyCommandForShard();
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, 0);
-
-        return (OngoingTaskElasticSearchEtlDetails)proxyCommand.Result;
+        RavenEtl process = null;
+        return ValueTask.FromResult(process);
     }
 }
