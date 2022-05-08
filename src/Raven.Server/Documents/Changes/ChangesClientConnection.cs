@@ -45,8 +45,8 @@ namespace Raven.Server.Documents.Changes
         private int _watchAllCounters;
         private int _watchAllTimeSeries;
 
-        public ChangesClientConnection(WebSocket webSocket, DocumentDatabase database, bool fromStudio)
-            : base(webSocket, database.DocumentsStorage.ContextPool, database.DatabaseShutdown, fromStudio)
+        public ChangesClientConnection(WebSocket webSocket, DocumentDatabase database, bool throttleConnection, bool fromStudio)
+            : base(webSocket, database.DocumentsStorage.ContextPool, database.DatabaseShutdown, throttleConnection, fromStudio)
         {
         }
 

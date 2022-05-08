@@ -22,7 +22,7 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
     {
     }
 
-    protected abstract TChangesClientConnection CreateChangesClientConnection(WebSocket webSocket, bool fromStudio);
+    protected abstract TChangesClientConnection CreateChangesClientConnection(WebSocket webSocket, bool throttleConnection, bool fromStudio);
 
     protected abstract void Connect(TChangesClientConnection connection);
 
@@ -79,10 +79,10 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
         var fromStudio = RequestHandler.GetBoolValueQueryString(StudioMarker, false) ?? false;
         var throttleConnection = RequestHandler.GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
 
-        var connection = CreateChangesClientConnection(webSocket, fromStudio);
+        var connection = CreateChangesClientConnection(webSocket, throttleConnection, fromStudio);
         Connect(connection);
 
-        var sendTask = connection.StartSendingNotificationsAsync(throttleConnection);
+        var sendTask = connection.StartSendingNotificationsAsync();
         var debugTag = "changes/" + connection.Id;
         using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment1))
         using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer segment2))

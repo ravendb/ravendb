@@ -11,7 +11,7 @@ internal class ChangesHandlerProcessorForGetChanges : AbstractChangesHandlerProc
     {
     }
 
-    protected override ChangesClientConnection CreateChangesClientConnection(WebSocket webSocket, bool fromStudio) => new(webSocket, RequestHandler.Database, fromStudio);
+    protected override ChangesClientConnection CreateChangesClientConnection(WebSocket webSocket, bool throttleConnection, bool fromStudio) => new(webSocket, RequestHandler.Database, throttleConnection, fromStudio);
 
     protected override void Connect(ChangesClientConnection connection)
     {

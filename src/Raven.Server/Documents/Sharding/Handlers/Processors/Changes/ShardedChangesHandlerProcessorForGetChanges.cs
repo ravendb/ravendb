@@ -12,7 +12,7 @@ internal class ShardedChangesHandlerProcessorForGetChanges : AbstractChangesHand
     {
     }
 
-    protected override ShardedChangesClientConnection CreateChangesClientConnection(WebSocket webSocket, bool fromStudio) => new(webSocket, RequestHandler.ServerStore, RequestHandler.DatabaseContext, fromStudio);
+    protected override ShardedChangesClientConnection CreateChangesClientConnection(WebSocket webSocket, bool throttleConnection, bool fromStudio) => new(webSocket, RequestHandler.ServerStore, RequestHandler.DatabaseContext, throttleConnection, fromStudio);
 
     protected override void Connect(ShardedChangesClientConnection connection)
     {

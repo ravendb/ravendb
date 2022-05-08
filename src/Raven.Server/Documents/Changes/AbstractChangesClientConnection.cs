@@ -29,11 +29,13 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
     private DateTime _lastSendMessage;
 
     protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
+    private readonly bool _throttleConnection;
 
-    protected AbstractChangesClientConnection(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken databaseShutdown, bool fromStudio)
+    protected AbstractChangesClientConnection(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken databaseShutdown, bool throttleConnection, bool fromStudio)
     {
         IsChangesConnectionOriginatedFromStudio = fromStudio;
         ContextPool = contextPool;
+        _throttleConnection = throttleConnection;
         _webSocket = webSocket;
         _startedAt = SystemTime.UtcNow;
         _cts = CancellationTokenSource.CreateLinkedTokenSource(databaseShutdown);
@@ -114,7 +116,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected abstract ValueTask UnwatchAllOperationsAsync();
 
-    public async Task StartSendingNotificationsAsync(bool throttleConnection)
+    public async Task StartSendingNotificationsAsync()
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
@@ -139,7 +141,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
                         do
                         {
-                            var value = await GetNextMessage(throttleConnection);
+                            var value = await GetNextMessage();
                             if (value == null || _disposeToken.IsCancellationRequested)
                                 break;
 
@@ -177,7 +179,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         }
     }
 
-    private async ValueTask<object> GetNextMessage(bool throttleConnection)
+    private async ValueTask<object> GetNextMessage()
     {
         while (true)
         {
@@ -189,7 +191,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
                 return dynamicJsonValue;
             }
             var msg = nextMessage.Item2;
-            if (throttleConnection && msg.AllowSkip)
+            if (_throttleConnection && msg.AllowSkip)
             {
                 if (DateTime.UtcNow - _lastSendMessage < TimeSpan.FromSeconds(5))
                 {

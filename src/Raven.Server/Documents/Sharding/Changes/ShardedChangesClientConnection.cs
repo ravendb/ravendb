@@ -21,15 +21,17 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     private IDisposable _watchAllDocumentsUnsubscribe;
 
     private readonly ShardedDatabaseContext _context;
+    private readonly bool _throttleConnection;
     private ShardedDatabaseChanges[] _changes;
 
     private IDisposable _releaseQueueContext;
     private JsonOperationContext _queueContext;
 
-    public ShardedChangesClientConnection(WebSocket webSocket, ServerStore serverStore, [NotNull] ShardedDatabaseContext context, bool fromStudio)
-        : base(webSocket, serverStore.ContextPool, context.DatabaseShutdown, fromStudio)
+    public ShardedChangesClientConnection(WebSocket webSocket, ServerStore serverStore, [NotNull] ShardedDatabaseContext context, bool throttleConnection, bool fromStudio)
+        : base(webSocket, serverStore.ContextPool, context.DatabaseShutdown, throttleConnection: false, fromStudio)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _throttleConnection = throttleConnection;
         _releaseQueueContext = ContextPool.AllocateOperationContext(out _queueContext);
     }
 
@@ -40,7 +42,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
         _changes = new ShardedDatabaseChanges[_context.NumberOfShardNodes];
         for (var i = 0; i < _changes.Length; i++)
-            _changes[i] = new ShardedDatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(i), ShardHelper.ToShardName(_context.DatabaseName, i), onDispose: null, nodeTag: null);
+            _changes[i] = new ShardedDatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(i), ShardHelper.ToShardName(_context.DatabaseName, i), onDispose: null, nodeTag: null, _throttleConnection);
 
         return ValueTask.CompletedTask;
     }

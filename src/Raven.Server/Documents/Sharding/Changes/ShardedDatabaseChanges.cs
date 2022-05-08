@@ -9,8 +9,8 @@ namespace Raven.Server.Documents.Sharding.Changes;
 
 internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseConnectionState>
 {
-    public ShardedDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag) 
-        : base(requestExecutor, databaseName, onDispose, nodeTag)
+    public ShardedDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag, bool throttleConnection) 
+        : base(requestExecutor, databaseName, onDispose, nodeTag, throttleConnection)
     {
     }
 
