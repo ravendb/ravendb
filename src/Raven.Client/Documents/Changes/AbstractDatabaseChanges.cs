@@ -27,6 +27,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState>
     private readonly string _database;
 
     private readonly Action _onDispose;
+    private readonly bool _throttleConnection;
     private ClientWebSocket _client;
 
     private readonly Task _task;
@@ -42,7 +43,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState>
     private int _nodeIndex;
     private Uri _url;
 
-    protected AbstractDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag)
+    protected AbstractDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag, bool throttleConnection)
     {
         RequestExecutor = requestExecutor;
         _database = databaseName;
@@ -52,6 +53,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState>
         _client = CreateClientWebSocket(RequestExecutor);
 
         _onDispose = onDispose;
+        _throttleConnection = throttleConnection;
         ConnectionStatusChanged += OnConnectionStatusChanged;
 
         _task = DoWork(nodeTag);
@@ -284,7 +286,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState>
             {
                 if (Connected == false)
                 {
-                    _url = new Uri($"{_serverNode.Url}/databases/{_database}/changes"
+                    _url = new Uri($"{_serverNode.Url}/databases/{_database}/changes?throttleConnection={_throttleConnection}"
                         .ToLower()
                         .ToWebSocketPath(), UriKind.Absolute);
 
