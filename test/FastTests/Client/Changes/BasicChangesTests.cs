@@ -30,9 +30,12 @@ public class BasicChangesTests : RavenTestBase
 
                 for (var i = 0; i < numberOfDocuments; i++)
                 {
-                    changes
-                        .ForDocument($"orders/{i}")
-                        .Subscribe(x => cde.Signal());
+                    var forDocument = changes
+                        .ForDocument($"orders/{i}");
+
+                    forDocument.Subscribe(x => cde.Signal());
+
+                    await forDocument.EnsureSubscribedNow();
                 }
 
                 for (var i = 0; i < numberOfDocuments; i++)
@@ -63,9 +66,12 @@ public class BasicChangesTests : RavenTestBase
 
                 var cde = new CountdownEvent(numberOfDocuments);
 
-                changes
-                    .ForAllDocuments()
-                    .Subscribe(x => cde.Signal());
+                var forDocuments = changes
+                    .ForAllDocuments();
+
+                forDocuments.Subscribe(x => cde.Signal());
+
+                await forDocuments.EnsureSubscribedNow();
 
                 for (var i = 0; i < numberOfDocuments; i++)
                 {
