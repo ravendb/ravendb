@@ -130,9 +130,9 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         [Fact]
-        public async Task AsyncSessionLoadWithIncludeTimeSeries(Options options)
+        public async Task AsyncSessionLoadWithIncludeTimeSeries()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
