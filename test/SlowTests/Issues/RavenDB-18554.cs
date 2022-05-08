@@ -9,6 +9,7 @@ using FastTests.Client;
 using NuGet.ContentModel;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -18,6 +19,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Commercial;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
@@ -40,9 +42,9 @@ namespace SlowTests.Issues
         {
             Options storeOptions;
             RavenServer leader = null;
+            List<RavenServer> nodes = null;
             if (cluster)
             {
-                List<RavenServer> nodes;
                 (nodes, leader) = await CreateRaftCluster(2);
                 storeOptions = new Options {Server = leader, ReplicationFactor = nodes.Count, RunInMemory = false};
             }
@@ -59,6 +61,8 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(c);
+                    if(cluster)
+                        session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
                     await session.SaveChangesAsync();
                     categoryId = c.Id;
                 }
@@ -70,41 +74,53 @@ namespace SlowTests.Issues
                 string[] indexNames = { index.IndexName };
                 CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = indexNames};
 
-                var database = cluster ? await GetDatabase(leader, store.Database) : await GetDatabase(store.Database);
+                DocumentDatabase database = null;
+                if (cluster)
+                {
+                    var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
+                    var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
+                    database = await GetDatabase(responsibleNode, store.Database);
+                }
+                else
+                {
+                    database = await GetDatabase(store.Database);
+                }
+                Assert.NotNull(database);
 
                 // Test
                 Exception exception = null;
-                AssertActualExpectedException assertException = null;
-                database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = () =>
+                List<Categoroies_Details.Entity> l = null;
+                Task t = new Task(() =>
                 {
                     try
                     {
                         using (var session = store.OpenSession())
                         {
-                            var l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
-                                                    .Where(x => x.Id == categoryId)
-                                                    .ProjectInto<Categoroies_Details.Entity>()
-                                                    .ToList();
-
-                            Assert.NotNull(l);
-                            Assert.Equal(1, l.Count);
-                            Assert.Equal(categoryId, l[0].Id);
-                            Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
+                            l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                .ProjectInto<Categoroies_Details.Entity>()
+                                .ToList();
                         }
-                    }
-                    catch (AssertActualExpectedException e)
-                    {
-                        assertException = e;
                     }
                     catch (Exception e)
                     {
                         exception = e;
                     }
+                });
+                database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = () =>
+                {
+                    t.Start();
                 };
 
-                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
-                await operation.WaitForCompletionAsync();
+                //var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(settings));
+                // operation.WaitForCompletion();
+                var reqEx = store.GetRequestExecutor(store.Database);
+                using (reqEx.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var compactCommand = new CompactDatabaseOperation(settings).GetCommand(store.Conventions, context);
+                    reqEx.Execute(compactCommand, context);
+                }
 
+                await t;
                 if (cluster == false)
                 {
                     Assert.NotNull(exception);
@@ -113,9 +129,10 @@ namespace SlowTests.Issues
                 else
                 {
                     Assert.Null(exception); // Failover
-
-                    if (assertException != null) // callback inner asserts
-                        throw assertException;
+                    Assert.NotNull(l);
+                    Assert.Equal(1, l.Count);
+                    Assert.Equal(categoryId, l[0].Id);
+                    Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
                 }
             }
         }
@@ -127,9 +144,9 @@ namespace SlowTests.Issues
         {
             Options storeOptions;
             RavenServer leader = null;
+            List<RavenServer> nodes = null;
             if (cluster)
             {
-                List<RavenServer> nodes;
                 (nodes, leader) = await CreateRaftCluster(2);
                 storeOptions = new Options { Server = leader, ReplicationFactor = nodes.Count, RunInMemory = false };
             }
@@ -140,12 +157,16 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(storeOptions))
             {
+
+                //WaitForUserToContinueTheTest(store);
                 // Prepare Server For Test
                 string categoryId;
-                Category c = new Category { Name = $"n0", Description = $"d0" };
+                Category c = new Category {Name = $"n0", Description = $"d0"};
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(c);
+                    if (cluster)
+                        session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
                     await session.SaveChangesAsync();
                     categoryId = c.Id;
                 }
@@ -154,43 +175,56 @@ namespace SlowTests.Issues
                 index.Execute(store);
                 Indexes.WaitForIndexing(store);
 
-                string[] indexNames = { index.IndexName };
-                CompactSettings settings = new CompactSettings { DatabaseName = store.Database, Documents = true, Indexes = indexNames };
-                var database = cluster ? await GetDatabase(leader, store.Database) : await GetDatabase(store.Database);
+                string[] indexNames = {index.IndexName};
+                CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = indexNames};
+
+                DocumentDatabase database;
+                if (cluster)
+                {
+                    var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
+                    var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
+                    database = await GetDatabase(responsibleNode, store.Database);
+                }
+                else
+                {
+                    database = await GetDatabase(store.Database);
+                }
+                Assert.NotNull(database);
 
                 // Test
                 Exception exception = null;
-                AssertActualExpectedException assertException = null;
-                database.IndexStore.ForTestingPurposesOnly().IndexCompaction = () =>
+                List<Categoroies_Details.Entity> l = null;
+                Task t = new Task(() =>
                 {
                     try
                     {
                         using (var session = store.OpenSession())
                         {
-                            var l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
-                                                    .Where(x => x.Id == categoryId)
-                                                    .ProjectInto<Categoroies_Details.Entity>()
-                                                    .ToList();
-
-                            Assert.NotNull(l);
-                            Assert.Equal(1, l.Count);
-                            Assert.Equal(categoryId, l[0].Id);
-                            Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
+                            l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                .ProjectInto<Categoroies_Details.Entity>()
+                                .ToList();
                         }
-                    }
-                    catch (AssertActualExpectedException e)
-                    {
-                        assertException = e;
                     }
                     catch (Exception e)
                     {
                         exception = e;
                     }
+                });
+                database.IndexStore.ForTestingPurposesOnly().IndexCompaction = () =>
+                {
+                    t.Start();
                 };
 
-                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
-                await operation.WaitForCompletionAsync();
+                // var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                // await operation.WaitForCompletionAsync();
+                var reqEx = store.GetRequestExecutor(store.Database);
+                using (reqEx.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var compactCommand = new CompactDatabaseOperation(settings).GetCommand(store.Conventions, context);
+                    reqEx.Execute(compactCommand, context);
+                }
 
+                await t;
                 if (cluster == false)
                 {
                     Assert.NotNull(exception);
@@ -199,9 +233,10 @@ namespace SlowTests.Issues
                 else
                 {
                     Assert.Null(exception); // Failover
-
-                    if (assertException != null) // callback inner asserts
-                        throw assertException;
+                    Assert.NotNull(l);
+                    Assert.Equal(1, l.Count);
+                    Assert.Equal(categoryId, l[0].Id);
+                    Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
                 }
             }
         }
