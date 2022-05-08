@@ -16,6 +16,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -3707,7 +3708,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void ThrowCompactionInProgress()
         {
-            throw new InvalidOperationException($"Index '{Name}' is currently being compacted.");
+            throw new IndexCompactionInProgressException($"Index '{Name}' is currently being compacted."); // Shahar
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
@@ -4577,6 +4578,8 @@ namespace Raven.Server.Documents.Indexes
                 _isCompactionInProgress = true;
                 PathSetting compactPath = null;
                 PathSetting tempPath = null;
+
+                DocumentDatabase.ForTestingPurposes?.IndexCompaction?.Invoke();
 
                 try
                 {
