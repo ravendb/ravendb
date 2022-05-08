@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
-                    WriteRange(writer, rangeResult, rangeResult.TotalResults);
+                    WriteRange(writer, rangeResult, rangeResult?.TotalResults);
                 }
             }
         }
