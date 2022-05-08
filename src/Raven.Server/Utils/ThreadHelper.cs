@@ -22,4 +22,16 @@ public static class ThreadHelper
             return false;
         }
     }
+
+    public static ThreadPriority GetThreadPriority()
+    {
+        try
+        {
+            return Thread.CurrentThread.Priority;
+        }
+        catch
+        {
+            return ThreadPriority.Normal;
+        }
+    }
 }

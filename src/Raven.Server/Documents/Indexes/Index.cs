@@ -1896,7 +1896,7 @@ namespace Raven.Server.Documents.Indexes
                     throw new NotSupportedException($"Unknown priority: {priority}");
             }
 
-            var currentPriority = Thread.CurrentThread.Priority;
+            var currentPriority = ThreadHelper.GetThreadPriority();
             if (currentPriority == newPriority)
                 return;
 
