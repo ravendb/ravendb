@@ -10,6 +10,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Changes;
 
@@ -238,6 +239,11 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     }
 
     protected override ValueTask UnwatchAllOperationsAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+    public override DynamicJsonValue GetDebugInfo()
     {
         throw new NotImplementedException();
     }

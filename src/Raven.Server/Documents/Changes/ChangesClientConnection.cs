@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -500,6 +501,29 @@ namespace Raven.Server.Documents.Changes
         {
             Interlocked.Decrement(ref _watchAllOperations);
             return ValueTask.CompletedTask;
+        }
+
+        public override DynamicJsonValue GetDebugInfo()
+        {
+            var djv = base.GetDebugInfo();
+
+            djv["WatchAllDocuments"] = _watchAllDocuments > 0;
+            djv["WatchAllIndexes"] = _watchAllIndexes > 0;
+            djv["WatchAllCounters"] = _watchAllCounters > 0;
+            djv["WatchAllTimeSeries"] = _watchAllTimeSeries > 0;
+            djv["WatchAllOperations"] = _watchAllOperations > 0;
+            djv["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray();
+            djv["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray();
+            djv["WatchIndexes"] = _matchingIndexes.ToArray();
+            djv["WatchDocuments"] = _matchingDocuments.ToArray();
+            djv["WatchCounters"] = _matchingCounters.ToArray();
+            djv["WatchCounterOfDocument"] = _matchingDocumentCounter.Select(x => x.ToJson()).ToArray();
+            djv["WatchCountersOfDocument"] = _matchingDocumentCounters.ToArray();
+            djv["WatchTimeSeries"] = _matchingTimeSeries.ToArray();
+            djv["WatchTimeSeriesOfDocument"] = _matchingDocumentTimeSeries.Select(x => x.ToJson()).ToArray();
+            djv["WatchAllTimeSeriesOfDocument"] = _matchingAllDocumentTimeSeries.ToArray();
+
+            return djv;
         }
 
         private static DynamicJsonValue CreateValueToSend(string type, DynamicJsonValue value)
