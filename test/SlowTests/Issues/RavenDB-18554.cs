@@ -22,6 +22,7 @@ using Raven.Server.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace SlowTests.Issues
 {
@@ -54,9 +55,9 @@ namespace SlowTests.Issues
             {
                 // Prepare Server For Test
                 string categoryId;
+                Category c = new Category { Name = $"n0", Description = $"d0" };
                 using (var session = store.OpenAsyncSession())
                 {
-                    Category c = new Category {Name = $"n0", Description = $"d0"};
                     await session.StoreAsync(c);
                     await session.SaveChangesAsync();
                     categoryId = c.Id;
@@ -72,36 +73,49 @@ namespace SlowTests.Issues
                 var database = cluster ? await GetDatabase(leader, store.Database) : await GetDatabase(store.Database);
 
                 // Test
-                Exception e = null;
-                database.ForTestingPurposesOnly().CompactionAfterDatabaseUnloadAction = () =>
+                Exception exception = null;
+                AssertActualExpectedException assertException = null;
+                database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = () =>
                 {
                     try
                     {
                         using (var session = store.OpenSession())
                         {
-                            session.Query<Categoroies_Details.Entitiy, Categoroies_Details>()
-                                .Where(x => x.Id == categoryId)
-                                .ProjectInto<Categoroies_Details.Entitiy>()
-                                .ToList();
+                            var l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                                    .Where(x => x.Id == categoryId)
+                                                    .ProjectInto<Categoroies_Details.Entity>()
+                                                    .ToList();
+
+                            Assert.NotNull(l);
+                            Assert.Equal(1, l.Count);
+                            Assert.Equal(categoryId, l[0].Id);
+                            Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
                         }
                     }
-                    catch (Exception e1)
+                    catch (AssertActualExpectedException e)
                     {
-                        e = e1;
+                        assertException = e;
+                    }
+                    catch (Exception e)
+                    {
+                        exception = e;
                     }
                 };
 
                 var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
                 await operation.WaitForCompletionAsync();
 
-                if (!cluster)
+                if (cluster == false)
                 {
-                    Assert.NotNull(e);
-                    Assert.True(e is DatabaseDisabledException);
+                    Assert.NotNull(exception);
+                    Assert.True(exception is DatabaseDisabledException);
                 }
                 else
                 {
-                    Assert.Null(e); // Faliover
+                    Assert.Null(exception); // Failover
+
+                    if (assertException != null) // callback inner asserts
+                        throw assertException;
                 }
             }
         }
@@ -128,9 +142,9 @@ namespace SlowTests.Issues
             {
                 // Prepare Server For Test
                 string categoryId;
+                Category c = new Category { Name = $"n0", Description = $"d0" };
                 using (var session = store.OpenAsyncSession())
                 {
-                    Category c = new Category { Name = $"n0", Description = $"d0" };
                     await session.StoreAsync(c);
                     await session.SaveChangesAsync();
                     categoryId = c.Id;
@@ -145,52 +159,59 @@ namespace SlowTests.Issues
                 var database = cluster ? await GetDatabase(leader, store.Database) : await GetDatabase(store.Database);
 
                 // Test
-                Exception e = null;
-                database.ForTestingPurposesOnly().IndexCompaction = () =>
+                Exception exception = null;
+                AssertActualExpectedException assertException = null;
+                database.IndexStore.ForTestingPurposesOnly().IndexCompaction = () =>
                 {
                     try
                     {
                         using (var session = store.OpenSession())
                         {
-                            session.Query<Categoroies_Details.Entitiy, Categoroies_Details>()
-                                .Where(x => x.Id == categoryId)
-                                .ProjectInto<Categoroies_Details.Entitiy>()
-                                .ToList();
+                            var l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                                    .Where(x => x.Id == categoryId)
+                                                    .ProjectInto<Categoroies_Details.Entity>()
+                                                    .ToList();
+
+                            Assert.NotNull(l);
+                            Assert.Equal(1, l.Count);
+                            Assert.Equal(categoryId, l[0].Id);
+                            Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
                         }
                     }
-                    catch (Exception e1)
+                    catch (AssertActualExpectedException e)
                     {
-                        e = e1;
+                        assertException = e;
+                    }
+                    catch (Exception e)
+                    {
+                        exception = e;
                     }
                 };
 
                 var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
                 await operation.WaitForCompletionAsync();
 
-
-                if (!cluster)
+                if (cluster == false)
                 {
-                    Assert.NotNull(e);
-                    Assert.True(e is IndexCompactionInProgressException);
+                    Assert.NotNull(exception);
+                    Assert.True(exception is IndexCompactionInProgressException);
                 }
                 else
                 {
-                    Assert.Null(e); // Faliover
+                    Assert.Null(exception); // Failover
+
+                    if (assertException != null) // callback inner asserts
+                        throw assertException;
                 }
             }
         }
 
-        class Categoroies_Details : AbstractMultiMapIndexCreationTask<Categoroies_Details.Entitiy>
+        class Categoroies_Details : AbstractMultiMapIndexCreationTask<Categoroies_Details.Entity>
         {
-            internal class Entitiy
+            internal class Entity
             {
                 public string Id { get; set; }
                 public string Details { get; set; }
-
-                public override string ToString()
-                {
-                    return $"Id=\"{Id}\", Details=\"{Details}\"";
-                }
             }
 
             public Categoroies_Details()
@@ -198,7 +219,7 @@ namespace SlowTests.Issues
                 AddMap<Category>(
                     categories =>
                         from c in categories
-                        select new Entitiy
+                        select new Entity
                         {
                             Id = c.Id,
                             Details = $"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\""

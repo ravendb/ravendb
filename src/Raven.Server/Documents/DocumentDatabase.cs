@@ -1771,9 +1771,7 @@ namespace Raven.Server.Documents
 
             internal Action CollectionRunnerBeforeOpenReadTransaction;
 
-            internal Action CompactionAfterDatabaseUnloadAction;
-
-            internal Action IndexCompaction;
+            internal Action CompactionAfterDatabaseUnload;
 
             internal bool SkipDrainAllRequests = false;
 

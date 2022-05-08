@@ -3708,7 +3708,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void ThrowCompactionInProgress()
         {
-            throw new IndexCompactionInProgressException($"Index '{Name}' is currently being compacted."); // Shahar
+            throw new IndexCompactionInProgressException($"Index '{Name}' is currently being compacted.");
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
@@ -4579,14 +4579,14 @@ namespace Raven.Server.Documents.Indexes
                 PathSetting compactPath = null;
                 PathSetting tempPath = null;
 
-                DocumentDatabase.ForTestingPurposes?.IndexCompaction?.Invoke();
-
                 try
                 {
                     var storageEnvironmentOptions = _environment.Options;
 
                     using (RestartEnvironment(onBeforeEnvironmentDispose: Optimize))
                     {
+                        DocumentDatabase.IndexStore?.ForTestingPurposes?.IndexCompaction?.Invoke();
+
                         if (Type.IsMapReduce())
                         {
                             result.AddMessage($"Skipping data compaction of '{Name}' index because data compaction of map-reduce indexes isn't supported");
