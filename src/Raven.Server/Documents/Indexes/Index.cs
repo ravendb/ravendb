@@ -1900,7 +1900,7 @@ namespace Raven.Server.Documents.Indexes
             if (currentPriority == newPriority)
                 return;
 
-            Thread.CurrentThread.Priority = newPriority;
+            ThreadHelper.TrySetThreadPriority(newPriority, IndexingThreadName, _logger);
         }
 
         private void PersistIndexDefinition()
