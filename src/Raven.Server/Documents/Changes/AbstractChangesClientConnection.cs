@@ -411,7 +411,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
     }
 
-    public DynamicJsonValue GetDebugInfo()
+    public virtual DynamicJsonValue GetDebugInfo()
     {
         return new DynamicJsonValue
         {
@@ -420,22 +420,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
             ["CloseStatus"] = _webSocket.CloseStatus,
             ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
             ["SubProtocol"] = _webSocket.SubProtocol,
-            ["Age"] = Age,
-            //["WatchAllDocuments"] = _watchAllDocuments > 0,
-            //["WatchAllIndexes"] = _watchAllIndexes > 0,
-            //["WatchAllCounters"] = _watchAllCounters > 0,
-            //["WatchAllTimeSeries"] = _watchAllTimeSeries > 0,
-            //["WatchAllOperations"] = _watchAllOperations > 0,
-            //["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray(),
-            //["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray(),
-            //["WatchIndexes"] = _matchingIndexes.ToArray(),
-            //["WatchDocuments"] = _matchingDocuments.ToArray(),
-            //["WatchCounters"] = _matchingCounters.ToArray(),
-            //["WatchCounterOfDocument"] = _matchingDocumentCounter.Select(x => x.ToJson()).ToArray(),
-            //["WatchCountersOfDocument"] = _matchingDocumentCounters.ToArray(),
-            //["WatchTimeSeries"] = _matchingTimeSeries.ToArray(),
-            //["WatchTimeSeriesOfDocument"] = _matchingDocumentTimeSeries.Select(x => x.ToJson()).ToArray(),
-            //["WatchAllTimeSeriesOfDocument"] = _matchingAllDocumentTimeSeries.ToArray()
+            ["Age"] = Age
         };
     }
 
