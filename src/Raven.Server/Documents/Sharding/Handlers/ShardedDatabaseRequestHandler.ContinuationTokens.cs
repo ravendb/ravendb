@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public partial class ShardedDatabaseRequestHandler
+    public abstract partial class ShardedDatabaseRequestHandler
     {
         public class ShardedContinuationTokensHandler
         {

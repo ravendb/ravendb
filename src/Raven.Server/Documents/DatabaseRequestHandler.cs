@@ -21,7 +21,8 @@ namespace Raven.Server.Documents
     public abstract class DatabaseRequestHandler : AbstractDatabaseRequestHandler<DocumentsOperationContext>
     {
         public DocumentDatabase Database;
-        public Logger Logger;
+
+        public override string DatabaseName => Database.Name;
 
         protected internal delegate void RefAction<T>(string databaseName, ref T configuration, JsonOperationContext context);
 
@@ -37,9 +38,6 @@ namespace Raven.Server.Documents
 
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
-
-
-        public override string DatabaseName => Database.Name;
 
         public override char IdentityPartsSeparator => Database.IdentityPartsSeparator;
 
