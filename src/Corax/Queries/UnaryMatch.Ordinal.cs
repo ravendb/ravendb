@@ -60,7 +60,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var intOffset);
                     var isMatch = false;
 
-                    if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.None))
+                    if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                     {
                         var read = reader.Read(match._fieldId, out var resultX);
                         var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
@@ -132,7 +132,7 @@ namespace Corax.Queries
                     bool isMatch = false;
                     if (typeof(TValueType) == typeof(long))
                     {
-                        if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.None))
+                        if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                         {
                             var read = reader.Read<long>(match._fieldId, out var resultX);
                             if (read)
@@ -155,7 +155,7 @@ namespace Corax.Queries
                     }
                     else if (typeof(TValueType) == typeof(double))
                     {
-                        if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.None))
+                        if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                         {
                             var read = reader.Read<double>(match._fieldId, out var resultX);
                             if (read)

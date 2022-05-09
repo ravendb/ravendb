@@ -623,7 +623,7 @@ namespace Raven.Server.Documents.Queries.Results
                     fixed (byte* ptr = &blittableBinary.GetPinnableReference())
                         value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
                     break;
-                case IndexEntryFieldType.None:
+                case IndexEntryFieldType.Simple:
                     retrieverInput.CoraxEntry.Read(fieldId, out data);
                     if (data.Length is 10 or 12)
                     {

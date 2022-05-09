@@ -28,16 +28,16 @@ namespace Corax
 
     [Flags]
     public enum IndexEntryFieldType : byte
-    {       
-        None = 1,
-        
-        Tuple = 1 << 2,
-        List = 1 << 3,
-        Raw = 1 << 4,
-        HasNull = 1 << 5, // Helper for list writer.
+    {
+        Null = 0,
+        Simple = 1,
+        Tuple = 1 << 1,
+        List = 1 << 2,
+        Raw = 1 << 3,
+
+        HasNulls = 1 << 5, // Helper for list writer.
         Invalid = 1 << 6,
-        
-        
+
         TupleList = List | Tuple,
         RawList = List | Raw
     }
@@ -114,6 +114,15 @@ namespace Corax
             _buffer = buffer[..^knownFieldMetadataSize];
             _dynamicFieldIndex = 0;
             _dataIndex = Unsafe.SizeOf<IndexEntryHeader>();
+        }
+
+        public void WriteNull(int field)
+        {
+            int dataLocation = _dataIndex;
+            
+            // Write known field.
+            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            _buffer[dataLocation] = (byte)IndexEntryFieldType.Null;
         }
 
         public void Write(int field, ReadOnlySpan<byte> value)
@@ -193,7 +202,7 @@ namespace Corax
             _dataIndex = dataLocation + value.Length;
         }    
         
-        public unsafe void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.HasNull) where TEnumerator : IReadOnlySpanIndexer
+        public unsafe void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.HasNulls) where TEnumerator : IReadOnlySpanIndexer
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
@@ -254,7 +263,7 @@ namespace Corax
                 dataLocation += nullBitStreamSize;
 
                 // Signal that we will have to deal with the nulls.
-                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNull;
+                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNulls;
             }
 
             dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
@@ -333,7 +342,7 @@ namespace Corax
                 dataLocation += nullBitStreamSize;
 
                 // Signal that we will have to deal with the nulls.
-                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNull;
+                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNulls;
             }
 
             dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
@@ -538,7 +547,7 @@ namespace Corax
                 _longOffset = MemoryMarshal.Read<int>(_buffer[(offset + sizeof(int))..]);
                 _doubleOffset = (offset + 2 * sizeof(int)); // Skip the pointer from sequences and longs.
 
-                if (Type.HasFlag(IndexEntryFieldType.HasNull))
+                if (Type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
                     int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
                     _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.                             
@@ -555,7 +564,7 @@ namespace Corax
                 _doubleOffset = 0;                
                 _longOffset = 0;
 
-                if (Type.HasFlag(IndexEntryFieldType.HasNull))
+                if (Type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
                     int nullBitStreamSize = Count / (sizeof(long) * 8) + Count % (sizeof(long) * 8) == 0 ? 0 : 1;
                     _spanTableOffset = _nullTableOffset + nullBitStreamSize; // Point after the null table.         
@@ -576,10 +585,14 @@ namespace Corax
         {
             get
             {
-                if (!Type.HasFlag(IndexEntryFieldType.HasNull))
+                if (!Type.HasFlag(IndexEntryFieldType.HasNulls))
                     return false;
 
-                throw new NotImplementedException();
+                unsafe
+                {
+                    byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
+                    return PtrBitVector.GetBitInPointer(nullTablePtr + _nullTableOffset, _currentIdx);
+                }
             }
         }
 
@@ -714,11 +727,14 @@ namespace Corax
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
-                goto Fail;
+                goto Fail;                        
 
             if (isTyped)
             {
                 type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                if (type == IndexEntryFieldType.Null)
+                    goto IsNull;
+                
                 intOffset += length;
 
                 if ((type & IndexEntryFieldType.Tuple) != 0)
@@ -796,6 +812,10 @@ namespace Corax
             Unsafe.SkipInit(out value);
             type = IndexEntryFieldType.Invalid;
             return false;
+        IsNull:
+            Unsafe.SkipInit(out value);
+            type = IndexEntryFieldType.Null;
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -815,7 +835,7 @@ namespace Corax
                 return (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var _, intOffset);
             }
 
-            return IndexEntryFieldType.None;
+            return IndexEntryFieldType.Simple;
         }
 
         public IndexEntryFieldIterator ReadMany(int field)
@@ -860,29 +880,28 @@ namespace Corax
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
-            {
-                value = Span<byte>.Empty;
-                type = IndexEntryFieldType.Invalid;
-                return false;
-            }
+                goto Fail;
 
             int stringLength = 0;
 
             if (isTyped)
             {
                 type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                if (type == IndexEntryFieldType.Null)
+                {
+                    if (elementIdx == 0)
+                        goto IsNull;
+                    else
+                        goto FailNull;
+                }
 
                 intOffset += length;
                 if (type.HasFlag(IndexEntryFieldType.List))
                 {                    
                     int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
                     if (elementIdx >= totalElements)
-                    {
-                        value = Span<byte>.Empty;
-                        type = IndexEntryFieldType.Invalid;
-                        return false;
-                    }
-                    
+                        goto Fail;
+
                     intOffset += length;
                     var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
                     if (type.HasFlag(IndexEntryFieldType.Tuple))
@@ -894,7 +913,7 @@ namespace Corax
                         intOffset += sizeof(int);
                     }
 
-                    if (type.HasFlag(IndexEntryFieldType.HasNull))
+                    if (type.HasFlag(IndexEntryFieldType.HasNulls))
                     {
                         byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
                         if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
@@ -916,7 +935,7 @@ namespace Corax
                 }
                 else if ((type & IndexEntryFieldType.Raw) != 0)
                 {
-                    if (type.HasFlag(IndexEntryFieldType.HasNull))
+                    if (type.HasFlag(IndexEntryFieldType.HasNulls))
                     {
                         var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
                         byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
@@ -930,7 +949,7 @@ namespace Corax
                 }
                 else if ((type & IndexEntryFieldType.Tuple) != 0)
                 {
-                    if (type.HasFlag(IndexEntryFieldType.HasNull))
+                    if (type.HasFlag(IndexEntryFieldType.HasNulls))
                     {
                         var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
                         byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
@@ -951,16 +970,26 @@ namespace Corax
             {
                 stringLength = VariableSizeEncoding.Read<int>(_buffer, out int readOffset, intOffset);
                 intOffset += readOffset;
-                type = IndexEntryFieldType.None;
+                type = IndexEntryFieldType.Simple;
             }
 
             value = _buffer.Slice(intOffset, stringLength);            
             return true;
 
         HasNull:
-            type = IndexEntryFieldType.HasNull;
+            type = IndexEntryFieldType.HasNulls;            
             value = Span<byte>.Empty;
             return true;
+        IsNull:
+            value = Span<byte>.Empty;
+            type = IndexEntryFieldType.Null;
+            return true;
+        Fail:
+            value = Span<byte>.Empty;
+            type = IndexEntryFieldType.Invalid;
+            return false;
+        FailNull:
+            throw new InvalidOperationException("Cannot request an internal value when the field is null.");
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -978,6 +1007,9 @@ namespace Corax
             if (isTyped)
             {
                 type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                if (type == IndexEntryFieldType.Null)
+                    goto IsNull;
+                
                 intOffset += length;
                 
                 if (type.HasFlag(IndexEntryFieldType.Tuple))
@@ -995,7 +1027,7 @@ namespace Corax
                         var longTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
                         intOffset += sizeof(int);
 
-                        if (type.HasFlag(IndexEntryFieldType.HasNull))
+                        if (type.HasFlag(IndexEntryFieldType.HasNulls))
                         {
                             byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
                             if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, 0) == true)
@@ -1014,7 +1046,7 @@ namespace Corax
                     }
                     else
                     {
-                        if (type.HasFlag(IndexEntryFieldType.HasNull))
+                        if (type.HasFlag(IndexEntryFieldType.HasNulls))
                             goto HasNull;
 
                         longValue = VariableSizeEncoding.Read<long>(_buffer, out length, intOffset); // Read
@@ -1042,7 +1074,13 @@ namespace Corax
             Unsafe.SkipInit(out longValue);
             Unsafe.SkipInit(out doubleValue);
             sequenceValue = Span<byte>.Empty;
-            type = IndexEntryFieldType.HasNull;
+            type = IndexEntryFieldType.HasNulls;
+            return true;
+        IsNull:
+            Unsafe.SkipInit(out longValue);
+            Unsafe.SkipInit(out doubleValue);
+            sequenceValue = Span<byte>.Empty;
+            type = IndexEntryFieldType.Null;
             return true;
         }
 
@@ -1053,12 +1091,12 @@ namespace Corax
             foreach (var (name, field) in knownFields)
             {
                 var type = GetFieldType(field, out _);
-                if (type.HasFlag(IndexEntryFieldType.None))
+                if (type.HasFlag(IndexEntryFieldType.Simple))
                 {
                     Read(field, out var value);
                     result += $"{name}: {Encodings.Utf8.GetString(value)}{Environment.NewLine}";
                 }
-                else if (type.HasFlag(IndexEntryFieldType.Invalid))
+                else if (type == IndexEntryFieldType.Invalid)
                 {
                     result += $"{name}: null{Environment.NewLine}";
                 }
