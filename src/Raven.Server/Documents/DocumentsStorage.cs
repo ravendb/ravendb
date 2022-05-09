@@ -1745,7 +1745,7 @@ namespace Raven.Server.Documents
                     {
                         if (DocumentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionOldDocument(context, flags, local.Document.Data, local.Document.ChangeVector, collectionName))
                         {
-                            DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data, flags | DocumentFlags.HasRevisions, NonPersistentDocumentFlags.None,
+                            DocumentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, local.Document.Data, flags | DocumentFlags.HasRevisions | DocumentFlags.FromOldDocumentRevision, NonPersistentDocumentFlags.None,
                                 local.Document.ChangeVector, local.Document.LastModified.Ticks, configuration, collectionName);
                         }
 
@@ -1757,7 +1757,6 @@ namespace Raven.Server.Documents
 
                 if (flags.Contain(DocumentFlags.HasRevisions) &&
                     revisionsStorage.Configuration == null &&
-                    (flags & DocumentFlags.Resolved) != DocumentFlags.Resolved &&
                     flags.Contain(DocumentFlags.Resolved) == false &&
                     nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     revisionsStorage.DeleteRevisionsFor(context, id);

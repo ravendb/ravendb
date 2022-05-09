@@ -12,7 +12,7 @@ namespace Raven.Server.Documents
         Artificial = 0x1,
         HasRevisions = 0x2,
         DeleteRevision = 0x4,
-        Reserved2 = 0x8,
+        FromOldDocumentRevision = 0x8,
 
         FromIndex = 0x10,
         Revision = 0x20,

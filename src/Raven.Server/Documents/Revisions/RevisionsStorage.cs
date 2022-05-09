@@ -286,6 +286,9 @@ namespace Raven.Server.Documents.Revisions
         {
             configuration = GetRevisionsConfiguration(collectionName.Name, documentFlags);
 
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                return false;
+
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
                 return false;
 
@@ -362,7 +365,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public bool ShouldVersionOldDocument(DocumentsOperationContext context, DocumentFlags flags, BlittableJsonReaderObject oldDoc, string changeVector, CollectionName collectionName = null)
+        public bool ShouldVersionOldDocument(DocumentsOperationContext context, DocumentFlags flags, BlittableJsonReaderObject oldDoc, string changeVector, CollectionName collectionName)
         {
             if (oldDoc == null)
                 return false; // no document to version
@@ -642,7 +645,10 @@ namespace Raven.Server.Documents.Revisions
             RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks)
         {
             var moreRevisionToDelete = false;
-            if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                return false;
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
 
             if (configuration.MinimumRevisionsToKeep.HasValue == false &&
