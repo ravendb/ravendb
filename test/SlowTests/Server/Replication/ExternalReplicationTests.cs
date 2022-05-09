@@ -9,8 +9,11 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -295,6 +298,60 @@ namespace SlowTests.Server.Replication
             {
                 var externalTask = new ExternalReplication(store1.Database + "test", $"Connection to {store1.Database} test");
                 await AddWatcherToReplicationTopology(store1, externalTask, new[] { "http://1.2.3.4:8080" });
+            }
+        }
+
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task Test(Options options)
+        {
+            using (var store1 = GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = s => $"{s}_FooBar-1"
+                   }))
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+                    
+                    s1.SaveChanges();
+                }
+                // SlowTests uses the regular old value of 3000mSec. But if called from StressTests - needs more timeout
+
+                await EnsureReplicatingAsync(store1, store2);
+
+                var dbs = await Sharding.GetShardsDocumentDatabaseInstancesFor(store2);
+
+                foreach (var db  in dbs)
+                {
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    {
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var ids = db.DocumentsStorage.GetAllIds(ctx);
+                            Console.WriteLine($"Ids for shard {db.Name}: ");
+
+                            foreach (var id in ids)
+                            {
+                                Console.WriteLine($"{id}");
+                            }
+                        }
+                    }
+                    
+
+                }
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null/*, database: ShardHelper.ToShardName(store2.Database, 2)*/));
+                }
+                    
             }
         }
     }

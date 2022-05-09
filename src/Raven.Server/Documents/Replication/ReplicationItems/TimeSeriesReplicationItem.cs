@@ -66,12 +66,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        public override unsafe void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
 
             var keySize = *(int*)Reader.ReadExactly(sizeof(int));
             var key = Reader.ReadExactly(keySize);
-            ToDispose(Slice.From(context.Allocator, key, keySize, ByteStringType.Immutable, out Key));
+            ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
 
             From = new DateTime(*(long*)Reader.ReadExactly(sizeof(long)));
             To = new DateTime(*(long*)Reader.ReadExactly(sizeof(long)));
@@ -161,12 +161,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        public override unsafe void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
             // TODO: add stats
             var keySize = *(int*)Reader.ReadExactly(sizeof(int));
             var key = Reader.ReadExactly(keySize);
-            ToDispose(Slice.From(context.Allocator, key, keySize, ByteStringType.Immutable, out Key));
+            ToDispose(Slice.From(allocator, key, keySize, ByteStringType.Immutable, out Key));
 
             var segmentSize = *(int*)Reader.ReadExactly(sizeof(int));
             var mem = Reader.AllocateMemory(segmentSize);

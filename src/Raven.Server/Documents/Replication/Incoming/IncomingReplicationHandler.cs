@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected virtual TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return new MergedDocumentReplicationCommand(data, lastDocumentEtag);
+            return new MergedDocumentReplicationCommand(data, lastDocumentEtag, ReplicationType);
         }
 
         internal class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -597,7 +597,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             Task task = null;
 
             using (_attachmentStreamsTempFile.Scope())
-            using (var incomingReplicationAllocator = new IncomingReplicationAllocator(documentsContext, _database))
+            using (var incomingReplicationAllocator = new IncomingReplicationAllocator(documentsContext.Allocator, _database.Configuration.Replication.MaxSizeToSend))
             using (var dataForReplicationCommand = new DataForReplicationCommand
             {
                 DocumentDatabase = _database,
@@ -767,14 +767,32 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                 var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader);
                 item.ReadChangeVectorAndMarker();
-                item.Read(context, stats);
+                item.Read(context, context.Allocator, stats);
                 data.ReplicatedItems[i] = item;
             }
         }
 
+        public static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)
+        {
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, segment.Name))
+            {
+                var localName = tss.Stats.GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
+                if (localName == null || localName.CompareTo(segment.Name) <= 0)
+                    return;
+
+                // the incoming ts-segment name exists locally but under a different casing
+                // lexical value of local name > lexical value of remote name =>
+                // need to replace the local name by the remote name, in TimeSeriesStats and in document's metadata
+
+                var collectionName = new CollectionName(segment.Collection);
+                tss.Stats.UpdateTimeSeriesName(context, collectionName, slicer);
+                tss.ReplaceTimeSeriesNameInMetadata(context, docId, localName, segment.Name);
+            }
+        }
+
+
         public unsafe class IncomingReplicationAllocator : IDisposable
         {
-            private readonly DocumentsOperationContext _context;
             private readonly long _maxSizeForContextUseInBytes;
             private readonly long _minSizeToAllocateNonContextUseInBytes;
             public long TotalDocumentsSizeInBytes { get; private set; }
@@ -782,12 +800,12 @@ namespace Raven.Server.Documents.Replication.Incoming
             private List<Allocation> _nativeAllocationList;
             private Allocation _currentAllocation;
 
-            public IncomingReplicationAllocator(DocumentsOperationContext context, DocumentDatabase database)
-            {
-                _context = context;
+            protected ByteStringContext _allocator;
 
-                var maxSizeForContextUse = database.Configuration.Replication.MaxSizeToSend * 2 ??
-                              new Size(128, SizeUnit.Megabytes);
+            public IncomingReplicationAllocator(ByteStringContext allocator, Size? maxSizeToSend)
+            {
+                _allocator = allocator;
+                var maxSizeForContextUse = maxSizeToSend * 2 ?? new Size(128, SizeUnit.Megabytes);
 
                 _maxSizeForContextUseInBytes = maxSizeForContextUse.GetValue(SizeUnit.Bytes);
                 var minSizeToNonContextAllocationInMb = PlatformDetails.Is32Bits ? 4 : 16;
@@ -799,7 +817,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 TotalDocumentsSizeInBytes += size;
                 if (TotalDocumentsSizeInBytes <= _maxSizeForContextUseInBytes)
                 {
-                    _context.Allocator.Allocate(size, out var output);
+                    _allocator.Allocate(size, out var output);
                     return output.Ptr;
                 }
 
@@ -888,7 +906,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                 using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
                 {
-                    attachment.ReadStream(context, _attachmentStreamsTempFile);
+                    attachment.ReadStream(context.Allocator, _attachmentStreamsTempFile);
                     replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
                 }
             }
@@ -1009,11 +1027,17 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             private readonly long _lastEtag;
             private readonly DataForReplicationCommand _replicationInfo;
-            
+            private readonly ReplicationLatestEtagRequest.ReplicationType _replicationType;
+
             public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag)
             {
                 _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
+            }
+
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, ReplicationLatestEtagRequest.ReplicationType replicationType) : this (replicationInfo, lastEtag)
+            {
+                _replicationType = replicationType;
             }
 
             protected virtual string PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item) => item.ChangeVector;
@@ -1361,7 +1385,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             protected virtual void SaveSourceEtag(DocumentsOperationContext context)
             {
                 context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
-                context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
+      			if (_replicationType != ReplicationLatestEtagRequest.ReplicationType.Sharded)
+                        context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
             }
 
             private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)
@@ -1371,16 +1396,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     var localName = tss.Stats.GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
                     if (localName == null || localName.CompareTo(segment.Name) <= 0)
                         return;
-
-                    // the incoming ts-segment name exists locally but under a different casing
-                    // lexical value of local name > lexical value of remote name =>
-                    // need to replace the local name by the remote name, in TimeSeriesStats and in document's metadata
-
-                    var collectionName = new CollectionName(segment.Collection);
-                    tss.Stats.UpdateTimeSeriesName(context, collectionName, slicer);
-                    tss.ReplaceTimeSeriesNameInMetadata(context, docId, localName, segment.Name);
-                }
-            }
 
             public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
             {

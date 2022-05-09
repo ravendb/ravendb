@@ -23,7 +23,6 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Pkcs;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
@@ -35,10 +34,10 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
-using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
@@ -2429,6 +2428,26 @@ namespace Raven.Server
                     break;
 
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                    if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
+                    {
+                        var shardedReplicationLoader = tcp.DatabaseContext.ReplicationContext;
+                        shardedReplicationLoader.Queue = new DocumentsQueue(result.DatabaseContext.ShardCount);
+
+                        shardedReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy);
+                      
+                        for (int i = 0; i < tcp.DatabaseContext.ShardCount; i++)
+                        {
+                            var replicationNode = new ShardReplicationNode
+                            {
+                                Database = ShardHelper.ToShardName(tcp.DatabaseContext.DatabaseName, i),
+                                Shard = i
+                            };
+
+                            shardedReplicationLoader.AddAndStartOutgoingReplication(replicationNode, i);
+                        }
+                        break;
+                    }
+
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
                     documentReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy);
                     break;

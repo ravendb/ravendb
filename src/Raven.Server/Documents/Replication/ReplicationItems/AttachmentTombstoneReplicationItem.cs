@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        public override unsafe void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
             using (stats.For(ReplicationOperation.Incoming.TombstoneRead))
             {
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 LastModifiedTicks = *(long*)Reader.ReadExactly(sizeof(long));
 
                 var size = *(int*)Reader.ReadExactly(sizeof(int));
-                ToDispose(Slice.From(context.Allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out Key));
+                ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out Key));
             }
         }
 
