@@ -43,8 +43,8 @@ class visualizer extends shardViewModelBase {
     private globalGraph = new visualizerGraphGlobal();
     private detailsGraph = new visualizerGraphDetails();
 
-    constructor(db: database) {
-        super(db);
+    constructor(db: database, location: databaseLocationSpecifier) {
+        super(db, location);
         
         this.bindToCurrentInstance("setSelectedIndex", "selectDocumentId", "addCurrentDocumentId");
 
@@ -70,7 +70,7 @@ class visualizer extends shardViewModelBase {
     }
 
     activate(args: { index: string }) {
-        return new getIndexesStatsCommand(this.db)
+        return new getIndexesStatsCommand(this.db, this.location)
             .execute()
             .done(result => {
                 this.onIndexesLoaded(result);
@@ -128,7 +128,7 @@ class visualizer extends shardViewModelBase {
         if (documentsToFetch.length) {
             this.spinners.addDocument(true);
 
-            new getIndexMapReduceTreeCommand(this.db, this.currentIndex(), documentsToFetch)
+            new getIndexMapReduceTreeCommand(this.db, this.location, this.currentIndex(), documentsToFetch)
                 .execute()
                 .done((mapReduceTrees) => {
                     if (mapReduceTrees.length) {
@@ -292,7 +292,7 @@ class visualizer extends shardViewModelBase {
 
         const currentDocumentIds = this.documents.documentIds();
 
-        new getIndexDebugSourceDocumentsCommand(this.db, this.currentIndex(), query, 0, 10)
+        new getIndexDebugSourceDocumentsCommand(this.db, this.location, this.currentIndex(), query, 0, 10)
             .execute()
             .done(result => {
                 if (this.documents.documentId() === query) {

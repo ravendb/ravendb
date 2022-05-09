@@ -19,7 +19,7 @@ class importParent extends viewModelBase {
     constructor() {
         super();
         
-        this.context = new shardingContext("both");
+        this.context = new shardingContext("allShards");
         
         this.router = durandalRouter.createChildRouter()
             .map([

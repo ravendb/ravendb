@@ -1,7 +1,7 @@
 <div class="modal-dialog" role="document">
     <div class="modal-content neo-modal">
         <div class="modal-body text-center">
-            <!-- <img src="../../../../Content/img/sharding/shard.png" alt="Shard" class="img-responsive" /> -->
+            <img src="../../../../Content/img/sharding/shard.png" alt="Shard" class="img-responsive margin-center" style="width: 70px" />
             <h2 class="text-capitalize">Select Shard</h2>
             <p>
                 This view can display data only for a single shard.<br>
@@ -19,7 +19,6 @@
                 <div class="btn-group">
                     <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                         <i class="icon-node text-success"></i> <span>Node</span> <span data-bind="text: $root.form.node"></span>
-                        <i class="icon-link" data-bind="visible: $root.form.node() !== $root.currentNode()"></i>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" data-bind="foreach: shardNodes">
@@ -32,23 +31,9 @@
                     </ul>
                 </div>
                 <div>
-                    <a href="#" class="btn btn-info" data-bind="click: shardSelected, attr: { href: targetHref, target: targetIsLocal() ? undefined : '_blank' }">
+                    <button class="btn btn-info" data-bind="click: shardSelected">
                         View <i class="icon-arrow-thin-right margin-left-sm"></i>
-                    </a>
-                </div>
-            </div>
-            <div class="margin-top">
-                <div class="checkbox" data-bind="visible: forcePin">
-                    <input id="pinShardForced" type="checkbox" checked disabled />
-                    <label for="pinShardForced">
-                        Pin selected shard
-                    </label>
-                </div>
-                <div class="checkbox" data-bind="visible: !forcePin()">
-                    <input id="pinShard" type="checkbox" data-bind="checked: form.pin" />
-                    <label for="pinShard">
-                        Pin selected shard
-                    </label>
+                    </button>
                 </div>
             </div>
         </div>

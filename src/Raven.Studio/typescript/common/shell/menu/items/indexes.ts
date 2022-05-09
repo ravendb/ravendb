@@ -7,7 +7,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesItems = [
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
-            shardingMode: "both",
+            shardingMode: "allShards",
             moduleId: require('viewmodels/database/query/query'),
             title: 'Query',
             nav: true,
@@ -17,7 +17,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             title: "List of Indexes",
             nav: true,
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             route: "databases/indexes",
             moduleId: require("viewmodels/database/indexes/indexes").indexes,
             css: 'icon-list-of-indexes',
@@ -25,7 +25,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
-            shardingMode: "singleShardOnly",
+            shardingMode: "singleShard",
             moduleId: require('viewmodels/database/indexes/indexPerformance'),
             title: 'Indexing Performance',
             tooltip: "Shows details about indexing performance",
@@ -35,7 +35,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/visualizer',
-            shardingMode: "singleShardOnly",
+            shardingMode: "singleShard",
             moduleId: require('viewmodels/database/indexes/visualizer/visualizer'),
             title: 'Map-Reduce Visualizer',
             nav: true,
@@ -44,7 +44,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/indexErrors',
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             moduleId: require('viewmodels/database/indexes/indexErrors'),
             title: 'Index Errors',
             nav: true,
@@ -54,7 +54,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             title: 'Edit Index',
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             route: 'databases/indexes/edit(/:indexName)',
             moduleId: require('viewmodels/database/indexes/editIndex'),
             css: 'icon-edit',
@@ -65,7 +65,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Terms',
             route: 'databases/indexes/terms/(:indexName)',
             moduleId: require('viewmodels/database/indexes/indexTerms'),
-            shardingMode: "singleShardOnly",
+            shardingMode: "allShards",
             css: 'icon-terms',
             nav: false
         })

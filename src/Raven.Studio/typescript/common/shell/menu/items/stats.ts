@@ -8,7 +8,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status',
             moduleId: require('viewmodels/database/status/statistics'),
-            shardingMode: "singleShardOnly",
+            shardingMode: "singleShard",
             title: 'Stats',
             nav: true,
             css: 'icon-stats',
@@ -17,7 +17,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status/ioStats',
             moduleId: require('viewmodels/database/status/ioStats'),
-            shardingMode: "singleShardOnly",
+            shardingMode: "singleShard",
             title: 'IO Stats',
             tooltip: "Displays IO metrics status",
             nav: true,
@@ -27,7 +27,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status/storage/report',
             moduleId: require('viewmodels/database/status/storageReport'),
-            shardingMode: "singleShardOnly",
+            shardingMode: "singleShard",
             title: 'Storage Report',
             tooltip: "Storage Report",
             nav: true,
@@ -45,7 +45,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status/ongoingTasksStats',
             moduleId: require('viewmodels/database/status/ongoingTasksStats'),
-            shardingMode: "singleShardOnly",
+            shardingMode: "singleShard",
             title: 'Ongoing Tasks Stats',
             nav: true,
             css: 'icon-replication-stats',

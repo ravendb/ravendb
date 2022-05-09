@@ -10,7 +10,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/documents",
             moduleId: require("viewmodels/database/documents/documents"),
-            shardingMode: "both",
+            shardingMode: "allShards",
             title: "List of documents",
             nav: false,
             css: "icon-documents",
@@ -19,7 +19,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/documents/revisions/bin",
             moduleId: require("viewmodels/database/documents/revisionsBin"),
-            shardingMode: "both",
+            shardingMode: "allShards",
             title: "Revisions Bin",
             nav: false,
             css: "icon-revisions-bin",
@@ -38,7 +38,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/query/index(/:indexNameOrRecentQueryIndex)",
             moduleId: require("viewmodels/database/query/query"),
-            shardingMode: "both",
+            shardingMode: "allShards",
             title: "Query",
             nav: true,
             css: "icon-documents-query",
@@ -48,7 +48,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/edit",
             moduleId: require("viewmodels/database/documents/editDocument"),
-            shardingMode: "both",
+            shardingMode: "allShards",
             title: "Edit Document",
             nav: false,
             itemRouteToHighlight: "databases/documents"
@@ -63,7 +63,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/identities",
             moduleId: require("viewmodels/database/identities/identities"),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: "Identities",
             nav: true,
             css: "icon-identities",
@@ -72,7 +72,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/cmpXchg",
             moduleId: require("viewmodels/database/cmpXchg/cmpXchg"),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: "Compare Exchange",
             nav: true,
             css: "icon-cmp-xchg",
@@ -81,7 +81,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/cmpXchg/edit",
             moduleId: require("viewmodels/database/cmpXchg/editCmpXchg"),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: "Edit Compare Exchange Value",
             nav: false,
             itemRouteToHighlight: "databases/cmpXchg"
@@ -89,7 +89,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/documents/conflicts",
             moduleId: require("viewmodels/database/conflicts/conflicts"),
-            shardingMode: "both",
+            shardingMode: "allShards",
             title: "Conflicts",
             nav: true,
             css: "icon-conflicts",

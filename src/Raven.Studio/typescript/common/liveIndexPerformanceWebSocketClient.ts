@@ -5,13 +5,14 @@ import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 import moment = require("moment");
+import appUrl from "common/appUrl";
 
 class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Client.Documents.Indexes.IndexPerformanceStats>> {
 
     private readonly onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void;
 
     private static readonly isoParser = d3.time.format.iso;
-
+    
     private mergedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
     private readonly dateCutOff: Date;
     private pendingDataToApply: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
@@ -20,9 +21,10 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
     loading = ko.observable<boolean>(true);
 
     constructor(db: database, 
+                location: databaseLocationSpecifier,
                 onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void,
                 dateCutOff?: Date) {
-        super(db);
+        super(db, location);
         this.onData = onData;
         this.dateCutOff = dateCutOff;
     }
@@ -31,8 +33,12 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
         return "Live Indexing Performance";
     }
 
-    protected webSocketUrlFactory() {
-        return endpoints.databases.index.indexesPerformanceLive + "?includeSideBySide=true"
+    protected webSocketUrlFactory(location: databaseLocationSpecifier) {
+        const args = appUrl.urlEncodeArgs({
+            includeSideBySide: true,
+            ...location
+        });
+        return endpoints.databases.index.indexesPerformanceLive + args;
     }
 
     get autoReconnect() {

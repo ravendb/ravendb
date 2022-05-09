@@ -212,7 +212,7 @@ interface menuItem {
 
 type dynamicHashType = KnockoutObservable<string> | (() => string);
 
-type shardingMode = "allShardsOnly" | "singleShardOnly" | "both";
+type shardingMode = "allShards" | "singleShard";
 
 interface chagesApiConfigureRequestDto {
     Command: string;

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getIndexMapReduceTreeCommand extends commandBase {
 
-    constructor(private db: database, private indexName: string, private documentIds: Array<string>) {
+    constructor(private db: database, private location: databaseLocationSpecifier, private indexName: string, private documentIds: Array<string>) {
         super();
     }
 
@@ -14,7 +14,8 @@ class getIndexMapReduceTreeCommand extends commandBase {
         {
             docId: this.documentIds,
             name: this.indexName,
-            op: "map-reduce-tree"
+            op: "map-reduce-tree",
+            ...this.location
         };
         return this.query(url + this.urlEncodeArgs(args), null, this.db, x => x.Results)
             .fail((response: JQueryXHR) => this.reportError("Failed to load map reduce tree", response.responseText, response.statusText))

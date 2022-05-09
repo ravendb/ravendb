@@ -1,14 +1,19 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import database from "models/resources/database";
-import shard from "models/resources/shard";
 import { shardingTodo } from "common/developmentHelper";
 import accessManager from "common/shell/accessManager";
 
 abstract class shardViewModelBase extends viewModelBase {
     
     protected readonly db: database;
+
+    /**
+     * Location is available when user explicitly select shard and node tag (when db is sharded) or node tag (when db is not sharded) 
+     * @protected
+     */
+    protected readonly location: databaseLocationSpecifier;
     
-    protected constructor(db: database) {
+    protected constructor(db: database, location?: databaseLocationSpecifier) {
         super();
 
         if (!db) {
@@ -16,6 +21,7 @@ abstract class shardViewModelBase extends viewModelBase {
         }
         
         this.db = db;
+        this.location = location;
 
         this.isReadOnlyAccess =  ko.pureComputed(() => accessManager.default.readOnlyOrAboveForDatabase(this.db));
         this.isReadWriteAccessOrAbove = ko.pureComputed(() => accessManager.default.readWriteAccessOrAboveForDatabase(this.db));

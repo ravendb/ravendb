@@ -3,12 +3,11 @@ import activator = require("durandal/activator");
 import database = require("models/resources/database");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import shardingContext from "viewmodels/common/sharding/shardingContext";
-import { shardingTodo } from "common/developmentHelper";
 import router = require("plugins/router");
 
 class shardAwareContainer extends viewModelBase {
     protected rootActivator: DurandalActivator<any>;
-    private readonly childCtr: new (db: database, state?: any) => shardViewModelBase;
+    private readonly childCtr: new (db: database, location: databaseLocationSpecifier, state?: any) => shardViewModelBase;
     
     context: shardingContext;
     usingExternalContext: boolean;
@@ -18,7 +17,9 @@ class shardAwareContainer extends viewModelBase {
     child = ko.observable<shardViewModelBase>();
     view = require("views/common/sharding/shardAwareContainer.html");
     
-    constructor(mode: shardingMode, childCtr: new (db: database, state?: any) => shardViewModelBase, externalContext?: shardingContext) {
+    constructor(mode: shardingMode, 
+                childCtr: new (db: database, location: databaseLocationSpecifier, state?: any) => shardViewModelBase, 
+                externalContext?: shardingContext) {
         super();
         
         this.context = externalContext ?? new shardingContext(mode);
@@ -36,25 +37,20 @@ class shardAwareContainer extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
-        this.context.onChange(db => {
+        this.context.onChange((db, location) => {
             if (db) {
-                this.useDatabase(db);
-            } else {
-                //TODO: ?
+                this.useDatabase(db, location);
             }
         });
         
         this.context.resetView();
     }
 
-    useDatabase(db: database) {
-        shardingTodo("Marcin");
-        // TODO: allow to persist between views - check if local / remote
-        //TODO: doesn't work when pinning
+    useDatabase(db: database, location: databaseLocationSpecifier) {
         const oldChild = this.child();
         const oldViewState = oldChild?.getViewState?.();
 
-        this.activateChildView(db); //TODO: old child state
+        this.activateChildView(db, location, oldViewState);
     }
 
     canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
@@ -71,8 +67,8 @@ class shardAwareContainer extends viewModelBase {
         }
     }
     
-    private activateChildView(db: database) {
-        const child = new this.childCtr(db);
+    private activateChildView(db: database, location: databaseLocationSpecifier, state?: any) {
+        const child = new this.childCtr(db, location, state);
         
         this.rootActivator.activateItem(child, this.activationData)
             .done((result) => {
