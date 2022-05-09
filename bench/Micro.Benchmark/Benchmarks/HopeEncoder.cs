@@ -120,9 +120,7 @@ namespace Micro.Benchmark.Benchmarks
                     throw new IndexOutOfRangeException();
                 return false;
             }
-
-            bool ISpanEnumerator.IsNull(int i) => IsNull(i);
-                
+            
             public ReadOnlySpan<byte> this[int i] => new(_values[i]);
 
             Span<byte> ISpanIndexer.this[int i] => new(_values[i]);

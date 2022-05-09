@@ -1212,8 +1212,7 @@ namespace Voron.Data.CompactTrees
             encodedKey.Key.CopyTo(output.ToSpan());
             
             var outputSpan = output.ToSpan();
-            key = outputSpan[^1] == 0 ? outputSpan[0..^1] : outputSpan;
-            return result;
+            key = output[^1] == 0 ? outputSpan : outputSpan.Slice(0, outputSpan.Length - 1);
         }
 
         private static void GetEntryBuffer(Page page, ushort entryOffset, out byte* b, out int len)

@@ -92,6 +92,11 @@ public struct StringArrayIterator : IReadOnlySpanIndexer, IReadOnlySpanEnumerato
 
     public int Length => _values.Length;
 
+    public bool IsNull(int i)
+    {
+        throw new NotImplementedException();
+    }
+
     public ReadOnlySpan<byte> this[int i] => Encoding.UTF8.GetBytes(_values[i]);
 
     public void Reset()
