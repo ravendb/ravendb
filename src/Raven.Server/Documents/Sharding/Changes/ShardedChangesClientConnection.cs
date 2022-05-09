@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -16,10 +17,19 @@ namespace Raven.Server.Documents.Sharding.Changes;
 
 public class ShardedChangesClientConnection : AbstractChangesClientConnection<TransactionOperationContext>, IObserver<BlittableJsonReaderObject>
 {
-    private readonly ConcurrentDictionary<string, Task<IDisposable>> _matchingDocuments = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, IDisposable> _matchingDocuments = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, IDisposable> _matchingCounters = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, IDisposable> _matchingDocumentCounters = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<DocumentIdAndNamePair, IDisposable> _matchingDocumentCounter = new();
 
     private int _watchAllDocuments;
     private IDisposable _watchAllDocumentsUnsubscribe;
+
+    private int _watchAllCounters;
+    private IDisposable _watchAllCountersUnsubscribe;
 
     private readonly ShardedDatabaseContext _context;
     private readonly bool _throttleConnection;
@@ -54,34 +64,33 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         return ValueTask.CompletedTask;
     }
 
-    protected override async ValueTask WatchDocumentAsync(string docId)
+    protected override async ValueTask WatchDocumentAsync(string docId, CancellationToken token)
     {
         await EnsureConnectedAsync();
 
-        await _matchingDocuments.GetOrAdd(docId, id => WatchInternalAsync(changes => changes.ForDocument(id)));
+        _matchingDocuments.GetOrAdd(docId, id => WatchInternalAsync(changes => changes.ForDocument(id), token).Result);
     }
 
-    protected override async ValueTask UnwatchDocumentAsync(string docId)
+    protected override async ValueTask UnwatchDocumentAsync(string docId, CancellationToken token)
     {
         await EnsureConnectedAsync();
 
-        if (_matchingDocuments.TryRemove(docId, out var unsubscribeTask) == false)
+        if (_matchingDocuments.TryRemove(docId, out var unsubscribe) == false)
             return;
 
-        var unsubscribe = await unsubscribeTask;
         unsubscribe.Dispose();
     }
 
-    protected override async ValueTask WatchAllDocumentsAsync()
+    protected override async ValueTask WatchAllDocumentsAsync(CancellationToken token)
     {
         await EnsureConnectedAsync();
 
         var value = Interlocked.Increment(ref _watchAllDocuments);
         if (value == 1)
-            _watchAllDocumentsUnsubscribe = await WatchInternalAsync(changes => changes.ForAllDocuments());
+            _watchAllDocumentsUnsubscribe = await WatchInternalAsync(changes => changes.ForAllDocuments(), token);
     }
 
-    protected override async ValueTask UnwatchAllDocumentsAsync()
+    protected override async ValueTask UnwatchAllDocumentsAsync(CancellationToken token)
     {
         await EnsureConnectedAsync();
 
@@ -93,44 +102,80 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         }
     }
 
-    protected override ValueTask WatchCounterAsync(string name)
+    protected override async ValueTask WatchCounterAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        _matchingCounters.GetOrAdd(name, n => WatchInternalAsync(changes => changes.ForCounter(n), token).Result);
     }
 
-    protected override ValueTask UnwatchCounterAsync(string name)
+    protected override async ValueTask UnwatchCounterAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        if (_matchingCounters.TryRemove(name, out var unsubscribe) == false)
+            return;
+
+        unsubscribe.Dispose();
     }
 
-    protected override ValueTask WatchDocumentCountersAsync(string docId)
+    protected override async ValueTask WatchDocumentCountersAsync(string docId, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        _matchingDocumentCounters.GetOrAdd(docId, id => WatchInternalAsync(changes => changes.ForCountersOfDocument(id), token).Result);
     }
 
-    protected override ValueTask UnwatchDocumentCountersAsync(string docId)
+    protected override async ValueTask UnwatchDocumentCountersAsync(string docId, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        if (_matchingDocumentCounters.TryRemove(docId, out var unsubscribe) == false)
+            return;
+
+        unsubscribe.Dispose();
     }
 
-    protected override ValueTask WatchDocumentCounterAsync(BlittableJsonReaderArray parameters)
+    protected override async ValueTask WatchDocumentCounterAsync(BlittableJsonReaderArray parameters, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        var val = GetParameters(parameters);
+
+        _matchingDocumentCounter.GetOrAdd(val, v => WatchInternalAsync(changes => changes.ForCounterOfDocument(v.DocumentId, v.Name), token).Result);
     }
 
-    protected override ValueTask UnwatchDocumentCounterAsync(BlittableJsonReaderArray parameters)
+    protected override async ValueTask UnwatchDocumentCounterAsync(BlittableJsonReaderArray parameters, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        var val = GetParameters(parameters);
+
+        if (_matchingDocumentCounter.TryRemove(val, out var unsubscribe) == false)
+            return;
+
+        unsubscribe.Dispose();
     }
 
-    protected override ValueTask WatchAllCountersAsync()
+    protected override async ValueTask WatchAllCountersAsync(CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        var value = Interlocked.Increment(ref _watchAllCounters);
+        if (value == 1)
+            _watchAllCountersUnsubscribe = await WatchInternalAsync(changes => changes.ForAllCounters(), token);
     }
 
-    protected override ValueTask UnwatchAllCountersAsync()
+    protected override async ValueTask UnwatchAllCountersAsync(CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync();
+
+        var value = Interlocked.Decrement(ref _watchAllCounters);
+        if (value == 0)
+        {
+            var watchAllCountersUnsubscribe = _watchAllCountersUnsubscribe;
+            watchAllCountersUnsubscribe?.Dispose();
+        }
     }
 
     protected override ValueTask WatchTimeSeriesAsync(string name)
@@ -281,7 +326,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         _releaseQueueContext = null;
     }
 
-    private async Task<IDisposable> WatchInternalAsync(Func<ShardedDatabaseChanges, IChangesObservable<BlittableJsonReaderObject>> factory)
+    private async Task<IDisposable> WatchInternalAsync(Func<ShardedDatabaseChanges, IChangesObservable<BlittableJsonReaderObject>> factory, CancellationToken token)
     {
         var toDispose = new IDisposable[_changes.Length];
         for (int i = 0; i < _changes.Length; i++)
@@ -290,7 +335,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
             toDispose[i] = observable
                 .Subscribe(this);
 
-            await observable.EnsureSubscribedNow();
+            await observable.EnsureSubscribedNow().WithCancellation(token);
         }
 
         return new MultiDispose(toDispose);

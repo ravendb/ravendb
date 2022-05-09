@@ -289,55 +289,55 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchDocumentAsync(string docId)
+        protected override ValueTask WatchDocumentAsync(string docId, CancellationToken token)
         {
             _matchingDocuments.TryAdd(docId);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchDocumentAsync(string docId)
+        protected override ValueTask UnwatchDocumentAsync(string docId, CancellationToken token)
         {
             _matchingDocuments.TryRemove(docId);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchAllDocumentsAsync()
+        protected override ValueTask WatchAllDocumentsAsync(CancellationToken token)
         {
             Interlocked.Increment(ref _watchAllDocuments);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchAllDocumentsAsync()
+        protected override ValueTask UnwatchAllDocumentsAsync(CancellationToken token)
         {
             Interlocked.Decrement(ref _watchAllDocuments);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchCounterAsync(string name)
+        protected override ValueTask WatchCounterAsync(string name, CancellationToken token)
         {
             _matchingCounters.TryAdd(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchCounterAsync(string name)
+        protected override ValueTask UnwatchCounterAsync(string name, CancellationToken token)
         {
             _matchingCounters.TryRemove(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchDocumentCountersAsync(string docId)
+        protected override ValueTask WatchDocumentCountersAsync(string docId, CancellationToken token)
         {
             _matchingDocumentCounters.TryAdd(docId);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchDocumentCountersAsync(string docId)
+        protected override ValueTask UnwatchDocumentCountersAsync(string docId, CancellationToken token)
         {
             _matchingDocumentCounters.TryRemove(docId);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchDocumentCounterAsync(BlittableJsonReaderArray parameters)
+        protected override ValueTask WatchDocumentCounterAsync(BlittableJsonReaderArray parameters, CancellationToken token)
         {
             var val = GetParameters(parameters);
 
@@ -345,7 +345,7 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchDocumentCounterAsync(BlittableJsonReaderArray parameters)
+        protected override ValueTask UnwatchDocumentCounterAsync(BlittableJsonReaderArray parameters, CancellationToken token)
         {
             var val = GetParameters(parameters);
 
@@ -353,13 +353,13 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchAllCountersAsync()
+        protected override ValueTask WatchAllCountersAsync(CancellationToken token)
         {
             Interlocked.Increment(ref _watchAllCounters);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchAllCountersAsync()
+        protected override ValueTask UnwatchAllCountersAsync(CancellationToken token)
         {
             Interlocked.Decrement(ref _watchAllCounters);
             return ValueTask.CompletedTask;

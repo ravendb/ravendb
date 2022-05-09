@@ -132,7 +132,8 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                                 reader.TryGet("Param", out string commandParameter);
                                 reader.TryGet("Params", out BlittableJsonReaderArray commandParameters);
 
-                                await connection.HandleCommandAsync(command, commandParameter, commandParameters);
+                                using (var commandToken = RequestHandler.CreateOperationToken(TimeSpan.FromSeconds(30)))
+                                    await connection.HandleCommandAsync(command, commandParameter, commandParameters, commandToken.Token);
 
                                 if (reader.TryGet("CommandId", out int commandId))
                                 {

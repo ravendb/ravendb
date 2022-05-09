@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanGetNotificationAboutCounterIncrement()
+        [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetNotificationAboutCounterIncrement(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var list = new BlockingCollection<CounterChange>();
                 var taskObservable = store.Changes();
@@ -40,7 +42,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(1)));
+                Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(5)));
 
                 Assert.Equal("users/1", counterChange.DocumentId);
                 Assert.Equal(CounterChangeTypes.Put, counterChange.Type);
@@ -54,7 +56,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                 Assert.Equal("users/1", counterChange.DocumentId);
                 Assert.Equal(CounterChangeTypes.Increment, counterChange.Type);
@@ -64,10 +66,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanGetNotificationAboutCounterDelete()
+        [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetNotificationAboutCounterDelete(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var list = new BlockingCollection<CounterChange>();
                 var taskObservable = store.Changes();
@@ -89,7 +92,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(1)));
+                Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(5)));
 
                 Assert.Equal("users/1", counterChange.DocumentId);
                 Assert.Equal(CounterChangeTypes.Put, counterChange.Type);
@@ -103,7 +106,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                 Assert.Equal("users/1", counterChange.DocumentId);
                 Assert.Equal(CounterChangeTypes.Delete, counterChange.Type);
@@ -113,10 +116,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanSubscribeToCounterChanges()
+        [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.Counters)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanSubscribeToCounterChanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -140,7 +144,7 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
                 }
 
                 observableWithTask = taskObservable.ForCounter("Likes");
@@ -157,12 +161,12 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                     Assert.Equal("Likes", counterChange.Name);
                 }
 
-                Assert.False(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                Assert.False(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                 observableWithTask = taskObservable.ForCounterOfDocument("users/1", "Likes");
 
@@ -178,12 +182,12 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                     Assert.Equal("Likes", counterChange.Name);
                 }
 
-                Assert.False(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                Assert.False(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                 observableWithTask = taskObservable.ForCountersOfDocument("users/1");
 
@@ -199,11 +203,11 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                     Assert.True(counterChange.Name == "Likes" || counterChange.Name == "Dislikes");
 
-                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
+                    Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(5)));
 
                     Assert.True(counterChange.Name == "Likes" || counterChange.Name == "Dislikes");
                 }
