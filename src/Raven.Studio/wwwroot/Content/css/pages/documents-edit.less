@@ -286,6 +286,12 @@
 
     .conflict-revision {
         a {
+            color: lighten(desaturate(@brand-warning, 30%), 5%);
+
+            &:hover {
+                color: lighten(desaturate(@brand-warning, 2%), 3%);
+            }
+            
             &:after {
                 content: @conflicts;
             }
@@ -294,6 +300,12 @@
 
     .resolved-revision {
         a {
+            color: lighten(desaturate(@brand-success, 30%), 5%);
+
+            &:hover {
+                color: lighten(desaturate(@brand-success, 2%), 3%);
+            }
+            
             &:after {
                 content: @tick-character;
             }
