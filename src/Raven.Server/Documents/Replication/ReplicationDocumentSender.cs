@@ -627,7 +627,8 @@ namespace Raven.Server.Documents.Replication
                         // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
                         if (doc.Flags.Contain(DocumentFlags.Conflicted) ||
                             doc.Flags.Contain(DocumentFlags.Resolved) ||
-                            (doc.Flags.Contain(DocumentFlags.FromClusterTransaction)))
+                            doc.Flags.Contain(DocumentFlags.FromClusterTransaction) ||
+                            doc.Flags.Contain(DocumentFlags.FromOldDocumentRevision))
                         {
                             return false;
                         }
@@ -635,8 +636,14 @@ namespace Raven.Server.Documents.Replication
 
                     break;
 
-                case AttachmentReplicationItem _:
+                case AttachmentReplicationItem attachment:
                     if (MissingAttachmentsInLastBatch)
+                    {
+                        return false;
+                    }
+
+                    var type = AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key);
+                    if (type == AttachmentType.Revision)
                     {
                         return false;
                     }
