@@ -29,7 +29,8 @@ namespace Raven.Client.Documents.Smuggler
         CompareExchangeTombstones = 1 << 17,
         TimeSeries = 1 << 18,
 
-        ReplicationHubCertificates = 1 << 19
+        ReplicationHubCertificates = 1 << 19,
+        AllDatabaseItems = Documents | RevisionDocuments | Tombstones | Conflicts | Attachments | CounterGroups | TimeSeries
     }
 
     [Flags]

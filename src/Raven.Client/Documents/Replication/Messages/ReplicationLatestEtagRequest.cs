@@ -21,7 +21,8 @@ namespace Raven.Client.Documents.Replication.Messages
             // External here as the default value to handle older servers, which aren't sending this field.
             External,
             Internal,
-            Migration
+            Migration,
+            Sharded
         }
     }
 

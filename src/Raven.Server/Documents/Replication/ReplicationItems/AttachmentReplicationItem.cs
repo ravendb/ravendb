@@ -93,20 +93,20 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         }
 
 
-        public override unsafe void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
             using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
             {
                 stats.RecordAttachmentRead();
 
                 var size = *(int*)Reader.ReadExactly(sizeof(int));
-                ToDispose(Slice.From(context.Allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out Key));
+                ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out Key));
 
                 SetLazyStringValueFromString(context, out Name);
                 SetLazyStringValueFromString(context, out ContentType);
 
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
-                ToDispose(Slice.From(context.Allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
+                ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
             }
         }
 
@@ -142,12 +142,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return item;
         }
 
-        public unsafe void ReadStream(DocumentsOperationContext context, StreamsTempFile attachmentStreamsTempFile)
+        public unsafe void ReadStream(ByteStringContext allocator, StreamsTempFile attachmentStreamsTempFile)
         {
             try
             {
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
-                ToDispose(Slice.From(context.Allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
+                ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
                 var streamLength = *(long*)Reader.ReadExactly(sizeof(long));
                 Stream = attachmentStreamsTempFile.StartNewStream();

@@ -257,6 +257,7 @@ namespace Raven.Server.Documents.Replication
         private readonly CancellationToken _shutdownToken;
         public ReplicationLoader(DocumentDatabase database, ServerStore server)
         {
+
             _server = server;
             Database = database;
             _shutdownToken = database.DatabaseShutdown;
@@ -482,7 +483,7 @@ namespace Raven.Server.Documents.Replication
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
 
-            var outgoingReplication = new OutgoingPullReplicationHandlerAsHub( this, Database, externalReplication, initialRequest.Info)
+            var outgoingReplication = new OutgoingPullReplicationHandlerAsHub(this, Database, externalReplication, initialRequest.Info)
             {
                 OutgoingPullReplicationParams = new PullReplicationParams
                 {
@@ -580,23 +581,30 @@ namespace Raven.Server.Documents.Replication
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullReplicationParams);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
-            // need to safeguard against two concurrent connection attempts
-            var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
-                (_, val) => val.IsDisposed ? newIncoming : val);
-
-            if (current == newIncoming)
+            if (ShardHelper.IsShardedName(Database.Name))
             {
                 newIncoming.Start();
-                IncomingReplicationAdded?.Invoke(newIncoming);
-                ForceTryReconnectAll();
             }
             else
             {
-                if (_log.IsInfoEnabled)
+                // need to safeguard against two concurrent connection attempts
+                var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
+                    (_, val) => val.IsDisposed ? newIncoming : val);
+
+                if (current == newIncoming)
                 {
-                    _log.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
+                    newIncoming.Start();
+                    IncomingReplicationAdded?.Invoke(newIncoming);
+                    ForceTryReconnectAll();
                 }
-                newIncoming.Dispose();
+                else
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
+                    }
+                    newIncoming.Dispose();
+                }
             }
         }
 
@@ -644,13 +652,13 @@ namespace Raven.Server.Documents.Replication
                     getLatestEtagMessage.ReplicationsType);
             }
             else
-            { 
+            {
                 newIncoming = new IncomingPullReplicationHandler(
                 tcpConnectionOptions,
                 getLatestEtagMessage,
                 this,
                 buffer,
-                getLatestEtagMessage.ReplicationsType, 
+                getLatestEtagMessage.ReplicationsType,
                 incomingPullParams);
             }
 
@@ -710,7 +718,8 @@ namespace Raven.Server.Documents.Replication
                     string changeVector = null;
                     long lastEtagFromSrc = 0;
 
-                    if (getLatestEtagMessage.ReplicationsType != ReplicationLatestEtagRequest.ReplicationType.Migration)
+                    if (getLatestEtagMessage.ReplicationsType != ReplicationLatestEtagRequest.ReplicationType.Migration &&
+						ShardHelper.IsShardedName(Database.Name) == false)
                     {
                         changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
 
@@ -1005,7 +1014,7 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 var source = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
-                
+
                 var destTopology = GetTopologyForShard(migration.DestinationShard);
                 var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
 
@@ -1222,6 +1231,13 @@ namespace Raven.Server.Documents.Replication
                     // here we might have blocking calls to fetch the tcp info.
                     try
                     {
+                        if (newRecord.IsSharded)
+                        {
+                            foreach (var dest in newDestinations)
+                            {
+                                dest.ConnectionString.Database += "$0";
+                            }
+                        }
                         StartOutgoingConnections(newDestinations);
                     }
                     catch (Exception e)
@@ -1600,19 +1616,20 @@ namespace Raven.Server.Documents.Replication
                         return GetPullReplicationTcpInfo(sinkNode, certificate, sinkNode.ConnectionString.Database);
 
                     case ExternalReplication exNode:
-                        return GetExternalReplicationTcpInfo(exNode, certificate, exNode.ConnectionString.Database);
+                        string database = exNode.ConnectionString.Database;
+                        return GetExternalReplicationTcpInfo(exNode, certificate, database);
 
                     case BucketMigrationReplication _:
                     case InternalReplication _:
-                    {
-                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
                         {
-                            cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
-                            return ReplicationUtils.GetTcpInfo(node.Url, node.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
-                                "Replication",
-                        certificate, cts.Token);
+                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
+                            {
+                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                                return ReplicationUtils.GetTcpInfo(node.Url, node.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
+                                    "Replication",
+                            certificate, cts.Token);
+                            }
                         }
-                    }
                     default:
                         throw new InvalidOperationException(
                             $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
@@ -1758,6 +1775,7 @@ namespace Raven.Server.Documents.Replication
             using (var requestExecutor = RequestExecutor.CreateForServer(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate, DocumentConventions.DefaultForServer))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
+
                 var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {

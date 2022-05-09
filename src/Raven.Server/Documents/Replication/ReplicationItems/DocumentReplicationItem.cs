@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        public override unsafe void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
             IncomingReplicationStatsScope scope;
 

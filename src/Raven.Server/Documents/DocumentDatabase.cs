@@ -259,7 +259,7 @@ namespace Raven.Server.Documents
 
         public ConfigurationStorage ConfigurationStorage { get; }
 
-        public ReplicationLoader ReplicationLoader { get; private set; }
+        public ReplicationLoader ReplicationLoader { get; internal set; }
 
         public EtlLoader EtlLoader { get; private set; }
 

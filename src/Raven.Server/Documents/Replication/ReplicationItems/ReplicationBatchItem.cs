@@ -9,6 +9,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public abstract void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats);
 
-        public abstract void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats);
+        public abstract void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats);
 
         protected abstract ReplicationBatchItem CloneInternal(JsonOperationContext context);
 
@@ -118,7 +119,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             prop = context.AllocateStringValue(null, mem, size);
         }
 
-        protected unsafe void SetLazyStringValueFromString(DocumentsOperationContext context, out LazyStringValue prop)
+        protected unsafe void SetLazyStringValueFromString(JsonOperationContext context, out LazyStringValue prop)
         {
             prop = null;
             var size = *(int*)Reader.ReadExactly(sizeof(int));
