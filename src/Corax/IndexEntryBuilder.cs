@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server.Compression;
 using Sparrow.Server.Platform;
@@ -27,13 +28,13 @@ namespace Corax
 
     [Flags]
     public enum IndexEntryFieldType : byte
-    {
-        Null = 0, // Helper for list writer.
+    {       
         None = 1,
         
         Tuple = 1 << 2,
         List = 1 << 3,
         Raw = 1 << 4,
+        HasNull = 1 << 5, // Helper for list writer.
         Invalid = 1 << 6,
         
         
@@ -107,7 +108,6 @@ namespace Corax
             }                
 
             int knownFieldMetadataSize = _knownFields.Count * sizeof(uint);
-            int knownFieldsCount = _knownFields.Count;
             _knownFieldsLocations = MemoryMarshal.Cast<byte, int>(buffer[^knownFieldMetadataSize..]);
             _knownFieldsLocations.Fill(Invalid); // We prepare the table in order to avoid tracking the writes. 
 
@@ -149,7 +149,11 @@ namespace Corax
             int dataLocation = _dataIndex;
             // Write known field.
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.Raw, dataLocation);
+
+            int indexEntryFieldLocation = dataLocation;
+            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.Raw);
+            dataLocation += sizeof(byte);
+
             dataLocation += VariableSizeEncoding.Write(_buffer, binaryValue.Length, dataLocation);
 
             binaryValue.CopyTo(_buffer.Slice(dataLocation));
@@ -172,7 +176,10 @@ namespace Corax
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the tuple information. 
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.Tuple, dataLocation);
+            int indexEntryFieldLocation = dataLocation;
+            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.Tuple);
+            dataLocation += sizeof(byte);
+
             dataLocation += VariableSizeEncoding.Write(_buffer, longValue, dataLocation);
             Unsafe.WriteUnaligned(ref _buffer[dataLocation], doubleValue);
             dataLocation += sizeof(double);
@@ -184,46 +191,9 @@ namespace Corax
             Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
 
             _dataIndex = dataLocation + value.Length;
-        }
-
-        public void PrepareForEnumerable(int field, out int dataLocation)
-        {
-            Debug.Assert(field < _knownFields.Count);
-            dataLocation = _dataIndex;
-            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.List, dataLocation);
-            Unsafe.WriteUnaligned(ref _buffer[dataLocation], 0F);
-            dataLocation += sizeof(long);
-            //place for buffer ptr
-            Unsafe.WriteUnaligned(ref _buffer[dataLocation], 1);
-            dataLocation += sizeof(int);
-            //we need to start writing buffer[dataLocation - sizeof(long) - sizeof(int)]
-        }
-
-        public void WriteEnumerableItem(ref int dataLocation, int field, ReadOnlySpan<byte> value)
-        {
-            value.CopyTo(_buffer[dataLocation..]);
-            dataLocation += value.Length;
-            _dataIndex = dataLocation;
-        }
-
-        public void FinishWritingEnumerable(int metadataLocation, int dataLocation, int field, List<int> lengthList)
-        {
-            //<- move pointer to left.
-            metadataLocation -= sizeof(long) + sizeof(int);
-            //write length of array
-            metadataLocation += VariableSizeEncoding.Write(_buffer, lengthList.Count, metadataLocation);
-            //allocate ptr table
-            var stringPtrTableLocation = _buffer.Slice(metadataLocation, sizeof(int));
-            MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
-            
-            foreach (var length in lengthList)
-                dataLocation += VariableSizeEncoding.Write<int>(_buffer, length, dataLocation);
-
-            _dataIndex = dataLocation;
-        }
+        }    
         
-        public void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.Null) where TEnumerator : IReadOnlySpanIndexer
+        public unsafe void Write<TEnumerator>(int field, TEnumerator values, IndexEntryFieldType type = IndexEntryFieldType.HasNull) where TEnumerator : IReadOnlySpanIndexer
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
@@ -237,7 +207,10 @@ namespace Corax
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the list metadata information. 
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)(IndexEntryFieldType.List | type), dataLocation);
+            int indexEntryFieldLocation = dataLocation;
+            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.List);
+            dataLocation += sizeof(byte);
+
             dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
 
             // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).
@@ -260,10 +233,33 @@ namespace Corax
             dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
             ArrayPool<int>.Shared.Return(stringLengths);
 
+            // We will include null values if there are nulls to be stored. 
+            int nullBitStreamSize = values.Length / (sizeof(long) * 8) + values.Length % (sizeof(long) * 8) == 0 ? 0 : 1;
+            long* nullStream = stackalloc long[nullBitStreamSize];
+            bool hasNull = false;
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values.IsNull(i))
+                {
+                    hasNull = true;
+                    PtrBitVector.SetBitInPointer(nullStream, i, true);
+                }
+            }
+
+            if (hasNull)
+            {
+                // Copy the null stream.
+                new ReadOnlySpan<byte>(nullStream, nullBitStreamSize * sizeof(long))
+                    .CopyTo(_buffer.Slice(dataLocation));
+
+                dataLocation += nullBitStreamSize * sizeof(long);
+                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNull;
+            }
+
             _dataIndex = dataLocation;
         }
 
-        public void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
+        public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
@@ -278,7 +274,10 @@ namespace Corax
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the list metadata information. 
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)(IndexEntryFieldType.TupleList), dataLocation);
+            int indexEntryFieldLocation = dataLocation;
+            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.TupleList);
+            dataLocation += sizeof(byte);
+
             dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
 
             // Prepare the location to store the pointer where the table of the strings will be (after writing the strings).
@@ -307,6 +306,29 @@ namespace Corax
 
             MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
             dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
+
+            // We will include null values if there are nulls to be stored.           
+            int nullBitStreamSize = values.Length / (sizeof(long) * 8) + values.Length % (sizeof(long) * 8) == 0 ? 0 : 1;
+            long* nullStream = stackalloc long[nullBitStreamSize];
+            bool hasNull = false;
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values.IsNull(i))
+                {
+                    hasNull = true;
+                    PtrBitVector.SetBitInPointer(nullStream, i, true);
+                }
+            }
+
+            if (hasNull)
+            {
+                // Copy the null stream.
+                new ReadOnlySpan<byte>(nullStream, nullBitStreamSize * sizeof(long))
+                    .CopyTo(_buffer.Slice(dataLocation));
+
+                dataLocation += nullBitStreamSize * sizeof(long);
+                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNull;
+            }
 
             // Write the long values
             MemoryMarshal.Write(longPtrLocation, ref dataLocation);
@@ -481,8 +503,8 @@ namespace Corax
         public IndexEntryFieldIterator(ReadOnlySpan<byte> buffer, int offset)
         {
             _buffer = buffer;
-            Type = (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, offset);
-            offset += length;
+            Type = (IndexEntryFieldType)_buffer[offset];
+            offset += sizeof(byte);
 
             if (((byte)Type & (byte)IndexEntryFieldType.List) == 0)
             {
@@ -496,16 +518,15 @@ namespace Corax
                 return;
             }
 
-            Count = VariableSizeEncoding.Read<ushort>(_buffer, out length, offset);
-
+            Count = VariableSizeEncoding.Read<ushort>(_buffer, out var length, offset);
             offset += length;
 
             _spanTableOffset = MemoryMarshal.Read<int>(_buffer[offset..]);
             if (((byte)Type & (byte)IndexEntryFieldType.Tuple) != 0)
             {
-                _longOffset = MemoryMarshal.Read<int>(_buffer[(offset+sizeof(int))..]);
-                _doubleOffset = (offset + 2 * sizeof(int));
-                _spanOffset = (_doubleOffset + Count * sizeof(double));
+                _longOffset = MemoryMarshal.Read<int>(_buffer[(offset+sizeof(int))..]);                
+                _doubleOffset = (offset + 2 * sizeof(int)); // Skip the pointer from sequences and longs.
+                _spanOffset = (_doubleOffset + Count * sizeof(double)); // Skip over the doubles array, and now we are sitting at the start of the sequences table.
             }
             else
             {
