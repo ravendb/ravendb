@@ -23,20 +23,20 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override ValueTask AssertCanExecuteAsync(string databaseName)
+        protected override ValueTask AssertCanExecuteAsync()
         {
             RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
 
-            return base.AssertCanExecuteAsync(databaseName);
+            return base.AssertCanExecuteAsync();
         }
 
-        protected override async ValueTask<BlittableJsonReaderObject> GetConfigurationAsync(TransactionOperationContext context, string databaseName, AsyncBlittableJsonTextWriter writer)
+        protected override async ValueTask<BlittableJsonReaderObject> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
         {
             _hubTaskName = RequestHandler.GetStringQueryString("name", true);
 
             using (context.OpenReadTransaction())
             {
-                _hubDefinition = RequestHandler.Server.ServerStore.Cluster.ReadPullReplicationDefinition(databaseName, _hubTaskName, context);
+                _hubDefinition = RequestHandler.Server.ServerStore.Cluster.ReadPullReplicationDefinition(RequestHandler.DatabaseName, _hubTaskName, context);
             }
 
             if (_hubDefinition == null)
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             return await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "register-hub-access");
         }
 
-        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
 
             var access = JsonDeserializationClient.ReplicationHubAccess(configuration);
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
             using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
 
-            var command = new RegisterReplicationHubAccessCommand(databaseName, _hubTaskName, access, cert, raftRequestId);
+            var command = new RegisterReplicationHubAccessCommand(RequestHandler.DatabaseName, _hubTaskName, access, cert, raftRequestId);
             return await RequestHandler.Server.ServerStore.SendToLeaderAsync(command);
         }
     }

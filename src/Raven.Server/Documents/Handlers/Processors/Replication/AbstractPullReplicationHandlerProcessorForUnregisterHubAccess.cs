@@ -15,19 +15,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
         }
 
-        protected override ValueTask AssertCanExecuteAsync(string databaseName)
+        protected override ValueTask AssertCanExecuteAsync()
         {
             RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
 
-            return base.AssertCanExecuteAsync(databaseName);
+            return base.AssertCanExecuteAsync();
         }
 
-        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configuration, string raftRequestId)
+        protected override async Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             var hub = RequestHandler.GetStringQueryString("name", true);
             var thumbprint = RequestHandler.GetStringQueryString("thumbprint", true);
 
-            var command = new UnregisterReplicationHubAccessCommand(databaseName, hub, thumbprint, raftRequestId);
+            var command = new UnregisterReplicationHubAccessCommand(RequestHandler.DatabaseName, hub, thumbprint, raftRequestId);
             return await RequestHandler.Server.ServerStore.SendToLeaderAsync(command);
         }
     }
