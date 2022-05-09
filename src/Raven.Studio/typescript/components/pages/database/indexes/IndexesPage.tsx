@@ -35,6 +35,9 @@ import useInterval from "../../../hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 
 import "./IndexesPage.scss";
+const shardImg = require("../../../../../wwwroot/Content/img/sharding/shard.svg");
+const nodeImg = require("../../../../../wwwroot/Content/img/node.svg");
+
 
 interface IndexesPageProps {
     database: database;
@@ -675,17 +678,99 @@ export function IndexesPage(props: IndexesPageProps) {
                 <IndexFilterDescription filter={filter} indexes={getAllIndexes(groups, replacements)} />
             </div>
             <div className="flex-grow scroll js-scroll-container">
+
+                <div className="index-tooltip">
+                    <div className="index-location">
+                        
+                        <div className="shard-id">
+                            <div className="small-label">SHARD</div>
+                            <img src={shardImg} /> 1
+                        </div>
+                        
+                        <div className="node-id">
+                            <div className="small-label">NODE</div>
+                            <img src={nodeImg} /> A
+                        </div>
+                        
+                    </div>
+                    <div className="index-details">
+                        <div className="details-item state"><div className="state-pill">Normal</div></div>
+                        <div className="details-item entries"><i className="icon-list" /> 4200 entries</div>
+                        <div className="details-item errors text-danger"><i className="icon-warning" /> 2 errors</div>
+                        <div className="details-item status updating"><i className="icon-waiting" /> Updating</div>
+                    </div>
+
+                    <div className="collection-name">Orders</div>
+                    <div className="collection-progress">
+                        <div className="progress-item">
+                            <strong className="progress-percentage">50%</strong> <span>documents</span>
+                            <div className="progress">
+                                <div className="progress-bar" style={{ width: "50%" }} />
+                            </div>
+                        </div>
+                        <div className="progress-item">
+                            <strong className="progress-percentage">40%</strong> <span>tombstones</span>
+                            <div className="progress">
+                                <div className="progress-bar" style={{ width: "40%" }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="collection-name">Users</div>
+                    <div className="collection-progress">
+                        <div className="progress-item">
+                            <strong className="progress-percentage">24%</strong> <span>documents</span>
+                            <div className="progress">
+                                <div className="progress-bar" style={{width: "24%"}} />
+                            </div>
+                        </div>
+                        <div className="progress-item">
+                            <strong className="progress-percentage">30%</strong> <span>tombstones</span>
+                            <div className="progress">
+                                <div className="progress-bar" style={{ width: "30%" }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="indexes-list">
                     <h2 className="on-base-background">Index group name</h2>
                     <div className="index-item">
                         <div className="index-header">
-                            <div className="flex-horizontal">
-                                <div className="index-select">
-                                    <div className="checkbox">
-                                        <input type="checkbox" className="styled" /><label></label>
-                                    </div>
+                            
+                            <div className="index-select">
+                                <div className="checkbox">
+                                    <input type="checkbox" className="styled" /><label></label>
                                 </div>
-                                <h3 className="index-name flex-grow"><a href="" title="Companies/StockPrices/TradeVolumeByMonth">Companies/StockPrices/TradeVolumeByMonth</a></h3>
+                            </div>
+                            <h3 className="index-name flex-grow"><a href="" title="Companies/StockPrices/TradeVolumeByMonth">Companies/StockPrices/TradeVolumeByMonth</a></h3>
+
+
+
+                            <div className="index-properties">
+                                <div className="btn-group properties-value">
+                                    <button type="button" className="btn set-size dropdown-toggle enable" data-toggle="dropdown" aria-expanded="false">
+                                        <span><i className="icon-check"></i><span>Normal Priority</span></span><span className="caret"></span>
+                                    </button>
+                                    <ul className="dropdown-menu">
+                                        <li><a href="#" title="Low"><i className="icon-coffee"></i><span>Low</span></a></li>
+                                        <li><a href="#" title="Normal"><i className="icon-check"></i><span>Normal</span></a></li>
+                                        <li><a href="#" title="High"><i className="icon-force"></i><span>High</span></a></li>
+                                    </ul>
+                                </div>
+
+                                <div className="btn-group properties-value">
+                                    <button type="button" className="btn set-size dropdown-toggle enable" data-toggle="dropdown" aria-expanded="false">
+                                        <span><i className="icon-unlock"></i><span>Unlocked</span></span><span className="caret"></span>
+                                    </button>
+                                    <ul className="dropdown-menu">
+                                        
+                                        <li><a href="#" title="Unlock"><i className="icon-unlock"></i><span>Unlock</span></a></li>
+                                        <li role="separator" className="divider"></li>
+                                        <li><a href="#" title="Lock"><i className="icon-lock"></i><span>Lock</span></a></li>
+                                        <li><a href="#" title="Lock (Error)"><i className="icon-lock-error"></i><span>Lock (Error)</span></a></li>
+                                    </ul>
+                                </div>
                             </div>
 
                             <div className="actions">
@@ -735,7 +820,6 @@ export function IndexesPage(props: IndexesPageProps) {
                         <div className="index-distribution">
                             <div className="distribution-legend">
                                 <div className="top"></div>
-                                <div className="node"><i className="icon-node" /> Node </div>
                                 <div> <i className="icon-list" /> Entries </div>
                                 <div> <i className="icon-warning" /> Errors </div>
                                 <div> <i />Status </div>
@@ -744,15 +828,13 @@ export function IndexesPage(props: IndexesPageProps) {
                                 <div className="top">
                                     <i className="icon-sum" />
                                 </div>
-                                <div> </div>
                                 <div> 4 802 809 </div>
                                 <div> 0 </div>
                                 <div></div>
                             </div>
 
                             <div className="distribution-item">
-                                <div className="top shard"><i className="icon-shard" />1</div>
-                                <div className="node">A</div>
+                                <div className="top node"><i className="icon-node" />A</div>
                                 <div className="entries">20 000 000 000 000</div>
                                 <div className="errors">0</div>
                                 <div className="state up-to-date">
@@ -763,8 +845,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </div>
 
                             <div className="distribution-item">
-                                <div className="top shard"><i className="icon-shard" />2</div>
-                                <div className="node">A</div>
+                                <div className="top node"><i className="icon-node" />B</div>
                                 <div className="entries">20 000</div>
                                 <div className="errors">0</div>
                                 <div className="state pending">
@@ -775,8 +856,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </div>
 
                             <div className="distribution-item">
-                                <div className="top shard"><i className="icon-shard" />3</div>
-                                <div className="node">A</div>
+                                <div className="top node"><i className="icon-node" />C</div>
                                 <div className="entries">20 000</div>
                                 <div className="errors">0</div>
                                 <div className="state running">
@@ -791,8 +871,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </div>
 
                             <div className="distribution-item ">
-                                <div className="top shard"><i className="icon-shard" />4</div>
-                                <div className="node">A</div>
+                                <div className="top node"><i className="icon-node" />BKP</div>
                                 <div className="entries text-danger">×</div>
                                 <div className="errors text-danger">×</div>
                                 <div className="state failed">
@@ -803,8 +882,7 @@ export function IndexesPage(props: IndexesPageProps) {
                             </div>
 
                             <div className="distribution-item loading">
-                                <div className="top shard"><i className="icon-shard" />5</div>
-                                <div className="node">A</div>
+                                <div className="top node"><i className="icon-node" />DEV</div>
                                 <div className="entries">20 000</div>
                                 <div className="errors">0</div>
                                 <div className="state up-to-date">
@@ -824,7 +902,32 @@ export function IndexesPage(props: IndexesPageProps) {
                                 </div>
                             </div>
                             <h3 className="index-name flex-grow"><a href="" title="Companies/StockPrices/TradeVolumeByMonth">Companies/StockPrices/TradeVolumeByMonth</a></h3>                                
-                            
+
+                            <div className="index-properties">
+                                <div className="btn-group properties-value">
+                                    <button type="button" className="btn set-size dropdown-toggle enable" data-toggle="dropdown" aria-expanded="false">
+                                        <span><i className="icon-check"></i><span>Normal Priority</span></span><span className="caret"></span>
+                                    </button>
+                                    <ul className="dropdown-menu">
+                                        <li><a href="#" title="Low"><i className="icon-coffee"></i><span>Low</span></a></li>
+                                        <li><a href="#" title="Normal"><i className="icon-check"></i><span>Normal</span></a></li>
+                                        <li><a href="#" title="High"><i className="icon-force"></i><span>High</span></a></li>
+                                    </ul>
+                                </div>
+
+                                <div className="btn-group properties-value">
+                                    <button type="button" className="btn set-size dropdown-toggle enable" data-toggle="dropdown" aria-expanded="false">
+                                        <span><i className="icon-unlock"></i><span>Unlocked</span></span><span className="caret"></span>
+                                    </button>
+                                    <ul className="dropdown-menu">
+
+                                        <li><a href="#" title="Unlock"><i className="icon-unlock"></i><span>Unlock</span></a></li>
+                                        <li role="separator" className="divider"></li>
+                                        <li><a href="#" title="Lock"><i className="icon-lock"></i><span>Lock</span></a></li>
+                                        <li><a href="#" title="Lock (Error)"><i className="icon-lock-error"></i><span>Lock (Error)</span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
 
                             <div className="actions">
                                 <div className="btn-toolbar pull-right-sm" role="toolbar">
