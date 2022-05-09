@@ -31,7 +31,15 @@ namespace FastTests.Corax
 
             public int Length => _values.Length;
 
-            public ReadOnlySpan<byte> this[int i] => Encoding.UTF8.GetBytes(_values[i]);
+            public bool IsNull(int i)
+            {
+                if (i < 0 || i >= Length)
+                    throw new ArgumentOutOfRangeException();
+
+                return _values[i] == null;
+            }
+
+            public ReadOnlySpan<byte> this[int i] => _values[i] == null ? ReadOnlySpan<byte>.Empty : Encoding.UTF8.GetBytes(_values[i]);
         }
 
         [Fact]

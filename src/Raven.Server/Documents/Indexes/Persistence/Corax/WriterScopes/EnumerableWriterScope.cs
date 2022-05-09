@@ -119,14 +119,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         {
             private readonly List<Memory<byte>> _values;
 
-            private static string[] Empty = new string[0];
-
-            public StringArrayIterator(List<System.Memory<byte>> values)
+            public StringArrayIterator(List<Memory<byte>> values)
             {
                 _values = values;
             }
 
             public int Length => _values.Count;
+
+            public bool IsNull(int i)
+            {
+                if (i < 0 || i >= Length)
+                    throw new ArgumentOutOfRangeException();
+
+                return false;                
+            }
 
             public ReadOnlySpan<byte> this[int i] => _values[i].Span;
         }
@@ -136,8 +142,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             private readonly List<BlittableJsonReaderObject> _values;
             private readonly List<IDisposable> _toDispose;
 
-            private static string[] Empty = new string[0];
-
             public BlittableIterator(List<BlittableJsonReaderObject> values)
             {
                 _values = values;
@@ -145,6 +149,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             }
 
             public int Length => _values.Count;
+
+            public bool IsNull(int i)
+            {
+                if (i < 0 || i >= Length)
+                    throw new ArgumentOutOfRangeException();
+
+                return false;
+            }
 
             public ReadOnlySpan<byte> this[int i] => Memory(i);
 

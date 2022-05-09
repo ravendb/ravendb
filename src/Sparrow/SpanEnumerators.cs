@@ -16,6 +16,8 @@ namespace Sparrow
     {
         int Length { get; }
 
+        bool IsNull(int i);
+
         ReadOnlySpan<byte> this[int i] { get; }
     }
 
@@ -28,6 +30,8 @@ namespace Sparrow
     public interface ISpanIndexer
     {
         int Length { get; }
+
+        bool IsNull(int i);
 
         Span<byte> this[int i] { get; }
     }
