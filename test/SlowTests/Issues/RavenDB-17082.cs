@@ -137,8 +137,8 @@ namespace SlowTests.Issues
                         token: token);
                 }
 
-                Assert.Equal(5, result.ScannedRevisions);
-                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
                 Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())

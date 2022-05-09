@@ -462,8 +462,8 @@ namespace SlowTests.Server.Documents.Revisions
                         onProgress: null, token: token);
                 }
 
-                Assert.Equal(4, result.ScannedRevisions);
-                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
                 Assert.Equal(0, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
@@ -527,9 +527,9 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(4, result.ScannedRevisions);
-                Assert.Equal(2, result.ScannedDocuments);
-                Assert.Equal(2, result.RevertedDocuments);
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -613,9 +613,9 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(5, result.ScannedRevisions);
-                Assert.Equal(3, result.ScannedDocuments);
-                Assert.Equal(2, result.RevertedDocuments);
+                Assert.Equal(3, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -695,9 +695,9 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(5, result.ScannedRevisions);
-                Assert.Equal(2, result.ScannedDocuments);
-                Assert.Equal(2, result.RevertedDocuments);
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -791,8 +791,8 @@ namespace SlowTests.Server.Documents.Revisions
                         token: token);
                 }
 
-                Assert.Equal(5, result.ScannedRevisions);
-                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
                 Assert.Equal(1, result.RevertedDocuments);
 
                 using (var session = store1.OpenAsyncSession())
