@@ -227,32 +227,6 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task ShouldRevisionOnReplication()
-        {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
-                await SetupReplicationAsync(store1, store2);
-
-                using (var session = store1.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "Hibernating" }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                Assert.True(WaitForDocument(store2, "users/1"));
-
-                using (var session = store2.OpenAsyncSession())
-                {
-                    var user = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
-                    Assert.NotNull(user);
-                    Assert.Equal(1, user.Count);
-                }
-            }
-        }
-
-        [Fact]
         public async Task ConflictedRevisionShouldReplicateBack()
         {
             using (var store1 = GetDocumentStore())
@@ -712,7 +686,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (var session = store2.OpenAsyncSession())
                 {
                     var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
-                    Assert.Equal(0, revisions.Count);
+                    Assert.Equal(10, revisions.Count);
                 }
 
                 /*
@@ -956,7 +930,19 @@ namespace SlowTests.Server.Documents.Revisions
 
                 WaitForMarker(store1, store2);
 
-                WaitForUserToContinueTheTest(store2);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+
+                EnforceConfigurationResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                {
+                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token: token);
+                }
+
+                Assert.Equal(11, result.ScannedRevisions);
+                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(10, result.RemovedRevisions);
+
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (var session = store2.OpenSession())
                 {
