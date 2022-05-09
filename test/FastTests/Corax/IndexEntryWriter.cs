@@ -77,8 +77,8 @@ namespace FastTests.Corax
             Assert.False(reader.GetFieldType(0, out var _).HasFlag(IndexEntryFieldType.List));
             Assert.True(reader.GetFieldType(1, out var _).HasFlag(IndexEntryFieldType.List));
             Assert.False(reader.GetFieldType(1, out var _).HasFlag(IndexEntryFieldType.Tuple));
-            Assert.True(reader.GetFieldType(2, out var _).HasFlag(IndexEntryFieldType.None));
-            Assert.True(reader.GetFieldType(3, out var _).HasFlag(IndexEntryFieldType.None));
+            Assert.True(reader.GetFieldType(2, out var _).HasFlag(IndexEntryFieldType.Simple));
+            Assert.True(reader.GetFieldType(3, out var _).HasFlag(IndexEntryFieldType.Simple));
 
             reader.Read(0, out double doubleValue);
             Assert.True(doubleValue.AlmostEquals(1.001));
@@ -174,6 +174,116 @@ namespace FastTests.Corax
                 try { var __ = fieldIterator.Double; } catch (InvalidOperationException) { }
                 try { var __ = fieldIterator.Long; } catch (InvalidOperationException) { }
                 Assert.True(fieldIterator.Sequence.SequenceCompareTo(Encoding.UTF8.GetBytes(values[i]).AsSpan()) == 0);
+                i++;
+            }
+        }
+
+        [Fact]
+        public void SimpleWriteNulls()
+        {
+            Span<byte> buffer = new byte[64000];
+
+            using var _ = StorageEnvironment.GetStaticContext(out var ctx);
+            Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
+            Slice.From(ctx, "B", ByteStringType.Immutable, out Slice bSlice);
+            Slice.From(ctx, "C", ByteStringType.Immutable, out Slice cSlice);
+            Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
+
+            // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
+
+            var knownFields = new IndexFieldsMapping(ctx)
+                                    .AddBinding(0, aSlice)
+                                    .AddBinding(1, bSlice)
+                                    .AddBinding(2, cSlice)
+                                    .AddBinding(3, dSlice);
+
+            string[] values =
+            {
+                "A",
+                null,
+                "CCC",
+            };
+
+            Span<long> longValues = new long[] { 1, 2, 3 };
+            Span<double> doubleValues = new[] { 1.01, 2.01, 3.01 };
+
+            var writer = new IndexEntryWriter(buffer, knownFields);
+            writer.Write(0, new StringArrayIterator(values));
+            writer.Write(1, new StringArrayIterator(values), longValues, doubleValues);
+            var length = writer.Finish(out var element);
+
+            var reader = new IndexEntryReader(element);
+
+            // Get the first
+            reader.Read(1, out var longValue, out var doubleValue, out var sequenceValue);
+            Assert.True(doubleValue.AlmostEquals(1.01));
+            Assert.Equal(1, longValue);
+            Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes(values[0]).AsSpan()) == 0);
+
+            Assert.False(reader.Read(2, out var _));
+            Assert.False(reader.TryReadMany(2, out var fieldIterator));
+
+            fieldIterator = reader.ReadMany(1);
+            Assert.Equal(3, fieldIterator.Count);
+
+            int i = 0;
+            while (fieldIterator.ReadNext())
+            {
+                if (values[i] == null)
+                {
+                    Assert.True(fieldIterator.IsNull);
+                    try
+                    { var __ = fieldIterator.Sequence; }
+                    catch (NullReferenceException) { }
+                    try
+                    { var __ = fieldIterator.Double; }
+                    catch (NullReferenceException) { }
+                    try
+                    { var __ = fieldIterator.Long; }
+                    catch (NullReferenceException) { }
+                }
+                else
+                {
+                    Assert.False(fieldIterator.IsNull);
+                    Assert.True(fieldIterator.Double.AlmostEquals(i + 1.01));
+                    Assert.Equal(1 + i, fieldIterator.Long);
+                    Assert.True(fieldIterator.Sequence.SequenceCompareTo(Encoding.UTF8.GetBytes(values[i]).AsSpan()) == 0);
+                }
+
+                i++;
+            }
+
+            fieldIterator = reader.ReadMany(0);
+            Assert.Equal(3, fieldIterator.Count);
+
+            i = 0;
+            while (fieldIterator.ReadNext())
+            {
+                if (values[i] == null)
+                {
+                    Assert.True(fieldIterator.IsNull);
+                    try
+                    { var __ = fieldIterator.Sequence; }
+                    catch (NullReferenceException) { }
+                    try
+                    { var __ = fieldIterator.Double; }
+                    catch (InvalidOperationException) { }
+                    try
+                    { var __ = fieldIterator.Long; }
+                    catch (InvalidOperationException) { }
+                }
+                else
+                {
+                    Assert.False(fieldIterator.IsNull);
+                    try
+                    { var __ = fieldIterator.Double; }
+                    catch (InvalidOperationException) { }
+                    try
+                    { var __ = fieldIterator.Long; }
+                    catch (InvalidOperationException) { }
+                    Assert.True(fieldIterator.Sequence.SequenceCompareTo(Encoding.UTF8.GetBytes(values[i]).AsSpan()) == 0);
+                }
+                                
                 i++;
             }
         }
