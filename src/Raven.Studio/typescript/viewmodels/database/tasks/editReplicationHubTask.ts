@@ -25,7 +25,6 @@ import deleteReplicationHubAccessConfigCommand = require("commands/database/task
 import genUtils = require("common/generalUtils");
 import certificateUtils = require("common/certificateUtils");
 import viewHelpers = require("common/helpers/view/viewHelpers");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import accessManager = require("common/shell/accessManager");
 
 class editReplicationHubTask extends viewModelBase {
@@ -189,6 +188,7 @@ class editReplicationHubTask extends viewModelBase {
             model.disabled,
             model.manualChooseMentor,
             model.mentorNode,
+            model.pinMentorNode,
             model.delayReplicationTime,
             model.showDelayReplication,
             model.preventDeletions,
