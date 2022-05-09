@@ -30,7 +30,6 @@ abstract class backupConfiguration {
     snapshot = ko.observable<snapshot>();
     
     mentorNode = ko.observable<string>();
-    //pinMentorNode = ko.observable<boolean>(); // todo new..??
     
     encryptionSettings = ko.observable<encryptionSettings>();
     
@@ -70,7 +69,6 @@ abstract class backupConfiguration {
         this.isServerWide(isServerWide);
         
         this.mentorNode(dto.MentorNode);
-        //this.pinMentorNode(dto.PinToMentorNode);
 
         const folderPath = this.localSettings().folderPath();
         if (folderPath) {
