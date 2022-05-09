@@ -39,7 +39,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
     {
     }
 
-    protected OngoingTasksResult GetOngoingTasksInternal()
+    public OngoingTasksResult GetOngoingTasksInternal()
     {
         var server = RequestHandler.ServerStore;
         var ongoingTasksResult = new OngoingTasksResult();
@@ -81,7 +81,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         }
     }
 
-    protected async ValueTask GetOngoingTaskInfoInternal()
+    protected async ValueTask GetOngoingTaskInfoInternalAsync()
     {
         var (key, taskName, type) = TryGetParameters();
 
@@ -111,7 +111,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var externalReplicationInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher, record.RavenConnectionStrings);
-                        await WriteResult(context, externalReplicationInfo);
+                        await WriteResultAsync(context, externalReplicationInfo);
                         break;
 
                     case OngoingTaskType.PullReplicationAsHub:
@@ -126,7 +126,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var sinkInfo = GetPullReplicationAsSinkInfo(dbTopology, clusterTopology, record, sinkReplication);
-                        await WriteResult(context, sinkInfo);
+                        await WriteResultAsync(context, sinkInfo);
                         break;
 
                     case OngoingTaskType.Backup:
@@ -142,7 +142,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, clusterTopology);
-                        await WriteResult(context, backupTaskInfo);
+                        await WriteResultAsync(context, backupTaskInfo);
                         break;
 
                     case OngoingTaskType.SqlEtl:
@@ -158,7 +158,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var sqlTaskInfo = GetSqlEtlTaskInfo(record, clusterTopology, sqlEtl);
-                        await WriteResult(context, sqlTaskInfo);
+                        await WriteResultAsync(context, sqlTaskInfo);
                         break;
 
                     case OngoingTaskType.OlapEtl:
@@ -174,7 +174,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var olapTaskInfo = GetOlapEtlTaskInfo(record, clusterTopology, olapEtl);
-                        await WriteResult(context, olapTaskInfo);
+                        await WriteResultAsync(context, olapTaskInfo);
                         break;
 
                     case OngoingTaskType.RavenEtl:
@@ -190,7 +190,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var ravenTaskInfo = GetRavenEtlTaskInfo(record, clusterTopology, ravenEtl);
-                        await WriteResult(context, ravenTaskInfo);
+                        await WriteResultAsync(context, ravenTaskInfo);
                         break;
 
                     case OngoingTaskType.ElasticSearchEtl:
@@ -206,7 +206,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var elasticSearchEtlInfo = GetElasticSearchEtTaskInfo(record, clusterTopology, elasticSearchEtl);
-                        await WriteResult(context, elasticSearchEtlInfo);
+                        await WriteResultAsync(context, elasticSearchEtlInfo);
                         break;
 
                     case OngoingTaskType.Subscription:
@@ -229,7 +229,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
                         }
 
                         var subscriptionStateInfo = GetSubscriptionTaskInfo(record, clusterTopology, subscriptionState, key);
-                        await WriteResult(context, subscriptionStateInfo);
+                        await WriteResultAsync(context, subscriptionStateInfo);
                         break;
 
                     default:
@@ -272,7 +272,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
         }
     }
 
-    private async Task WriteResult(JsonOperationContext context, IDynamicJson taskInfo)
+    private async Task WriteResultAsync(JsonOperationContext context, IDynamicJson taskInfo)
     {
         HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
