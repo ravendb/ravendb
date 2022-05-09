@@ -8,7 +8,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/backups',
             moduleId: require('viewmodels/database/tasks/backups'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Backups',
             nav: true,
             css: 'icon-backups',
@@ -17,7 +17,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/ongoingTasks',
             moduleId: require('viewmodels/database/tasks/ongoingTasks'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Ongoing Tasks',
             nav: true,
             css: 'icon-manage-ongoing-tasks',
@@ -35,7 +35,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
             moduleId: require('viewmodels/database/tasks/exportDatabase'),
-            shardingMode: "both",
+            shardingMode: "allShards",
             title: 'Export Database',
             nav: true,
             css: 'icon-export-database',
@@ -44,7 +44,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/sampleData',
             moduleId: require('viewmodels/database/tasks/createSampleData'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Create Sample Data',
             nav: true,
             css: 'icon-create-sample-data',
@@ -54,7 +54,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',
             moduleId: require('viewmodels/database/tasks/editExternalReplicationTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'External Replication Task',
             nav: false,
             dynamicHash: appUrls.editExternalReplicationTaskUrl,
@@ -63,7 +63,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editReplicationHubTask',
             moduleId: require('viewmodels/database/tasks/editReplicationHubTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Replication Hub Task',
             nav: false,
             dynamicHash: appUrls.editReplicationHubTaskUrl,
@@ -72,7 +72,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editReplicationSinkTask',
             moduleId: require('viewmodels/database/tasks/editReplicationSinkTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Replication Sink Task',
             nav: false,
             dynamicHash: appUrls.editReplicationSinkTaskUrl,
@@ -81,7 +81,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editPeriodicBackupTask',
             moduleId: require('viewmodels/database/tasks/editPeriodicBackupTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Backup Task',
             nav: false,
             dynamicHash: appUrls.backupsUrl,
@@ -90,7 +90,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editSubscriptionTask',
             moduleId: require('viewmodels/database/tasks/editSubscriptionTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Subscription Task',
             nav: false,
             dynamicHash: appUrls.editSubscriptionTaskUrl,
@@ -99,7 +99,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editRavenEtlTask',
             moduleId: require('viewmodels/database/tasks/editRavenEtlTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'RavenDB ETL Task',
             nav: false,
             dynamicHash: appUrls.editRavenEtlTaskUrl,
@@ -108,7 +108,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editSqlEtlTask',
             moduleId: require('viewmodels/database/tasks/editSqlEtlTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'SQL ETL Task',
             nav: false,
             dynamicHash: appUrls.editSqlEtlTaskUrl,
@@ -117,7 +117,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editOlapEtlTask',
             moduleId: require('viewmodels/database/tasks/editOlapEtlTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'OLAP ETL Task',
             nav: false,
             dynamicHash: appUrls.editOlapEtlTaskUrl,
@@ -126,7 +126,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editElasticSearchEtlTask',
             moduleId: require('viewmodels/database/tasks/editElasticSearchEtlTask'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Elastic Search ETL Task',
             nav: false,
             dynamicHash: appUrls.editElasticSearchEtlTaskUrl,

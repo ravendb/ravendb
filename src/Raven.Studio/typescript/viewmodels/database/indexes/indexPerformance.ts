@@ -151,7 +151,7 @@ class hitTest {
 }
 
 class indexPerformance extends shardViewModelBase {
-
+    
     /* static */
     
     view = require("views/database/indexes/indexPerformance.html");
@@ -294,8 +294,8 @@ class indexPerformance extends shardViewModelBase {
         }
     };
     
-    constructor(db: database) {
-        super(db);
+    constructor(db: database, location: databaseLocationSpecifier) {
+        super(db, location);
         
         this.bindToCurrentInstance("toggleScroll", "clearGraphWithConfirm");
 
@@ -334,7 +334,7 @@ class indexPerformance extends shardViewModelBase {
             this.expandedTracks.push(args.indexName);
         }
         
-        return new getIndexesStatsCommand(this.db)
+        return new getIndexesStatsCommand(this.db, this.location)
             .execute()
             .done((stats) => {
                 this.faultyIndexes(stats.filter(x => x.Type === "Faulty").map(x => x.Name));
@@ -513,7 +513,7 @@ class indexPerformance extends shardViewModelBase {
             }
         };
 
-        this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.db, onDataUpdate, this.dateCutoff));
+        this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.db, this.location, onDataUpdate, this.dateCutoff));
     }
 
     isConnectedToWebSocket() {

@@ -10,7 +10,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: ['databases/settings/databaseSettings'],
             moduleId: require('viewmodels/database/settings/databaseSettings'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Database Settings',
             nav: true,
             css: 'icon-database-settings',
@@ -29,7 +29,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',
             moduleId: require("viewmodels/database/settings/conflictResolution"),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: "Conflict Resolution",
             nav: true,
             css: 'icon-conflicts-resolution',
@@ -38,7 +38,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
             moduleId: require('viewmodels/database/settings/clientConfiguration'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Client Configuration',
             nav: true,
             css: 'icon-database-client-configuration',
@@ -47,7 +47,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/studioConfiguration',
             moduleId: require('viewmodels/database/settings/studioConfiguration'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Studio Configuration',
             nav: true,
             css: 'icon-database-studio-configuration',
@@ -56,7 +56,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: require('viewmodels/database/settings/revisions'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Document Revisions',
             nav: true,
             css: 'icon-revisions',
@@ -74,7 +74,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/refresh',
             moduleId: require('viewmodels/database/settings/refresh'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Document Refresh',
             nav: true,
             css: 'icon-expos-refresh',
@@ -83,7 +83,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/expiration',
             moduleId: require('viewmodels/database/settings/expiration'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Document Expiration',
             nav: true,
             css: 'icon-document-expiration',
@@ -92,7 +92,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/documentsCompression',
             moduleId: require('viewmodels/database/settings/documentsCompression'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Document Compression',
             nav: true,
             css: 'icon-documents-compression',
@@ -101,7 +101,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/timeSeries',
             moduleId: require('viewmodels/database/settings/timeSeries'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Time Series',
             nav: true, 
             css: 'icon-timeseries-settings',
@@ -111,7 +111,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/settings/customSorters',
             moduleId: require('viewmodels/database/settings/customSorters'),
             title: 'Custom Sorters',
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             nav: true,
             css: 'icon-custom-sorters',
             dynamicHash: appUrls.customSorters
@@ -119,7 +119,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/customAnalyzers',
             moduleId: require('viewmodels/database/settings/customAnalyzers'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Custom Analyzers',
             nav: true,
             css: 'icon-custom-analyzers',
@@ -152,7 +152,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/settings/integrations',
             moduleId: require('viewmodels/database/settings/integrations'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Integrations',
             nav: true,
             css: 'icon-integrations',
@@ -164,7 +164,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/advanced/databaseRecord',
             moduleId: require('viewmodels/database/advanced/databaseRecord'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Database Record',
             nav: true,
             css: 'icon-database-record',
@@ -174,7 +174,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/advanced/databaseIDs',
             moduleId: require('viewmodels/database/advanced/databaseIDs'),
-            shardingMode: "allShardsOnly",
+            shardingMode: "allShards",
             title: 'Unused Database IDs',
             nav: true,
             css: 'icon-database-id',

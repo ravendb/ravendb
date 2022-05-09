@@ -1,8 +1,4 @@
-﻿<div class="sharding-control" data-bind="css: { pinned: pinned }, visible: showContext, if: showContext">
-    <div class="sharding-message"  data-bind="visible: pinned">
-        <i class="icon-pinned"></i><span>Pinned Shard</span><span class="separator">|</span>
-        <span>Displayed data is sourced from only a single shard</span>
-    </div>
+﻿<div class="sharding-control" data-bind="visible: showContext, if: showContext">
     <div class="flex-grow"></div>
     <div class="flex-horizontal">
         <div class="shard-selector">
@@ -13,11 +9,7 @@
             <button class="btn btn-default" data-bind="click: changeScope, visible: canChangeScope" title="Select a shard to view">
                 <i class="icon-settings"></i>
             </button>
-            <button class="btn btn-default" data-bind="click: exit, visible: canCloseContext" title="Close & view All Shards">
-                <i class="icon-cancel"></i>
-            </button>
         </div>
     </div>
 </div>
 <div data-bind="compose: { model: shardSelector }"></div>
-<div data-bind="compose: { model: allShardsDialog }"></div>
