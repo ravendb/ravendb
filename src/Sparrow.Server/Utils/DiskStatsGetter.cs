@@ -81,9 +81,9 @@ namespace Sparrow.Server.Utils
                 return null;
 
             var diff = (currentInfo.Time - state.Prev.Raw.Time).TotalSeconds;
-            var read = (currentInfo.ReadIOs - state.Prev.Raw.ReadIOs) / diff;
-            var write = (currentInfo.WriteIOs - state.Prev.Raw.WriteIOs) / diff;
-            var diskSpaceResult = new DiskStatsResult {ReadIos = read, WriteIos = write};
+            var read = (currentInfo.IoReadOperations - state.Prev.Raw.IoReadOperations) / diff;
+            var write = (currentInfo.IoWriteOperations - state.Prev.Raw.IoWriteOperations) / diff;
+            var diskSpaceResult = new DiskStatsResult {IoReadOperations = read, IoWriteOperations = write};
 
             return new PrevInfo {Raw = currentInfo, Calculated = diskSpaceResult};
         }
@@ -102,9 +102,9 @@ namespace Sparrow.Server.Utils
         
         private record DiskStatsRawResult
         {
-            public long ReadIOs { get; init; }
+            public long IoReadOperations { get; init; }
     
-            public long WriteIOs { get; init; }
+            public long IoWriteOperations { get; init; }
     
             public DateTime Time { get; init;}
         }
@@ -118,9 +118,9 @@ namespace Sparrow.Server.Utils
     
     public record DiskStatsResult
     {
-        public double ReadIos { get; init; }
+        public double IoReadOperations { get; init; }
     
-        public double WriteIos { get; init;}
+        public double IoWriteOperations { get; init;}
     }
 
     internal class NotImplementedDiskStatsGetter : IDiskStatsGetter

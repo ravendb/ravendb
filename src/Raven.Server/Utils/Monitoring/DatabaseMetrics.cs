@@ -126,8 +126,8 @@ namespace Raven.Server.Utils.Monitoring
         public long IndexesUsedDataFileInMb { get; set; }
         public long TotalAllocatedStorageFileInMb { get; set; }
         public long TotalFreeSpaceInMb { get; set; }
-        public double ReadIos { get; set; }
-        public double WriteIos { get; set; }
+        public double IoReadOperations { get; set; }
+        public double IoWriteOperations { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -139,8 +139,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(IndexesUsedDataFileInMb)] = IndexesUsedDataFileInMb,
                 [nameof(TotalAllocatedStorageFileInMb)] = TotalAllocatedStorageFileInMb,
                 [nameof(TotalFreeSpaceInMb)] = TotalFreeSpaceInMb,
-                [nameof(ReadIos)] = ReadIos,
-                [nameof(WriteIos)] = WriteIos
+                [nameof(IoReadOperations)] = IoReadOperations,
+                [nameof(IoWriteOperations)] = IoWriteOperations
             };
         }
     }

@@ -221,10 +221,10 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Remaining server storage disk space in %")]
             public const string StorageDiskRemainingSpacePercentage = "1.10.4";
 
-            [Description("IO read per seconds")]
+            [Description("IO read operation per seconds")]
             public const string StorageDiskIoRead = "1.10.5";
             
-            [Description("IO read per seconds")]
+            [Description("IO write operation per seconds")]
             public const string StorageDiskIoWrite = "1.10.6";
             
             [Description("Server certificate expiration date")]
@@ -413,10 +413,10 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Remaining storage disk space in MB")]
             public const string StorageDiskRemainingSpace = "5.2.{0}.2.6";
             
-            [Description("IO read per seconds")]
+            [Description("IO read operation per seconds")]
             public const string StorageDiskIoRead = "5.2.{0}.2.7";
             
-            [Description("IO write per seconds")]
+            [Description("IO write operation per seconds")]
             public const string StorageDiskIoWrite = "5.2.{0}.2.8";
 
             [Description("Number of document puts per second (one minute rate)")]

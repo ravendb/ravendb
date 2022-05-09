@@ -20,7 +20,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 return Empty;
 
             var result = database.ServerStore.Server.DiskStatsGetter.Get(database.DocumentsStorage.Environment.Options.DriveInfoByPath?.Value.BasePath.DriveName);
-            return result == null ? Empty : new Gauge32((int)Math.Round(result.WriteIos));
+            return result == null ? Empty : new Gauge32((int)Math.Round(result.IoWriteOperations));
         }
     }
 }
