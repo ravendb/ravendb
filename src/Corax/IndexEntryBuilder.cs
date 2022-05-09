@@ -240,7 +240,16 @@ namespace Corax
 
             // Write the pointer to the location
             MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
+            dataLocation = WriteNullsTableIfRequired(values, dataLocation, indexEntryFieldLocation);
+            dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
 
+            ArrayPool<int>.Shared.Return(stringLengths);
+
+            _dataIndex = dataLocation;
+        }
+
+        private readonly int WriteNullsTableIfRequired<TEnumerator>(TEnumerator values, int dataLocation, int indexEntryFieldLocation) where TEnumerator : IReadOnlySpanIndexer
+        {
             // We will include null values if there are nulls to be stored.           
             int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1;
             byte* nullStream = stackalloc byte[nullBitStreamSize];
@@ -266,10 +275,7 @@ namespace Corax
                 _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNulls;
             }
 
-            dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
-            ArrayPool<int>.Shared.Return(stringLengths);
-
-            _dataIndex = dataLocation;
+            return dataLocation;
         }
 
         public unsafe void Write(int field, IReadOnlySpanIndexer values, ReadOnlySpan<long> longValues, ReadOnlySpan<double> doubleValues)
@@ -319,32 +325,7 @@ namespace Corax
 
             // Write the pointer to the location.
             MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
-
-            // We will include null values if there are nulls to be stored.           
-            int nullBitStreamSize = values.Length / (sizeof(byte) * 8) + values.Length % (sizeof(byte) * 8) == 0 ? 0 : 1;
-            byte* nullStream = stackalloc byte[nullBitStreamSize];
-            bool hasNull = false;
-            for (int i = 0; i < values.Length; i++)
-            {
-                if (values.IsNull(i))
-                {
-                    hasNull = true;
-                    PtrBitVector.SetBitInPointer(nullStream, i, true);
-                }
-            }
-
-            if (hasNull)
-            {
-                // Copy the null stream.
-                new ReadOnlySpan<byte>(nullStream, nullBitStreamSize * sizeof(long))
-                    .CopyTo(_buffer.Slice(dataLocation));
-
-                dataLocation += nullBitStreamSize;
-
-                // Signal that we will have to deal with the nulls.
-                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNulls;
-            }
-
+            dataLocation = WriteNullsTableIfRequired(values, dataLocation, indexEntryFieldLocation);
             dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..values.Length], dataLocation);
 
             // Write the long values
