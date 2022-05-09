@@ -136,7 +136,7 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(UsedSpace)] = UsedSpace,
                 [nameof(UsedSpaceByTempBuffers)] = UsedSpaceByTempBuffers,
                 [nameof(DiskSpaceResult)] = DiskSpaceResult.ToJson()
-                [nameof(IoStatsResult)] = IoStatsResult.ToJson()
+                [nameof(IoStatsResult)] = IoStatsResult?.ToJson()
             };
         }
     }
@@ -165,16 +165,16 @@ namespace Raven.Client.ServerWide.Operations
 
     public class IoStatsResult
     {
-        public double ReadIOs { get; set; }
+        public double IoReadOperations { get; set; }
 
-        public double WriteIOs { get; set; }
+        public double IoWriteOperations { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(ReadIOs)] = ReadIOs,
-                [nameof(WriteIOs)] = WriteIOs,
+                [nameof(IoReadOperations)] = IoReadOperations,
+                [nameof(IoWriteOperations)] = IoWriteOperations,
             };
         }
     }

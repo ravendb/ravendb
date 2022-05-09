@@ -201,8 +201,8 @@ namespace Raven.Server.Web.System
                 var diskStatsResult = Server.DiskStatsGetter.Get(ServerStore._env.Options.DriveInfoByPath?.Value.BasePath.DriveName);
                 if (diskStatsResult != null)
                 {
-                    result.ReadIos = diskStatsResult.ReadIos;
-                    result.WriteIos = diskStatsResult.WriteIos;
+                    result.IoReadOperations = diskStatsResult.IoReadOperations;
+                    result.IoWriteOperations = diskStatsResult.IoWriteOperations;
                 }
             }
 
@@ -448,8 +448,8 @@ namespace Raven.Server.Web.System
                 var diskStatsResult = Server.DiskStatsGetter.Get(database.DocumentsStorage.Environment.Options.DriveInfoByPath?.Value.BasePath.DriveName);
                 if (diskStatsResult != null)
                 {
-                    result.ReadIos = diskStatsResult.ReadIos;
-                    result.WriteIos = diskStatsResult.WriteIos;
+                    result.IoReadOperations = diskStatsResult.IoReadOperations;
+                    result.IoWriteOperations = diskStatsResult.IoWriteOperations;
                 }
             }
 

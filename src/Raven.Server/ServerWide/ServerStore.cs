@@ -3303,7 +3303,7 @@ namespace Raven.Server.ServerWide
             
             var ioStatsResult = Server.DiskStatsGetter.Get(driveInfo?.BasePath.DriveName);
             if (ioStatsResult != null)
-                usage.IoStatsResult = new IoStatsResult {ReadIOs = ioStatsResult.ReadIos, WriteIOs = ioStatsResult.WriteIos}; 
+                usage.IoStatsResult = new IoStatsResult {IoReadOperations = ioStatsResult.IoReadOperations, IoWriteOperations = ioStatsResult.IoWriteOperations}; 
 
             if (diskSpaceResult.DriveName == driveInfo?.JournalPath.DriveName)
             {
@@ -3330,7 +3330,7 @@ namespace Raven.Server.ServerWide
                     };
                     var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
                     if (journalIoStatsResult != null)
-                        usage.IoStatsResult = new IoStatsResult {ReadIOs = journalIoStatsResult.ReadIos, WriteIOs = journalIoStatsResult.WriteIos}; 
+                        usage.IoStatsResult = new IoStatsResult {IoReadOperations = journalIoStatsResult.IoReadOperations, IoWriteOperations = journalIoStatsResult.IoWriteOperations}; 
                     
                     yield return journalUsage;
                 }
@@ -3362,7 +3362,7 @@ namespace Raven.Server.ServerWide
                         };
                         var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
                         if(tempBufferIoStatsResult != null)
-                            tempBuffersUsage.IoStatsResult = new IoStatsResult {ReadIOs = tempBufferIoStatsResult.ReadIos, WriteIOs = tempBufferIoStatsResult.WriteIos}; 
+                            tempBuffersUsage.IoStatsResult = new IoStatsResult {IoReadOperations = tempBufferIoStatsResult.IoReadOperations, IoWriteOperations = tempBufferIoStatsResult.IoWriteOperations}; 
 
                         yield return tempBuffersUsage;
                     }

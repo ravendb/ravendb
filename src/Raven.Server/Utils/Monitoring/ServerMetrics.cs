@@ -145,8 +145,8 @@ namespace Raven.Server.Utils.Monitoring
         public long SystemStoreTotalDataFileSizeInMb { get; set; }
         public long TotalFreeSpaceInMb { get; set; }
         public int RemainingStorageSpacePercentage { get; set; }
-        public double ReadIos { get; set; }
-        public double WriteIos { get; set; }
+        public double IoReadOperations { get; set; }
+        public double IoWriteOperations { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -156,8 +156,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(SystemStoreTotalDataFileSizeInMb)] = SystemStoreTotalDataFileSizeInMb,
                 [nameof(TotalFreeSpaceInMb)] = TotalFreeSpaceInMb,
                 [nameof(RemainingStorageSpacePercentage)] = RemainingStorageSpacePercentage,
-                [nameof(ReadIos)] = ReadIos,
-                [nameof(WriteIos)] = WriteIos
+                [nameof(IoReadOperations)] = IoReadOperations,
+                [nameof(IoWriteOperations)] = IoWriteOperations
             };
         }
     }
