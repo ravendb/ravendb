@@ -55,7 +55,8 @@ namespace Voron.Data.CompactTrees
                 }
 
                 randomEntry = _generator.Next(state.Header->NumberOfEntries);
-                GetEntry(_tree, state.Page, state.EntriesOffsets[randomEntry], out key, out value);
+                if (GetEntry(_tree, state.Page, state.EntriesOffsets[randomEntry], out key, out value) == false)
+                    goto Failure;
 
                 _currentSample++;
                 return true;

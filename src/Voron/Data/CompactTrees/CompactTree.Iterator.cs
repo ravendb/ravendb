@@ -50,7 +50,7 @@ namespace Voron.Data.CompactTrees
             {
                 var next = MoveNext(out Span<byte> keySpan, out value);
                 if (next)
-                {
+                {    
                     Slice.From(_tree._llt.Allocator, keySpan, out key);
                 }
                 else
@@ -69,7 +69,9 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
-                        GetEntry(_tree, state.Page, state.EntriesOffsets[state.LastSearchPosition], out key, out value);
+                        if (GetEntry(_tree, state.Page, state.EntriesOffsets[state.LastSearchPosition], out key, out value) == false)
+                            return false;
+                            
                         state.LastSearchPosition++;
                         return true;
                     }

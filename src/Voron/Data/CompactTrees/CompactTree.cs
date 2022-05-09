@@ -1194,25 +1194,28 @@ namespace Voron.Data.CompactTrees
             if(entryOffset < PageHeader.SizeOf)
                 throw new ArgumentOutOfRangeException();
             byte* entryPos = page.Pointer + entryOffset;
-            var keyLen = (int)Encoder.Decode7Bits(entryPos, out var lenKeyLen);
-            key = new Span<byte>(entryPos + lenKeyLen, keyLen);
-            entryPos += keyLen + lenKeyLen;
+            var keyLen = (int)Encoder.Decode7Bits(entryPos, out var lenOfKeyLen);
+            key = new Span<byte>(entryPos + lenOfKeyLen, keyLen);
+            entryPos += keyLen + lenOfKeyLen;
             value = Encoder.ZigZagDecode(entryPos, out var valLen);
             entryPos += valLen;
             return (int)(entryPos - page.Pointer - entryOffset);
         }
 
-        internal static void GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> key, out long value)
+        internal static bool GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> key, out long value)
         {
             var result = GetEncodedEntry(page, entriesOffset, out key, out value);
+            if (key.Length == 0)
+                return false;
+            
             EncodedKey encodedKey = EncodedKey.From(key, tree, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
-            tree.Llt.Allocator.Allocate(encodedKey.Key.Length, out var output);
-            
+            tree.Llt.Allocator.Allocate(encodedKey.Key.Length, out var output);            
             encodedKey.Key.CopyTo(output.ToSpan());
             
             var outputSpan = output.ToSpan();
-            key = output[^1] == 0 ? outputSpan : outputSpan.Slice(0, outputSpan.Length - 1);
+            key = outputSpan[^1] == 0 ? outputSpan[0..^1] : outputSpan;
+            return true;
         }
 
         private static void GetEntryBuffer(Page page, ushort entryOffset, out byte* b, out int len)

@@ -63,9 +63,7 @@ namespace Voron.Data.CompactTrees
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
                         GetEntry(_tree, state.Page, state.EntriesOffsets[state.LastSearchPosition], out key, out value);
-                        state.LastSearchPosition++;
-
-                        key = key.Slice(0, key.Length - 1);
+                        state.LastSearchPosition++;                        
 
                         float currentScore = distance.GetDistance(_baseKey, key);
                         if (currentScore < _minScore)
