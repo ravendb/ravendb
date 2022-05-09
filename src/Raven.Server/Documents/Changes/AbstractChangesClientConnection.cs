@@ -48,29 +48,29 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected abstract ValueTask WatchTopologyAsync();
 
-    protected abstract ValueTask WatchDocumentAsync(string docId);
+    protected abstract ValueTask WatchDocumentAsync(string docId, CancellationToken token);
 
-    protected abstract ValueTask UnwatchDocumentAsync(string docId);
+    protected abstract ValueTask UnwatchDocumentAsync(string docId, CancellationToken token);
 
-    protected abstract ValueTask WatchAllDocumentsAsync();
+    protected abstract ValueTask WatchAllDocumentsAsync(CancellationToken token);
 
-    protected abstract ValueTask UnwatchAllDocumentsAsync();
+    protected abstract ValueTask UnwatchAllDocumentsAsync(CancellationToken token);
 
-    protected abstract ValueTask WatchCounterAsync(string name);
+    protected abstract ValueTask WatchCounterAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask UnwatchCounterAsync(string name);
+    protected abstract ValueTask UnwatchCounterAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask WatchDocumentCountersAsync(string docId);
+    protected abstract ValueTask WatchDocumentCountersAsync(string docId, CancellationToken token);
 
-    protected abstract ValueTask UnwatchDocumentCountersAsync(string docId);
+    protected abstract ValueTask UnwatchDocumentCountersAsync(string docId, CancellationToken token);
 
-    protected abstract ValueTask WatchDocumentCounterAsync(BlittableJsonReaderArray parameters);
+    protected abstract ValueTask WatchDocumentCounterAsync(BlittableJsonReaderArray parameters, CancellationToken token);
 
-    protected abstract ValueTask UnwatchDocumentCounterAsync(BlittableJsonReaderArray parameters);
+    protected abstract ValueTask UnwatchDocumentCounterAsync(BlittableJsonReaderArray parameters, CancellationToken token);
 
-    protected abstract ValueTask WatchAllCountersAsync();
+    protected abstract ValueTask WatchAllCountersAsync(CancellationToken token);
 
-    protected abstract ValueTask UnwatchAllCountersAsync();
+    protected abstract ValueTask UnwatchAllCountersAsync(CancellationToken token);
 
     protected abstract ValueTask WatchTimeSeriesAsync(string name);
 
@@ -256,7 +256,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         _sendQueue.Enqueue(item);
     }
 
-    public async ValueTask HandleCommandAsync(string command, string commandParameter, BlittableJsonReaderArray commandParameters)
+    public async ValueTask HandleCommandAsync(string command, string commandParameter, BlittableJsonReaderArray commandParameters, CancellationToken token)
     {
         long.TryParse(commandParameter, out long commandParameterAsLong);
 
@@ -278,19 +278,19 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         }
         else if (Match(command, "watch-doc"))
         {
-            await WatchDocumentAsync(commandParameter);
+            await WatchDocumentAsync(commandParameter, token);
         }
         else if (Match(command, "unwatch-doc"))
         {
-            await UnwatchDocumentAsync(commandParameter);
+            await UnwatchDocumentAsync(commandParameter, token);
         }
         else if (Match(command, "watch-docs"))
         {
-            await WatchAllDocumentsAsync();
+            await WatchAllDocumentsAsync(token);
         }
         else if (Match(command, "unwatch-docs"))
         {
-            await UnwatchAllDocumentsAsync();
+            await UnwatchAllDocumentsAsync(token);
         }
         else if (Match(command, "watch-prefix"))
         {
@@ -334,35 +334,35 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         }
         else if (Match(command, "watch-counters"))
         {
-            await WatchAllCountersAsync();
+            await WatchAllCountersAsync(token);
         }
         else if (Match(command, "unwatch-counters"))
         {
-            await UnwatchAllCountersAsync();
+            await UnwatchAllCountersAsync(token);
         }
         else if (Match(command, "watch-counter"))
         {
-            await WatchCounterAsync(commandParameter);
+            await WatchCounterAsync(commandParameter, token);
         }
         else if (Match(command, "unwatch-counter"))
         {
-            await UnwatchCounterAsync(commandParameter);
+            await UnwatchCounterAsync(commandParameter, token);
         }
         else if (Match(command, "watch-document-counters"))
         {
-            await WatchDocumentCountersAsync(commandParameter);
+            await WatchDocumentCountersAsync(commandParameter, token);
         }
         else if (Match(command, "unwatch-document-counters"))
         {
-            await UnwatchDocumentCountersAsync(commandParameter);
+            await UnwatchDocumentCountersAsync(commandParameter, token);
         }
         else if (Match(command, "watch-document-counter"))
         {
-            await WatchDocumentCounterAsync(commandParameters);
+            await WatchDocumentCounterAsync(commandParameters, token);
         }
         else if (Match(command, "unwatch-document-counter"))
         {
-            await UnwatchDocumentCounterAsync(commandParameters);
+            await UnwatchDocumentCounterAsync(commandParameters, token);
         }
         else if (Match(command, "watch-all-timeseries"))
         {
