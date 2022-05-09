@@ -71,26 +71,12 @@ namespace SlowTests.Issues
                 index.Execute(store);
                 Indexes.WaitForIndexing(store);
 
-                string[] indexNames = { index.IndexName };
-                CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = indexNames};
-
-                DocumentDatabase database = null;
-                if (cluster)
-                {
-                    var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
-                    var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
-                    database = await GetDatabase(responsibleNode, store.Database);
-                }
-                else
-                {
-                    database = await GetDatabase(store.Database);
-                }
-                Assert.NotNull(database);
-
                 // Test
+                CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = new[]{ index.IndexName } };
+
                 Exception exception = null;
                 List<Categoroies_Details.Entity> l = null;
-                Task t = new Task(() =>
+                var d = () =>
                 {
                     try
                     {
@@ -105,22 +91,25 @@ namespace SlowTests.Issues
                     {
                         exception = e;
                     }
-                });
-                database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = () =>
-                {
-                    t.Start();
                 };
 
-                //var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(settings));
-                // operation.WaitForCompletion();
-                var reqEx = store.GetRequestExecutor(store.Database);
-                using (reqEx.ContextPool.AllocateOperationContext(out var context))
+                if (cluster)
                 {
-                    var compactCommand = new CompactDatabaseOperation(settings).GetCommand(store.Conventions, context);
-                    reqEx.Execute(compactCommand, context);
+                    foreach (var node in nodes)
+                    {
+                        var database = await GetDatabase(node, store.Database);
+                        database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = d;
+                    }
+                }
+                else
+                {
+                    var database = await GetDatabase(store.Database);
+                    database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = d;
                 }
 
-                await t;
+                var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(settings));
+                operation.WaitForCompletion();
+
                 if (cluster == false)
                 {
                     Assert.NotNull(exception);
@@ -157,8 +146,6 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(storeOptions))
             {
-
-                //WaitForUserToContinueTheTest(store);
                 // Prepare Server For Test
                 string categoryId;
                 Category c = new Category {Name = $"n0", Description = $"d0"};
@@ -175,26 +162,12 @@ namespace SlowTests.Issues
                 index.Execute(store);
                 Indexes.WaitForIndexing(store);
 
-                string[] indexNames = {index.IndexName};
-                CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = indexNames};
-
-                DocumentDatabase database;
-                if (cluster)
-                {
-                    var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
-                    var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
-                    database = await GetDatabase(responsibleNode, store.Database);
-                }
-                else
-                {
-                    database = await GetDatabase(store.Database);
-                }
-                Assert.NotNull(database);
-
                 // Test
+                CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };
+
                 Exception exception = null;
                 List<Categoroies_Details.Entity> l = null;
-                Task t = new Task(() =>
+                var d = () =>
                 {
                     try
                     {
@@ -209,22 +182,25 @@ namespace SlowTests.Issues
                     {
                         exception = e;
                     }
-                });
-                database.IndexStore.ForTestingPurposesOnly().IndexCompaction = () =>
-                {
-                    t.Start();
                 };
 
-                // var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
-                // await operation.WaitForCompletionAsync();
-                var reqEx = store.GetRequestExecutor(store.Database);
-                using (reqEx.ContextPool.AllocateOperationContext(out var context))
+                if (cluster)
                 {
-                    var compactCommand = new CompactDatabaseOperation(settings).GetCommand(store.Conventions, context);
-                    reqEx.Execute(compactCommand, context);
+                    foreach (var node in nodes)
+                    {
+                        var database = await GetDatabase(node, store.Database);
+                        database.IndexStore.ForTestingPurposesOnly().IndexCompaction = d;
+                    }
+                }
+                else
+                {
+                    var database = await GetDatabase(store.Database);
+                    database.IndexStore.ForTestingPurposesOnly().IndexCompaction = d;
                 }
 
-                await t;
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                await operation.WaitForCompletionAsync();
+
                 if (cluster == false)
                 {
                     Assert.NotNull(exception);
