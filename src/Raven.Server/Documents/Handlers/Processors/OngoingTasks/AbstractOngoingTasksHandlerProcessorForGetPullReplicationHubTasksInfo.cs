@@ -75,12 +75,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         OngoingTasks = currentHandlers.ToList()
                     };
 
-                    await WriteResult(context, response.ToJson());
+                    await WriteResultAsync(context, response.ToJson());
                 }
             }
         }
 
-        internal async Task WriteResult(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
+        internal async Task WriteResultAsync(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
