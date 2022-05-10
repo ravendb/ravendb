@@ -27,6 +27,20 @@
                     </div>
                 </div>
             </div>
+            <div data-bind="visible: topology().isPassive()">
+                <div class="passive-node-info bg-info margin-top">
+                    <div class="padding">
+                        <p class="lead margin-bottom">The running server is in a <strong>Passive State</strong>, it is not part of a cluster yet.</p>
+                        <p>Either one of the following can be done to <strong>Bootstrap a Cluster</strong>:</p>
+                        <ul>
+                            <li>Create a new database</li>
+                            <li>Bootstrap the cluster (see button above)</li>
+                            <li>Add another node (see button above), resulting in both nodes being part of the cluster</li>
+                            <li>Register a license (if not registered yet) in the <a target="_blank" data-bind="attr: { href: aboutViewUrl }">About View</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
                 <div class="panel panel-state">
                     <div data-bind="attr: { 'data-state-text': createStateObservable($root.topology), class: 'state ' + createStateClassObservable($root.topology)() } "></div>
