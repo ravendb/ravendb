@@ -5,6 +5,8 @@ import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import genUtils from "common/generalUtils";
 import moment = require("moment");
 
+//TODO: delete this class and use IndexProgressTooltip
+
 interface IndexProgressProps {
     progress: IndexProgressInfo;
     nodeDetails: IndexNodeInfoDetails;

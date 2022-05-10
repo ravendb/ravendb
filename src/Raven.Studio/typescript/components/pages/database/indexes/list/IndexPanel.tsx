@@ -13,6 +13,7 @@ import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
 import { IndexDistribution } from "./IndexDistribution";
+import { IndexProgressTooltip } from "./IndexProgressTooltip";
 
 interface IndexPanelProps {
     database: database;
@@ -502,69 +503,10 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     </div>
                 </div>
                 <IndexDistribution index={index} />
+                <IndexProgressTooltip />
             </div>
         </div>
     );
 }
 
-interface IndexDistributionProps {
-    index: IndexSharedInfo;
-}
-
-function IndexDistribution(props: IndexDistributionProps) {
-    const { index } = props;
-    return (
-        <div className="index-distribution">
-            <div className="distribution-legend">
-                <div className="top"></div>
-                <div className="node"><i className="icon-node" /> Node </div>
-                <div> <i className="icon-list" /> Entries </div>
-                <div> <i className="icon-warning" /> Errors </div>
-                <div> <i />Status </div>
-            </div>
-            <div className="distribution-summary">
-                <div className="top">
-                    <i className="icon-sum" />
-                </div>
-                <div> </div>
-                <div> 4 802 809 </div>
-                <div> 0 </div>
-                <div></div>
-            </div>
-
-            {index.nodesInfo.map(nodeInfo => {
-                if (nodeInfo.status === "loaded") {
-                    return (
-                        <div className="distribution-item" key={indexNodeInfoKey(nodeInfo)}>
-                            <div className="top shard"><i className="icon-shard"/> Shard #{nodeInfo.location.shardNumber}</div>
-                            <div className="node">{nodeInfo.location.nodeTag}</div>
-                            <div className="entries">{nodeInfo.details.entriesCount}</div>
-                            <div className="errors">{nodeInfo.details.errorCount}</div>
-                            <div className="state up-to-date">
-                                <div className="state-desc">up to date</div>
-                                <div className="state-indicator"><i className="icon-check" /></div>
-                            </div>
-                        </div>
-                    )
-                }
-                return (
-                    <div className="distribution-item loading" key={indexNodeInfoKey(nodeInfo)}>
-                        <div className="top shard"><i className="icon-shard"/> Shard #{nodeInfo.location.shardNumber}</div>
-                        <div className="node">{nodeInfo.location.nodeTag}</div>
-                        <div className="entries"></div>
-                        <div className="errors"></div>
-                        <div className="state up-to-date">
-                            <div className="state-desc">up to date</div>
-                            <div className="state-indicator"><i className="icon-check" /></div>
-                        </div>
-                    </div>
-                )
-            })}
-        </div>
-    )
-}
-
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;
-
-const indexNodeInfoKey = (nodeInfo: IndexNodeInfo) =>
-    "$" + nodeInfo.location.shardNumber + "@" + nodeInfo.location.nodeTag;

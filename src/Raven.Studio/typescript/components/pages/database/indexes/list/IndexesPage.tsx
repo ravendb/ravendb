@@ -35,9 +35,6 @@ import useInterval from "hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 
 import "./IndexesPage.scss";
-const shardImg = require("Content/img/sharding/shard.svg");
-const nodeImg = require("Content/img/node.svg");
-
 
 interface IndexesPageProps {
     database: database;
