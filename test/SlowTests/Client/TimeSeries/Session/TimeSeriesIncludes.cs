@@ -12,6 +12,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -125,6 +126,121 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.NotNull(google);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SessionLoadWithIncludeTimeSeriesRanges(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Company = "companies/apple" }, "orders/1-A");
+                    session.Store(new Company { Name = "apple" }, "companies/apple");
+                    session.Store(new Company { Name = "facebook" }, "companies/facebook");
+                    session.Store(new Company { Name = "amazon" }, "companies/amazon");
+                    session.Store(new Company { Name = "google" }, "companies/google");
+
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "companies/apple");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/apple");
+                    tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/google");
+                    
+                    session.SaveChanges();
+                }
+
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    Assert.NotEqual(Sharding.GetShardNumber(store, "companies/apple"), Sharding.GetShardNumber(store, "companies/google"));
+                }
+
+                using (var session = store.OpenAsyncSession())
+                using(var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    //get 3 points so they'll get saved in session
+                    await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(from: baseline, to: baseline);
+                    await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(from: baseline.AddMinutes(5), to: baseline.AddMinutes(5));
+                    await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(from: baseline.AddMinutes(10), to: baseline.AddMinutes(10));
+
+                    //ask for the entire range - will call MultipleTimeSeriesRanges operation
+                    await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(from: baseline, to: baseline.AddMinutes(10), i => i.IncludeDocument().IncludeTags());
+
+                    var inMemoryDocumentSession = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("orders/1-A"));
+                    Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/apple"));
+                    Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/google"));
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task MissingIncludesTimeSeriesRanges(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Company = "companies/apple" }, "orders/1-A");
+                    session.Store(new Company { Name = "apple" }, "companies/apple");
+                    session.Store(new Company { Name = "facebook" }, "companies/facebook");
+
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "companies/apple");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/apple");
+                    tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/google");
+
+                    var tsf2 = session.TimeSeriesFor("orders/1-A", "Heartrate2");
+                    tsf2.Append(baseline, new[] { 67d }, "companies/facebook");
+                    tsf2.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/facebook");
+                    tsf2.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/amazon");
+
+                    session.SaveChanges();
+                }
+
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    Assert.NotEqual(Sharding.GetShardNumber(store, "companies/apple"), Sharding.GetShardNumber(store, "companies/google"));
+                    Assert.NotEqual(Sharding.GetShardNumber(store, "companies/facebook"), Sharding.GetShardNumber(store, "companies/amazon"));
+                }
+
+                using (var session = store.OpenAsyncSession())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    
+                    var reqRanges = new List<TimeSeriesRange>()
+                    {
+                        new TimeSeriesRange() {From = null, To = null, Name = "Heartrate"},
+                        new TimeSeriesRange() {From = null, To = null, Name = "Heartrate2"}
+                    };
+
+                    var result = await store.Operations.SendAsync(new GetMultipleTimeSeriesOperation("orders/1-A", reqRanges, 0, int.MaxValue,
+                        includes: i => i.IncludeDocument().IncludeTags()));
+
+                    Assert.True(result.Values.TryGetValue("Heartrate", out var _));
+                    Assert.Equal(1, result.Values["Heartrate"].Count);
+                    Assert.Equal(1, result.Values["Heartrate"][0].MissingIncludes.Count);
+                    Assert.Contains("companies/google", result.Values["Heartrate"][0].MissingIncludes);
+
+                    Assert.True(result.Values.TryGetValue("Heartrate2", out var _));
+                    Assert.Equal(1, result.Values["Heartrate2"].Count);
+                    Assert.Equal(1, result.Values["Heartrate2"][0].MissingIncludes.Count);
+                    Assert.Contains("companies/amazon", result.Values["Heartrate2"][0].MissingIncludes);
+
+                    await session.StoreAsync(new Company { Name = "amazon" }, "companies/amazon");
+                    await session.StoreAsync(new Company { Name = "google" }, "companies/google");
+                    await session.SaveChangesAsync();
+
+                    var result2 = await store.Operations.SendAsync(new GetMultipleTimeSeriesOperation( "orders/1-A", reqRanges, 0, int.MaxValue,
+                        includes: i => i.IncludeDocument().IncludeTags()));
+
+                    Assert.Equal(0, result2.Values["Heartrate"][0].MissingIncludes.Count);
+                    Assert.Equal(0, result2.Values["Heartrate2"][0].MissingIncludes.Count);
                 }
             }
         }

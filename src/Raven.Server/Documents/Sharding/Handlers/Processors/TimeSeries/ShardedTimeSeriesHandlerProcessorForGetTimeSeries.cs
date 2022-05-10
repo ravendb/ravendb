@@ -69,13 +69,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 rangeResult.Includes ??= context.ReadObject(new DynamicJsonValue(), includesDocId);
 
                 var mods = new DynamicJsonValue(rangeResult.Includes);
-                foreach (var data in result.Result.Documents)
+                foreach (var (id, data) in result.Result.Documents)
                 {
-                    if (data.GetMetadata().TryGetId(out string id))
-                    {
-                        rangeResult.MissingIncludes.Remove(id);
-                        mods[id] = data;
-                    }
+                    rangeResult.MissingIncludes.Remove(id);
+                    mods[id] = data;
                 }
 
                 rangeResult.Includes.Modifications = mods;

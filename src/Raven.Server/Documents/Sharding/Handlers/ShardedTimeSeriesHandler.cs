@@ -21,6 +21,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/timeseries/ranges", "GET")]
+        public async Task ReadRanges()
+        {
+            using (var processor = new ShardedTimeSeriesHandlerProcessorForGetTimeSeriesRanges(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/admin/timeseries/config", "POST")]
         public async Task PostTimeSeriesConfiguration()
         {

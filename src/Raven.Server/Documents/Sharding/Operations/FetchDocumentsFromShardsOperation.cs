@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         public GetShardedDocumentsResult CombineResults(Memory<GetDocumentsResult> results)
         {
             var span = results.Span;
-            var docs = new List<BlittableJsonReaderObject>();
+            var docs = new Dictionary<string, BlittableJsonReaderObject>();
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -79,7 +80,8 @@ namespace Raven.Server.Documents.Sharding.Operations
                     if(cmdResult == null)
                         continue;
 
-                    docs.Add(cmdResult.Clone(_context));
+                    var docId = cmdResult.GetMetadata().GetId();
+                    docs.Add(docId, cmdResult.Clone(_context));
                 }
 
                 if (cmdCounterIncludes != null)
@@ -116,7 +118,7 @@ namespace Raven.Server.Documents.Sharding.Operations
     public class GetShardedDocumentsResult
     {
         public List<BlittableJsonReaderObject> Includes;
-        public List<BlittableJsonReaderObject> Documents;
+        public Dictionary<string, BlittableJsonReaderObject> Documents;
 
         public HashSet<string> MissingIncludes;
     }

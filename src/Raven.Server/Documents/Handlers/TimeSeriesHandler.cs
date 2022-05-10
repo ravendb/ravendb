@@ -1,22 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
-using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Sparrow.Json;
-using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -30,67 +23,12 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
             }
         }
-
-        internal static List<string> GetTimesSeriesNames(Document document)
-        {
-            var timeSeriesNames = new List<string>();
-            if (document.TryGetMetadata(out var metadata))
-            {
-                if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeries) && timeSeries != null)
-                {
-                    foreach (object name in timeSeries)
-                    {
-                        if (name == null)
-                            continue;
-
-                        if (name is string || name is LazyStringValue || name is LazyCompressedStringValue)
-                        {
-                            timeSeriesNames.Add(name.ToString());
-                        }
-                    }
-                }
-            }
-
-            return timeSeriesNames;
-        }
-
+        
         [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ReadRanges()
         {
-            var documentId = GetStringQueryString("docId");
-            var names = GetStringValuesQueryString("name");
-            var fromList = GetStringValuesQueryString("from");
-            var toList = GetStringValuesQueryString("to");
-
-            var start = GetStart();
-            var pageSize = GetPageSize();
-
-            var includeDoc = GetBoolValueQueryString("includeDocument", required: false) ?? false;
-            var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
-            var returnFullResults = GetBoolValueQueryString("full", required: false) ?? false;
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var includesCommand = includeDoc || includeTags
-                    ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
-                    : null;
-
-                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includesCommand, returnFullResults);
-
-                var actualEtag = CombineHashesFromMultipleRanges(ranges);
-
-                var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-                if (etag == actualEtag)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
-
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-
-                await WriteResponse(context, documentId, ranges, Database.DatabaseShutdown);
-            }
+            using (var processor = new TimeSeriesHandlerProcessorForGetTimeSeriesRanges(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -98,204 +36,6 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var processor = new TimeSeriesHandlerProcessorForGetTimeSeries(this))
                 await processor.ExecuteAsync();
-        }
-
-        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize,
-            IncludeDocumentsDuringTimeSeriesLoadingCommand includes, bool returnFullResult = false)
-        {
-            if (fromList.Count == 0)
-                throw new ArgumentException("Length of query string values 'from' must be greater than zero");
-
-            if (fromList.Count != toList.Count)
-                throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
-
-            if (fromList.Count != names.Count)
-                throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Argument count miss match on document '{documentId}'. " +
-                                                    $"Received {names.Count} 'name' arguments, and {fromList.Count} 'from'/'to' arguments.");
-
-            var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
-
-            for (int i = 0; i < fromList.Count; i++)
-            {
-                var name = names[i];
-
-                if (string.IsNullOrEmpty(name))
-                    throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
-                                                        $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
-
-                var from = string.IsNullOrEmpty(fromList[i]) ? DateTime.MinValue : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(fromList[i], name);
-                var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(toList[i], name);
-
-                bool incrementalTimeSeries = TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(name);
-
-                var rangeResult = incrementalTimeSeries ?
-                    TimeSeriesHandlerProcessorForGetTimeSeries.GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes, returnFullResult) :
-                    TimeSeriesHandlerProcessorForGetTimeSeries.GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes);
-
-                if (rangeResult == null)
-                {
-                    Debug.Assert(pageSize <= 0, "Page size must be zero or less here");
-                    return rangeResultDictionary;
-                }
-                if (rangeResultDictionary.TryGetValue(name, out var list) == false)
-                {
-                    rangeResultDictionary[name] = new List<TimeSeriesRangeResult> { rangeResult };
-                }
-                else
-                {
-                    list.Add(rangeResult);
-                }
-
-                if (pageSize <= 0)
-                    break;
-            }
-
-            return rangeResultDictionary;
-        }
-
-        private static unsafe string CombineHashesFromMultipleRanges(Dictionary<string, List<TimeSeriesRangeResult>> ranges)
-        {
-            // init hash
-            var size = Sodium.crypto_generichash_bytes();
-            Debug.Assert((int)size == 32);
-            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
-            var state = stackalloc byte[cryptoGenerichashStatebytes];
-            if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
-                ComputeHttpEtags.ThrowFailToInitHash();
-
-            ComputeHttpEtags.HashNumber(state, ranges.Count);
-
-            foreach (var kvp in ranges)
-            {
-                foreach (var range in kvp.Value)
-                {
-                    ComputeHttpEtags.HashChangeVector(state, range.Hash);
-                }
-            }
-
-            return ComputeHttpEtags.FinalizeHash(size, state);
-        }
-
-        private async Task WriteResponse(DocumentsOperationContext context, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> ranges, CancellationToken token)
-        {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                {
-                    writer.WritePropertyName(nameof(TimeSeriesDetails.Id));
-                    writer.WriteString(documentId);
-
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
-                    await WriteTimeSeriesRangeResultsAsync(context, writer, documentId, ranges, token);
-                }
-                writer.WriteEndObject();
-            }
-        }
-
-        internal static async Task WriteTimeSeriesRangeResultsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary, CancellationToken token)
-        {
-            if (dictionary == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
-            writer.WriteStartObject();
-
-            bool first = true;
-            foreach (var (name, ranges) in dictionary)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WritePropertyName(name);
-
-                writer.WriteStartArray();
-
-                (long Count, DateTime Start, DateTime End) stats = default;
-                if (documentId != null)
-                {
-                    Debug.Assert(context != null);
-                    stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
-                }
-
-                for (var i = 0; i < ranges.Count; i++)
-                {
-                    long? totalCount = null;
-
-                    if (i > 0)
-                        writer.WriteComma();
-
-                    if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
-                    {
-                        totalCount = stats.Count;
-                    }
-
-                    TimeSeriesHandlerProcessorForGetTimeSeries.WriteRange(writer, ranges[i], totalCount);
-
-                    await writer.MaybeFlushAsync(token);
-                }
-                writer.WriteEndArray();
-            }
-
-            writer.WriteEndObject();
-        }
-
-        internal static int WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
-        {
-            if (dictionary == null)
-            {
-                writer.WriteNull();
-                return 0;
-            }
-
-            writer.WriteStartObject();
-
-            int size = 0;
-            bool first = true;
-            foreach (var (name, ranges) in dictionary)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WritePropertyName(name);
-                size += name.Length;
-
-                writer.WriteStartArray();
-
-                (long Count, DateTime Start, DateTime End) stats = default;
-                if (documentId != null)
-                {
-                    Debug.Assert(context != null);
-                    stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
-                }
-
-                for (var i = 0; i < ranges.Count; i++)
-                {
-                    long? totalCount = null;
-
-                    if (i > 0)
-                        writer.WriteComma();
-
-                    if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
-                    {
-                        totalCount = stats.Count;
-                    }
-
-                    size += TimeSeriesHandlerProcessorForGetTimeSeries.WriteRange(writer, ranges[i], totalCount);
-                }
-
-                writer.WriteEndArray();
-            }
-
-            writer.WriteEndObject();
-
-            return size;
         }
 
         [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]

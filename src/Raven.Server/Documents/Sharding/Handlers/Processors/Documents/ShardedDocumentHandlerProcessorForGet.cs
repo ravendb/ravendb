@@ -60,7 +60,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         var result = new DocumentsByIdResult<BlittableJsonReaderObject>
         {
             Etag = shardedReadResult.CombinedEtag,
-            Documents = shardedReadResult.Result?.Documents,
+            Documents = shardedReadResult.Result?.Documents.Values.ToList(),
             Includes = shardedReadResult.Result?.Includes,
             MissingIncludes = shardedReadResult.Result?.MissingIncludes,
             StatusCode = (HttpStatusCode)shardedReadResult.StatusCode
@@ -72,7 +72,7 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, RequestHandler, missingIncludeIdsByShard, includePaths: null, etag: null, metadataOnly: metadataOnly);
             var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, CancellationToken);
 
-            foreach (var missing in missingResult.Result.Documents)
+            foreach (var (id, missing) in missingResult.Result.Documents)
             {
                 if (missing == null)
                     continue;
