@@ -298,7 +298,10 @@ module.exports = (env, args) => {
                 durandal: path.resolve(__dirname, 'node_modules/durandal/js'),
                 jquery: path.resolve(__dirname, 'node_modules/jquery/dist/jquery'),
                 plugins: path.resolve(__dirname, 'node_modules/durandal/js/plugins'),
-                jwerty: path.resolve(__dirname, 'node_modules/jwerty-globals-fixed/jwerty')
+                jwerty: path.resolve(__dirname, 'node_modules/jwerty-globals-fixed/jwerty'),
+
+
+                hooks: path.resolve(__dirname, 'typescript/components/hooks'),
             }
         }
     };

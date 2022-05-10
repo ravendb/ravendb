@@ -1,16 +1,24 @@
 import { IndexesPage } from "./IndexesPage";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import React from "react";
-import { withStorybookContexts } from "../../../../test/storybookTestUtils";
-import { mockServices } from "../../../../test/mocks/MockServices";
+import { withStorybookContexts } from "../../../../../test/storybookTestUtils";
+import { mockServices } from "../../../../../test/mocks/MockServices";
 import accessManager from "common/shell/accessManager";
-import { DatabasesStubs } from "../../../../test/stubs/DatabasesStubs";
+import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+
+function indexesHolder(storyFn: any) {
+    return (
+        <div className="indexes content-margin no-transition absolute-fill">
+            {storyFn()}
+        </div>
+    );
+}
 
 export default {
     title: "Indexes page",
     component: IndexesPage,
-    decorators: [withStorybookContexts],
+    decorators: [withStorybookContexts, indexesHolder],
 } as ComponentMeta<typeof IndexesPage>;
 
 export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
@@ -25,9 +33,7 @@ export const SampleDataSingleNode: ComponentStory<typeof IndexesPage> = () => {
     indexesService.withGetProgress();
 
     return (
-        <div className="indexes content-margin no-transition absolute-fill">
-            <IndexesPage database={db} />
-        </div>
+        <IndexesPage database={db} />
     );
 };
 
@@ -43,9 +49,7 @@ export const SampleDataCluster: ComponentStory<typeof IndexesPage> = () => {
     indexesService.withGetProgress();
 
     return (
-        <div className="indexes content-margin no-transition absolute-fill">
-            <IndexesPage database={db} />
-        </div>
+        <IndexesPage database={db} />
     );
 };
 
@@ -61,8 +65,6 @@ export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
     indexesService.withGetProgress();
 
     return (
-        <div className="indexes content-margin no-transition absolute-fill">
-            <IndexesPage database={db} />
-        </div>
+        <IndexesPage database={db} />
     );
 };

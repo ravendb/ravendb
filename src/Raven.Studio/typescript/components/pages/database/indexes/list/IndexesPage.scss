@@ -1,10 +1,9 @@
 @use 'sass:math';
-@use "src/variables";
-@use "src/colors";
-@use "src/sizes";
+@use "Content/scss/variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
 
 .index-tooltip {
-    font-family: 'BR Cobane';
     position: absolute;
     background-color: colors.$gray-700;
     border-radius: sizes.$gutter-xs;
@@ -137,8 +136,6 @@
 }
 
 .indexes-list {
-    font-family: 'BR Cobane';
-
     .index-item {
         background-color: colors.$gray-900;
         margin-bottom: sizes.$gutter;

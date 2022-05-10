@@ -58,7 +58,8 @@
           "knockout": ["node_modules/@types/knockout"],
           "endpoints": ["typings/server/endpoints"],
           "configuration": ["typings/server/configuration"],
-          "node-forge": ["typings/custom_node-forge.d.ts"]
+          "node-forge": ["typings/custom_node-forge.d.ts"],
+          "hooks/*": ["typescript/components/hooks/*"]
       },
     "jsx": "react"
   },

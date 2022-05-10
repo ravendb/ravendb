@@ -1,10 +1,10 @@
-import { IndexCollectionProgress, IndexNodeInfo, IndexProgressInfo, IndexSharedInfo } from "../../../models/indexes";
+import { IndexCollectionProgress, IndexNodeInfo, IndexProgressInfo, IndexSharedInfo } from "../../../../models/indexes";
 import { Reducer } from "react";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { produce } from "immer";
-import { databaseLocationComparator } from "../../../utils/common";
+import { databaseLocationComparator } from "../../../../utils/common";
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 import { WritableDraft } from "immer/dist/types/types-external";
 

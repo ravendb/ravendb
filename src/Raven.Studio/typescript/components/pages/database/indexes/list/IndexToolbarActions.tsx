@@ -1,7 +1,7 @@
 ﻿import React, { useCallback } from "react";
-import { useAppUrls } from "../../../hooks/useAppUrls";
+import { useAppUrls } from "hooks/useAppUrls";
 import classNames from "classnames";
-import { withPreventDefault } from "../../../utils/common";
+import { withPreventDefault } from "../../../../utils/common";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 
 interface IndexToolbarActionProps {

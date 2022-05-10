@@ -1,8 +1,8 @@
-import { rtlRender } from "../../../../test/rtlTestUtils";
-import { DatabasesStubs } from "../../../../test/stubs/DatabasesStubs";
+import { rtlRender } from "../../../../../test/rtlTestUtils";
+import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "../../../../test/mocks/MockServices";
+import { mockServices } from "../../../../../test/mocks/MockServices";
 import { IndexesPage } from "./IndexesPage";
 import React from "react";
 
@@ -38,7 +38,7 @@ describe("IndexesPage", function () {
         indexesService.withGetSampleStats();
         indexesService.withGetProgress();
 
-        const { screen, fireClick } = render();
+        const { screen } = render();
 
         await screen.findByText("Orders/ByCompany");
         await screen.findByText("ReplacementOf/Orders/ByCompany");
