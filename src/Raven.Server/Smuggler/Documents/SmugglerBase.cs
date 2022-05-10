@@ -11,6 +11,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
