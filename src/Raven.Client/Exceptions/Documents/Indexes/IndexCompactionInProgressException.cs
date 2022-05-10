@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Client.Exceptions.Database
+namespace Raven.Client.Exceptions.Documents.Indexes
 {
     internal class IndexCompactionInProgressException : RavenException
     {
