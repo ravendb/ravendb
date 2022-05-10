@@ -10,6 +10,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
@@ -175,16 +176,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Create()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                var options = JsonDeserializationServer.SubscriptionCreationParams(json);
-                var id = GetLongQueryString("id", required: false);
-                var disabled = options.Disabled;
-
-                await CreateInternal(json, options, context, id, disabled);
-            }
+            using (var processor = new SubscriptionsHandlerProcessorForPutSubscription(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/subscriptions", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
@@ -527,14 +520,14 @@ namespace Raven.Server.Documents.Handlers
                         if (id == null)
                         {
                             // subscription with such name doesn't exist, add new subscription
-                            await CreateInternal(json, options, context, id: null, disabled: false);
+                            await CreateInternalAsync(json, options, context, id: null, disabled: false);
                             return;
                         }
 
                         if (options.Name == null)
                         {
                             // subscription with such id doesn't exist, add new subscription using id
-                            await CreateInternal(json, options, context, id, disabled: false);
+                            await CreateInternalAsync(json, options, context, id, disabled: false);
                             return;
                         }
 
@@ -548,7 +541,7 @@ namespace Raven.Server.Documents.Handlers
                         catch (SubscriptionDoesNotExistException)
                         {
                             // subscription with such id or name doesn't exist, add new subscription using both name and id
-                            await CreateInternal(json, options, context, id, disabled: false);
+                            await CreateInternalAsync(json, options, context, id, disabled: false);
                             return;
                         }
                     }
@@ -573,7 +566,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                await CreateInternal(json, options, context, id, disabled: false);
+                await CreateInternalAsync(json, options, context, id, disabled: false);
             }
         }
 
@@ -587,7 +580,7 @@ namespace Raven.Server.Documents.Handlers
             return gotChanges;
         }
 
-        private async Task CreateInternal(BlittableJsonReaderObject bjro, SubscriptionCreationOptions options, DocumentsOperationContext context, long? id, bool? disabled)
+        public async Task CreateInternalAsync(BlittableJsonReaderObject bjro, SubscriptionCreationOptions options, DocumentsOperationContext context, long? id, bool? disabled)
         {
             if (TrafficWatchManager.HasRegisteredClients)
                 AddStringToHttpContext(bjro.ToString(), TrafficWatchChangeType.Subscriptions);

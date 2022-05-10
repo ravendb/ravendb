@@ -8,6 +8,8 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.ShardedTcpHandlers;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Subscriptions;
@@ -30,19 +32,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscriptions", "PUT")]
         public async Task Create()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(json.ToString(), TrafficWatchChangeType.Subscriptions);
-
-                var options = JsonDeserializationServer.SubscriptionCreationParams(json);
-                var id = GetLongQueryString("id", required: false);
-                bool? disabled = GetBoolValueQueryString("disabled", required: false);
-
-                await CreateSubscriptionInternal(id, disabled, options, context);
-            }
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForPutSubscription(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/subscriptions/update", "POST")]
@@ -80,14 +71,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         if (id == null)
                         {
                             // subscription with such name doesn't exist, add new subscription
-                            await CreateSubscriptionInternal(id: null, disabled: false, options, context);
+                            await CreateSubscriptionInternalAsync(json, id: null, disabled: false, options, context);
                             return;
                         }
 
                         if (options.Name == null)
                         {
                             // subscription with such id doesn't exist, add new subscription using id
-                            await CreateSubscriptionInternal(id, disabled: false, options, context);
+                            await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
                             return;
                         }
 
@@ -101,7 +92,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         catch (SubscriptionDoesNotExistException)
                         {
                             // subscription with such id or name doesn't exist, add new subscription using both name and id
-                            await CreateSubscriptionInternal(id, disabled: false, options, context);
+                            await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
                             return;
                         }
                     }
@@ -126,12 +117,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     return;
                 }
 
-                await CreateSubscriptionInternal(id, disabled: false, options, context);
+                await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
             }
         }
-
-        private async Task CreateSubscriptionInternal(long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context)
+        
+        public async Task CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context)
         {
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext(bjro.ToString(), TrafficWatchChangeType.Subscriptions);
+
             var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
             var changeVectorValidationResult = await TryValidateChangeVector(options, sub);
 
