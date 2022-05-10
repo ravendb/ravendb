@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -13,7 +12,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config;
@@ -37,9 +35,9 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_Three_Nodes()
     {
         DoNotReuseServer();
-        
+
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
-        Debug.Assert(license != null, nameof(license) + " != null");
+        Assert.True(license != null, nameof(license) + " != null");
         var licenseObj = JsonConvert.DeserializeObject<License>(license);
 
         byte[] selfSignedTestCertificate = CertificateUtils.CreateSelfSignedTestCertificate("localhost", "RavenTestsServer");
@@ -56,14 +54,13 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             License = licenseObj,
             NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
             {
-                ["A"] = new() {Port = 443, TcpPort = 38887, Addresses = new List<string> {"127.0.0.1"}},
-                ["B"] = new() {Port = 448, TcpPort = 38888, Addresses = new List<string> {"127.0.0.1"}},
-                ["C"] = new() {Port = 446, TcpPort = 38889, Addresses = new List<string> {"127.0.0.1"}}
+                ["A"] = new() { Port = 443, TcpPort = 38887, Addresses = new List<string> { "127.0.0.1" } },
+                ["B"] = new() { Port = 448, TcpPort = 38888, Addresses = new List<string> { "127.0.0.1" } },
+                ["C"] = new() { Port = 446, TcpPort = 38889, Addresses = new List<string> { "127.0.0.1" } }
             }
         };
-        
-        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
+        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
         var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
         {
@@ -100,7 +97,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         var url2 = otherNodesUrls["B"];
         var url3 = otherNodesUrls["C"];
         const int numberOfExpectedNodes = 3;
-        
+
         using var server = GetNewServer(new ServerCreationOptions
         {
             CustomSettings = new ConcurrentDictionary<string, string>
@@ -114,7 +111,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
             }
         });
-        
+
         using var __ = GetNewServer(new ServerCreationOptions
         {
             CustomSettings = new ConcurrentDictionary<string, string>
@@ -122,13 +119,13 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempFileName,
                 [RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = letsEncryptEmail,
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = certPassword,
-                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] =   url2,
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = url2,
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
             }
         });
-        
+
         using var ___ = GetNewServer(new ServerCreationOptions
         {
             CustomSettings = new ConcurrentDictionary<string, string>
@@ -136,19 +133,19 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempFileName,
                 [RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = letsEncryptEmail,
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = certPassword,
-                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] =   url3,
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = url3,
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url3,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
             }
         });
-        
+
         var dbName = GetDatabaseName();
         using (var store = new DocumentStore
-               {
-                   Urls = new[] {url1}, 
-                   Certificate = serverCert,
-               }.Initialize())
+        {
+            Urls = new[] { url1 },
+            Certificate = serverCert,
+        }.Initialize())
         {
             {
                 DatabaseRecord databaseRecord = new(dbName);
@@ -161,28 +158,28 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                     await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(url2), ctx);
                     await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(url3), ctx);
                 }
-                
+
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(dbName, "B"));
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(dbName, "C"));
             }
             using (var store1 = new DocumentStore
-                   {
-                       Urls = new [] { url1 },
-                       Certificate = clientCert,
-                       Database = dbName
-                   }.Initialize())
+            {
+                Urls = new[] { url1 },
+                Certificate = clientCert,
+                Database = dbName
+            }.Initialize())
             using (var store2 = new DocumentStore
-                   {
-                       Urls = new [] { url2 },
-                       Certificate = clientCert,
-                       Database = dbName
-                   }.Initialize())
+            {
+                Urls = new[] { url2 },
+                Certificate = clientCert,
+                Database = dbName
+            }.Initialize())
             using (var store3 = new DocumentStore
-                   {
-                       Urls = new [] { url3 },
-                       Certificate = clientCert,
-                       Database = dbName
-                   }.Initialize())
+            {
+                Urls = new[] { url3 },
+                Certificate = clientCert,
+                Database = dbName
+            }.Initialize())
             {
                 string userId;
                 using (var session = store2.OpenAsyncSession())
@@ -193,12 +190,12 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                     await session.SaveChangesAsync();
                 }
-            
+
                 using (var session = store1.OpenAsyncSession())
                 {
                     Assert.NotNull(await session.LoadAsync<User>(userId));
                 }
-            
+
                 using (var session = store3.OpenAsyncSession())
                 {
                     Assert.NotNull(await session.LoadAsync<User>(userId));
@@ -208,14 +205,14 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         }
 
     }
-    
+
     [LicenseRequiredFact]
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_One_Node()
     {
         DoNotReuseServer();
-        
+
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
-        Debug.Assert(license != null, nameof(license) + " != null");
+        Assert.True(license != null, nameof(license) + " != null");
         var licenseObj = JsonConvert.DeserializeObject<License>(license);
 
         byte[] selfSignedTestCertificate = CertificateUtils.CreateSelfSignedTestCertificate("localhost", "RavenTestsServer");
@@ -232,11 +229,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             License = licenseObj,
             NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
             {
-                ["A"] = new() {Port = 443, TcpPort = 38887, Addresses = new List<string> {"127.0.0.1"}},
+                ["A"] = new() { Port = 443, TcpPort = 38887, Addresses = new List<string> { "127.0.0.1" } },
             }
         };
-        
-        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
+
+        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
 
         var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
@@ -272,7 +269,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         var tempFileName = GetTempFileName();
         await File.WriteAllBytesAsync(tempFileName, serverCertBytes);
         const int numberOfExpectedNodes = 1;
-        
+
         using var server = GetNewServer(new ServerCreationOptions
         {
             CustomSettings = new ConcurrentDictionary<string, string>
@@ -286,13 +283,13 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
             }
         });
-        
+
         var dbName = GetDatabaseName();
         using (var store = new DocumentStore
-               {
-                   Urls = new[] {url1}, 
-                   Certificate = serverCert,
-               }.Initialize())
+        {
+            Urls = new[] { url1 },
+            Certificate = serverCert,
+        }.Initialize())
         {
             {
                 DatabaseRecord databaseRecord = new(dbName);
@@ -301,13 +298,13 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 await store.Maintenance.Server.SendAsync(new PutClientCertificateOperation("client certificate", clientCert, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin));
             }
             using (var store1 = new DocumentStore
-                   {
-                       Urls = new [] { url1 },
-                       Certificate = clientCert,
-                       Database = dbName
-                   }.Initialize())
+            {
+                Urls = new[] { url1 },
+                Certificate = clientCert,
+                Database = dbName
+            }.Initialize())
 
-         Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
+                Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
         }
 
     }
@@ -318,15 +315,15 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         DoNotReuseServer();
 
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
-        Debug.Assert(license != null, nameof(license) + " != null");
+        Assert.True(license != null, nameof(license) + " != null");
         var licenseObj = JsonConvert.DeserializeObject<License>(license);
 
         const string domain = "rvnTest";
         const string rootDomain = "development.run";
         const string publicTcpServerUrl1 = $"tcp://a.{domain}.{rootDomain}:38879";
         const string tcpServerUrl1 = "tcp://127.0.0.1:38879";
-        
-        
+
+
         var setupInfo = new SetupInfo
         {
             Environment = StudioConfiguration.StudioEnvironment.None,
@@ -340,7 +337,8 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {"A", new SetupInfo.NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
             }
         };
-        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
+
+        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
         var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
             {
@@ -354,10 +352,10 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                     Output.WriteLine(tuple.Exception.Message);
                 }
             })
-            {
-                Processed = 0,
-                Total = 4
-            },
+        {
+            Processed = 0,
+            Total = 4
+        },
             CancellationToken.None);
 
         X509Certificate2 serverCert;
@@ -376,7 +374,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 out var _,
                 out _,
                 out var _);
-            
+
         }
         catch (Exception e)
         {
@@ -392,8 +390,8 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
         var tempFileName = GetTempFileName();
         await File.WriteAllBytesAsync(tempFileName, serverCertBytes);
-        
-        
+
+
         const int numberOfExpectedNodes = 1;
 
         using var server = GetNewServer(new ServerCreationOptions
@@ -416,10 +414,10 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         var dbName = GetDatabaseName();
 
         using (var store = new DocumentStore
-               {
-                   Urls = new [] { url1 },
-                   Certificate = serverCert
-               }.Initialize())
+        {
+            Urls = new[] { url1 },
+            Certificate = serverCert
+        }.Initialize())
         {
             DatabaseRecord databaseRecord = new(dbName);
             CreateDatabaseOperation createDatabaseOperation = new(databaseRecord);
@@ -427,24 +425,24 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             await store.Maintenance.Server.SendAsync(new PutClientCertificateOperation("client certificate", clientCert, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin));
 
         }
-        
-        using (var store1 = new DocumentStore
-               {
-                   Urls = new [] { url1 },
-                   Certificate = clientCert,
-                   Database = dbName
-               }.Initialize())
 
-        Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
+        using (var store1 = new DocumentStore
+        {
+            Urls = new[] { url1 },
+            Certificate = clientCert,
+            Database = dbName
+        }.Initialize())
+
+            Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
     }
-    
+
     [LicenseRequiredFact]
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_Three_Nodes()
     {
         DoNotReuseServer();
 
         var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
-        Debug.Assert(license != null, nameof(license) + " != null");
+        Assert.True(license != null, nameof(license) + " != null");
         var licenseObj = JsonConvert.DeserializeObject<License>(license);
 
         const string domain = "rvnTest";
@@ -457,8 +455,8 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         const string tcpServerUrl1 = "tcp://127.0.0.1:38879";
         const string tcpServerUrl2 = "tcp://127.0.0.1:38880";
         const string tcpServerUrl3 = "tcp://127.0.0.1:38888";
-        
-        
+
+
         var setupInfo = new SetupInfo
         {
             Environment = StudioConfiguration.StudioEnvironment.None,
@@ -474,7 +472,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {"C", new SetupInfo.NodeInfo {Port = 446, TcpPort = 38888, Addresses = new List<string> {"127.0.0.1"}}}
             }
         };
-        Debug.Assert(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
+        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
 
         var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
             {
@@ -488,10 +486,10 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                     Output.WriteLine(tuple.Exception.Message);
                 }
             })
-            {
-                Processed = 0,
-                Total = 4
-            },
+        {
+            Processed = 0,
+            Total = 4
+        },
             CancellationToken.None);
 
         X509Certificate2 serverCert;
@@ -511,7 +509,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 out var _,
                 out otherNodesUrls,
                 out var _);
-            
+
         }
         catch (Exception e)
         {
@@ -527,11 +525,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
         var tempFileName = GetTempFileName();
         await File.WriteAllBytesAsync(tempFileName, serverCertBytes);
-        
+
         var url2 = otherNodesUrls["B"];
         var url3 = otherNodesUrls["C"];
 
-        
+
         const int numberOfExpectedNodes = 3;
 
         using var server = GetNewServer(new ServerCreationOptions
@@ -558,7 +556,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempFileName,
                 [RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = letsEncryptEmail,
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = certPassword,
-                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] =   url2,
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = url2,
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl2,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
@@ -566,7 +564,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = publicTcpServerUrl2
             }
         });
-        
+
         using var ___ = GetNewServer(new ServerCreationOptions
         {
             CustomSettings = new ConcurrentDictionary<string, string>
@@ -574,7 +572,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempFileName,
                 [RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = letsEncryptEmail,
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = certPassword,
-                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] =   url3,
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = url3,
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl3,
                 [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                 [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
@@ -586,10 +584,10 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         var dbName = GetDatabaseName();
 
         using (var store = new DocumentStore
-               {
-                   Urls = new [] { url1 },
-                   Certificate = serverCert
-               }.Initialize())
+        {
+            Urls = new[] { url1 },
+            Certificate = serverCert
+        }.Initialize())
         {
             DatabaseRecord databaseRecord = new(dbName);
             CreateDatabaseOperation createDatabaseOperation = new(databaseRecord);
@@ -602,29 +600,29 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(url2), ctx);
                 await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(url3), ctx);
             }
-            
+
             await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(dbName, "B"));
             await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(dbName, "C"));
         }
-        
+
         using (var store1 = new DocumentStore
-               {
-                   Urls = new [] { url1 },
-                   Certificate = clientCert,
-                   Database = dbName
-               }.Initialize())
+        {
+            Urls = new[] { url1 },
+            Certificate = clientCert,
+            Database = dbName
+        }.Initialize())
         using (var store2 = new DocumentStore
-               {
-                   Urls = new [] { url2 },
-                   Certificate = clientCert,
-                   Database = dbName
-               }.Initialize())
+        {
+            Urls = new[] { url2 },
+            Certificate = clientCert,
+            Database = dbName
+        }.Initialize())
         using (var store3 = new DocumentStore
-               {
-                   Urls = new [] { url3 },
-                   Certificate = clientCert,
-                   Database = dbName
-               }.Initialize())
+        {
+            Urls = new[] { url3 },
+            Certificate = clientCert,
+            Database = dbName
+        }.Initialize())
         {
             string userId;
             using (var session = store2.OpenAsyncSession())
@@ -635,12 +633,12 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                 await session.SaveChangesAsync();
             }
-            
+
             using (var session = store1.OpenAsyncSession())
             {
                 Assert.NotNull(await session.LoadAsync<User>(userId));
             }
-            
+
             using (var session = store3.OpenAsyncSession())
             {
                 Assert.NotNull(await session.LoadAsync<User>(userId));
