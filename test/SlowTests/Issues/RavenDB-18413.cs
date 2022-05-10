@@ -31,7 +31,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task ToQueryableTimings()
+        public void ToQueryableTimings()
         {
             using (var store = GetDocumentStore())
             {
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task ToQueryableTimingsOutTimings()
+        public void ToQueryableTimingsOutTimings()
         {
             using (var store = GetDocumentStore())
             {
