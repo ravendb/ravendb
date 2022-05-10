@@ -1250,7 +1250,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (DocumentIncludes.Count == 0 &&
                 HighlightingTokens.Count == 0 &&
                 ExplanationToken == null &&
-                !ShouldIncludeTimings.Value &&
+                QueryTimings.ShouldBeIncluded == false &&
                 CounterIncludesTokens == null &&
                 RevisionsIncludesTokens == null &&
                 TimeSeriesIncludesTokens == null &&
@@ -1286,7 +1286,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 ExplanationToken.WriteTo(queryText);
             }
 
-            if (ShouldIncludeTimings.Value)
+            if (QueryTimings.ShouldBeIncluded)
             {
                 if (first == false)
                     queryText.Append(",");

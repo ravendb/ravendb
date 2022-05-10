@@ -6,17 +6,10 @@ namespace Raven.Client.Documents.Session
     {
         protected QueryTimings QueryTimings = new QueryTimings();
 
-        protected FlagHolder ShouldIncludeTimings = new FlagHolder { Value = false };
-
         public void IncludeTimings(out QueryTimings timings)
         {
-            ShouldIncludeTimings.Value = true;
+            QueryTimings.ShouldBeIncluded = true;
             timings = QueryTimings;
         }
-    }
-
-    public class FlagHolder
-    {
-        public bool Value { get; set; }
     }
 }
