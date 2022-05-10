@@ -6,12 +6,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -169,7 +173,7 @@ namespace SlowTests.Sharding.Backup
                 }
 
                 // assert
-                await AssertDocsInShardedDb(shardNumToDocIds, store2);
+                await AssertDocsInShardedDb(store2, shardNumToDocIds);
 
                 // add more data to store1
                 using (var session = store1.OpenAsyncSession())
@@ -205,28 +209,180 @@ namespace SlowTests.Sharding.Backup
                 }
 
                 // assert
-                await AssertDocsInShardedDb(shardNumToDocIds, store2);
+                await AssertDocsInShardedDb(store2, shardNumToDocIds);
             }
         }
 
-        private async Task AssertDocsInShardedDb(Dictionary<int, List<string>> shardNumToDocIds, IDocumentStore store)
-        {
-            foreach ((int shardNumber, List<string> ids) in shardNumToDocIds)
-            {
-                var shard = await GetDocumentDatabaseInstanceFor(store, $"{store.Database}${shardNumber}");
-                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var docs = shard.DocumentsStorage.GetDocumentsFrom(context, 0).ToList();
-                    Assert.NotEmpty(docs);
-                    Assert.Equal(ids.Count, docs.Count);
 
-                    foreach (var doc in docs)
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanAddServerWideBackup(Options options)
+        {
+            DoNotReuseServer();
+
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = Sharding.GetDocumentStore())
+            using (var store3 = GetDocumentStore())
+            {
+                await store1.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "* * * * *",
+                    Disabled = true,
+                    Name = "test"
+                }));
+
+                foreach (var store in new []{ store1, store2, store3 })
+                {
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
+                    Assert.Equal("Server Wide Backup, test", databaseRecord.PeriodicBackups[0].Name);
+
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanBackupShardedServerWide(Options options)
+        {
+            DoNotReuseServer();
+
+            const string usersPrefix = "Users";
+            const string ordersPrefix = "Orders";
+
+            var backupPath = NewDataPath(suffix: "_BackupFolder");
+
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                // generate data on store1 and store2
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 100; i++)
                     {
-                        Assert.Contains(doc.Id, ids);
+                        await session1.StoreAsync(new User(), $"{usersPrefix}/{i}");
+                        await session2.StoreAsync(new Order(), $"{ordersPrefix}/{i}");
+                    }
+
+                    await session1.SaveChangesAsync();
+                    await session2.SaveChangesAsync();
+                }
+
+                // define server wide backup
+                await store1.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "* * * * *",
+                    Disabled = false,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                }));
+
+                // wait for backups to complete
+                var backupsDone = await Sharding.Backup.WaitForBackupsToComplete(new []{store1, store2});
+
+                Assert.True(WaitHandle.WaitAll(backupsDone, TimeSpan.FromMinutes(2)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(2, dirs.Length);
+
+                var store1Backups = Directory.GetDirectories(Path.Combine(backupPath, store1.Database));
+                var store2Backup = Directory.GetDirectories(Path.Combine(backupPath, store2.Database));
+
+                Assert.Equal(3, store1Backups.Length); // one per shard
+                Assert.Single(store2Backup);
+
+                // import data to new stores and assert
+                using (var store3 = GetDocumentStore(options))
+                using (var store4 = GetDocumentStore(options))
+                {
+                    foreach (var dir in store1Backups)
+                    {
+                        await store3.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+
+                    await store4.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), store2Backup[0]);
+
+                    switch (options.DatabaseMode)
+                    {
+                        case RavenDatabaseMode.Single:
+                            await AssertDocs(store3, idPrefix: usersPrefix);
+                            await AssertDocs(store4, idPrefix: ordersPrefix);
+                            break;
+                        case RavenDatabaseMode.Sharded:
+                            await AssertDocsInShardedDb(store3, idPrefix: usersPrefix);
+                            await AssertDocsInShardedDb(store4, idPrefix: ordersPrefix);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(options.DatabaseMode.ToString());
                     }
                 }
             }
         }
+
+        private async Task AssertDocsInShardedDb(IDocumentStore store, string idPrefix, int count = 100)
+        {
+            var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            if (dbRecord.IsSharded == false)
+                throw new InvalidOperationException($"database {store.Database} is not sharded");
+
+            var shardedCtx = new ShardedDatabaseContext(Server.ServerStore, dbRecord);
+            var shardNumToDocIds = new Dictionary<int, List<string>>();
+
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    var id = $"{idPrefix}/{i}";
+                    var shardNumber = shardedCtx.GetShardNumber(context, id);
+                    if (shardNumToDocIds.TryGetValue(shardNumber, out var ids) == false)
+                    {
+                        shardNumToDocIds[shardNumber] = ids = new List<string>();
+                    }
+
+                    ids.Add(id);
+
+                }
+
+                Assert.Equal(dbRecord.Shards.Length, shardNumToDocIds.Count);
+            }
+
+            await AssertDocsInShardedDb(store, shardNumToDocIds);
+        }
+
+        private async Task AssertDocsInShardedDb(IDocumentStore store, Dictionary<int, List<string>> shardNumToDocIds)
+        {
+            foreach ((int shardNumber, List<string> ids) in shardNumToDocIds)
+            {
+                var shard = await GetDocumentDatabaseInstanceFor(store, $"{store.Database}${shardNumber}");
+                AssertDocs(shard, ids);
+            }
+        }
+
+        private async Task AssertDocs(IDocumentStore store, string idPrefix, int count = 100)
+        {
+            var ids = Enumerable.Range(0, count).Select(x => $"{idPrefix}/{x}").ToList();
+            var db = await GetDocumentDatabaseInstanceFor(store);
+            AssertDocs(db, ids);
+        }
+
+        private static void AssertDocs(DocumentDatabase database, IReadOnlyCollection<string> ids)
+        {
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var docs = database.DocumentsStorage.GetDocumentsFrom(context, 0).ToList();
+                Assert.NotEmpty(docs);
+                Assert.Equal(ids.Count, docs.Count);
+
+                foreach (var doc in docs)
+                {
+                    Assert.Contains(doc.Id, ids);
+                }
+            }
+        }
+
     }
 }
