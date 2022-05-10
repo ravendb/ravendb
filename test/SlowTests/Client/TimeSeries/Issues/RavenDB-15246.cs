@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -62,10 +63,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public void TestRanges()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void TestRanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "users/1-A";

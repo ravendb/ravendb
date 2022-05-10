@@ -5,6 +5,7 @@ using System.Net;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -224,10 +225,11 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void ShouldMergeTimeSeriesRangesInCache()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldMergeTimeSeriesRangesInCache(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
 

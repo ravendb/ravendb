@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
             }
         }
 
-        private static List<string> GetTimesSeriesNames(Document document)
+        public static List<string> GetTimesSeriesNames(Document document)
         {
             var timeSeriesNames = new List<string>();
             if (document.TryGetMetadata(out var metadata))

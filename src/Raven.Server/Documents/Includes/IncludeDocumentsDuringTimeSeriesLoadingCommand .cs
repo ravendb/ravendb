@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -17,6 +18,7 @@ namespace Raven.Server.Documents.Includes
         private byte* _state;
         private readonly Dictionary<string, BlittableJsonReaderObject> _includesDictionary;
         private DynamicJsonValue _includes;
+        private HashSet<string> _missingIncludes;
 
         public IncludeDocumentsDuringTimeSeriesLoadingCommand(DocumentsOperationContext context, string docId, bool includeDocument, bool includeTags)
         {
@@ -26,12 +28,14 @@ namespace Raven.Server.Documents.Includes
             _includeTags = includeTags;
 
             _includesDictionary = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            _missingIncludes = new HashSet<string>();
         }
 
         public void InitializeNewRangeResult(byte* state)
         {
             _state = state;
             _includes = new DynamicJsonValue();
+            _missingIncludes = new HashSet<string>();
 
             if (_includeDoc == false)
                 return;
@@ -52,7 +56,7 @@ namespace Raven.Server.Documents.Includes
             if (rangeResult == null)
                 return;
 
-            rangeResult.MissingIncludes = GetMissingIncludes();
+            rangeResult.MissingIncludes = _missingIncludes.ToList();
 
             if (_includes?.Properties.Count > 0 == false)
                 return;
@@ -68,24 +72,16 @@ namespace Raven.Server.Documents.Includes
             var doc = _context.DocumentDatabase.DocumentsStorage.Get(_context, id, throwOnConflict: false);
             doc?.EnsureMetadata();
             _includesDictionary[id] = doc?.Data;
-
+            
             ComputeHttpEtags.HashChangeVector(_state, doc?.ChangeVector);
 
-            if (doc?.Data == null) 
-                return;
-
-            _includes[id] = doc.Data;
-        }
-
-        private List<string> GetMissingIncludes()
-        {
-            var missingIncludes = new List<string>();
-            foreach (var (id, data) in _includesDictionary)
+            if (doc?.Data == null)
             {
-                missingIncludes.Add(id);
+                _missingIncludes.Add(id);
+                return;
             }
 
-            return missingIncludes;
+            _includes[id] = doc.Data;
         }
     }
 }

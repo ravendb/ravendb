@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Includes
                         throw new NotSupportedException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
 
                     // get all ts names
-                    var timeSeriesNames = TimeSeriesHandler.GetTimesSeriesNames(document);
+                    var timeSeriesNames = TimeSeriesHandlerProcessorForGetTimeSeriesStats.GetTimesSeriesNames(document);
 
                     tsRanges = new HashSet<AbstractTimeSeriesRange>();
                     switch (firstTsRange)

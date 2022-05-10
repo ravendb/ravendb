@@ -19,6 +19,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Spatial;
@@ -30,6 +31,7 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -1948,7 +1950,7 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(kvp.Key);
 
-                await TimeSeriesHandler.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, token);
+                await TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, calcTotalCount: true, token);
             }
 
             writer.WriteEndObject();
@@ -1969,7 +1971,7 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(kvp.Key);
                 size += kvp.Key.Length;
-                size += TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
+                size += AbstractTimeSeriesHandlerProcessor<DatabaseRequestHandler,DocumentsOperationContext>.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
             }
 
             writer.WriteEndObject();
