@@ -47,6 +47,22 @@ export default class IndexUtils {
         }
     }
 
+    static indexTypeIcon(indexType: IndexType) {
+        switch (indexType) {
+            case "AutoMapReduce":
+            case "JavaScriptMapReduce":
+            case "MapReduce":
+                return "icon-map-reduce";
+            case "AutoMap":
+            case "JavaScriptMap":
+            case "Map":
+                return "icon-map"; //TODO: create such icon!
+                //TODO: handle other types
+            default:
+                return "";
+        }
+    }
+
     static formatType(indexType: IndexType) {
         switch (indexType) {
             case "Map":

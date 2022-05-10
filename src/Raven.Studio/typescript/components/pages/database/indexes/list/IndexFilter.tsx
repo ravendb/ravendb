@@ -1,10 +1,10 @@
 ﻿import React, { ChangeEvent } from "react";
 import classNames from "classnames";
 import { shardingTodo } from "common/developmentHelper";
-import { IndexStatus, IndexFilterCriteria, IndexGroup, IndexSharedInfo } from "../../../models/indexes";
+import { IndexStatus, IndexFilterCriteria, IndexGroup, IndexSharedInfo } from "../../../../models/indexes";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
-import IndexUtils from "../../../utils/IndexUtils";
-import { DropdownPanel } from "../../../common/DropdownPanel";
+import IndexUtils from "../../../../utils/IndexUtils";
+import { DropdownPanel } from "../../../../common/DropdownPanel";
 
 interface IndexFilterStatusItemProps {
     label: string;
