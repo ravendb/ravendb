@@ -1198,7 +1198,6 @@ namespace Raven.Client.Documents.Session
                 DisableCaching = DisableCaching,
                 ProjectionBehavior = queryData?.ProjectionBehavior ?? ProjectionBehavior,
                 QueryTimings = QueryTimings,
-                ShouldIncludeTimings = ShouldIncludeTimings,
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
