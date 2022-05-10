@@ -17,6 +17,7 @@ using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;

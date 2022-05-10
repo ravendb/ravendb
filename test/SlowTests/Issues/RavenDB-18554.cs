@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
@@ -46,13 +47,21 @@ namespace SlowTests.Issues
             if (cluster)
             {
                 (nodes, leader) = await CreateRaftCluster(2);
-                storeOptions = new Options {Server = leader, ReplicationFactor = nodes.Count, RunInMemory = false};
+                Assert.Equal(nodes.Count, 2);
+                storeOptions = new Options
+                {
+                    Server = leader, 
+                    ReplicationFactor = nodes.Count, 
+                    RunInMemory = false, 
+                    ModifyDocumentStore = (store) => store.Conventions.DisableTopologyUpdates = true
+                };
+                
             }
             else
             {
                 storeOptions = new Options {RunInMemory = false};
             }
-            
+
             using (var store = GetDocumentStore(storeOptions))
             {
                 // Prepare Server For Test
@@ -80,11 +89,28 @@ namespace SlowTests.Issues
                 {
                     try
                     {
-                        using (var session = store.OpenSession())
+                        if (cluster)
                         {
-                            l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
-                                .ProjectInto<Categoroies_Details.Entity>()
-                                .ToList();
+                            using (var store2 = new DocumentStore() // DisableTopologyUpdates is false, for letting failover work (failover updates the topology)
+                            {
+                                       Urls = (from node in nodes select node.WebUrl).ToArray<string>(),
+                                Database = store.Database,
+                                   }.Initialize())
+                            using (var session = store2.OpenSession())
+                            {
+                                l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                    .ProjectInto<Categoroies_Details.Entity>()
+                                    .ToList();
+                            }
+                        }
+                        else
+                        {
+                            using (var session = store.OpenSession())
+                            {
+                                l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                    .ProjectInto<Categoroies_Details.Entity>()
+                                    .ToList();
+                            }
                         }
                     }
                     catch (Exception e)
@@ -95,11 +121,10 @@ namespace SlowTests.Issues
 
                 if (cluster)
                 {
-                    foreach (var node in nodes)
-                    {
-                        var database = await GetDatabase(node, store.Database);
-                        database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = d;
-                    }
+                    var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
+                    var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
+                    var database = await GetDatabase(responsibleNode, store.Database);
+                    database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = d;
                 }
                 else
                 {
@@ -121,7 +146,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(l);
                     Assert.Equal(1, l.Count);
                     Assert.Equal(categoryId, l[0].Id);
-                    Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
+                    Assert.Equal(Categoroies_Details.GenDetails(c), l[0].Details);
                 }
             }
         }
@@ -137,7 +162,14 @@ namespace SlowTests.Issues
             if (cluster)
             {
                 (nodes, leader) = await CreateRaftCluster(2);
-                storeOptions = new Options { Server = leader, ReplicationFactor = nodes.Count, RunInMemory = false };
+                Assert.Equal(nodes.Count, 2);
+                storeOptions = new Options
+                {
+                    Server = leader,
+                    ReplicationFactor = nodes.Count,
+                    RunInMemory = false,
+                    ModifyDocumentStore = (store) => store.Conventions.DisableTopologyUpdates = true
+                };
             }
             else
             {
@@ -171,11 +203,28 @@ namespace SlowTests.Issues
                 {
                     try
                     {
-                        using (var session = store.OpenSession())
+                        if (cluster)
                         {
-                            l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
-                                .ProjectInto<Categoroies_Details.Entity>()
-                                .ToList();
+                            using (var store2 = new DocumentStore() // DisableTopologyUpdates is false, for letting failover work (failover updates the topology)
+                                   {
+                                       Urls = (from node in nodes select node.WebUrl).ToArray<string>(), 
+                                       Database = store.Database,
+                                   }.Initialize())
+                            using (var session = store2.OpenSession())
+                            {
+                                l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                    .ProjectInto<Categoroies_Details.Entity>()
+                                    .ToList();
+                            }
+                        }
+                        else
+                        {
+                            using (var session = store.OpenSession())
+                            {
+                                l = session.Query<Categoroies_Details.Entity, Categoroies_Details>()
+                                    .ProjectInto<Categoroies_Details.Entity>()
+                                    .ToList();
+                            }
                         }
                     }
                     catch (Exception e)
@@ -186,11 +235,10 @@ namespace SlowTests.Issues
 
                 if (cluster)
                 {
-                    foreach (var node in nodes)
-                    {
-                        var database = await GetDatabase(node, store.Database);
-                        database.IndexStore.ForTestingPurposesOnly().IndexCompaction = d;
-                    }
+                    var responsibleNodeUrl = store.GetRequestExecutor(store.Database).Topology.Nodes[0].Url;
+                    var responsibleNode = nodes.Single(n => n.ServerStore.GetNodeHttpServerUrl() == responsibleNodeUrl);
+                    var database = await GetDatabase(responsibleNode, store.Database);
+                    database.IndexStore.ForTestingPurposesOnly().IndexCompaction = d;
                 }
                 else
                 {
@@ -212,7 +260,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(l);
                     Assert.Equal(1, l.Count);
                     Assert.Equal(categoryId, l[0].Id);
-                    Assert.Equal($"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"", l[0].Details);
+                    Assert.Equal(Categoroies_Details.GenDetails(c), l[0].Details);
                 }
             }
         }
@@ -237,6 +285,11 @@ namespace SlowTests.Issues
                         }
                 );
                 Store(x => x.Details, FieldStorage.Yes);
+            }
+
+            public static string GenDetails(Category c)
+            {
+                return $"Id=\"{c.Id}\", Name=\"{c.Name}\", Description=\"{c.Description}\"";
             }
         }
     }
