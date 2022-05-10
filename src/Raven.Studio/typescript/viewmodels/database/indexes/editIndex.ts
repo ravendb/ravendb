@@ -945,7 +945,8 @@ class editIndex extends viewModelBase {
         popoverUtils.longWithHover($(".store-field-info"),
             {
                 content: `
-                         <ul class="padding padding-xs margin-top-xs margin-left margin-bottom-xs">
+                         <h3 class="margin-top">Please verify whether you need to store the field in the index:</h3>
+                         <ul class="padding padding-xs margin-top margin-left margin-bottom-xs">
                              <li class="margin-bottom"><small>
                                  <strong>Storing the field is Not necessary</strong> in order to filter by the field when querying the index.<br>
                                  Full-text search is also available without storing the field.</small>
