@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Server.Config;
-using System.Runtime.InteropServices;
 using System.Linq;
 using Sparrow.Platform;
 
@@ -74,7 +73,7 @@ namespace Raven.Server.Web.Studio
                                 folderPathOptions.List.Add(directory);
                         }
                     }
-                    else
+                    else if (string.IsNullOrEmpty(directoryPrefix) == false)
                     {
                         var availableDrives = GetAvailableDrives();
                         foreach (var drive in availableDrives)
