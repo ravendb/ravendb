@@ -338,21 +338,30 @@ public partial class RavenTestBase
                 }
             }
 
-            public async Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
+            public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
             {
-                var dbs = _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
-                var waitHandles = new WaitHandle[3];
-                for (var i = 0; i < dbs.Count; i++)
-                {
-                    var mre = new ManualResetEventSlim();
-                    waitHandles[i] = mre.WaitHandle;
+                return WaitForBackupsToComplete(new[] { store });
+            }
 
-                    var db = await dbs[i];
-                    db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
-                    db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
+            public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores)
+            {
+                var waitHandles = new List<WaitHandle>();
+
+                foreach (var store in stores)
+                {
+                    var dbs = _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
+                    foreach (var task in dbs)
+                    {
+                        var mre = new ManualResetEventSlim();
+                        waitHandles.Add(mre.WaitHandle);
+
+                        var db = await task;
+                        db.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
+                        db.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
+                    }
                 }
 
-                return waitHandles;
+                return waitHandles.ToArray();
             }
 
             public async Task UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
