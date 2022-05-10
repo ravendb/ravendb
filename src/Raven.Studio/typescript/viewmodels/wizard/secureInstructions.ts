@@ -1,7 +1,7 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 
-class letsEncryptInstructions extends dialogViewModelBase {
+class secureInstructions extends dialogViewModelBase {
 
     certificateInstalled = ko.observable<boolean>(undefined);
     
@@ -36,4 +36,4 @@ class letsEncryptInstructions extends dialogViewModelBase {
 
 }
 
-export = letsEncryptInstructions;
+export = secureInstructions;
