@@ -45,11 +45,11 @@ namespace SlowTests.Issues
             }
         }
 
-        class Job
+        private class Job
         {
             public string Id { get; set; }
             public string Name { get; set;  }
-            public String Group { get; set; }
+            public string Group { get; set; }
         }
     }
 
