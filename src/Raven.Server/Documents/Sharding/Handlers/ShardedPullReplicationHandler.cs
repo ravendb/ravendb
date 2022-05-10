@@ -2,7 +2,6 @@
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -15,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
- [RavenShardedAction("/databases/*/admin/tasks/pull-replication/hub", "PUT")]
+        [RavenShardedAction("/databases/*/admin/tasks/pull-replication/hub", "PUT")]
         public async Task DefineHub()
         {
             using (var processor = new ShardedPullReplicationHandlerProcessorForDefineHub(this))

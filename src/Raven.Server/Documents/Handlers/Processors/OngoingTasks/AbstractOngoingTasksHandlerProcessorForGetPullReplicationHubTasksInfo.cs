@@ -11,7 +11,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -30,11 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected void AssertCanExecute()
         {
             if (ResourceNameValidator.IsValidResourceName(RequestHandler.DatabaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-            {
-                bool sharded = ShardHelper.IsShardedName(RequestHandler.DatabaseName);
-                if (sharded == false)
-                    throw new BadRequestException(errorMessage);
-            }
+                throw new BadRequestException(errorMessage);
         }
 
         public override async ValueTask ExecuteAsync()
@@ -45,37 +40,34 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                ClusterTopology clusterTopology;
-                PullReplicationDefinition def;
                 using (context.OpenReadTransaction())
                 {
-                    clusterTopology = RequestHandler.ServerStore.GetClusterTopology(context);
+                    var clusterTopology = RequestHandler.ServerStore.GetClusterTopology(context);
                     using (var rawRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName))
                     {
                         if (rawRecord == null)
                             throw new DatabaseDoesNotExistException(RequestHandler.DatabaseName);
 
-                        def = rawRecord.GetHubPullReplicationById(key);
+                        var def = rawRecord.GetHubPullReplicationById(key);
+
+                        if (def == null)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return;
+                        }
+
+                        var databaseRecord = rawRecord.MaterializedRecord;
+
+                        var currentHandlers = GetOngoingTasks(context, databaseRecord, clusterTopology, key);
+
+                        var response = new PullReplicationDefinitionAndCurrentConnections
+                        {
+                            Definition = def,
+                            OngoingTasks = currentHandlers.ToList()
+                        };
+
+                        await WriteResultAsync(context, response.ToJson());
                     }
-
-                    if (def == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-
-                    var databaseRecord = RequestHandler.ServerStore.Cluster.ReadDatabase(context, RequestHandler.DatabaseName);
-
-                    var currentHandlers = GetOngoingTasks(context, databaseRecord, clusterTopology, key);
-
-                    var response = new PullReplicationDefinitionAndCurrentConnections
-                    {
-                        Definition = def,
-                        OngoingTasks = currentHandlers.ToList()
-                    };
-
-                    await WriteResultAsync(context, response.ToJson());
                 }
             }
         }
