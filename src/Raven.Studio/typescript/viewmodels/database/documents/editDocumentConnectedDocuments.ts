@@ -61,8 +61,9 @@ class connectedDocuments {
     attachmentsColumns: virtualColumn[];
     attachmentsInReadOnlyModeColumns: virtualColumn[];
     countersColumns: virtualColumn[];
-    revisionCountersColumns: virtualColumn[];
+    countersInReadOnlyModeColumns: virtualColumn[];
     timeSeriesColumns: virtualColumn[];
+    timeSeriesInReadOnlyModeColumns: virtualColumn[];
     
     private downloader = new downloader();
     currentDocumentIsStarred = ko.observable<boolean>(false);
@@ -197,7 +198,7 @@ class connectedDocuments {
                 { title: () => 'Delete counter', hide: () => this.isReadOnlyAccess() }),
         ];
 
-        this.revisionCountersColumns = [
+        this.countersInReadOnlyModeColumns = [
             new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "60%"),
             new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatAsCommaSeperatedString(x.totalCounterValue, 0), "Counter total value", "40%")
         ];
@@ -215,6 +216,12 @@ class connectedDocuments {
                 "50px",
                 { title: () => this.isClone() ? 'Go to time series in source document' : 'Go to time series details' })
         ]
+        
+        this.timeSeriesInReadOnlyModeColumns = [
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Timeseries Name", "145px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries, "Timeseries items count", "60px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Timeseries date range", "170px")
+        ];
     }
 
     compositionComplete() {
@@ -227,11 +234,7 @@ class connectedDocuments {
             }
             
             if (connectedDocuments.currentTab() === "counters") {
-                const doc = this.document();
-                if (doc && doc.__metadata && doc.__metadata.hasFlag("Revision")) {
-                    return this.revisionCountersColumns;
-                }
-                return this.countersColumns;
+                return this.inReadOnlyMode() ? this.countersInReadOnlyModeColumns : this.countersColumns;
             }
             
             if (connectedDocuments.currentTab() === "revisions") {
@@ -239,7 +242,7 @@ class connectedDocuments {
             }
 
             if (connectedDocuments.currentTab() === "timeSeries") {
-                return this.timeSeriesColumns;
+                return this.inReadOnlyMode() ? this.timeSeriesInReadOnlyModeColumns : this.timeSeriesColumns;
             }
             
             return this.docsColumns;
