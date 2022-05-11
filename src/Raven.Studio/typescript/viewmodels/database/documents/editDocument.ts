@@ -589,7 +589,9 @@ class editDocument extends viewModelBase {
         }
         
         if (change.Type === 'Delete') {
-            this.displayDocumentDeleted(true);
+            if (this.editedDocId() === change.Id) {
+                this.displayDocumentDeleted(true);
+            }
         } else {
             this.displayDocumentChange(true);
         }
@@ -1147,6 +1149,7 @@ class editDocument extends viewModelBase {
             viewModel.deletionTask.done(() => {
                 this.dirtyFlag().reset();
                 this.connectedDocuments.onDocumentDeleted();
+                this.displayDocumentDeleted(false);
             });
             app.showBootstrapDialog(viewModel, editDocument.editDocSelector);
         } 
