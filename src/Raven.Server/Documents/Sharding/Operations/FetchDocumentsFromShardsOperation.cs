@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         public GetShardedDocumentsResult CombineResults(Memory<GetDocumentsResult> results)
         {
             var span = results.Span;
-            var docs = new Dictionary<string, BlittableJsonReaderObject>();
+            var docs = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                         continue;
 
                     var docId = cmdResult.GetMetadata().GetId();
-                    docs.Add(docId, cmdResult.Clone(_context));
+                    docs.TryAdd(docId, cmdResult.Clone(_context));
                 }
 
                 if (cmdCounterIncludes != null)

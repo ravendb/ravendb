@@ -3,16 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Amazon.Glacier;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
@@ -49,7 +45,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle not modified for include tags");
 
-            var nonLocalIncludes = new List<string>();
+            var nonLocalIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var id in rangeResult.MissingIncludes)
             {
                 if(RequestHandler.DatabaseContext.GetShardNumber(context, id) != shardNumber)
@@ -64,20 +60,18 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 result = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(idsByShards.Keys.ToArray(), fetchDocsOp, token.Token);
             
             var includesDocId = $"TimeSeriesRangeIncludes/{docId}";
-            using (context.OpenReadTransaction())
+            rangeResult.Includes ??= context.ReadObject(new DynamicJsonValue(), includesDocId);
+
+            var mods = new DynamicJsonValue(rangeResult.Includes);
+            foreach (var (id, data) in result.Result.Documents)
             {
-                rangeResult.Includes ??= context.ReadObject(new DynamicJsonValue(), includesDocId);
-
-                var mods = new DynamicJsonValue(rangeResult.Includes);
-                foreach (var (id, data) in result.Result.Documents)
-                {
-                    rangeResult.MissingIncludes.Remove(id);
-                    mods[id] = data;
-                }
-
-                rangeResult.Includes.Modifications = mods;
-                rangeResult.Includes = context.ReadObject(rangeResult.Includes, includesDocId);
+                rangeResult.MissingIncludes.Remove(id);
+                mods[id] = data;
             }
+
+            rangeResult.Includes.Modifications = mods;
+            rangeResult.Includes = context.ReadObject(rangeResult.Includes, includesDocId);
+            
             
             return rangeResult;
         }

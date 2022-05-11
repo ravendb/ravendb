@@ -54,23 +54,24 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
-                    await WriteTimeSeriesRangeResultsAsync(docsContext, writer, documentId, ranges.Values, false, token);
+                    await WriteTimeSeriesRangeResultsAsync(docsContext, writer, documentId, ranges.Values, calcTotalCount: false, token);
                 }
                 writer.WriteEndObject();
             }
         }
 
-        internal static async Task WriteTimeSeriesRangeResultsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, 
-            Dictionary<string, List<TimeSeriesRangeResult>> dictionary, bool calcTotalCount, CancellationToken token)
+        internal static async ValueTask<int> WriteTimeSeriesRangeResultsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, 
+            Dictionary<string, List<TimeSeriesRangeResult>> dictionary, bool calcTotalCount = false, CancellationToken token = default)
         {
             if (dictionary == null)
             {
                 writer.WriteNull();
-                return;
+                return 0;
             }
 
             writer.WriteStartObject();
 
+            int size = 0;
             bool first = true;
             foreach (var (name, ranges) in dictionary)
             {
@@ -80,6 +81,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 first = false;
 
                 writer.WritePropertyName(name);
+                size += name.Length;
 
                 writer.WriteStartArray();
 
@@ -94,18 +96,17 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 {
                     long? totalCount = null;
 
-                    if (calcTotalCount == false)
-                        totalCount = ranges[i].TotalResults;
-
                     if (i > 0)
                         writer.WriteComma();
 
-                    if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
+                    if (calcTotalCount == false)
+                        totalCount = ranges[i].TotalResults;
+                    else if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
                     {
                         totalCount = stats.Count;
                     }
 
-                    TimeSeriesHandlerProcessorForGetTimeSeries.WriteRange(writer, ranges[i], totalCount);
+                    size += TimeSeriesHandlerProcessorForGetTimeSeries.WriteRange(writer, ranges[i], totalCount);
 
                     await writer.MaybeFlushAsync(token);
                 }
@@ -113,6 +114,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
             }
 
             writer.WriteEndObject();
+            return size;
         }
 
         protected static List<TimeSeriesRange> ConvertAndValidateMultipleTimeSeriesParameters(string documentId, StringValues names, StringValues fromList, StringValues toList)

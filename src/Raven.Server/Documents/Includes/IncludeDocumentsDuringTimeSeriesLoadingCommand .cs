@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Includes
         private byte* _state;
         private readonly Dictionary<string, BlittableJsonReaderObject> _includesDictionary;
         private DynamicJsonValue _includes;
-        private HashSet<string> _missingIncludes;
+        private  readonly HashSet<string> _missingIncludes;
 
         public IncludeDocumentsDuringTimeSeriesLoadingCommand(DocumentsOperationContext context, string docId, bool includeDocument, bool includeTags)
         {
@@ -28,14 +28,14 @@ namespace Raven.Server.Documents.Includes
             _includeTags = includeTags;
 
             _includesDictionary = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-            _missingIncludes = new HashSet<string>();
+            _missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public void InitializeNewRangeResult(byte* state)
         {
             _state = state;
             _includes = new DynamicJsonValue();
-            _missingIncludes = new HashSet<string>();
+            _missingIncludes.Clear();
 
             if (_includeDoc == false)
                 return;
@@ -67,8 +67,12 @@ namespace Raven.Server.Documents.Includes
         private void IncludeDocument(string id)
         {
             if (_includesDictionary.ContainsKey(id))
+            {
+                if (_includesDictionary[id] == null && _missingIncludes.Contains(id) == false)
+                    _missingIncludes.Add(id);
                 return;
-
+            }
+            
             var doc = _context.DocumentDatabase.DocumentsStorage.Get(_context, id, throwOnConflict: false);
             doc?.EnsureMetadata();
             _includesDictionary[id] = doc?.Data;

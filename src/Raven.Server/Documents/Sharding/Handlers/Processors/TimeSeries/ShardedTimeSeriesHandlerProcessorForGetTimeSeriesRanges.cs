@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle not modified for include tags and its status code");
 
             var rangeResultToIncludes = new Dictionary<TimeSeriesRangeResult, HashSet<string>>();
-            var nonLocalMissingIncludes = new HashSet<string>();
+            var nonLocalMissingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (name, ranges) in rangesResult.Values)
             {
                 foreach (var range in ranges)
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                         if (RequestHandler.DatabaseContext.GetShardNumber(context, id) != shardNumber)
                         {
                             if (rangeResultToIncludes.ContainsKey(range) == false)
-                                rangeResultToIncludes[range] = new HashSet<string>() {id};
+                                rangeResultToIncludes[range] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {id};
                             else 
                                 rangeResultToIncludes[range].Add(id);
                             nonLocalMissingIncludes.Add(id);
@@ -73,27 +73,25 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(idsByShards.Keys.ToArray(), fetchDocsOp, token);
 
             var includesDocId = $"TimeSeriesRangeIncludes/{documentId}";
-            using (context.OpenReadTransaction())
+            
+            foreach (var (rangeResult, includesHs) in rangeResultToIncludes)
             {
-                foreach (var (rangeResult, includesHs) in rangeResultToIncludes)
+                rangeResult.Includes ??= context.ReadObject(new DynamicJsonValue(), includesDocId);
+                var mods = new DynamicJsonValue(rangeResult.Includes);
+
+                foreach (var docId in includesHs)
                 {
-                    rangeResult.Includes ??= context.ReadObject(new DynamicJsonValue(), includesDocId);
-                    var mods = new DynamicJsonValue(rangeResult.Includes);
-
-                    foreach (var docId in includesHs)
+                    if (result.Result.Documents.ContainsKey(docId))
                     {
-                        if (result.Result.Documents.ContainsKey(docId))
-                        {
-                            rangeResult.MissingIncludes.Remove(docId);
-                            mods[docId] = result.Result.Documents[docId];
-                        }
+                        rangeResult.MissingIncludes.Remove(docId);
+                        mods[docId] = result.Result.Documents[docId];
                     }
-
-                    rangeResult.Includes.Modifications = mods;
-                    rangeResult.Includes = context.ReadObject(rangeResult.Includes, includesDocId);
                 }
-            }
 
+                rangeResult.Includes.Modifications = mods;
+                rangeResult.Includes = context.ReadObject(rangeResult.Includes, includesDocId);
+            }
+            
             await WriteTimeSeriesDetails(writeContext: context, docsContext: null, documentId: null, rangesResult, token);
         }
     }
