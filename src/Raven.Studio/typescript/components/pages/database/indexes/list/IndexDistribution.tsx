@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import classNames from "classnames";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
+import IndexUtils from "../../../../utils/IndexUtils";
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -13,6 +14,11 @@ export function IndexDistribution(props: IndexDistributionProps) {
     const { index, globalIndexingStatus } = props;
 
     const [indexId] = useState(() => _.uniqueId("index-id"));
+
+    const totalErrors = index.nodesInfo
+        .filter((x) => x.status === "loaded")
+        .reduce((prev, current) => prev + current.details.errorCount, 0);
+    const estimatedEntries = IndexUtils.estimateEntriesCount(index);
 
     return (
         <div className="index-distribution">
@@ -32,15 +38,18 @@ export function IndexDistribution(props: IndexDistributionProps) {
                     Status
                 </div>
             </div>
-            {/*TODO <div className="distribution-summary">
+            <div className="distribution-summary">
                 <div className="top">
                     <i className="icon-sum" />
                 </div>
                 <div> </div>
-                <div> TODO </div>
-                <div> TODO </div>
+                <div>
+                    {estimatedEntries.estimated && estimatedEntries.entries != null ? "~" : ""}
+                    {estimatedEntries.entries?.toLocaleString() ?? "-"}
+                </div>
+                <div>{totalErrors}</div>
                 <div></div>
-            </div>*/}
+            </div>
 
             {index.nodesInfo.map((nodeInfo) => {
                 const shard = (

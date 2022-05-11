@@ -57,7 +57,7 @@ export default class IndexUtils {
             case "JavaScriptMap":
             case "Map":
                 return "icon-map"; //TODO: create such icon!
-                //TODO: handle other types
+            //TODO: handle other types
             default:
                 return "";
         }
@@ -165,5 +165,31 @@ export default class IndexUtils {
 
     static isPending(index: IndexNodeInfoDetails) {
         return index.status === "Pending";
+    }
+
+    static isSharded(index: IndexSharedInfo) {
+        return index.nodesInfo.some((x) => x.location.shardNumber != null);
+    }
+
+    static replicasCount(index: IndexSharedInfo) {
+        return index.nodesInfo.filter((x) => x.location.shardNumber === 0).length;
+    }
+
+    static estimateEntriesCount(index: IndexSharedInfo): { entries: number; estimated: boolean } {
+        if (index.nodesInfo.some((x) => x.status !== "loaded")) {
+            return {
+                entries: null,
+                estimated: true,
+            };
+        }
+
+        const divideBy = IndexUtils.isSharded(index) ? IndexUtils.replicasCount(index) : index.nodesInfo.length;
+
+        const totalEntries = index.nodesInfo.reduce((prev, b) => prev + b.details.entriesCount, 0);
+
+        return {
+            entries: totalEntries / divideBy,
+            estimated: divideBy > 1,
+        };
     }
 }
