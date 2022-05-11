@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
-using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -19,9 +20,23 @@ namespace Raven.Server.Documents.Indexes
         private CollectionOfBloomFilters _filters;
         private IndexingStatsScope _statsInstance;
         private readonly MapStats _stats = new MapStats();
+        protected readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected MapIndexBase(IndexType type, IndexSourceType sourceType, T definition) : base(type, sourceType, definition)
+        protected MapIndexBase(IndexType type, IndexSourceType sourceType, T definition, AbstractStaticIndexBase compiled) : base(type, sourceType, definition, compiled)
         {
+            TryPopulateReferencedCollections(_compiled, ref _referencedCollections);
+        }
+
+        public static void TryPopulateReferencedCollections(AbstractStaticIndexBase compiled, ref HashSet<string> referencedCollections)
+        {
+            if (compiled.ReferencedCollections == null)
+                return;
+
+            foreach (var collection in compiled.ReferencedCollections)
+            {
+                foreach (var referencedCollection in collection.Value)
+                    referencedCollections.Add(referencedCollection.Name);
+            }
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()

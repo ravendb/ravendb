@@ -1,18 +1,14 @@
 ﻿using System;
-using Sparrow.Json;
 using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
-using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Patch.V8;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class AggregatedAnonymousObjects : AggregationResult
     {
-        protected readonly IJavaScriptOptions JsOptions;
         protected Action<DynamicJsonValue> ModifyOutputToStore;
 
         private List<object> _outputs;
@@ -20,9 +16,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private IPropertyAccessor _propertyAccessor;
         private JsonOperationContext _indexContext;
 
-        public AggregatedAnonymousObjects(IJavaScriptOptions jsOptions, List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext)
+        public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext)
         {
-            JsOptions = jsOptions;
             _outputs = results;
             _propertyAccessor = propertyAccessor;
             _jsons = new List<BlittableJsonReaderObject>(results.Count);
@@ -63,11 +58,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _jsons[i].Dispose();
             }
             _jsons.Clear();
-
-            if (JsOptions.EngineType == JavaScriptEngineType.V8)
-            {
-                V8EngineEx.DisposeAndCollectGarbage(_outputs, "reduce");
-            }
+            //TODO: egor
+            //if (JsOptions.EngineType == JavaScriptEngineType.V8)
+            //{
+            //    V8EngineEx.DisposeAndCollectGarbage(_outputs, "reduce");
+            //}
 
             _outputs.Clear();
 

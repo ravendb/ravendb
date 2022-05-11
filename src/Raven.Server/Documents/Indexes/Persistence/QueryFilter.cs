@@ -1,7 +1,5 @@
 using System;
 using Lucene.Net.Store;
-using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -26,8 +24,8 @@ public class QueryFilter : IDisposable
     private readonly Reference<int> _scannedDocuments;
     private readonly IQueryResultRetriever _retriever;
     private readonly QueryTimingsScope _queryTimings;
-    private readonly ScriptRunner.SingleRun _filterScriptRun;
-    private ScriptRunner.ReturnRun _filterSingleRun;
+    private readonly ISingleRun _filterScriptRun;
+    private ReturnRun _filterSingleRun;
 
     public QueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults,
         Reference<int> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)

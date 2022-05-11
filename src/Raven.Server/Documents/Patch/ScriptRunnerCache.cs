@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Patch
 
         private RavenConfiguration _configuration;
 
-        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleV8>>> _scriptRunnerCacheV8 = new ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleV8>>>();
-        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleJint>>> _scriptRunnerCacheJint = new ConcurrentDictionary<Key, Lazy<ScriptRunner<JsHandleJint>>>();
+        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunnerV8>> _scriptRunnerCacheV8 = new ConcurrentDictionary<Key, Lazy<ScriptRunnerV8>>();
+        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunnerJint>> _scriptRunnerCacheJint = new ConcurrentDictionary<Key, Lazy<ScriptRunnerJint>>();
 
         public bool EnableClr;
 
@@ -118,7 +118,19 @@ namespace Raven.Server.Documents.Patch
            // patchRun.SetReadOnly(readOnly);
             return returnRun;
         }
+        public ReturnRun GetScriptRunnerJint(Key key, bool readOnly, out SingleRunJint patchRun, bool executeScriptsSource = true)
+        {
+            if (key == null)
+            {
+                patchRun = null;
+                return new ReturnRun();
+            }
 
+            ReturnRun returnRun = TryGetJintScriptRunnerFromCache(key).GetRunner(out patchRun, executeScriptsSource);
+            patchRun.ReadOnly = false;
+            // patchRun.SetReadOnly(readOnly);
+            return returnRun;
+        }
         public ReturnRun GetScriptRunnerJint(Key key, bool readOnly, out SingleRun<JsHandleJint> patchRun, bool executeScriptsSource = true)
         {
             if (key == null)
@@ -128,6 +140,19 @@ namespace Raven.Server.Documents.Patch
             }
 
             ReturnRun returnRun = TryGetJintScriptRunnerFromCache(key).GetRunner(out patchRun, executeScriptsSource);
+            patchRun.ReadOnly = false;
+            // patchRun.SetReadOnly(readOnly);
+            return returnRun;
+        }
+        public ReturnRun GetScriptRunnerV8(Key key, bool readOnly, out SingleRunV8 patchRun, bool executeScriptsSource = true)
+        {
+            if (key == null)
+            {
+                patchRun = null;
+                return new ReturnRun();
+            }
+
+            ReturnRun returnRun = TryGetV8ScriptRunnerFromCache(key).GetRunner(out patchRun, executeScriptsSource);
             patchRun.ReadOnly = false;
             // patchRun.SetReadOnly(readOnly);
             return returnRun;
@@ -145,12 +170,13 @@ namespace Raven.Server.Documents.Patch
             // patchRun.SetReadOnly(readOnly);
             return returnRun;
         }
-        private ScriptRunner<JsHandleJint> TryGetJintScriptRunnerFromCache(Key script)
+
+        private ScriptRunnerJint TryGetJintScriptRunnerFromCache(Key script)
         {
             if (_scriptRunnerCacheJint.TryGetValue(script, out var lazy))
                 return lazy.Value;
 
-            var value = new Lazy<ScriptRunner<JsHandleJint>>(() =>
+            var value = new Lazy<ScriptRunnerJint>(() =>
             {
                 var runner = new ScriptRunnerJint(this, EnableClr);
                 script.GenerateScript(runner);
@@ -160,12 +186,12 @@ namespace Raven.Server.Documents.Patch
             return _scriptRunnerCacheJint.GetOrAdd(script, value).Value;
         }
 
-        private ScriptRunner<JsHandleV8> TryGetV8ScriptRunnerFromCache(Key script)
+        private ScriptRunnerV8 TryGetV8ScriptRunnerFromCache(Key script)
         {
             if (_scriptRunnerCacheV8.TryGetValue(script, out var lazy))                
                 return lazy.Value;
 
-            var value = new Lazy<ScriptRunner<JsHandleV8>>(() =>
+            var value = new Lazy<ScriptRunnerV8>(() =>
             {
                 var runner = new ScriptRunnerV8(this, EnableClr);
                 script.GenerateScript(runner);

@@ -1,7 +1,7 @@
 ﻿using Raven.Client;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries.Jint
 {

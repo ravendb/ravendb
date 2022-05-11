@@ -22,27 +22,14 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
     public class MapTimeSeriesIndex : MapIndexBase<MapIndexDefinition, IndexField>
     {
-        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        protected internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleTimeSeriesReferences _handleReferences;
         private HandleCompareExchangeTimeSeriesReferences _handleCompareExchangeReferences;
 
         protected MapTimeSeriesIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
-            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
+            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition, compiled)
         {
-            _compiled = compiled;
-
-            if (_compiled.ReferencedCollections == null)
-                return;
-
-            foreach (var collection in _compiled.ReferencedCollections)
-            {
-                foreach (var referencedCollection in collection.Value)
-                    _referencedCollections.Add(referencedCollection.Name);
-            }
         }
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;

@@ -19,8 +19,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReduceToCollectionCommandBatcher : IDisposable
     {
-        private readonly IJavaScriptOptions _jsOptions;
-        
         private static int BatchSize = PlatformDetails.Is32Bits == false
             ? 4096
             : 1024;
@@ -40,7 +38,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             new Dictionary<string, List<(BlittableJsonReaderObject Json, string ReferenceDocId)>>();
 
         public OutputReduceToCollectionCommandBatcher(
-            IJavaScriptOptions jsOptions, 
             DocumentDatabase database,
             string outputReduceToCollection,
             long? reduceOutputIndex,
@@ -49,7 +46,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             JsonOperationContext indexContext,
             TransactionHolder indexWriteTxHolder)
         {
-            _jsOptions = jsOptions;
             _database = database;
             _outputReduceToCollection = outputReduceToCollection;
             _reduceOutputIndex = reduceOutputIndex;
@@ -68,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
 
             if (_index.OutputReduceToCollectionPropertyAccessor == null)
-                _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
+                _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject, _database.Configuration.JavaScript.EngineType);
 
             var reduceObjectJson = GenerateReduceOutput(reduceObject, stats, out string referenceDocumentId);
 

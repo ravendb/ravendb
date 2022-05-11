@@ -371,38 +371,38 @@ var process = {
     }
 }
 ";
+    //TODO: egor do we need this??
+    //public static void DisposeAndCollectGarbage(List<object> items, string snapshotName)
+    //{
+    //    V8Engine? engine = null;
+    //    for (int i = items.Count - 1; i >= 0; i--)
+    //    {
+    //        var v8Handle = items[i] is InternalHandle ? (InternalHandle)items[i] : InternalHandle.Empty;
+    //        if (!v8Handle.IsEmpty)
+    //        {
+    //            if (engine == null)
+    //                engine = v8Handle.Engine;
+    //            v8Handle.Dispose();
+    //        }
+    //        else
+    //        {
+    //            var jsHandle = items[i] is JsHandle ? (JsHandle)items[i] : JsHandle.Empty;
+    //            if (!jsHandle.IsEmpty)
+    //            {
+    //                if (engine == null)
+    //                    engine = (V8Engine)jsHandle.Engine;
+    //                jsHandle.Dispose();
+    //            }
+    //        }
+    //    }
 
-    public static void DisposeAndCollectGarbage(List<object> items, string snapshotName)
-    {
-        V8Engine? engine = null;
-        for (int i = items.Count - 1; i >= 0; i--)
-        {
-            var v8Handle = items[i] is InternalHandle ? (InternalHandle)items[i] : InternalHandle.Empty;
-            if (!v8Handle.IsEmpty)
-            {
-                if (engine == null)
-                    engine = v8Handle.Engine;
-                v8Handle.Dispose();
-            }
-            else
-            {
-                var jsHandle = items[i] is JsHandle ? (JsHandle)items[i] : JsHandle.Empty;
-                if (!jsHandle.IsEmpty)
-                {
-                    if (engine == null)
-                        engine = (V8Engine)jsHandle.Engine;
-                    jsHandle.Dispose();
-                }
-            }
-        }
+    //    if (engine != null && engine.IsMemoryChecksOn)
+    //    {
+    //        engine.ForceV8GarbageCollection();
+    //        engine.CheckForMemoryLeaks(snapshotName);
+    //    }
 
-        if (engine != null && engine.IsMemoryChecksOn)
-        {
-            engine.ForceV8GarbageCollection();
-            engine.CheckForMemoryLeaks(snapshotName);
-        }
-
-    }
+    //} 
 
     private ContextEx? _contextEx;
 

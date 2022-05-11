@@ -642,6 +642,9 @@ namespace Raven.Server.Documents.Indexes.Static
     
     public abstract class AbstractJavaScriptIndexBase : AbstractStaticIndexBase
     {
+        public const string Load = "load";
+        public const string NoTracking = "noTracking";
+        public const string CmpXchg = "cmpxchg";
         protected const string GlobalDefinitions = "globalDefinition";
         protected const string CollectionProperty = "collection";
         protected const string MethodProperty = "method";
@@ -765,23 +768,7 @@ function boost(value, boost) {
 }
 ";
 
-        //TODO: egor handle tests
-        //public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
-        //{
-        //    ReduceOperation?.SetBufferPoolForTestingPurposes(bufferPool);
-        //}
 
-        //public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
-        //{
-        //    ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
-        //}
-
-        protected class MapMetadata
-        {
-            public HashSet<CollectionName> ReferencedCollections;
-
-            public bool HasCompareExchangeReferences;
-        }
     }
 
 }

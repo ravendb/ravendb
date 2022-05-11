@@ -18,7 +18,6 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
@@ -37,7 +36,11 @@ using V8.Net;
 
 namespace Raven.Server.Documents.Patch;
 
-public abstract class SingleRun<T> : ISingleRun
+public abstract class SingleRunBase
+{
+    public const string GetMetadataMethod = "getMetadata";
+}
+public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     where T : struct, IJsHandle<T>
 {
     public Exception LastException { get; set; }
@@ -77,10 +80,10 @@ public abstract class SingleRun<T> : ISingleRun
     public bool DebugMode;
     public List<string> DebugOutput;
     public bool PutOrDeleteCalled;
-    public HashSet<string> Includes;
-    public HashSet<string> IncludeRevisionsChangeVectors;
-    public DateTime? IncludeRevisionByDateTimeBefore;
-    public HashSet<string> CompareExchangeValueIncludes;
+    public HashSet<string> Includes { get; set; }
+    public HashSet<string> IncludeRevisionsChangeVectors { get; set; }
+    public DateTime? IncludeRevisionByDateTimeBefore { get; set; }
+    public HashSet<string> CompareExchangeValueIncludes { get; set; }
     protected HashSet<string> _documentIds;
     protected CancellationToken _token;
     public JsBlittableBridge<T> JsBlittableBridge;
@@ -94,11 +97,11 @@ public abstract class SingleRun<T> : ISingleRun
     public string OriginalDocumentId;
     public bool RefreshOriginalDocument;
     protected readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
-    public HashSet<string> DocumentCountersToUpdate;
-    public HashSet<string> DocumentTimeSeriesToUpdate;
+    public HashSet<string> DocumentCountersToUpdate { get; set; }
+    public HashSet<string> DocumentTimeSeriesToUpdate { get; set; }
 
     protected const string _timeSeriesSignature = "timeseries(doc, name)";
-    public const string GetMetadataMethod = "getMetadata";
+
 
     private List<string> _scriptsSource;
 
@@ -1999,18 +2002,27 @@ public abstract class SingleRun<T> : ISingleRun
 
 public interface ISingleRun
 {
-    void CleanStuff();
+    public void CleanStuff();
 
-    IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null,
+    public IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null,
         CancellationToken token = default);
 
-    IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args,
+    public IScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args,
         QueryTimingsScope scope = null, CancellationToken token = default);
 
-    bool ReadOnly { get; set; }
+    public bool ReadOnly { get; set; }
 
-    IScriptEngineChanges ScriptEngineHandle { get; set; }
+    public IScriptEngineChanges ScriptEngineHandle { get; set; }
 
-    object Translate(IScriptRunnerResult result, JsonOperationContext context, IResultModifier modifier = null,
+    public object Translate(IScriptRunnerResult result, JsonOperationContext context, IResultModifier modifier = null,
         BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None);
+
+    public object Translate(JsonOperationContext context, object o);
+
+    public HashSet<string> DocumentCountersToUpdate { get; set; }
+    public HashSet<string> DocumentTimeSeriesToUpdate { get; set; }
+    public HashSet<string> Includes { get; set; }
+     public HashSet<string> IncludeRevisionsChangeVectors { get; set; }
+    public DateTime? IncludeRevisionByDateTimeBefore { get; set; }
+    public HashSet<string> CompareExchangeValueIncludes { get; set; }
 }

@@ -9,6 +9,8 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide;
+using Sparrow.Server;
 using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static;
@@ -16,9 +18,6 @@ namespace Raven.Server.Documents.Indexes.Static;
 public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
     where T : struct, IJsHandle<T>
 {
-    public const string Load = "load";
-    public const string NoTracking = "noTracking";
-    public const string CmpXchg = "cmpxchg";
     public IJavaScriptUtils<T> JsUtils;
     public JavaScriptIndexUtils<T> JsIndexUtils;
 
@@ -103,6 +102,23 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
     }
     public JavaScriptReduceOperation<T> ReduceOperation { get; protected set; }
 
+    //TODO: egor uncomment usage of those methods in tests
+    public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
+    {
+        ReduceOperation?.SetBufferPoolForTestingPurposes(bufferPool);
+    }
+
+    public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
+    {
+        ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
+    }
+
+    protected class MapMetadata
+    {
+        public HashSet<CollectionName> ReferencedCollections;
+
+        public bool HasCompareExchangeReferences;
+    }
     //TODO: egor this should be abstract and devided into 2 methods? (_definitions & _definitionsForParsing) the I can use it normally to create JavaScriptReduceOperation
     private void ProcessReduce()
     {

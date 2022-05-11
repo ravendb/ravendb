@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
         {
             _index = index;
             _jsOptions = index.JsOptions;
+
+
         }
 
         public abstract bool HasWriter { get; }

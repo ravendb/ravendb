@@ -8,7 +8,9 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Workers;
@@ -19,23 +21,20 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
-using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Patch.V8;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition, IndexField>
     {
-        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        protected readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         protected HandleReferences _handleReferences;
@@ -46,18 +45,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public IPropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
         protected MapReduceIndex(MapReduceIndexDefinition definition, AbstractStaticIndexBase compiled)
-            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
+            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition, compiled)
         {
-            _compiled = compiled;
-
-            if (_compiled.ReferencedCollections == null)
-                return;
-
-            foreach (var collection in _compiled.ReferencedCollections)
-            {
-                foreach (var referencedCollection in collection.Value)
-                    _referencedCollections.Add(referencedCollection.Name);
-            }
+            MapIndex.TryPopulateReferencedCollections(_compiled, ref _referencedCollections);
         }
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
@@ -505,7 +495,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
         {
-            private readonly IJavaScriptOptions _jsOptions;
             private IEnumerable _items;
             private TransactionOperationContext _indexContext;
             private IndexingStatsScope _stats;
@@ -515,10 +504,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
             private readonly AbstractStaticIndexBase _compiledIndex;
+            protected readonly JavaScriptEngineType _engineType;
 
             public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
             {
-                _jsOptions = index.JsOptions;
+                _engineType = index.DocumentDatabase.Configuration.JavaScript.EngineType;
                 _indexContext = indexContext;
                 _groupByFields = index.Definition.GroupByFields;
                 _isMultiMap = index.IsMultiMap;
@@ -550,7 +540,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             private Enumerator GetEnumerator()
             {
-                return new Enumerator(_jsOptions, _items.GetEnumerator(), this, _createBlittableResultStats);
+                return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
             }
 
             private class Enumerator : IEnumerator<MapResult>
@@ -564,9 +554,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly Queue<(string PropertyName, object PropertyValue)> _propertyQueue = new Queue<(string PropertyName, object PropertyValue)>();
                 private readonly CurrentIndexingScope.MetadataFieldCache _metadataFields;
 
-                public Enumerator(IJavaScriptOptions jsOptions, IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
+                public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
                 {
-                    _jsOptions = jsOptions;
                     _enumerator = enumerator;
                     _parent = parent;
                     _createBlittableResult = createBlittableResult;
@@ -586,9 +575,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     {
                         IPropertyAccessor accessor;
                         if (_parent._isMultiMap == false)
-                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output, _groupByFields);
+                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), output, _groupByFields, _parent._engineType);
                         else
-                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields);
+                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields, _parent._engineType);
 
                         _reduceKeyProcessor.Reset();
 

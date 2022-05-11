@@ -18,20 +18,16 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class MapIndex : MapIndexBase<MapIndexDefinition, IndexField>
     {
-        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _suggestionsActive = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleDocumentReferences _handleReferences;
         private HandleCompareExchangeReferences _handleCompareExchangeReferences;
 
         protected MapIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
-            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
+            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition, compiled)
         {
-            _compiled = compiled;
-
             foreach (var field in definition.IndexDefinition.Fields)
             {
                 var suggestionOption = field.Value.Suggestions;
@@ -39,15 +35,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     _suggestionsActive.Add(field.Key);
                 }
-            }
-
-            if (_compiled.ReferencedCollections == null)
-                return;
-
-            foreach (var collection in _compiled.ReferencedCollections)
-            {
-                foreach (var referencedCollection in collection.Value)
-                    _referencedCollections.Add(referencedCollection.Name);
             }
         }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -40,6 +41,8 @@ public partial class ShardedDatabaseContext
 
         public ShardedIndexHasChangedController HasChanged;
 
+        public readonly JavaScriptEngineType JsEngineType;
+
         public ShardedIndexesContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -53,7 +56,7 @@ public partial class ShardedDatabaseContext
             HasChanged = new ShardedIndexHasChangedController(context);
 
             ScriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
-
+            JsEngineType = context.Configuration.JavaScript.EngineType;
             Update(context.DatabaseRecord, 0);
         }
 

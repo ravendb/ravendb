@@ -1,23 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 using Jint;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Extensions;
-using Sparrow.Json;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Extensions.Jint;
-using V8.Net;
-using LuceneDocumentsJint = Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint;
-using LuceneDocumentsV8 = Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -30,28 +22,48 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder =
             new List<KeyValuePair<string, Accessor>>();
 
-        public static IPropertyAccessor Create(Type type, object instance)
+        public static IPropertyAccessor Create(Type type, object instance, JavaScriptEngineType? engineType)
         {
-            if (type == typeof(JsHandle) || type == typeof(ObjectInstance) || type == typeof(InternalHandle))
-                return new JsPropertyAccessor(null);
+            //TODO: egor cehck this
+            if (typeof(IObjectInstance<>).IsAssignableFrom(type))
+            {
+                switch (engineType)
+                {
+                    case JavaScriptEngineType.Jint:
+                return new JsPropertyAccessorJint(groupByFields: null);
+                    case JavaScriptEngineType.V8:
+                return new JsPropertyAccessorV8(groupByFields: null);
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(engineType), engineType, null);
+                }
+            }
 
             if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict);
 
             return new PropertyAccessor(type);
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static IPropertyAccessor CreateMapReduceOutputAccessorJs(Dictionary<string, CompiledIndexField> groupByFields)
-        {
-            return new JsPropertyAccessor(groupByFields);
-        }
 
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false, [CanBeNull] Type type = null)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, JavaScriptEngineType engineType, bool isObjectInstance = false)
         {
-            if (instance is JsHandle)
-                return CreateMapReduceOutputAccessorJs(groupByFields);
-            
+            //TODO: egor check this
+            if (isObjectInstance || typeof(IObjectInstance<>).IsAssignableFrom(type))
+            {
+                if (typeof(IObjectInstance<>).IsAssignableFrom(type))
+                {
+                    switch (engineType)
+                    {
+                        case JavaScriptEngineType.Jint:
+                            return new JsPropertyAccessorJint(null);
+                        case JavaScriptEngineType.V8:
+                            return new JsPropertyAccessorV8(null);
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(engineType), engineType, null);
+                    }
+                }
+            }
+
             if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict, groupByFields);
 
@@ -94,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 yield return (key, value.GetValue(target), value.GroupByField, value.IsGroupByField);
             }
         }
-        
+
         public object GetValue(string name, object target)
         {
             if (Properties.TryGetValue(name, out Accessor accessor))
@@ -177,116 +189,65 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
     }
 
-    public class JsPropertyAccessor : IPropertyAccessor
+    public abstract class JsPropertyAccessor<T> : IPropertyAccessor
+    where T : struct, IJsHandle<T>
     {
         protected readonly Dictionary<string, CompiledIndexField> _groupByFields;
 
-        public JsPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields)
+        protected JsPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields)
         {
             _groupByFields = groupByFields;
         }
-        
+
+        protected void AssertTargetType(object target, [CallerMemberName] string caller = null)
+        {
+            if (typeof(IObjectInstance<>).IsAssignableFrom(target.GetType()) == false)
+            {
+                throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target assignable from 'IObjectInstance' but got one of type '{target.GetType().Name}' with interfaces: {string.Join(",", target.GetType().GetInterfaces().ToList())}");
+            }
+
+            AssertTargetTypeInternal(target,caller);
+        }
+
+        protected abstract void AssertTargetTypeInternal(object target, [CallerMemberName] string caller = null);
+
         public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
+            AssertTargetType(target);
 
-            if (target is JsHandle jsTarget && jsTarget.IsObject)
+            //the case should be safe because we asserted the type before
+            T jsHandle = (T)target;
+            if (jsHandle.IsObject == false)
+                ThrowArgumentException(target);
+
+            foreach (var property in jsHandle.GetOwnProperties())
             {
-                foreach (var (propertyName, jsPropertyValue) in jsTarget.GetOwnProperties())
-                {
-                    using (jsPropertyValue)
-                    {
-                        CompiledIndexField field = null;
-                        var isGroupByField = _groupByFields?.TryGetValue(propertyName, out field) ?? false;
+                CompiledIndexField field = null;
+                var isGroupByField = _groupByFields?.TryGetValue(property.Key, out field) ?? false;
 
-                        yield return (propertyName, GetValue(jsPropertyValue), field, isGroupByField);
-                    }
-                }
+                yield return (property.Key, GetValue(property.Value), field, isGroupByField);
             }
-            else
-                throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target of type JsHandle and IsObject but got one of type {target.GetType().Name}.");
+        }
+
+        private static void ThrowArgumentException(object target)
+        {
+            throw new ArgumentException(
+                $"JsPropertyAccessor.GetPropertiesInOrder is expecting a target of type of IJsHandle and IsObject == true but got one of type {target.GetType().Name} and IsObject == false");
         }
 
         public object GetValue(string name, object target)
         {
-            if (target is ObjectInstance oi)
-                return GetValueJint(name, oi);
-            else if (target is InternalHandle ih)
-                return GetValueV8(name, ih);
-            else
-                throw new ArgumentException($"JsPropertyAccessor.GetValue is expecting a target of type ObjectInstance or InternalHandle but got one of type {target.GetType().Name}.");
+            AssertTargetType(target);
+            T jsHandle = (T)target;
+            if (jsHandle.IsObject == false)
+                ThrowArgumentException(target);
+            if (jsHandle.HasOwnProperty(name) == false)
+                throw new MissingFieldException($"The target for 'JintPropertyAccessor.GetValue' doesn't contain the property {name}.");
+
+            return GetValue(jsHandle.GetProperty(name));
         }
 
-        private static object GetValueJint(string name, ObjectInstance jsValue)
-        {
-            if (jsValue.HasOwnProperty(name) == false)
-                throw new MissingFieldException($"The target for 'JsPropertyAccessor.GetValue' doesn't contain the property {name}.");
-            return GetValue(jsValue.GetProperty(name).Value);
-        }
-
-        private static object GetValueV8(string name, InternalHandle jsValue)
-        {
-            if (jsValue.HasOwnProperty(name))
-                throw new MissingFieldException($"The target for 'JsPropertyAccessor.GetValue' doesn't contain the property {name}.");
-            using (var jsProp = jsValue.GetProperty(name))
-            {
-                return GetValue(jsProp);
-            }
-        }
-
-        private static object GetValue(JsValue jsValue)
-        {
-            if (jsValue.IsNull())
-                return null;
-            if (jsValue.IsString())
-                return jsValue.AsString();
-            if (jsValue.IsBoolean())
-                return jsValue.AsBoolean();
-            if (jsValue.IsNumber())
-                return jsValue.AsNumber();
-            if (jsValue.IsDate())
-                return jsValue.AsDate();
-            if (jsValue is ObjectWrapper ow)
-            {
-                var target = ow.Target;
-                switch (target)
-                {
-                    case LazyStringValue lsv:
-                        return lsv;
-
-                    case LazyCompressedStringValue lcsv:
-                        return lcsv;
-
-                    case LazyNumberValue lnv:
-                        return lnv; //should be already blittable supported type.
-                }
-                ThrowInvalidObject(new JsHandle(jsValue));
-            }
-            else if (jsValue.IsArray())
-            {
-                var arr = jsValue.AsArray();
-                var array = new object[arr.Length];
-                var i = 0;
-                foreach ((var key, var val) in arr.GetOwnPropertiesWithoutLength())
-                {
-                    array[i++] = GetValue(val.Value);
-                }
-
-                return array;
-            }
-            else if (jsValue.IsObject())
-            {
-                return jsValue.AsObject();
-            }
-            if (jsValue.IsUndefined())
-            {
-                return null;
-            }
-
-            ThrowInvalidObject(new JsHandle(jsValue));
-            return null;
-        }
-        
-        private static object GetValue(InternalHandle jsValue)
+        private static object GetValue(T jsValue)
         {
             if (jsValue.IsNull)
                 return null;
@@ -294,125 +255,85 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return jsValue.AsString;
             if (jsValue.IsBoolean)
                 return jsValue.AsBoolean;
-            if (jsValue.IsInt32)
-                return jsValue.AsInt32;
-            if (jsValue.IsNumberEx)
+            if (jsValue.IsNumber)
                 return jsValue.AsDouble;
             if (jsValue.IsDate)
                 return jsValue.AsDate;
 
-            if (jsValue.IsArray)
+
+            //TODO: egor impelemnt it in derived class??
+            //if (jsValue is ObjectWrapper ow)
+            //{
+            //    var target = ow.Target;
+            //    switch (target)
+            //    {
+            //        case LazyStringValue lsv:
+            //            return lsv;
+
+            //        case LazyCompressedStringValue lcsv:
+            //            return lcsv;
+
+            //        case LazyNumberValue lnv:
+            //            return lnv; //should be already blittable supported type.
+            //    }
+            //    ThrowInvalidObject(jsValue);
+            //}
+            //else if (jsValue.IsArray)
+            //{
+            //    var arr = jsValue.AsArray;
+            //    var array = new object[arr.Length];
+            //    var i = 0;
+            //    foreach ((var key, var val) in arr.GetOwnPropertiesWithoutLength())
+            //    {
+            //        array[i++] = GetValue(val.Value);
+            //    }
+
+            //    return array;
+            //}
+            else if (jsValue.IsObject)
             {
-                int arrayLength =  jsValue.ArrayLength;
-                var array = new object[arrayLength];
-                for (int i = 0; i < arrayLength; i++)
-                {
-                    using (var jsItem = jsValue.GetProperty(i))
-                        array[i] = GetValue(jsItem);
-                }
-                return array;
+                return jsValue.AsObject;
             }
-
-            if (jsValue.IsObject)
-            {
-                var boundObject = jsValue.BoundObject;
-                if (boundObject != null)
-                {
-                    switch (boundObject)
-                    {
-                        case LazyStringValue lsv:
-                            return lsv;
-
-                        case LazyCompressedStringValue lcsv:
-                            return lcsv;
-
-                        case LazyNumberValue lnv:
-                            return lnv; //should be already blittable supported type.
-                    }
-                }
-                return new InternalHandle(ref jsValue, true);
-            }
-
             if (jsValue.IsUndefined)
             {
                 return null;
             }
 
-            ThrowInvalidObject(new JsHandle(jsValue));
+            ThrowInvalidObject(jsValue);
             return null;
         }
 
-        private static object GetValue(JsHandle jsValue)
+        private static void ThrowInvalidObject(T jsValue)
         {
-            var engineType = jsValue.EngineType;
-            return engineType switch
-            {
-                JavaScriptEngineType.Jint => GetValue(jsValue.Jint.Item),
-                JavaScriptEngineType.V8 => GetValue(jsValue.V8.Item),
-                _ => throw new NotSupportedException($"Not supported JS engine kind '{engineType}'.")
-            };
+            throw new NotSupportedException($"Was requested to extract the value out of a JsValue object but could not figure its type, value={jsValue}, value type == '{jsValue.ValueType}'");
+        }
+    }
+
+    public class JsPropertyAccessorJint : JsPropertyAccessor<JsHandleJint>
+    {
+        public JsPropertyAccessorJint(Dictionary<string, CompiledIndexField> groupByFields) : base(groupByFields)
+        {
         }
 
-        private static object GetValueUnified(JsHandle jhValue) // we can replace the above three methods with this one but at some cost to performance
+        protected override void AssertTargetTypeInternal(object target, [CallerMemberName] string caller = null)
         {
-            var jsValue = jhValue.Handler; // this is with boxing, without boxing but with two step access on each call would be if not using handler: jsValue = jhValue
-            if (jsValue.IsNull)
-                return null;
-            if (jsValue.IsStringEx)
-                return jsValue.AsString;
-            if (jsValue.IsBoolean)
-                return jsValue.AsBoolean;
-            if (jsValue.IsInt32)
-                return jsValue.AsInt32;
-            if (jsValue.IsNumberEx)
-                return jsValue.AsDouble;
-            if (jsValue.IsDate)
-                return jsValue.AsDate;
+            if (target.GetType() != typeof(JsHandleJint))
+                throw new ArgumentException(
+                    $"{caller} is expecting a target of type of '{nameof(JsHandleJint)}' but got one of type '{target.GetType().Name}'.");
+        }
+    }
 
-            if (jsValue.IsArray)
-            {
-                var arrayLength =  jsValue.ArrayLength;
-                var array = new object[arrayLength];
-                for (int i = 0; i < arrayLength; i++)
-                {
-                    using (var jsItem = jsValue.GetProperty(i))
-                        array[i] = GetValue(jsItem);
-                }
-                return array;
-            }
-
-            if (jsValue.IsObject)
-            {
-                var boundObject = jsValue.Object;
-                if (boundObject != null)
-                {
-                    switch (boundObject)
-                    {
-                        case LazyStringValue lsv:
-                            return lsv;
-
-                        case LazyCompressedStringValue lcsv:
-                            return lcsv;
-
-                        case LazyNumberValue lnv:
-                            return lnv; //should be already blittable supported type.
-                    }
-                }
-                return jhValue.Clone();
-            }
-
-            if (jsValue.IsUndefined)
-            {
-                return null;
-            }
-
-            ThrowInvalidObject(jhValue);
-            return null;
+    public class JsPropertyAccessorV8 : JsPropertyAccessor<JsHandleV8>
+    {
+        public JsPropertyAccessorV8(Dictionary<string, CompiledIndexField> groupByFields) : base(groupByFields)
+        {
         }
 
-        private static void ThrowInvalidObject(JsHandle jsValue)
+        protected override void AssertTargetTypeInternal(object target, [CallerMemberName] string caller = null)
         {
-            throw new NotSupportedException($"Was requested to extract the value out of a JsValue object but could not figure its type, value={jsValue.ValueType}");
+            if (target.GetType() != typeof(JsHandleV8))
+                throw new ArgumentException(
+                    $"{caller} is expecting a target of type of '{nameof(JsHandleV8)}' but got one of type '{target.GetType().Name}'.");
         }
     }
 }

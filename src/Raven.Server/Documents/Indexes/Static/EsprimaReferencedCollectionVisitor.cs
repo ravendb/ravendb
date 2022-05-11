@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 switch (id.Name)
                 {
-                    case JavaScriptIndex.Load:
+                    case AbstractJavaScriptIndexBase.Load:
                         {
                             if (callExpression.Arguments.Count != 2)
                             {
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         break;
 
-                    case JavaScriptIndex.CmpXchg:
+                    case AbstractJavaScriptIndexBase.CmpXchg:
                         HasCompareExchangeReferences = true;
                         break;
                 }
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         return true;
                     case StaticMemberExpression sme:
                         {
-                            if (sme.Object is Identifier { Name: JavaScriptIndex.NoTracking })
+                            if (sme.Object is Identifier { Name: AbstractJavaScriptIndexBase.NoTracking })
                             {
                                 noTracking = true;
 

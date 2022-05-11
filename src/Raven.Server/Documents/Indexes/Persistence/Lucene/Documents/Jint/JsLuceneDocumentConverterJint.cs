@@ -11,7 +11,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Patch.Jint;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -20,33 +19,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint
 {
     public sealed class JsLuceneDocumentConverterJint : JsLuceneDocumentConverterBaseJint
     {
-        public JsLuceneDocumentConverterJint(MapIndex index, bool storeValue = false)
-            : base(index, index.Definition.IndexDefinition, storeValue: storeValue)
+        public JsLuceneDocumentConverterJint(MapIndex index, bool storeValue = false) : base(index, index.Definition.IndexDefinition, storeValue: storeValue)
         {
         }
 
-        public JsLuceneDocumentConverterJint(MapReduceIndex index, bool storeValue = false)
-            : base(index, index.Definition.IndexDefinition, storeValue: storeValue)
+        public JsLuceneDocumentConverterJint(MapReduceIndex index, bool storeValue = false) : base(index, index.Definition.IndexDefinition, storeValue: storeValue)
         {
         }
     }
 
     public abstract class JsLuceneDocumentConverterBaseJint : JsLuceneDocumentConverterBase
     {
+        private readonly JintEngineEx _engineEx;
         protected JsLuceneDocumentConverterBaseJint(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : base(index, indexDefinition, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
+            var jsIndexJint = (AbstractJavaScriptIndexJint)index._compiled;
+            _engineEx = jsIndexJint.EngineEx;
         }
 
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object documentObj, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
         {
-            if  (!(documentObj is JsHandle documentJH))
+            //TODO: egor probably can create generic JsLuceneDocumentConverter
+            if (!(documentObj is JsHandleJint jsHandle))
                 return 0;
-            var document = documentJH.Jint.Item;
+            var document = jsHandle.Item;
 
             if (!(document is ObjectInstance documentToProcess))
                 return 0;
-
             int newFields = 0;
             if (key != null)
             {
@@ -62,9 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint
 
             if (_storeValue)
             {
-                var storedValue = JsBlittableBridgeJint.Translate(indexContext,
-                    documentToProcess.Engine,
-                    documentToProcess);
+                var storedValue = JsBlittableBridgeJint.Translate(indexContext, _engineEx, jsHandle);
 
                 instance.Add(GetStoredValueField(storedValue, writeBuffer));
                 newFields++;
@@ -117,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint
                             }
                             else
                             {
-                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
+                                value = TypeConverter.ToBlittableSupportedType(val, _engineEx, flattenArrays: false, forIndexing: true, indexContext);
                                 numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
 
                                 newFields += numberOfCreatedFields;
@@ -174,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint
                     }
                 }
 
-                value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
+                value = TypeConverter.ToBlittableSupportedType(actualValue, _engineEx, flattenArrays: false, forIndexing: true, indexContext);
                 numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
 
                 newFields += numberOfCreatedFields;

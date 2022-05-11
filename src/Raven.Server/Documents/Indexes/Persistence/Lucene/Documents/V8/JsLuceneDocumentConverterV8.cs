@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
-using V8.Net;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
 {
@@ -29,18 +28,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
 
     public abstract class JsLuceneDocumentConverterBaseV8 : JsLuceneDocumentConverterBase
     {
+        private readonly V8EngineEx _engineEx;
         protected JsLuceneDocumentConverterBaseV8(Index index, IndexDefinition indexDefinition, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : base(index, indexDefinition, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
+            var jsIndexV8 = (AbstractJavaScriptIndexV8)index._compiled;
+            _engineEx = jsIndexV8.EngineEx;
         }
 
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object documentObj, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
         {
-            if  (!(documentObj is JsHandle documentJH))
+            if  (!(documentObj is JsHandleV8 jsHandle))
                 return 0;
-            var documentToProcess = documentJH.V8.Item;
+            var documentToProcess = jsHandle.Item;
 
-            if (!documentToProcess.IsObject)
+            if (documentToProcess.IsObject == false)
                 return 0;
 
             int newFields = 0;
@@ -58,9 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
 
             if (_storeValue)
             {
-                var storedValue = JsBlittableBridgeV8.Translate(indexContext,
-                    documentToProcess.Engine,
-                    documentToProcess);
+                var storedValue = JsBlittableBridgeV8.Translate(indexContext, _engineEx, jsHandle);
 
                 instance.Add(GetStoredValueField(storedValue, writeBuffer));
                 newFields++;
@@ -117,8 +117,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
                                         }
                                         else
                                         {
-                                            value = TypeConverter.ToBlittableSupportedType(jsValue, flattenArrays: false, forIndexing: true,
-                                                engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
+                                            value = TypeConverter.ToBlittableSupportedType(jsValue, _engineEx, flattenArrays: false, forIndexing: true, indexContext);
                                             numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext,
                                                 out _);
 
@@ -192,8 +191,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
                             }
                         }
 
-                        value = TypeConverter.ToBlittableSupportedType(jsPropertyValueNew, flattenArrays: false, forIndexing: true,
-                            engine: (IJsEngineHandle)documentToProcess.Engine, context: indexContext);
+                        value = TypeConverter.ToBlittableSupportedType(jsPropertyValueNew, _engineEx, flattenArrays: false, forIndexing: true, indexContext);
                     }
                 }
                 finally

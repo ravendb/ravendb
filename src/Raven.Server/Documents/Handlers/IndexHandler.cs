@@ -230,151 +230,150 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/try", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task TestJavaScriptIndex()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var jsOptions = context.DocumentDatabase.JsOptions;
+            //TODO: egor
+            //using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            //{
+            //    var input = await context.ReadForMemoryAsync(RequestBodyStream(), "TestJavaScriptIndex");
+            //    if (input.TryGet("Definition", out BlittableJsonReaderObject index) == false)
+            //        ThrowRequiredPropertyNameInRequest("Definition");
 
-                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "TestJavaScriptIndex");
-                if (input.TryGet("Definition", out BlittableJsonReaderObject index) == false)
-                    ThrowRequiredPropertyNameInRequest("Definition");
+            //    input.TryGet("Ids", out BlittableJsonReaderArray ids);
 
-                input.TryGet("Ids", out BlittableJsonReaderArray ids);
+            //    var indexDefinition = JsonDeserializationServer.IndexDefinition(index);
 
-                var indexDefinition = JsonDeserializationServer.IndexDefinition(index);
+            //    if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+            //        throw new ArgumentException("Index must have a 'Maps' fields");
 
-                if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
-                    throw new ArgumentException("Index must have a 'Maps' fields");
+            //    indexDefinition.Type = indexDefinition.DetectStaticIndexType();
 
-                indexDefinition.Type = indexDefinition.DetectStaticIndexType();
+            //    if (indexDefinition.Type.IsJavaScript() == false)
+            //        throw new UnauthorizedAccessException("Testing indexes is only allowed for JavaScript indexes.");
 
-                if (indexDefinition.Type.IsJavaScript() == false)
-                    throw new UnauthorizedAccessException("Testing indexes is only allowed for JavaScript indexes.");
+            //    AbstractStaticIndexBase compiledIndexBase = AbstractJavaScriptIndexBase.Create(indexDefinition, Database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
-                var compiledIndexBase = AbstractJavaScriptIndex.Create(indexDefinition, Database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
-
-                var inputSize = GetIntValueQueryString("inputSize", false) ?? DefaultInputSizeForTestingJavaScriptIndex;
-                var collections = new HashSet<string>(compiledIndexBase.Maps.Keys);
-                var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
-                using (context.OpenReadTransaction())
-                {
-                    if (ids == null)
-                    {
-                        foreach (var collection in collections)
-                        {
-                            docsPerCollection.Add(collection,
-                                Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, inputSize).Select(d => new DynamicBlittableJson(d)).ToList());
-                        }
-                    }
-                    else
-                    {
-                        var listOfIds = ids.Select(x => x.ToString());
-                        var _ = new Reference<int>
-                        {
-                            Value = 0
-                        };
-                        var docs = Database.DocumentsStorage.GetDocuments(context, listOfIds, 0, long.MaxValue, _);
-                        foreach (var doc in docs)
-                        {
-                            if (doc.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionStr))
-                            {
-                                if (docsPerCollection.TryGetValue(collectionStr, out var listOfDocs) == false)
-                                {
-                                    listOfDocs = docsPerCollection[collectionStr] = new List<DynamicBlittableJson>();
-                                }
-                                listOfDocs.Add(new DynamicBlittableJson(doc));
-                            }
-                        }
-                    }
+            //    var inputSize = GetIntValueQueryString("inputSize", false) ?? DefaultInputSizeForTestingJavaScriptIndex;
+            //    var collections = new HashSet<string>(compiledIndexBase.Maps.Keys);
+            //    var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
+            //    using (context.OpenReadTransaction())
+            //    {
+            //        if (ids == null)
+            //        {
+            //            foreach (var collection in collections)
+            //            {
+            //                docsPerCollection.Add(collection,
+            //                    Database.DocumentsStorage.GetDocumentsFrom(context, collection, 0, 0, inputSize).Select(d => new DynamicBlittableJson(d)).ToList());
+            //            }
+            //        }
+            //        else
+            //        {
+            //            var listOfIds = ids.Select(x => x.ToString());
+            //            var _ = new Reference<int>
+            //            {
+            //                Value = 0
+            //            };
+            //            var docs = Database.DocumentsStorage.GetDocuments(context, listOfIds, 0, long.MaxValue, _);
+            //            foreach (var doc in docs)
+            //            {
+            //                if (doc.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionStr))
+            //                {
+            //                    if (docsPerCollection.TryGetValue(collectionStr, out var listOfDocs) == false)
+            //                    {
+            //                        listOfDocs = docsPerCollection[collectionStr] = new List<DynamicBlittableJson>();
+            //                    }
+            //                    listOfDocs.Add(new DynamicBlittableJson(doc));
+            //                }
+            //            }
+            //        }
                     
-                    var compiledIndex = (JavaScriptIndex)compiledIndexBase;
-                    var mapRes = new List<JsHandle>();
-                    //all maps
-                    foreach (var listOfFunctions in compiledIndexBase.Maps)
-                    {
-                        //multi maps per collection
-                        foreach (var kvp in listOfFunctions.Value)
-                        {
-                            // TODO [ppekrol] check if this is correct
-                            foreach (var mapFunc in kvp.Value)
-                            {
-                                if (docsPerCollection.TryGetValue(listOfFunctions.Key, out var docs))
-                                {
-                                    foreach (JsHandle res in mapFunc(docs))
-                                    {
-                                        mapRes.Add(res);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    var first = true;
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("MapResults");
-                        writer.WriteStartArray();
-                        foreach (var mapResult in mapRes)
-                        {
-                            using (var jsStr = compiledIndex.JsIndexUtils.StringifyObject(mapResult))
-                            {
-                                if (jsStr.IsStringEx)
-                                {
-                                    if (first == false)
-                                    {
-                                        writer.WriteComma();
-                                    }
+            //        var compiledIndex = compiledIndexBase;
+            //        var mapRes = new List<JsHandle>();
+            //        //all maps
+            //        foreach (var listOfFunctions in compiledIndexBase.Maps)
+            //        {
+            //            //multi maps per collection
+            //            foreach (var kvp in listOfFunctions.Value)
+            //            {
+            //                // TODO [ppekrol] check if this is correct
+            //                foreach (var mapFunc in kvp.Value)
+            //                {
+            //                    if (docsPerCollection.TryGetValue(listOfFunctions.Key, out var docs))
+            //                    {
+            //                        foreach (var res in mapFunc(docs))
+            //                        {
+            //                            mapRes.Add(res);
+            //                        }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //        var first = true;
+            //        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            //        {
+            //            writer.WriteStartObject();
+            //            writer.WritePropertyName("MapResults");
+            //            writer.WriteStartArray();
+            //            foreach (var mapResult in mapRes)
+            //            {
+            //                using (var jsStr = compiledIndex.JsIndexUtils.StringifyObject(mapResult))
+            //                {
+            //                    if (jsStr.IsStringEx)
+            //                    {
+            //                        if (first == false)
+            //                        {
+            //                            writer.WriteComma();
+            //                        }
 
-                                    writer.WriteString(jsStr.AsString);
-                                    first = false;
-                                }
-                            }
-                        }
+            //                        writer.WriteString(jsStr.AsString);
+            //                        first = false;
+            //                    }
+            //                }
+            //            }
 
-                        writer.WriteEndArray();
-                        if (indexDefinition.Reduce != null)
-                        {
-                            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Name))
-                            {
-                                compiledIndexBase.SetBufferPoolForTestingPurposes(bufferPool);
-                                compiledIndexBase.SetAllocatorForTestingPurposes(context.Allocator);
-                                first = true;
-                                writer.WritePropertyName("ReduceResults");
-                                writer.WriteStartArray();
+            //            writer.WriteEndArray();
+            //            if (indexDefinition.Reduce != null)
+            //            {
+            //                using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Name))
+            //                {
+            //                    compiledIndexBase.SetBufferPoolForTestingPurposes(bufferPool);
+            //                    compiledIndexBase.SetAllocatorForTestingPurposes(context.Allocator);
+            //                    first = true;
+            //                    writer.WritePropertyName("ReduceResults");
+            //                    writer.WriteStartArray();
 
-                                var reduceResults = compiledIndexBase.Reduce(mapRes.Select(mr =>
-                                    new DynamicBlittableJson(JsBlittableBridge.Translate(context, compiledIndexBase.EngineHandle, mr))));
+            //                    var reduceResults = compiledIndexBase.Reduce(mapRes.Select(mr =>
+            //                        new DynamicBlittableJson(JsBlittableBridge.Translate(context, compiledIndexBase.EngineHandle, mr))));
 
-                                foreach (JsHandle reduceResult in reduceResults)
-                                {
-                                    using (reduceResult)
-                                    using (var jsStr = compiledIndex.JsIndexUtils.StringifyObject(reduceResult))
-                                    {
-                                        if (jsStr.IsStringEx)
-                                        {
-                                            if (first == false)
-                                            {
-                                                writer.WriteComma();
-                                            }
+            //                    foreach (JsHandle reduceResult in reduceResults)
+            //                    {
+            //                        using (reduceResult)
+            //                        using (var jsStr = compiledIndex.JsIndexUtils.StringifyObject(reduceResult))
+            //                        {
+            //                            if (jsStr.IsStringEx)
+            //                            {
+            //                                if (first == false)
+            //                                {
+            //                                    writer.WriteComma();
+            //                                }
 
-                                            writer.WriteString(jsStr.AsString);
-                                            first = false;
-                                        }
-                                    }
-                                }
+            //                                writer.WriteString(jsStr.AsString);
+            //                                first = false;
+            //                            }
+            //                        }
+            //                    }
 
-                                foreach (JsHandle mr in mapRes)
-                                {
-                                    mr.Dispose();
-                                }
-                            }
+            //                    foreach (JsHandle mr in mapRes)
+            //                    {
+            //                        mr.Dispose();
+            //                    }
+            //                }
 
-                            writer.WriteEndArray();
-                        }
+            //                writer.WriteEndArray();
+            //            }
 
-                        writer.WriteEndObject();
-                    }
-                }
-            }
+            //            writer.WriteEndObject();
+            //        }
+            //    }
+            //}
         }
 
         private static readonly int DefaultInputSizeForTestingJavaScriptIndex = 10;

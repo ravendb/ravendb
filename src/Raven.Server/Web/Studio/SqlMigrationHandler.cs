@@ -24,7 +24,6 @@ namespace Raven.Server.Web.Studio
             {
                 var sourceSqlDatabase = JsonDeserializationServer.SourceSqlDatabase(sourceSqlDatabaseBlittable);
 
-                var jsOptions = context.DocumentDatabase.JsOptions;
                 var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
                 var schema = dbDriver.FindSchema();
 
@@ -56,7 +55,6 @@ namespace Raven.Server.Web.Studio
 
                     var sourceSqlDatabase = migrationRequest.Source;
 
-                    var jsOptions = context.DocumentDatabase.JsOptions;
                     var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
                     var schema = dbDriver.FindSchema();
                     var token = CreateOperationToken();
@@ -122,7 +120,6 @@ namespace Raven.Server.Web.Studio
 
                     var sourceSqlDatabase = testRequest.Source;
 
-                    var jsOptions = context.DocumentDatabase.JsOptions;
                     var dbDriver = DatabaseDriverDispatcher.CreateDriver(sourceSqlDatabase.Provider, sourceSqlDatabase.ConnectionString);
                     var schema = dbDriver.FindSchema();
 

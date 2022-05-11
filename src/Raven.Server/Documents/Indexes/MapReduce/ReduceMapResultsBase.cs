@@ -32,7 +32,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBaseServerSide
     {
-        protected readonly IJavaScriptOptions _jsOptions;
         private static readonly TimeSpan MinReduceDurationToCalculateProcessMemoryUsage = TimeSpan.FromSeconds(3);
         internal static readonly Slice PageNumberSlice;
         internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
@@ -57,7 +56,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         protected ReduceMapResultsBase(Index index, T indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
         {
-            _jsOptions = index.JsOptions;
             _index = index;
             _indexDefinition = indexDefinition;
             _indexStorage = indexStorage;

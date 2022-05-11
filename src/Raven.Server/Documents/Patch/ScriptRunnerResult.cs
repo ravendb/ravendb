@@ -184,6 +184,9 @@ public interface IScriptRunnerResult : IDisposable
     object TranslateRawJsValue(JsonOperationContext context, IResultModifier modifier = null,
         BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isRoot = true);
 
+    BlittableJsonReaderObject TranslateToObject(JsonOperationContext context, IResultModifier modifier = null,
+        BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None);
     public bool? BooleanValue { get; }
     public bool IsNull { get; }
+    public string StringValue { get; }
 }

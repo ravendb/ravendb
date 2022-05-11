@@ -16,22 +16,8 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 {
     public class MapReduceCountersIndex : MapReduceIndex
     {
-        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        protected internal new readonly AbstractStaticIndexBase _compiled;
-
         public MapReduceCountersIndex(MapReduceIndexDefinition definition, AbstractStaticIndexBase compiled) : base(definition, compiled)
         {
-            _compiled = compiled;
-
-            if (_compiled.ReferencedCollections == null)
-                return;
-
-            foreach (var collection in _compiled.ReferencedCollections)
-            {
-                foreach (var referencedCollection in collection.Value)
-                    _referencedCollections.Add(referencedCollection.Name);
-            }
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private IndexingStatsScope _statsInstance;
         private readonly MapPhaseStats _stats = new MapPhaseStats();
 
-        protected MapReduceIndexBase(IndexType type, IndexSourceType sourceType, T definition) : base(type, sourceType, definition)
+        protected MapReduceIndexBase(IndexType type, IndexSourceType sourceType, T definition, AbstractStaticIndexBase compiled) : base(type, sourceType, definition, compiled)
         {
         }
 
