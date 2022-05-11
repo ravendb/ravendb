@@ -1935,28 +1935,8 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-
-        public static async Task WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries, CancellationToken token)
-        {
-            writer.WriteStartObject();
-
-            var first = true;
-            foreach (var kvp in timeSeries)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WritePropertyName(kvp.Key);
-
-                await TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, calcTotalCount: true, token);
-            }
-
-            writer.WriteEndObject();
-        }
-
-        public static int WriteTimeSeries(this AsyncBlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
+        
+        public static async ValueTask<int> WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries, CancellationToken token)
         {
             int size = 0;
             writer.WriteStartObject();
@@ -1971,7 +1951,7 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(kvp.Key);
                 size += kvp.Key.Length;
-                size += AbstractTimeSeriesHandlerProcessor<DatabaseRequestHandler,DocumentsOperationContext>.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
+                size += await TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, calcTotalCount: true, token);
             }
 
             writer.WriteEndObject();

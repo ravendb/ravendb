@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -189,16 +190,18 @@ namespace SlowTests.Client.TimeSeries.Session
                     session.Store(new Order { Company = "companies/apple" }, "orders/1-A");
                     session.Store(new Company { Name = "apple" }, "companies/apple");
                     session.Store(new Company { Name = "facebook" }, "companies/facebook");
-
+                    
                     var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
                     tsf.Append(baseline, new[] { 67d }, "companies/apple");
                     tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/apple");
                     tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/google");
+                    tsf.Append(baseline.AddMinutes(15), new[] { 66d }, "companies/overlap");
 
                     var tsf2 = session.TimeSeriesFor("orders/1-A", "Heartrate2");
                     tsf2.Append(baseline, new[] { 67d }, "companies/facebook");
                     tsf2.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/facebook");
                     tsf2.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/amazon");
+                    tsf2.Append(baseline.AddMinutes(15), new[] { 66d }, "companies/overlap");
 
                     session.SaveChanges();
                 }
@@ -210,9 +213,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
 
                 using (var session = store.OpenAsyncSession())
-                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    
                     var reqRanges = new List<TimeSeriesRange>()
                     {
                         new TimeSeriesRange() {From = null, To = null, Name = "Heartrate"},
@@ -224,16 +225,20 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.True(result.Values.TryGetValue("Heartrate", out var _));
                     Assert.Equal(1, result.Values["Heartrate"].Count);
-                    Assert.Equal(1, result.Values["Heartrate"][0].MissingIncludes.Count);
+                    Assert.Equal(2, result.Values["Heartrate"][0].MissingIncludes.Count);
                     Assert.Contains("companies/google", result.Values["Heartrate"][0].MissingIncludes);
+                    Assert.Contains("companies/overlap", result.Values["Heartrate"][0].MissingIncludes);
 
                     Assert.True(result.Values.TryGetValue("Heartrate2", out var _));
                     Assert.Equal(1, result.Values["Heartrate2"].Count);
-                    Assert.Equal(1, result.Values["Heartrate2"][0].MissingIncludes.Count);
+                    Assert.Equal(2, result.Values["Heartrate2"][0].MissingIncludes.Count);
                     Assert.Contains("companies/amazon", result.Values["Heartrate2"][0].MissingIncludes);
+                    Assert.Contains("companies/overlap", result.Values["Heartrate2"][0].MissingIncludes);
 
                     await session.StoreAsync(new Company { Name = "amazon" }, "companies/amazon");
                     await session.StoreAsync(new Company { Name = "google" }, "companies/google");
+                    await session.StoreAsync(new Company { Name = "overlap" }, "companies/overlap");
+
                     await session.SaveChangesAsync();
 
                     var result2 = await store.Operations.SendAsync(new GetMultipleTimeSeriesOperation( "orders/1-A", reqRanges, 0, int.MaxValue,
@@ -241,6 +246,59 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(0, result2.Values["Heartrate"][0].MissingIncludes.Count);
                     Assert.Equal(0, result2.Values["Heartrate2"][0].MissingIncludes.Count);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task TimeSeriesIncludeTagsCaseSensitive(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Company = "companies/google" }, "orders/1-A");
+                    session.Store(new Company { Name = "google" }, "companies/google");
+                    session.Store(new Company { Name = "amazon" }, "companies/amazon");
+                    session.Store(new Company { Name = "apple" }, "Companies/apple");
+
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "Companies/google");
+                    tsf.Append(baseline.AddMinutes(5), new[] { 68d }, "Companies/apple");
+                    tsf.Append(baseline.AddMinutes(10), new[] { 69d }, "Companies/amazon");
+
+                    session.SaveChanges();
+                }
+
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    var s1 = await Sharding.GetShardNumber(store, "orders/1-A");
+                    var s2 = await Sharding.GetShardNumber(store, "Companies/google");
+                    var s3 = await Sharding.GetShardNumber(store, "Companies/apple");
+                    Assert.Equal(s1, s2);
+                    Assert.NotEqual(s1, s3);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var reqRanges = new List<TimeSeriesRange>()
+                    {
+                        new TimeSeriesRange() {From = null, To = null, Name = "Heartrate"}
+                    };
+
+                    var result = await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(null, null, includes: builder => builder.IncludeTags());
+                    var resultMultiGet = await store.Operations.SendAsync(new GetMultipleTimeSeriesOperation("orders/1-A", reqRanges, 0, int.MaxValue,
+                        includes: i => i.IncludeTags()));
+
+                    Assert.True(resultMultiGet.Values.TryGetValue("Heartrate", out var _));
+                    var inMemoryDocumentSession = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/google"));
+                    Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/apple"));
+                    Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/amazon"));
+                    Assert.Equal(1, resultMultiGet.Values["Heartrate"].Count);
+                    Assert.Equal(0, resultMultiGet.Values["Heartrate"][0].MissingIncludes.Count);
                 }
             }
         }

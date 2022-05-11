@@ -625,7 +625,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     writer.WriteComma();
 
                                     writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                                    var size = writer.WriteTimeSeries(includeTimeSeriesCommand.Results);
+                                    var size = await writer.WriteTimeSeriesAsync(includeTimeSeriesCommand.Results, CancellationTokenSource.Token);
 
                                     batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.Results.Sum(x =>
                                     x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))), size);

@@ -366,59 +366,5 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
             }
             writer.WriteEndObject();
         }
-
-        public static int WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
-        {
-            if (dictionary == null)
-            {
-                writer.WriteNull();
-                return 0;
-            }
-
-            writer.WriteStartObject();
-
-            int size = 0;
-            bool first = true;
-            foreach (var (name, ranges) in dictionary)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WritePropertyName(name);
-                size += name.Length;
-
-                writer.WriteStartArray();
-
-                (long Count, DateTime Start, DateTime End) stats = default;
-                if (documentId != null)
-                {
-                    Debug.Assert(context != null);
-                    stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
-                }
-
-                for (var i = 0; i < ranges.Count; i++)
-                {
-                    long? totalCount = null;
-
-                    if (i > 0)
-                        writer.WriteComma();
-
-                    if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
-                    {
-                        totalCount = stats.Count;
-                    }
-
-                    size += TimeSeriesHandlerProcessorForGetTimeSeries.WriteRange(writer, ranges[i], totalCount);
-                }
-
-                writer.WriteEndArray();
-            }
-
-            writer.WriteEndObject();
-
-            return size;
-        }
     }
 }
