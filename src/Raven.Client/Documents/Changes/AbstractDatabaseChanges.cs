@@ -16,7 +16,7 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Changes;
 
-internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState>
+internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDisposable
     where TDatabaseConnectionState : AbstractDatabaseConnectionState
 {
     private int _commandId;
