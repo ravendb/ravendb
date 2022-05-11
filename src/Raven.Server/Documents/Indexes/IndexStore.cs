@@ -2547,6 +2547,7 @@ namespace Raven.Server.Documents.Indexes
             internal Action DuringIndexReplacement_OnOldIndexDeletion;
             internal Action AfterIndexesOpen;
             internal Action<string> AfterIndexCreation;
+            internal Action IndexCompaction;
 
             internal Action<Index> OnRollingIndexFinished;
             internal Action<Index> BeforeRollingIndexFinished;

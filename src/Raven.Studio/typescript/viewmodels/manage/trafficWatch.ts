@@ -13,6 +13,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryCriteria = require("models/database/query/queryCriteria");
 import databasesManager = require("common/shell/databasesManager");
+import accessManager = require("common/shell/accessManager");
 import TrafficWatchHttpChange = Raven.Client.Documents.Changes.TrafficWatchHttpChange;
 import trafficWatchQueriesDialog from "viewmodels/manage/trafficWatchQueriesDialog";
 import app = require("durandal/app");
@@ -127,6 +128,7 @@ class trafficWatch extends viewModelBase {
     view = require("views/manage/trafficWatch.html");
     
     static readonly usingHttps = location.protocol === "https:";
+    static readonly isSecureServer = accessManager.default.secureServer();
     
     static maxBufferSize = 200000;
     
@@ -204,7 +206,7 @@ class trafficWatch extends viewModelBase {
         }
         this.updateHelpLink('EVEP6I');
 
-        if (trafficWatch.usingHttps) {
+        if (trafficWatch.isSecureServer) {
             return this.loadCertificates();
         }
     }
@@ -484,7 +486,7 @@ class trafficWatch extends viewModelBase {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
-                    x => trafficWatch.usingHttps ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${x.ClientIP}` : x.ClientIP,
+                    x => trafficWatch.isSecureServer ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${x.ClientIP}` : x.ClientIP,
                     "Source", "8%", {
                     extraClass: rowHighlightRules,
                     useRawValue: () => true

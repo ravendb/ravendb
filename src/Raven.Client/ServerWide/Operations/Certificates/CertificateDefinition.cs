@@ -26,6 +26,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         public SecurityClearance SecurityClearance;
         public string Thumbprint;
         public DateTime? NotAfter;
+        public DateTime? NotBefore;
         public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
         public List<string> CollectionSecondaryKeys = new List<string>();
         public string CollectionPrimaryKey = string.Empty;
@@ -46,6 +47,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 [nameof(SecurityClearance)] = SecurityClearance,
                 [nameof(Permissions)] = permissions,
                 [nameof(NotAfter)] = NotAfter,
+                [nameof(NotBefore)] = NotBefore,
                 [nameof(CollectionSecondaryKeys)] = CollectionSecondaryKeys,
                 [nameof(CollectionPrimaryKey)] = CollectionPrimaryKey,
                 [nameof(PublicKeyPinningHash)] = PublicKeyPinningHash

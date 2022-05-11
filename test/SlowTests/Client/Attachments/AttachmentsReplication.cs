@@ -477,6 +477,215 @@ namespace SlowTests.Client.Attachments
         }
 
         [Fact]
+        public async Task AttachmentsRevisionsReplicationAfterEnable()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var names = new[] { "profile.png", "background-photo.jpg", "fileNAME_#$1^%_בעברית.txt" };
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+
+                    result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
+
+                    result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
+                    Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", result.Hash);
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+                await SetupAttachmentReplicationAsync(store1, store2);
+                await SetupAttachmentReplicationAsync(store2, store1);
+
+                var stats1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                var stats2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 30;
+                    session.SaveChanges();
+                }
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
+
+                stats1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                stats2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 40;
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 50;
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 60;
+                    session.SaveChanges();
+                }
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
+
+                stats1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                stats2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+            }
+        }
+
+        [Fact]
+        public async Task AttachmentsRevisionsReplicationAfterEnable2()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo", profileStream, "image/png"));
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo", backgroundStream, "ImGgE/jPeG"));
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
+                }
+
+                await SetupAttachmentReplicationAsync(store1, store2);
+                await SetupAttachmentReplicationAsync(store2, store1);
+
+                var stats1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                var stats2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 30;
+                    session.SaveChanges();
+                }
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
+
+                stats1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                stats2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 40;
+                    session.SaveChanges();
+                }
+
+
+                using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "bar", fileStream, null));
+                    Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", result.Hash);
+                }
+
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 50;
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    var u = session.Load<User>("users/1");
+                    u.Age = 60;
+                    session.SaveChanges();
+                }
+
+                WaitForMarker(store1, store2);
+                WaitForMarker(store2, store1);
+
+                stats1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                stats2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(stats1.CountOfDocuments, stats2.CountOfDocuments);
+                Assert.Equal(stats1.CountOfRevisionDocuments, stats2.CountOfRevisionDocuments);
+                Assert.Equal(stats1.CountOfAttachments, stats2.CountOfAttachments);
+                Assert.Equal(stats1.CountOfUniqueAttachments, stats2.CountOfUniqueAttachments);
+            }
+        }
+
+        [Fact]
         public async Task AttachmentsRevisionsReplication()
         {
             using (var store1 = GetDocumentStore())

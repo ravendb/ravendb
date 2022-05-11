@@ -12,12 +12,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
@@ -25,6 +27,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -471,7 +474,7 @@ namespace Raven.Server.Web.System
                     writer.WriteStartArray();
 
                     var first = true;
-                    foreach (var value in SetupManager.GetCertificateAlternativeNames(certificate))
+                    foreach (var value in CertificateUtils.GetCertificateAlternativeNames(certificate))
                     {
                         if (first == false)
                             writer.WriteComma();
@@ -524,13 +527,13 @@ namespace Raven.Server.Web.System
                     [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
                 };
 
-                if (setupInfo.Port == 0)
-                    setupInfo.Port = 8080;
+                if (setupInfo.Port == Constants.Network.ZeroValue)
+                    setupInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
 
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
-                if (setupInfo.TcpPort == 0)
-                    setupInfo.TcpPort = 38888;
+                if (setupInfo.TcpPort == Constants.Network.ZeroValue)
+                    setupInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
 
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
@@ -554,8 +557,8 @@ namespace Raven.Server.Web.System
 
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
-                SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
+                var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
+                SettingsZipFileHelper.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
             }
 
             NoContentStatus();

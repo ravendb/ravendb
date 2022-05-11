@@ -1121,8 +1121,12 @@ namespace Raven.Server.Documents.Queries
                         case ' ':
                             if(quoted)
                                 continue;
-                            
-                            yield return YieldValue(valueAsString, lastWordStart, i - lastWordStart, escapePositions);
+
+                            if (lastWordStart != i)
+                            {
+                                yield return YieldValue(valueAsString, lastWordStart, i - lastWordStart, escapePositions);
+                            }
+
                             lastWordStart = i + 1; // skipping
                             break;
                     }

@@ -430,6 +430,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                                     Thumbprint = certificate.Thumbprint,
                                     PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
                                     NotAfter = certificate.NotAfter,
+                                    NotBefore = certificate.NotBefore,
                                     Name = "Server Certificate for " + nodeUrl,
                                     SecurityClearance = SecurityClearance.ClusterNode
                                 };

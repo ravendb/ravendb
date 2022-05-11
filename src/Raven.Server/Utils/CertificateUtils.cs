@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
+using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
@@ -13,6 +17,10 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Client;
+using Raven.Client.Documents.Operations;
+using Raven.Server.Commercial;
+using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Logging;
@@ -22,7 +30,7 @@ using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Raven.Server.Utils
 {
-    internal static class CertificateUtils
+    public static class CertificateUtils
     {
         private const int BitsPerByte = 8;
 
@@ -100,6 +108,12 @@ namespace Raven.Server.Utils
             return true;
         }
 
+        public class CertificateHolder
+        {
+            public string CertificateForClients;
+            public X509Certificate2 Certificate;
+            public AsymmetricKeyEntry PrivateKey;
+        }
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {
             // Note this is for tests only!
@@ -170,7 +184,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder, out byte[] certBytes, DateTime notAfter)
+        public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, CertificateHolder certificateHolder, out byte[] certBytes, DateTime notAfter)
         {
             var serverCertBytes = certificateHolder.Certificate.Export(X509ContentType.Cert);
             var readCertificate = new X509CertificateParser().ReadCertificate(serverCertBytes);
@@ -209,7 +223,7 @@ namespace Raven.Server.Utils
                 throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
         }
 
-        public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)
+        public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, CertificateHolder certificateHolder)
         {
             var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
 
@@ -386,8 +400,169 @@ namespace Raven.Server.Utils
         {
             return new SecureRandom(new CryptoApiRandomGenerator());
         }
-    }
 
+        public static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
+        {
+            publicTcpUrl = null;
+            var node = setupInfo.NodeSetupInfos[nodeTag];
+
+            var cn = cert.GetNameInfo(X509NameType.SimpleName, false);
+            Debug.Assert(cn != null, nameof(cn) + " != null");
+            if (cn[0] == '*')
+            {
+                var parts = cn.Split("*.");
+                if (parts.Length != 2)
+                    throw new FormatException($"{cn} is not a valid wildcard name for a certificate.");
+
+                domain = parts[1];
+
+                publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
+                    ? $"tcp://{nodeTag.ToLower()}.{domain}:{node.ExternalTcpPort}"
+                    : $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
+
+                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != Constants.Network.ZeroValue)
+                    return $"https://{nodeTag.ToLower()}.{domain}:{node.ExternalPort}";
+
+                return port == Constants.Network.DefaultSecuredRavenDbHttpPort
+                    ? $"https://{nodeTag.ToLower()}.{domain}"
+                    : $"https://{nodeTag.ToLower()}.{domain}:{port}";
+            }
+
+            domain = cn; //default for one node case
+
+            foreach (var value in GetCertificateAlternativeNames(cert))
+            {
+                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                domain = value;
+                break;
+            }
+
+            var url = $"https://{domain}";
+
+            if (node.ExternalPort != Constants.Network.ZeroValue)
+                url += ":" + node.ExternalPort;
+            else if (port != Constants.Network.DefaultSecuredRavenDbHttpPort)
+                url += ":" + port;
+
+            publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
+                ? $"tcp://{domain}:{node.ExternalTcpPort}"
+                : $"tcp://{domain}:{tcpPort}";
+
+            node.PublicServerUrl = url;
+            node.PublicTcpServerUrl = publicTcpUrl;
+
+            return url;
+        }
+
+        public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
+        {
+            // If we have alternative names, find the appropriate url using the node tag
+            var sanNames = cert.Extensions["2.5.29.17"];
+
+            if (sanNames == null)
+                yield break;
+
+            var generalNames = GeneralNames.GetInstance(Asn1Object.FromByteArray(sanNames.RawData));
+
+            foreach (var certHost in generalNames.GetNames())
+            {
+                yield return certHost.Name.ToString();
+            }
+        }
+
+        public static void RegisterClientCertInOs(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, X509Certificate2 clientCert)
+        {
+            using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
+            {
+                try
+                {
+                    userPersonalStore.Add(clientCert);
+                    progress.AddInfo($"Successfully registered the admin client certificate in the OS Personal CurrentUser Store '{userPersonalStore.Name}'.");
+                    onProgress(progress);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to register client certificate in the current user personal store '{userPersonalStore.Name}'.", e);
+                }
+            }
+        }
+        
+        public static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(CompleteAuthorizationAndGetCertificateParameters parameters)
+        {
+            if (parameters.ChallengeResult.Challange == null && parameters.ChallengeResult.Cache != null)
+            {
+                return BuildNewPfx(parameters.SetupInfo, parameters.ChallengeResult.Cache.Certificate, parameters.ChallengeResult.Cache.PrivateKey);
+            }
+
+            try
+            {
+                await parameters.Client.CompleteChallenges(parameters.Token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
+            }
+
+            parameters.OnValidationSuccessful();
+
+            (X509Certificate2 Cert, RSA PrivateKey) result;
+            try
+            {
+                result = await parameters.Client.GetCertificate(parameters.ExistingPrivateKey, parameters.Token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
+            }
+
+            try
+            {
+                return BuildNewPfx(parameters.SetupInfo, result.Cert, result.PrivateKey);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
+            }
+        }
+
+        private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
+        {
+            var certWithKey = certificate.CopyWithPrivateKey(privateKey);
+
+            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+
+            var chain = new X509Chain();
+            chain.ChainPolicy.DisableCertificateDownloads = true;
+
+            chain.Build(certificate);
+
+            foreach (var item in chain.ChainElements)
+            {
+                var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
+
+                if (item.Certificate.Thumbprint == certificate.Thumbprint)
+                {
+                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
+                    store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
+                    continue;
+                }
+
+                store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
+            }
+
+            var memoryStream = new MemoryStream();
+            store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
+            var certBytes = memoryStream.ToArray();
+            
+            Debug.Assert(certBytes != null);
+            setupInfo.Certificate = Convert.ToBase64String(certBytes);
+
+            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+        }
+    }
     public static class PublicKeyPinningHashHelpers
     {
         public static string GetPublicKeyPinningHash(this X509Certificate2 cert)

@@ -10,6 +10,8 @@ namespace Raven.Client.Documents.Queries.Timings
 
         public IDictionary<string, QueryTimings> Timings { get; set; }
 
+        internal bool ShouldBeIncluded { get; set; }
+
         public void FillFromBlittableJson(BlittableJsonReaderObject json)
         {
             var timings = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<QueryTimings>(json, "query/timings");
