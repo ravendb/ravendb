@@ -436,9 +436,9 @@ namespace Raven.Client
                 {
                 }
 
-                public string DocumentChangeVector;
+                public const string DocumentChangeVector = null;
 
-                public string DestinationDocumentChangeVector;
+                public const string DestinationDocumentChangeVector = null;
             }
         }
     }
