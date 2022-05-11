@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CanGetNotificationAboutTimeSeriesAppend()
+        [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetNotificationAboutTimeSeriesAppend(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var list = new BlockingCollection<TimeSeriesChange>();
                 var taskObservable = store.Changes();
@@ -69,10 +71,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanGetNotificationAboutTimeSeriesDelete()
+        [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetNotificationAboutTimeSeriesDelete(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var list = new BlockingCollection<TimeSeriesChange>();
                 var taskObservable = store.Changes();
@@ -138,10 +141,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanSubscribeToTimeSeriesChanges()
+        [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.TimeSeries)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanSubscribeToTimeSeriesChanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
