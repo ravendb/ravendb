@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries
                 _queryMetadata = queryMetadata;
             }
 
-            public override void GenerateScript(ScriptRunner runner)
+            public override void GenerateScript<T>(ScriptRunner<T> runner)
             {
                 if (_queryMetadata.DeclaredFunctions != null)
                 {
@@ -139,8 +139,8 @@ namespace Raven.Server.Documents.Queries
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
             private readonly CancellationToken _token;
-            private readonly ScriptRunner.SingleRun _filterScriptRun;
-            private ScriptRunner.ReturnRun _releaseFilterScriptRunner;
+            private readonly ISingleRun _filterScriptRun;
+            private ReturnRun _releaseFilterScriptRunner;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,

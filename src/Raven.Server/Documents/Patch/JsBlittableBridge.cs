@@ -16,7 +16,7 @@ public abstract class JsBlittableBridge<T>
     where T : struct, IJsHandle<T>
 {
     protected  ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _writer;
-    private  BlittableJsonDocumentBuilder.UsageMode _usageMode;
+    protected BlittableJsonDocumentBuilder.UsageMode _usageMode;
     public IJsEngineHandle<T> _scriptEngine;
     [ThreadStatic]
     protected static HashSet<object> _recursive;
@@ -30,7 +30,7 @@ public abstract class JsBlittableBridge<T>
         ThreadLocalCleanup.ReleaseThreadLocalState += () => _recursive = null;
     }
 
-    public JsBlittableBridge(IJsEngineHandle<T> scriptEngine)
+    protected JsBlittableBridge(IJsEngineHandle<T> scriptEngine)
     {
         //_writer = writer;
         //_usageMode = usageMode;
@@ -55,7 +55,7 @@ public abstract class JsBlittableBridge<T>
 
         modifier?.Modify(jsObject, _scriptEngine);
         var boundObject = jsObject.AsObject();
-        if (boundObject is IBlittableObjectInstance<T>)
+        if (boundObject is IBlittableObjectInstance)
             WriteBlittableInstance(jsObject, isRoot, filterProperties);
         else
             WriteJsInstance(jsObject, isRoot, filterProperties);
@@ -63,7 +63,7 @@ public abstract class JsBlittableBridge<T>
         _writer.WriteObjectEnd();
     }
 
-    private void WriteJsonValue(T jsParent, bool isRoot, bool filterProperties, string propertyName, T jsValue)
+    protected void WriteJsonValue(T jsParent, bool isRoot, bool filterProperties, string propertyName, T jsValue)
     {
         jsValue.ThrowOnError();
 
@@ -187,7 +187,7 @@ public abstract class JsBlittableBridge<T>
         var target = jsObj.AsObject();
         if (target != null)
         {
-            if (target is IDictionary || target is IBlittableObjectInstance<T> blittableJsObject)
+            if (target is IDictionary || target is IBlittableObjectInstance blittableJsObject)
             {
                 WriteValueInternal(target, jsObj, filterProperties);
             }
@@ -340,89 +340,10 @@ public abstract class JsBlittableBridge<T>
         }
     }
 
-    private unsafe void WriteBlittableInstance(T jsObj, bool isRoot, bool filterProperties)
-    {
-        var obj = (IBlittableObjectInstance<T>)jsObj.AsObject();
-        HashSet<string> modifiedProperties = null;
-        if (obj.DocumentId != null &&
-            _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
-        {
-            var metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key);
-            if (metadata.AsObject() is IBlittableObjectInstance<T> boi)
-            {
-                using (var jsDocId = _scriptEngine.CreateValue(obj.DocumentId))
-                    boi.SetOwnProperty(Constants.Documents.Metadata.Id, jsDocId, toReturnCopy: false);
-            }
-            else
-            {
-                metadata.SetProperty(Constants.Documents.Metadata.Id, _scriptEngine.CreateValue(obj.DocumentId));
-            }
-        }
-
-        if (obj.Blittable != null)
-        {
-            using var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
-            for (int i = 0; i < propertiesByInsertionOrder.Size; i++)
-            {
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-                var propIndex = propertiesByInsertionOrder.Properties[i];
-                obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
-
-                IBlittableObjectProperty modifiedValue = default;
-                var key = prop.Name.ToString();
-                var existInObject = obj.TryGetValue(key, out modifiedValue, out bool isDeleted);
-
-                if (isDeleted)
-                    continue;
-
-                if (existInObject)
-                {
-                    modifiedProperties ??= new HashSet<string>();
-
-                    modifiedProperties.Add(prop.Name);
-                }
-
-                if (ShouldFilterProperty(filterProperties, prop.Name))
-                    continue;
-
-                _writer.WritePropertyName(prop.Name);
-
-                if (existInObject && modifiedValue.Changed)
-                {
-                    WriteJsonValue(jsObj, isRoot, filterProperties, prop.Name, modifiedValue.Value);
-                }
-                else
-                {
-                    _writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                }
-            }
-        }
-
-        if (obj.OwnValues == null)
-            return;
-
-        foreach (var modificationKvp in obj.OwnValues)
-        {
-            //We already iterated through those properties while iterating the original properties set.
-            if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key))
-                continue;
-
-            var propertyName = modificationKvp.Key;
-            var propertyNameAsString = propertyName;
-            if (ShouldFilterProperty(filterProperties, propertyNameAsString))
-                continue;
-
-            if (modificationKvp.Value.Changed == false)
-                continue;
-
-            _writer.WritePropertyName(propertyNameAsString);
-            IBlittableObjectProperty blittableObjectProperty = modificationKvp.Value;
-            WriteJsonValue(jsObj, isRoot, filterProperties, propertyNameAsString, blittableObjectProperty.Value);
-        }
-    }
+    protected abstract unsafe void WriteBlittableInstance(T jsObj, bool isRoot, bool filterProperties);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ShouldFilterProperty(bool filterProperties, string property)
+    protected static bool ShouldFilterProperty(bool filterProperties, string property)
     {
         if (filterProperties == false)
             return false;
@@ -444,7 +365,7 @@ public abstract class JsBlittableBridge<T>
         if (objectInstance == null)
             return null;
 
-        if (objectInstance is IBlittableObjectInstance<T> boi && boi.Changed == false && isRoot)
+        if (objectInstance is IBlittableObjectInstance boi && boi.Changed == false && isRoot)
             return boi.Blittable.Clone(context);
 
         using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
@@ -459,7 +380,6 @@ public abstract class JsBlittableBridge<T>
             return writer.CreateReader();
         }
     }
-
 }
 
 public interface IBlittableObjectProperty<T> : IDisposable

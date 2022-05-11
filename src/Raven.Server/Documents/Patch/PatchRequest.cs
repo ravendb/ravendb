@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Esprima;
-using Esprima.Ast;
-using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
@@ -65,19 +61,19 @@ namespace Raven.Server.Documents.Patch
 
         }
 
-        public override void GenerateScript(ScriptRunner runner)
+        public override void GenerateScript<T>(ScriptRunner<T> runner)
         {
-            if (_functions!= null)
+            if (_functions != null)
             {
-                foreach(var function in _functions)
+                foreach (var function in _functions)
                 {
                     runner.AddScript(function.Value.FunctionText);
                 }
             }
-            runner.AddScript(GenerateRootScript(runner.JsOptions.EngineType));
+            runner.AddScript(GenerateRootScript());
         }
 
-        protected virtual string GenerateRootScript(JavaScriptEngineType jsEngineType)
+        protected virtual string GenerateRootScript()
         {
             switch (Type)
             {
@@ -94,6 +90,7 @@ namespace Raven.Server.Documents.Patch
  function __actual_func(args) {{ 
 Raven_ExplodeArgs(this, args);
 {Script}
+
 }};
 
 function execute(doc, args){{ 
@@ -109,40 +106,10 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
 
 }}";
                 case PatchRequestType.EtlBehaviorFunctions:
-                    return FilterCode(Script);
+                    return Script;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-        }
-
-        private string FilterCode(string script)
-        {
-            var javascriptParser = new JavaScriptParser(script, new ParserOptions());
-            var program = javascriptParser.ParseScript();
-            return FilterCodeForNode(program.Body, script);
-        }
-
-        private string FilterCodeForNode(IEnumerable<Statement> nodes, string script)
-        {
-            var result = "";
-            foreach (var item in nodes)
-            {
-                if (item.Type == Nodes.BlockStatement)
-                {
-                    var blockResult = FilterCodeForNode(item.As<BlockStatement>().Body, script);
-                    if (blockResult != "")
-                        result += $"{{\n{blockResult}}}\n\n";
-                }
-                else if (item.Type == Nodes.FunctionDeclaration || item.Type == Nodes.VariableDeclaration || item.Type == Nodes.ClassDeclaration)
-                {
-                    var startPos = item.Range.Start;
-                    var endPos = item.Range.End;
-                    var itemCode = script.Substring(startPos, endPos - startPos) + "\n\n";
-                    if (item.Type != Nodes.VariableDeclaration || !itemCode.Contains("this"))
-                        result += itemCode;
-                }
-            }
-            return result;
         }
 
         public override bool Equals(object obj)

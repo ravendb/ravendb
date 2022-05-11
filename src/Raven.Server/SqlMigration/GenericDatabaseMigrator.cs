@@ -42,8 +42,7 @@ namespace Raven.Server.SqlMigration
 
                 string CollectionNameProvider(string schema, string name) => settings.CollectionsMapping.Single(x => x.TableSchema == schema && x.TableName == name).CollectionName;
 
-                var jsOptions = context.DocumentDatabase.JsOptions;
-                using (var patcher = new JsPatcher(jsOptions, collectionToImport, context))
+                using (var patcher = new JsPatcher(collectionToImport, context))
                 {
                     var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider);
 
@@ -118,8 +117,7 @@ namespace Raven.Server.SqlMigration
                     var tableSchema = dbSchema.GetTable(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
                     var specialColumns = dbSchema.FindSpecialColumns(collectionToImport.SourceTableSchema, collectionToImport.SourceTableName);
 
-                    var jsOptions = db.JsOptions;
-                    using (var patcher = new JsPatcher(jsOptions, collectionToImport, context))
+                    using (var patcher = new JsPatcher(collectionToImport, context))
                     {
                         var references = ResolveReferences(collectionToImport, dbSchema, CollectionNameProvider);
 

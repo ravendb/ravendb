@@ -70,8 +70,6 @@ public interface IJsEngineHandle<T> : /*IJavaScriptEngineForParsing<T>,*/ IScrip
 
     void CheckForMemoryLeaks(string name, bool shouldRemove = true);
 
-    void TryCompileScript(string script);
-
     void ResetCallStack();
 
     void ResetConstraints();
@@ -115,4 +113,6 @@ public interface IScriptEngineChanges
     IDisposable ChangeMaxStatements(int value);
 
     IDisposable ChangeMaxDuration(int value);
+
+    void TryCompileScript(string script);
 }

@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Patch.V8
     {
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, Task oi, bool keepAlive = false) 
         {
-            var jsBinder = engine.CreateObjectBinder<TaskCustomBinder>(oi, engine.Context.TypeBinderTask(), keepAlive: keepAlive);
+            var jsBinder = engine.Engine.CreateObjectBinder<TaskCustomBinder>(oi, engine.Context.TypeBinderTask(), keepAlive: keepAlive);
             var binder = (ObjectBinder)jsBinder.Object;
             binder.ShouldDisposeBoundObject = true;
             return jsBinder;
@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.Patch.V8
             }
             catch (Exception e)
             {
-                var engineEx = (V8EngineEx)engine;
-                engineEx.Context.JsContext.LastException = e;
+                //TODO: egor
+          //      engine.Context.JsContext.LastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -48,8 +48,7 @@ namespace Raven.Server.Documents.Patch.V8
             }
             catch (Exception e)
             {
-                var engineEx = (V8EngineEx)Engine;
-                engineEx.Context.JsContext.LastException = e;
+               // engineEx.Context.JsContext.LastException = e;
                 return Engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }

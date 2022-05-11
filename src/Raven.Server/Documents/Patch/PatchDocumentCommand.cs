@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Handlers.Batches;
-using Raven.Server.Documents.TimeSeries;using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -31,7 +34,6 @@ namespace Raven.Server.Documents.Patch
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patchIfMissing;
         private readonly BlittableJsonReaderObject _createIfMissing;
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patch;
-        private readonly JavaScriptEngineType _engineType;
 
         public List<string> DebugOutput { get; private set; }
 
@@ -56,11 +58,60 @@ namespace Raven.Server.Documents.Patch
             _isTest = isTest;
             _debugMode = debugMode;
             _returnDocument = returnDocument;
-
-            _engineType = _database.Configuration.JavaScript.EngineType;
         }
 
-        protected PatchResult ExecuteOnDocument(DocumentsOperationContext context, string id, LazyStringValue expectedChangeVector, ScriptRunner.SingleRun run, ScriptRunner.SingleRun runIfMissing)
+        protected List<(string Id, PatchResult PatchResult)> ExecuteOnDocumentExtended(DocumentsOperationContext context, BlittableJsonReaderArray ids)
+        {
+            var patchResults = new List<(string Id, PatchResult PatchResult)>();
+            switch (_database.Configuration.JavaScript.EngineType)
+            {
+                case JavaScriptEngineType.Jint:
+                    SingleRunJint runIfMissingJint = null;
+                    using (_database.Scripts.GetScriptRunnerJint(_patch.Run, readOnly: false, out SingleRunJint run))
+                    using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunnerJint(_patchIfMissing.Run, readOnly: false, out runIfMissingJint) : (IDisposable)null)
+                    {
+                        foreach (var item in ids)
+                        {
+                            var id = TryGetIdAndChangeVector(item, out LazyStringValue expectedChangeVector);
+                            var patchResult = ExecuteOnDocument(context, id, expectedChangeVector, run, runIfMissingJint);
+                            patchResults.Add((id, patchResult));
+                        }
+
+                        return patchResults;
+                    }
+                case JavaScriptEngineType.V8:
+                    SingleRunV8 runIfMissingV8 = null;
+                    using (_database.Scripts.GetScriptRunnerV8(_patch.Run, readOnly: false, out SingleRunV8 run))
+                    using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunnerV8(_patchIfMissing.Run, readOnly: false, out runIfMissingV8) : (IDisposable)null)
+                    {
+                        foreach (var item in ids)
+                        {
+                            var id = TryGetIdAndChangeVector(item, out LazyStringValue expectedChangeVector);
+                            var patchResult = ExecuteOnDocument(context, id, expectedChangeVector, run, runIfMissingV8);
+                            patchResults.Add((id, patchResult));
+                        }
+
+                        return patchResults;
+                    }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_database.Configuration.JavaScript.EngineType));
+            }
+        }
+
+        private static string TryGetIdAndChangeVector(object item, out LazyStringValue expectedChangeVector)
+        {
+            if (!(item is BlittableJsonReaderObject bjro))
+                throw new InvalidOperationException();
+
+            if (bjro.TryGet(nameof(ICommandData.Id), out string id) == false)
+                throw new InvalidOperationException();
+
+            bjro.TryGet(nameof(ICommandData.ChangeVector), out expectedChangeVector);
+            return id;
+        }
+
+        private PatchResult ExecuteOnDocument<T>(DocumentsOperationContext context, string id, LazyStringValue expectedChangeVector, SingleRun<T> run, SingleRun<T> runIfMissing)
+        where T : struct, IJsHandle<T>
         {
             _database = context.DocumentDatabase;
             run.DebugMode = _debugMode;
@@ -117,7 +168,7 @@ namespace Raven.Server.Documents.Patch
                     };
                 }
 
-                JsHandle documentInstance = JsHandle.Empty;
+                T documentInstance = run.ScriptEngineHandle.Empty;
                 var args = _patch.Args;
                 if (originalDocument == null)
                 {
@@ -273,21 +324,21 @@ namespace Raven.Server.Documents.Patch
             return originalDocument;
         }
 
-        private BlittableJsonReaderObject ExecuteScript(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run, JsonOperationContext patchContext,
-            JsHandle documentInstance, BlittableJsonReaderObject args)
+        private BlittableJsonReaderObject ExecuteScript<T>(DocumentsOperationContext context, string id, ISingleRun run, JsonOperationContext patchContext,
+            T documentInstance, BlittableJsonReaderObject args) where T : struct, IJsHandle<T>
         {
             if (documentInstance.IsEmpty)
             {
                 return _createIfMissing;
             }
 
-            using (var scriptResult = run.Run(patchContext, context, "execute", id, new[] {(object)documentInstance, args}))
+            using (IScriptRunnerResult scriptResult = run.Run(patchContext, context, "execute", id, new[] {(object)documentInstance, args}))
             {
                 return scriptResult.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
         }
 
-        private NonPersistentDocumentFlags HandleMetadataUpdates(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run)
+        private NonPersistentDocumentFlags HandleMetadataUpdates(DocumentsOperationContext context, string id, ISingleRun run)
         {
             var nonPersistentFlags = AddResolveFlagOrUpdateRelatedDocuments(context, id, run.DocumentCountersToUpdate, resolveFlag: NonPersistentDocumentFlags.ResolveCountersConflict);
             nonPersistentFlags |= AddResolveFlagOrUpdateRelatedDocuments(context, id, run.DocumentTimeSeriesToUpdate, resolveFlag: NonPersistentDocumentFlags.ResolveTimeSeriesConflict);
@@ -370,7 +421,7 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly BlittableJsonReaderArray _ids;
 
-        private readonly List<(string Id, PatchResult PatchResult)> _patchResults = new List<(string Id, PatchResult PatchResult)>();
+        private  List<(string Id, PatchResult PatchResult)> _patchResults = new List<(string Id, PatchResult PatchResult)>();
 
         public BatchPatchDocumentCommand(
             JsonOperationContext context,
@@ -391,25 +442,8 @@ namespace Raven.Server.Documents.Patch
             if (_ids == null || _ids.Length == 0)
                 return 0;
 
-            ScriptRunner.SingleRun runIfMissing = null;
             _database = context.DocumentDatabase;
-            using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
-            using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
-            {
-                foreach (var item in _ids)
-                {
-                    if (!(item is BlittableJsonReaderObject bjro))
-                        throw new InvalidOperationException();
-
-                    if (bjro.TryGet(nameof(ICommandData.Id), out string id) == false)
-                        throw new InvalidOperationException();
-
-                    bjro.TryGet(nameof(ICommandData.ChangeVector), out LazyStringValue expectedChangeVector);
-
-                    var patchResult = ExecuteOnDocument(context, id, expectedChangeVector, run, runIfMissing);
-                    _patchResults.Add((id, patchResult));
-                }
-            }
+            _patchResults = ExecuteOnDocumentExtended(context, _ids);
 
             return _ids.Length;
         }
@@ -456,24 +490,30 @@ namespace Raven.Server.Documents.Patch
             bool collectResultsNeeded,
             bool returnDocument) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, createIfMissing, isTest, debugMode, collectResultsNeeded, returnDocument)
         {
+            if (string.IsNullOrEmpty(id) || id.EndsWith(identityPartsSeparator) || id.EndsWith('|'))
+                throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
+
             _id = id;
             _expectedChangeVector = expectedChangeVector;
 
-            if (string.IsNullOrEmpty(id) || id.EndsWith(identityPartsSeparator) || id.EndsWith('|'))
-                throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
         }
         
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            ScriptRunner.SingleRun runIfMissing = null;
             _database = context.DocumentDatabase;
 
-            using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
-            using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
+            //TODO: egor check if BlittableJsonReaderArray creation is right
+            using var bjro = context.ReadObject(new DynamicJsonValue()
             {
-                PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
-                return 1;
-            }
+                [nameof(BatchPatchCommandData.Ids)] = new DynamicJsonArray { new DynamicJsonValue { [nameof(ICommandData.Id)] = _id, [nameof(ICommandData.ChangeVector)] = _expectedChangeVector } }
+            }, "PatchDocumentCommand");
+
+            bjro.TryGet(nameof(BatchPatchCommandData.Ids), out BlittableJsonReaderArray ids);
+            if (ids == null || ids.Length == 0)
+                return 0;
+
+            PatchResult = ExecuteOnDocumentExtended(context, ids).FirstOrDefault().PatchResult;
+            return 1;
         }
 
         public override string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections)

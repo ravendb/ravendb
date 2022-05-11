@@ -13,7 +13,7 @@ namespace Raven.Server.SqlMigration
         private readonly DocumentsOperationContext _context;
         private ReturnRun scriptRunner;
         
-        public JsPatcher(IJavaScriptOptions jsOptions, RootCollection collection, DocumentsOperationContext context) 
+        public JsPatcher(RootCollection collection, DocumentsOperationContext context) 
         {
             if (string.IsNullOrWhiteSpace(collection.Patch)) 
                 return;

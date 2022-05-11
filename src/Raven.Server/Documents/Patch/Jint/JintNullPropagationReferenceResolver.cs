@@ -5,6 +5,7 @@ using Jint.Runtime.Interop;
 using Jint.Runtime.References;
 using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
 using Raven.Client;
+using Raven.Server.Documents.Patch.V8;
 
 namespace Raven.Server.Documents.Patch.Jint
 {
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Patch.Jint
             if (reference.GetReferencedName() == Constants.Documents.Metadata.Key && 
                 reference.GetBase() is BlittableObjectInstanceJint boi)
             {
-                value = engine.Invoke(ScriptRunner.SingleRun.GetMetadataMethod, boi);
+                value = engine.Invoke(SingleRunBase.GetMetadataMethod, boi);
                 return true;
             }
             

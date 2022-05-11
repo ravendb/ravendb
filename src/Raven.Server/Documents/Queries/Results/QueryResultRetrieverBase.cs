@@ -997,7 +997,7 @@ namespace Raven.Server.Documents.Queries.Results
                 _functions = functions;
             }
 
-            public override void GenerateScript(ScriptRunner runner)
+            public override void GenerateScript<T>(ScriptRunner<T> runner)
             {
                 foreach (var kvp in _functions ?? Enumerable.Empty<KeyValuePair<string, DeclaredFunction>>())
                 {
