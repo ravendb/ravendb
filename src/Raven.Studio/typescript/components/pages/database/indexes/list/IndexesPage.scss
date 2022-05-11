@@ -4,26 +4,13 @@
 @use "Content/scss/sizes";
 
 .index-tooltip {
-    position: absolute;
     background-color: colors.$gray-700;
     border-radius: sizes.$gutter-xs;
     display: grid;
     grid-template-columns: auto auto;
     z-index: 1000;
     box-shadow: 0 2px 10px 2px colors.$black;
-
-    &::after {
-        content: '';
-        position: absolute;
-        width: sizes.$gutter-sm;
-        height: math.div(sizes.$gutter-sm, 2);
-        bottom: 0;
-        left: 50%;
-        background-color: colors.$gray-700;
-        transform: translateX(-50%) translateY(100%);
-        clip-path: polygon(50% 100%, 100% 0%, 0% 0%);
-    }
-
+    
     .index-location {
         display: flex;
         flex-direction: column;
