@@ -206,9 +206,9 @@ class connectedDocuments {
         const dateFormatter = (date: string) => moment.utc(date).local().format("YYYY-MM-DD");
         
         this.timeSeriesColumns = [
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Timeseries Name", "145px"),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries, "Timeseries items count", "60px"),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Timeseries date range", "170px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Time series name", "145px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries, "Time Series items count", "60px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Time Series date range", "170px"),
             new actionColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>,
                 x => this.goToTimeSeriesEdit(x),
                 "Details",
@@ -218,9 +218,9 @@ class connectedDocuments {
         ]
         
         this.timeSeriesInReadOnlyModeColumns = [
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Timeseries Name", "145px"),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries, "Timeseries items count", "60px"),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Timeseries date range", "170px")
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Time series name", "145px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries, "Time series items count", "60px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Time series date range", "170px")
         ];
     }
 
