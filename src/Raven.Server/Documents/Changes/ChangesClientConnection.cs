@@ -365,31 +365,31 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchTimeSeriesAsync(string name)
+        protected override ValueTask WatchTimeSeriesAsync(string name, CancellationToken token)
         {
             _matchingTimeSeries.TryAdd(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchTimeSeriesAsync(string name)
+        protected override ValueTask UnwatchTimeSeriesAsync(string name, CancellationToken token)
         {
             _matchingTimeSeries.TryRemove(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchAllDocumentTimeSeriesAsync(string docId)
+        protected override ValueTask WatchAllDocumentTimeSeriesAsync(string docId, CancellationToken token)
         {
             _matchingAllDocumentTimeSeries.TryAdd(docId);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchAllDocumentTimeSeriesAsync(string docId)
+        protected override ValueTask UnwatchAllDocumentTimeSeriesAsync(string docId, CancellationToken token)
         {
             _matchingAllDocumentTimeSeries.TryRemove(docId);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters)
+        protected override ValueTask WatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters, CancellationToken token)
         {
             var val = GetParameters(parameters);
 
@@ -398,7 +398,7 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters)
+        protected override ValueTask UnwatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters, CancellationToken token)
         {
             var val = GetParameters(parameters);
 
@@ -407,13 +407,13 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchAllTimeSeriesAsync()
+        protected override ValueTask WatchAllTimeSeriesAsync(CancellationToken token)
         {
             Interlocked.Increment(ref _watchAllTimeSeries);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchAllTimeSeriesAsync()
+        protected override ValueTask UnwatchAllTimeSeriesAsync(CancellationToken token)
         {
             Interlocked.Decrement(ref _watchAllTimeSeries);
             return ValueTask.CompletedTask;

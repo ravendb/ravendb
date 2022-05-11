@@ -72,21 +72,21 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected abstract ValueTask UnwatchAllCountersAsync(CancellationToken token);
 
-    protected abstract ValueTask WatchTimeSeriesAsync(string name);
+    protected abstract ValueTask WatchTimeSeriesAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask UnwatchTimeSeriesAsync(string name);
+    protected abstract ValueTask UnwatchTimeSeriesAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask WatchAllDocumentTimeSeriesAsync(string docId);
+    protected abstract ValueTask WatchAllDocumentTimeSeriesAsync(string docId, CancellationToken token);
 
-    protected abstract ValueTask UnwatchAllDocumentTimeSeriesAsync(string docId);
+    protected abstract ValueTask UnwatchAllDocumentTimeSeriesAsync(string docId, CancellationToken token);
 
-    protected abstract ValueTask WatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters);
+    protected abstract ValueTask WatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters, CancellationToken token);
 
-    protected abstract ValueTask UnwatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters);
+    protected abstract ValueTask UnwatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters, CancellationToken token);
 
-    protected abstract ValueTask WatchAllTimeSeriesAsync();
+    protected abstract ValueTask WatchAllTimeSeriesAsync(CancellationToken token);
 
-    protected abstract ValueTask UnwatchAllTimeSeriesAsync();
+    protected abstract ValueTask UnwatchAllTimeSeriesAsync(CancellationToken token);
 
     protected abstract ValueTask WatchDocumentPrefixAsync(string name);
 
@@ -366,35 +366,35 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         }
         else if (Match(command, "watch-all-timeseries"))
         {
-            await WatchAllTimeSeriesAsync();
+            await WatchAllTimeSeriesAsync(token);
         }
         else if (Match(command, "unwatch-all-timeseries"))
         {
-            await UnwatchAllTimeSeriesAsync();
+            await UnwatchAllTimeSeriesAsync(token);
         }
         else if (Match(command, "watch-timeseries"))
         {
-            await WatchTimeSeriesAsync(commandParameter);
+            await WatchTimeSeriesAsync(commandParameter, token);
         }
         else if (Match(command, "unwatch-timeseries"))
         {
-            await UnwatchTimeSeriesAsync(commandParameter);
+            await UnwatchTimeSeriesAsync(commandParameter, token);
         }
         else if (Match(command, "watch-all-document-timeseries"))
         {
-            await WatchAllDocumentTimeSeriesAsync(commandParameter);
+            await WatchAllDocumentTimeSeriesAsync(commandParameter, token);
         }
         else if (Match(command, "unwatch-all-document-timeseries"))
         {
-            await UnwatchAllDocumentTimeSeriesAsync(commandParameter);
+            await UnwatchAllDocumentTimeSeriesAsync(commandParameter, token);
         }
         else if (Match(command, "watch-document-timeseries"))
         {
-            await WatchDocumentTimeSeriesAsync(commandParameters);
+            await WatchDocumentTimeSeriesAsync(commandParameters, token);
         }
         else if (Match(command, "unwatch-document-timeseries"))
         {
-            await UnwatchDocumentTimeSeriesAsync(commandParameters);
+            await UnwatchDocumentTimeSeriesAsync(commandParameters, token);
         }
         else if (Match(command, "watch-topology-change"))
         {
