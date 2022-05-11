@@ -55,8 +55,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
-            var boostedValue = document as BoostedValue;
-            var documentToProcess = boostedValue == null ? document : boostedValue.Value;
+            var boostedValue = document  as BoostedValue;
+            object documentToProcess;
+            if (boostedValue != null)
+            {
+                documentToProcess = boostedValue.Value;
+                Document.Boost = boostedValue.Boost;
+            }
+            else
+            {
+                documentToProcess = document;
+                Document.Boost = LuceneDefaultBoost;
+            }
 
             IPropertyAccessor accessor;
 
@@ -92,7 +102,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     for (int idx = fields.Count - 1; numberOfCreatedFields > 0; numberOfCreatedFields--, idx--)
                     {
                         var luceneField = fields[idx];
-                        luceneField.Boost = boostedValue.Boost;
                         luceneField.OmitNorms = false;
                     }
                 }
