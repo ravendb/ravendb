@@ -94,16 +94,10 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
             _watchAllDocumentsUnsubscribe = await WatchInternalAsync(changes => changes.ForAllDocuments(), token);
     }
 
-    protected override async ValueTask UnwatchAllDocumentsAsync(CancellationToken token)
+    protected override ValueTask UnwatchAllDocumentsAsync(CancellationToken token)
     {
-        await EnsureConnectedAsync();
-
-        var value = Interlocked.Decrement(ref _watchAllDocuments);
-        if (value == 0)
-        {
-            var watchAllDocumentsUnsubscribe = _watchAllDocumentsUnsubscribe;
-            watchAllDocumentsUnsubscribe?.Dispose();
-        }
+        UnwatchInternal(ref _watchAllDocuments, _watchAllDocumentsUnsubscribe);
+        return ValueTask.CompletedTask;
     }
 
     protected override async ValueTask WatchCounterAsync(string name, CancellationToken token)
@@ -155,16 +149,10 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
             _watchAllCountersUnsubscribe = await WatchInternalAsync(changes => changes.ForAllCounters(), token);
     }
 
-    protected override async ValueTask UnwatchAllCountersAsync(CancellationToken token)
+    protected override ValueTask UnwatchAllCountersAsync(CancellationToken token)
     {
-        await EnsureConnectedAsync();
-
-        var value = Interlocked.Decrement(ref _watchAllCounters);
-        if (value == 0)
-        {
-            var watchAllCountersUnsubscribe = _watchAllCountersUnsubscribe;
-            watchAllCountersUnsubscribe?.Dispose();
-        }
+        UnwatchInternal(ref _watchAllCounters, _watchAllCountersUnsubscribe);
+        return ValueTask.CompletedTask;
     }
 
     protected override async ValueTask WatchTimeSeriesAsync(string name, CancellationToken token)
@@ -216,16 +204,10 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
             _watchAllTimeSeriesUnsubscribe = await WatchInternalAsync(changes => changes.ForAllTimeSeries(), token);
     }
 
-    protected override async ValueTask UnwatchAllTimeSeriesAsync(CancellationToken token)
+    protected override ValueTask UnwatchAllTimeSeriesAsync(CancellationToken token)
     {
-        await EnsureConnectedAsync();
-
-        var value = Interlocked.Decrement(ref _watchAllTimeSeries);
-        if (value == 0)
-        {
-            var watchAllTimeSeriesUnsubscribe = _watchAllTimeSeriesUnsubscribe;
-            watchAllTimeSeriesUnsubscribe?.Dispose();
-        }
+        UnwatchInternal(ref _watchAllTimeSeries, _watchAllTimeSeriesUnsubscribe);
+        return ValueTask.CompletedTask;
     }
 
     protected override ValueTask WatchDocumentPrefixAsync(string name)
@@ -359,6 +341,15 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
             return;
 
         unsubscribe.Dispose();
+    }
+
+    private static void UnwatchInternal(ref int watch, IDisposable unsubscribe)
+    {
+        var value = Interlocked.Decrement(ref watch);
+        if (value == 0)
+        {
+            unsubscribe?.Dispose();
+        }
     }
 
     private readonly struct MultiDispose : IDisposable
