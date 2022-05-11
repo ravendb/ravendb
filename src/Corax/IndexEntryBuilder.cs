@@ -27,16 +27,16 @@ namespace Corax
      */
 
     [Flags]
-    public enum IndexEntryFieldType : byte
+    public enum IndexEntryFieldType : ushort
     {
         Null = 0,
         Simple = 1,
         Tuple = 1 << 1,
         List = 1 << 2,
         Raw = 1 << 3,
-
-        HasNulls = 1 << 5, // Helper for list writer.
-        Invalid = 1 << 6,
+        
+        HasNulls = 1 << 14, // Helper for list writer.
+        Invalid = 1 << 15,
 
         TupleList = List | Tuple,
         RawList = List | Raw
@@ -122,7 +122,7 @@ namespace Corax
             
             // Write known field.
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
-            _buffer[dataLocation] = (byte)IndexEntryFieldType.Null;
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Null);
         }
 
         public void Write(int field, ReadOnlySpan<byte> value)
@@ -159,9 +159,8 @@ namespace Corax
             // Write known field.
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
-            int indexEntryFieldLocation = dataLocation;
-            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.Raw);
-            dataLocation += sizeof(byte);
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Raw);
+            dataLocation += sizeof(IndexEntryFieldType);
 
             dataLocation += VariableSizeEncoding.Write(_buffer, binaryValue.Length, dataLocation);
 
@@ -185,9 +184,8 @@ namespace Corax
             _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the tuple information. 
-            int indexEntryFieldLocation = dataLocation;
-            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.Tuple);
-            dataLocation += sizeof(byte);
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Tuple);
+            dataLocation += sizeof(IndexEntryFieldType);
 
             dataLocation += VariableSizeEncoding.Write(_buffer, longValue, dataLocation);
             Unsafe.WriteUnaligned(ref _buffer[dataLocation], doubleValue);
@@ -217,8 +215,8 @@ namespace Corax
 
             // Write the list metadata information. 
             int indexEntryFieldLocation = dataLocation;
-            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.List);
-            dataLocation += sizeof(byte);
+            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.List);
+            dataLocation += sizeof(IndexEntryFieldType);
 
             dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
 
@@ -272,7 +270,7 @@ namespace Corax
                 dataLocation += nullBitStreamSize;
 
                 // Signal that we will have to deal with the nulls.
-                _buffer[indexEntryFieldLocation] |= (byte)IndexEntryFieldType.HasNulls;
+                Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.HasNulls);
             }
 
             return dataLocation;
@@ -294,8 +292,8 @@ namespace Corax
 
             // Write the list metadata information. 
             int indexEntryFieldLocation = dataLocation;
-            _buffer[indexEntryFieldLocation] = (byte)(IndexEntryFieldType.TupleList);
-            dataLocation += sizeof(byte);
+            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.TupleList);
+            dataLocation += sizeof(IndexEntryFieldType);
 
             dataLocation += VariableSizeEncoding.Write(_buffer, values.Length, dataLocation); // Size of list.
 
@@ -503,8 +501,9 @@ namespace Corax
         public IndexEntryFieldIterator(ReadOnlySpan<byte> buffer, int offset)
         {
             _buffer = buffer;
-            Type = (IndexEntryFieldType)_buffer[offset];
-            offset += sizeof(byte);
+
+            Type = MemoryMarshal.Read<IndexEntryFieldType>(buffer.Slice(offset));
+            offset += sizeof(IndexEntryFieldType);
 
             if (!Type.HasFlag(IndexEntryFieldType.List))
             {
@@ -660,8 +659,8 @@ namespace Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static (int, bool) GetMetadataFieldLocation(Span<byte> buffer, int field)
         {
-            ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);            
-            
+            ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);
+
             ushort knownFieldsCount = (ushort)(header.KnownFieldCount >> 2);
             byte encodeSize = (byte)(header.KnownFieldCount & 0b11);
 
@@ -712,15 +711,15 @@ namespace Corax
 
             if (isTyped)
             {
-                type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
                 if (type == IndexEntryFieldType.Null)
                     goto IsNull;
-                
-                intOffset += length;
+
+                intOffset += sizeof(IndexEntryFieldType);
 
                 if ((type & IndexEntryFieldType.Tuple) != 0)
                 {
-                    var lResult = VariableSizeEncoding.Read<long>(_buffer, out length, intOffset);
+                    var lResult = VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset);
                     if (typeof(long) == typeof(T))
                     {
                         value = (T)(object)lResult;
@@ -813,7 +812,7 @@ namespace Corax
 
             if (isTyped)
             {
-                return (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var _, intOffset);
+                return (IndexEntryFieldType)_buffer[intOffset];
             }
 
             return IndexEntryFieldType.Simple;
@@ -866,8 +865,8 @@ namespace Corax
             int stringLength = 0;
 
             if (isTyped)
-            {
-                type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+            {                               
+                type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
                 if (type == IndexEntryFieldType.Null)
                 {
                     if (elementIdx == 0)
@@ -876,15 +875,15 @@ namespace Corax
                         goto FailNull;
                 }
 
-                intOffset += length;
+                intOffset += sizeof(IndexEntryFieldType);
                 if (type.HasFlag(IndexEntryFieldType.List))
                 {                    
-                    int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
+                    int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out int length, intOffset);
                     if (elementIdx >= totalElements)
                         goto Fail;
 
                     intOffset += length;
-                    var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
+                    var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
                     if (type.HasFlag(IndexEntryFieldType.Tuple))
                     {
                         intOffset += 2 * sizeof(int) + totalElements * sizeof(double);
@@ -918,7 +917,7 @@ namespace Corax
                 {
                     if (type.HasFlag(IndexEntryFieldType.HasNulls))
                     {
-                        var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
+                        var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
                         byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
                         if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
                             goto HasNull;
@@ -932,13 +931,13 @@ namespace Corax
                 {
                     if (type.HasFlag(IndexEntryFieldType.HasNulls))
                     {
-                        var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
+                        var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
                         byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
                         if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, elementIdx) == true)
                             goto HasNull;
                     }
 
-                    VariableSizeEncoding.Read<long>(_buffer, out length, intOffset); // Skip
+                    VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Skip
                     intOffset += length;
                     Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
                     intOffset += sizeof(double);
@@ -987,25 +986,25 @@ namespace Corax
 
             if (isTyped)
             {
-                type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
                 if (type == IndexEntryFieldType.Null)
                     goto IsNull;
                 
-                intOffset += length;
+                intOffset += sizeof(IndexEntryFieldType);
                 
                 if (type.HasFlag(IndexEntryFieldType.Tuple))
                 {
                     int stringLength;
                     if (type.HasFlag(IndexEntryFieldType.List))
                     {
-                        int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
+                        int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out int length, intOffset);
                         intOffset += length;
 
                         var spanOffset = intOffset + 2 * sizeof(int) + totalElements * sizeof(double);
 
-                        var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
+                        var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
                         intOffset += sizeof(int);
-                        var longTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
+                        var longTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
                         intOffset += sizeof(int);
 
                         if (type.HasFlag(IndexEntryFieldType.HasNulls))
@@ -1030,7 +1029,7 @@ namespace Corax
                         if (type.HasFlag(IndexEntryFieldType.HasNulls))
                             goto HasNull;
 
-                        longValue = VariableSizeEncoding.Read<long>(_buffer, out length, intOffset); // Read
+                        longValue = VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Read
                         intOffset += length;
                         doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
                         intOffset += sizeof(double);
