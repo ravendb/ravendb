@@ -256,8 +256,8 @@ class clusterGraph {
     }
 
     private updateEdges(selection: d3.Selection<clusterGraphEdge<clusterNodeWithLayout>>, leaderTag: string) {
-        const leaderDistance = 52;
-        const nonLeaderDistance = 45;
+        const leaderDistance = clusterGraph.circleRadius + 3;
+        const nonLeaderDistance = clusterGraph.circleRadius + 7;
 
         selection
             .select(".edge-line")

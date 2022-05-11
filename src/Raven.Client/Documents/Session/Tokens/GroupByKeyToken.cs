@@ -26,8 +26,9 @@ namespace Raven.Client.Documents.Session.Tokens
                 return;
 
             writer
-                .Append(" as ")
-                .Append(_projectedName);
+                .Append(" as '")
+                .Append(_projectedName)
+                .Append("'");
         }
     }
 }

@@ -71,6 +71,8 @@ namespace Raven.Server.Documents
                     },
                 new CatastrophicFailureNotification((endId, path, exception, stacktrace) => throw new InvalidOperationException($"Failed to compact database {_database} ({path}), StackTrace='{stacktrace}'", exception))))
                 {
+                    documentDatabase.ForTestingPurposes?.CompactionAfterDatabaseUnload?.Invoke();
+
                     InitializeOptions(src, configuration, documentDatabase, encryptionKey);
                     DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(src, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
 

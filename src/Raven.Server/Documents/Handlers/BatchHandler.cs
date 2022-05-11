@@ -805,7 +805,7 @@ namespace Raven.Server.Documents.Handlers
                                     Database.DocumentsStorage.RevisionsStorage.Put(context, existingDocument.Id,
                                                                                    existingDocument.Data.Clone(context),
                                                                                    existingDocument.Flags |= DocumentFlags.HasRevisions,
-                                                                                   nonPersistentFlags: NonPersistentDocumentFlags.None,
+                                                                                   nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
                                                                                    existingDocument.ChangeVector,
                                                                                    existingDocument.LastModified.Ticks);
                                     flags |= DocumentFlags.HasRevisions;
@@ -1103,7 +1103,7 @@ namespace Raven.Server.Documents.Handlers
                             revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id,
                                                                                          clonedDocData,
                                                                                          existingDoc.Flags,
-                                                                                         nonPersistentFlags: NonPersistentDocumentFlags.None,
+                                                                                         nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
                                                                                          existingDoc.ChangeVector,
                                                                                          existingDoc.LastModified.Ticks);
                             if (revisionCreated)

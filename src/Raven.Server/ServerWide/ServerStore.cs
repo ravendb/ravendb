@@ -287,6 +287,11 @@ namespace Raven.Server.ServerWide
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
             return ClusterMaintenanceSupervisor?.GetStats();
         }
+        
+        internal LicenseType GetLicenseType()
+        {
+            return LicenseManager.LicenseStatus.Type;
+        }
 
         public void UpdateTopologyChangeNotification()
         {
@@ -933,11 +938,12 @@ namespace Raven.Server.ServerWide
             _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 ClusterMaintenanceSetupTask(), null, "Cluster Maintenance Setup Task");
 
+            const string threadName = "Update Topology Change Notification Task";
             _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
-                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, Logger);
                 UpdateTopologyChangeNotification();
-            }, null, "Update Topology Change Notification Task");
+            }, null, threadName);
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
@@ -1466,10 +1472,7 @@ namespace Raven.Server.ServerWide
                     {
                         try
                         {
-                            Secrets.NotifyExecutableOfCertificateChange(Configuration.Security.CertificateChangeExec,
-                                Configuration.Security.CertificateChangeExecArguments,
-                                certBase64,
-                                this);
+                            Secrets.NotifyExecutableOfCertificateChange(Configuration.Security.CertificateChangeExec, Configuration.Security.CertificateChangeExecArguments, certBase64);
                         }
                         catch (Exception e)
                         {
@@ -1735,7 +1738,7 @@ namespace Raven.Server.ServerWide
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
             tree.Delete(name);
         }
-
+        
         public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes, string raftRequestId)
         {
             var deleteCommand = new DeleteDatabaseCommand(db, raftRequestId)

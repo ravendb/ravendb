@@ -1,7 +1,7 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 
-class letsEncryptInstructions extends dialogViewModelBase {
+class secureInstructions extends dialogViewModelBase {
 
     view = require("views/wizard/letsEncryptInstructions.html");
 
@@ -38,4 +38,4 @@ class letsEncryptInstructions extends dialogViewModelBase {
 
 }
 
-export = letsEncryptInstructions;
+export = secureInstructions;

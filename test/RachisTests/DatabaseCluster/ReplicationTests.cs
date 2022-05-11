@@ -111,6 +111,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = new DatabaseRecord(databaseName);
                 databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
             }
+            
             Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
             {

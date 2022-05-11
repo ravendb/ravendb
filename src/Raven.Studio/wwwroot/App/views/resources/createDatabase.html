@@ -22,9 +22,10 @@
                 </div>
                 <div class="modal-settings-panel" data-bind="visible: !operationNotSupported">
                     <div class="modal-settings-panel-main">
-                        <div class="form-group" data-bind="validationElement: databaseModel.name">
+                        <div class="form-group" data-bind="validationElement: databaseModel.name, validationOptions: { insertMessages: false }">
                             <h3>NAME<i class="required"></i></h3>
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control" placeholder="Enter database name">
+                            <span class="help-block force-text-wrap" data-bind="validationMessage: databaseModel.name"></span>
                         </div>
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
                             <div class="checkbox settings-item nocheck" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: alwaysEnabled">
@@ -57,11 +58,11 @@
                             </div>
                         </div>
                         <div>
-                           <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption() && usingHttps">
+                           <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption() && isSecureServer">
                            </div>
                         </div>
                         <div>
-                            <div class="encryption" data-bind="template: { name: 'authentication-is-off' }, visible: advancedVisibility.encryption() && !usingHttps">
+                            <div class="encryption" data-bind="template: { name: 'authentication-is-off' }, visible: advancedVisibility.encryption() && !isSecureServer">
                             </div>
                         </div>
                         <div>

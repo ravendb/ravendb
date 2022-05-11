@@ -38,7 +38,8 @@ namespace SlowTests.Server
                         SecurityClearance = SecurityClearance.ClusterAdmin,
                         Thumbprint = certificate.Thumbprint,
                         PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
-                        NotAfter = certificate.NotAfter
+                        NotAfter = certificate.NotAfter,
+                        NotBefore = certificate.NotBefore
                     },string.Empty));
                 }
 
@@ -74,7 +75,8 @@ namespace SlowTests.Server
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint,
                             PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
-                            NotAfter = certificate.NotAfter
+                            NotAfter = certificate.NotAfter,
+                            NotBefore = certificate.NotBefore
                         }, string.Empty));
                     }
                 }
@@ -90,7 +92,8 @@ namespace SlowTests.Server
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint,
                             PublicKeyPinningHash = certificate.GetPublicKeyPinningHash(),
-                            NotAfter = certificate.NotAfter
+                            NotAfter = certificate.NotAfter,
+                            NotBefore = certificate.NotBefore
                         }, string.Empty));
                     }
                 }
