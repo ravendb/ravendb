@@ -306,8 +306,9 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     public override void Dispose()
     {
+        var exceptionAggregator = new ExceptionAggregator($"Could not dispose '{_context.DatabaseName}' changes.");
         foreach (var changes in _changes)
-            changes.Dispose();
+            exceptionAggregator.Execute(changes);
 
         _changes = null;
 
@@ -316,6 +317,8 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         _queueContext = null;
         _releaseQueueContext?.Dispose();
         _releaseQueueContext = null;
+
+        exceptionAggregator.ThrowIfNeeded();
     }
 
     private async Task<IDisposable> WatchInternalAsync(Func<ShardedDatabaseChanges, IChangesObservable<BlittableJsonReaderObject>> factory, CancellationToken token)
@@ -363,8 +366,11 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
         public void Dispose()
         {
+            var exceptionAggregator = new ExceptionAggregator("Could not unsubscribe from changes.");
             foreach (var item in _toDispose)
-                item.Dispose();
+                exceptionAggregator.Execute(item);
+
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }
