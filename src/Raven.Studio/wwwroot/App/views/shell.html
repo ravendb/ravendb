@@ -179,8 +179,8 @@
         <li>
             <!-- ko with: $root.collectionsTracker.getAllDocumentsCollection() -->
             <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
-                <i class="icon-recent"></i>
-                <span>Recent</span>
+                <i class="icon-documents"></i>
+                <span>All Documents</span>
                 <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce': hasBounceClass }">
                     <div class="value label label-default" data-bind="text: countPrefix"></div>
                     <div data-bind="attr: { class: sizeClass }"></div>
