@@ -254,7 +254,7 @@ module.exports = (env, args) => {
                     }
                 },
                 {
-                    test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9]+)?$/,
+                    test: /\.(ttf|eot|woff(2)?)(\?[a-z0-9]+)?$/,
                     type: "asset",
                     generator: {
                         filename: 'assets/fonts/[name].[hash:8][ext]',
@@ -262,7 +262,7 @@ module.exports = (env, args) => {
                 },
                 {
                     test: /\.(png|jpg|jpeg|gif|svg)$/,
-                    type: "asset",
+                    type: "asset/resource",
                     generator: {
                         filename: 'assets/img/[name].[hash:8][ext]'
                     }
@@ -279,6 +279,7 @@ module.exports = (env, args) => {
                 common: path.resolve(__dirname, 'typescript/common'),
                 external: path.resolve(__dirname, 'typescript/external'),
                 models: path.resolve(__dirname, 'typescript/models'),
+                
                 commands: path.resolve(__dirname, 'typescript/commands'),
                 durandalPlugins: path.resolve(__dirname, 'typescript/durandalPlugins'),
                 viewmodels: path.resolve(__dirname, 'typescript/viewmodels'),
