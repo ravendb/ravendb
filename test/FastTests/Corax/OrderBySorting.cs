@@ -83,6 +83,10 @@ namespace FastTests.Corax
                 using var indexWriter = new IndexWriter(Env);
                 foreach (var entry in longList)
                 {
+                    if (entry.Id == "list/589")
+                    {
+                        var x = 1;
+                    }
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
                     var data = CreateIndexEntry(ref entryWriter, entry);
                     indexWriter.Index(entry.Id, data, knownFields);

@@ -8,6 +8,8 @@ namespace SlowTests.Utils.Attributes
 {
     public class CriticalCulturesAttribute : DataAttribute
     {
+        public static CultureInfo InvariantCulture = CultureInfo.InvariantCulture;
+        
         private static readonly CultureInfo[] Cultures =
         {
             CultureInfo.InvariantCulture,
