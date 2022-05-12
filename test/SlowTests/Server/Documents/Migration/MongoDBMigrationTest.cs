@@ -10,6 +10,7 @@ using Raven.Client.Documents.Smuggler;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,10 +52,12 @@ namespace SlowTests.Server.Documents.Migration
 
             var databaseName = $"Test{Guid.NewGuid().ToString()}";
 
-            var connectionString = Environment.GetEnvironmentVariable("RAVEN_MONGODB_CONNECTION_STRING");
+            var connectionString = MongoDBConnectionString.Instance.ConnectionString.Value;
             var client = new MongoClient(connectionString);
             var db = client.GetDatabase(databaseName);
 
+            try
+            {
             var booksCollection = db.GetCollection<Book>("Books");
             await booksCollection.InsertManyAsync(expectedBooks);
 
@@ -96,6 +99,11 @@ namespace SlowTests.Server.Documents.Migration
                     AssertEquivalent(expectedBooks, actualBooks, new Book.Comparer());
                     AssertEquivalent(expectedMovies, actualMovies, new Movie.Comparer());
                 }
+            }
+        }
+            finally
+            {
+                client.DropDatabase(databaseName);
             }
         }
 

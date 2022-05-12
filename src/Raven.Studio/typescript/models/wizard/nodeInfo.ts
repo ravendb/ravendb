@@ -142,8 +142,8 @@ class nodeInfo {
         
         this.externalIpAddress.extend({
             required: {   
-                onlyIf: () => this.ipsContainHostName() && !this.externalIpAddress(),                
-                message: "This field is required when an address contains Hostname"
+                onlyIf: () => (this.ipsContainHostName() || this.ipContainBindAll()) && !this.externalIpAddress(),
+                message: "This field is required when an address contains Hostname or 0.0.0.0"
             },
             validIpWithoutPort: true
         });

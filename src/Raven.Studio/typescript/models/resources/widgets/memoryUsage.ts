@@ -1,4 +1,5 @@
 import generalUtils = require("common/generalUtils");
+import accessManager = require("common/shell/accessManager");
 
 import historyAwareNodeStats = require("models/resources/widgets/historyAwareNodeStats");
 
@@ -29,9 +30,7 @@ class memoryUsage extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster.N
     constructor(tag: string) {
         super(tag);
 
-        this.showEncryptionBuffers = ko.pureComputed(() => {
-            return location.protocol === "https:";
-        });
+        this.showEncryptionBuffers = ko.pureComputed(() => accessManager.default.secureServer());
         
         this.workingSetFormatted = this.valueAndUnitFormatter(this.workingSet);
 

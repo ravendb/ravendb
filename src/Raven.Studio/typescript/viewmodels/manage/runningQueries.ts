@@ -90,9 +90,9 @@ class runningQueries extends viewModelBase {
         grid.setDefaultSortBy(3, "desc");
         grid.init(() => this.fetchData(), () =>
             [
-                new actionColumn<ExecutingQueryInfoWithCache>(grid, x => this.killQuery(x), "Kill", `<i class="icon-force"></i>`, "70px",
+                new actionColumn<ExecutingQueryInfoWithCache>(grid, x => this.killQuery(x), "Abort", `<i class="icon-force"></i>`, "70px",
                     {
-                        title: () => 'Kill this query'
+                        title: () => 'Abort this query'
                     }),
                 new textColumn<ExecutingQueryInfoWithCache>(grid, x => x.DatabaseName, "Database Name", "15%", {
                     sortable: "string"
@@ -139,14 +139,14 @@ class runningQueries extends viewModelBase {
     private killQuery(query: ExecutingQueryInfoWithCache) {
         const db = databasesManager.default.getDatabaseByName(query.DatabaseName);
         
-        this.confirmationMessage("Kill the query", "Do you want to kill query for index: " + generalUtils.escapeHtml(query.IndexName) + "?", {
+        this.confirmationMessage("Abort the query", "Do you want to abort query for index: " + generalUtils.escapeHtml(query.IndexName) + "?", {
             html: true
         })
             .done(result => {
                 if (result.can) {
-                    new killQueryCommand(db, query.IndexName, query.RunningQuery.QueryId)
+                    killQueryCommand.byIndexAndQueryId(db, query.IndexName, query.RunningQuery.QueryId)
                         .execute()
-                        .done(() => messagePublisher.reportSuccess("Scheduled query kill"));
+                        .done(() => messagePublisher.reportSuccess("Aborting query"));
                 }
             });
     }

@@ -609,7 +609,7 @@ hr {
         }
 
         .icon-edit:before {
-            content: "\e92a";
+            content: "\f116";
             color: @brand-success;
         }
 
@@ -2058,6 +2058,10 @@ ul.properties {
     &:hover {
         color: @copy-button-hover-color;
     }
+    
+    &.inherit-position {
+        position: inherit;
+    }
 }
 
  .copy-area {
@@ -2070,6 +2074,16 @@ ul.properties {
 
 .border-warning {
     border-color: @brand-warning !important;
+}
+
+.passive-node-info {
+    width: 100%;
+    padding: @gutter;
+    margin-bottom: @gutter !important;
+    background-image: url(../img/pages/about/passive-state-bg.svg);
+    background-position: right center;
+    background-repeat: no-repeat;
+    background-size: auto 100%;
 }
 
 @import "prism.less";

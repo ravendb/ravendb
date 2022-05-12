@@ -66,8 +66,8 @@ class indexAceAutoCompleteProvider {
                 this.getIndexMapCollectionFieldsForAutocomplete(session, completedToken)
                     .done(x => returnedDeferred.resolve(x))
                     .fail(() => returnedDeferred.reject());
-            } else if (currentToken.type === "data.prefix" || currentToken.type === "data.suffix") {
-                completedToken = currentToken.type === "data.prefix" ? currentToken : prevToken;
+            } else if (currentToken.type === "punctuation.operator") {
+                completedToken = prevToken;
 
                 const firstToken = session.getTokenAt(0, 0);
                 // treat a "from [foo] in [bar] type of index syntax

@@ -11,7 +11,9 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,6 +23,264 @@ namespace SlowTests.Client.Attachments
     {
         public AttachmentsRevisions(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [Fact]
+        public async Task ReplaceAttachmentsStreamAfterRevisionsEnabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = true;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "ImGgE/jPeG"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("ImGgE/jPeG", result.ContentType);
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var rev = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
+                    Assert.Equal(2, rev.Count);
+
+                    var att1 = rev[0].GetObjects("@attachments");
+                    var att2 = rev[1].GetObjects("@attachments");
+                    Assert.Equal(1, att1.Length);
+                    Assert.Equal(1, att2.Length);
+
+                }
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var hash1 = ctx.GetLazyString("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="))
+                using (var hash2 = ctx.GetLazyString("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U="))
+                using (Slice.From(ctx.Allocator, hash1, out var hash1Slice))
+                using (Slice.From(ctx.Allocator, hash2, out var hash2Slice))
+                {
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash2));
+                    Assert.Equal(1, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                    Assert.Equal(2, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ReplaceAttachmentsStreamAndDocumentAfterRevisionsEnabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = true;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>("users/1");
+                    u.Age = 30;
+                    session.Advanced.Attachments.Store(u, "foo/bar", backgroundStream, "ImGgE/jPeG");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var rev = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
+                    Assert.Equal(3, rev.Count);
+
+                    var att1 = rev[0].GetObjects("@attachments");
+                    var att2 = rev[1].GetObjects("@attachments");
+                    var att3 = rev[2].GetObjects("@attachments");
+                    Assert.Equal(1, att1.Length);
+                    Assert.Equal(1, att2.Length);
+                    Assert.Equal(1, att3.Length);
+
+                }
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var hash1 = ctx.GetLazyString("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="))
+                using (var hash2 = ctx.GetLazyString("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U="))
+                using (Slice.From(ctx.Allocator, hash1, out var hash1Slice))
+                using (Slice.From(ctx.Allocator, hash2, out var hash2Slice))
+                {
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash2));
+                    Assert.Equal(2, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                    Assert.Equal(2, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ModifyAttachmentsDetailsAfterRevisionsEnabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = true;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "ImGgE/jPeG"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("ImGgE/jPeG", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var rev = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
+                    Assert.Equal(2, rev.Count);
+
+                    var att1 = rev[0].GetObjects("@attachments");
+                    var att2 = rev[1].GetObjects("@attachments");
+                    Assert.Equal(1, att1.Length);
+                    Assert.Equal(1, att2.Length);
+
+                }
+                WaitForUserToContinueTheTest(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var hash1 = ctx.GetLazyString("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="))
+                using (Slice.From(ctx.Allocator, hash1, out var hash1Slice))
+                {
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
+                    // 1 doc + 2 rev
+                    Assert.Equal(3, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ModifyAttachmentsDetailsAndDocumentAfterRevisionsEnabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = true;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>("users/1");
+                    u.Age = 30;
+                    session.Advanced.Attachments.Store(u, "foo/bar", profileStream, "ImGgE/jPeG");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var rev = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
+                    Assert.Equal(3, rev.Count);
+
+                    var att1 = rev[0].GetObjects("@attachments");
+                    var att2 = rev[1].GetObjects("@attachments");
+                    var att3 = rev[2].GetObjects("@attachments");
+                    Assert.Equal(1, att1.Length);
+                    Assert.Equal(1, att2.Length);
+                    Assert.Equal(1, att3.Length);
+
+                }
+                WaitForUserToContinueTheTest(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var hash1 = ctx.GetLazyString("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="))
+                using (Slice.From(ctx.Allocator, hash1, out var hash1Slice))
+                {
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
+                    // 1 doc + 3 rev
+                    Assert.Equal(4, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                }
+            }
         }
 
         public static Guid dbId = new Guid("00000000-48c4-421e-9466-000000000000");

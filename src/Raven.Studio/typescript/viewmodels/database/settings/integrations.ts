@@ -6,6 +6,7 @@ import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/
 import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
 import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
 import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
+import licenseModel from "models/auth/licenseModel";
 
 class integrations extends viewModelBase {
 
@@ -21,6 +22,7 @@ class integrations extends viewModelBase {
 
     clientVersion = viewModelBase.clientVersion;
     isPostgreSqlSupportEnabled = ko.observable<boolean>();
+    needsLicenseUpgrade = ko.observable<boolean>(false);
     
     spinners = {
         test: ko.observable<boolean>(false)
@@ -44,6 +46,14 @@ class integrations extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
+        const license = licenseModel.licenseStatus();
+        
+        if (!license.HasPostgreSqlIntegration && !license.HasPowerBI) {
+            this.isPostgreSqlSupportEnabled(true);
+            this.needsLicenseUpgrade(true);
+            return ;
+        }  
+        
         return $.when<any>(this.getAllIntegrationsCredentials(), this.getPostgreSqlSupportStatus());
     }
     

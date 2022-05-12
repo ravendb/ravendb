@@ -270,21 +270,22 @@ namespace Raven.Server.Utils
 
             private static bool ResetThreadPriority()
             {
-                try
+                var currentPriority = ThreadHelper.GetThreadPriority();
+                if (currentPriority != ThreadPriority.Normal)
                 {
-                    if (Thread.CurrentThread.Priority != ThreadPriority.Normal)
-                        Thread.CurrentThread.Priority = ThreadPriority.Normal;
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    // if we can't reset it, better just kill it
-                    if (_log.IsInfoEnabled)
+                    if (ThreadHelper.TrySetThreadPriority(ThreadPriority.Normal, null, _log) == false)
                     {
-                        _log.Info($"Unable to set this thread priority to normal, since we don't want its priority of {Thread.CurrentThread.Priority}, we'll let it exit", e);
+                        // if we can't reset it, better just kill it
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Unable to set this thread priority to normal, since we don't want its priority of {currentPriority}, we'll let it exit");
+                        }
+
+                        return false;
                     }
-                    return false;
                 }
+
+                return true;
             }
 
             private void InitializeProcessThreads()

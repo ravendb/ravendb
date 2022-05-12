@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
     public abstract class LuceneDocumentConverterBase : ConverterBase
     {
+        protected const float LuceneDefaultBoost = 1f;
+        
         public struct DefaultDocumentLuceneWrapper : ILuceneDocumentWrapper
         {
             private readonly LuceneDocument _doc;

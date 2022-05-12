@@ -6,6 +6,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import { d3adaptor, Link, Node, ID3StyleLayoutAdaptor, Layout } from "webcola";
 import d3 = require("d3");
+import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 
 interface debugGraphOutputNodeWithLayout extends debugGraphOutputNode, Node {
     fixed: number;
@@ -219,7 +220,7 @@ class graphQueryResults {
         enteringNodes
             .append("text")
             .attr("class", "icon-style lock-icon")
-            .html("&#xe904;")
+            .html(icomoonHelpers.getCodePointForCanvas("lock"))
             .attr("y", 30);
         
         enteringNodes

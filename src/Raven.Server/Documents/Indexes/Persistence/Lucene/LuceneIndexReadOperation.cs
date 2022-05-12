@@ -333,10 +333,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 string key;
                 if (options != null && string.IsNullOrWhiteSpace(options.GroupKey) == false)
+                {
                     key = luceneDocument.Get(options.GroupKey, _state);
+                }
                 else
-                    key = document.Id;
-
+                {
+                    key = document.Id ?? 
+                          // map reduce index
+                          luceneDocument.Get(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, _state) ?? 
+                          // projection? probably shouldn't happen
+                          Guid.NewGuid().ToString();
+                }
+                
                 if (results.TryGetValue(fieldName, out var result) == false)
                     results[fieldName] = result = new Dictionary<string, string[]>();
 

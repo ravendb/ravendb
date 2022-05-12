@@ -7,6 +7,7 @@ import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader");
 import fileImporter = require("common/fileImporter");
 import genUtils = require("common/generalUtils");
+import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 
 type stackFrame = {
     short: string;
@@ -398,7 +399,7 @@ class captureStackTraces extends viewModelBase {
         buttonGroup
             .append("text")
             .attr("class", "icon-style copy")
-            .html("&#xe943;")
+            .html(icomoonHelpers.getCodePointForCanvas("copy-to-clipboard"))
             .attr("text-anchor", "middle")
             .attr("x", -stackInfo.headerSize / 2)
             .attr("y", 0);

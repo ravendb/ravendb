@@ -258,11 +258,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             Debug.Assert(uploadStatus != null);
 
             var localUploadStatus = uploadStatus;
+            var threadName = $"Upload backup file of database '{_settings.DatabaseName}' to {targetName} (task: '{_settings.TaskName}')";
             var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
             {
                 try
                 {
-                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, _logger);
                     NativeMemory.EnsureRegistered();
 
                     using (localUploadStatus.UpdateStats(_isFullBackup))
@@ -325,7 +326,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     localUploadStatus.Exception = (exception ?? e).ToString();
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, $"Upload backup file of database '{_settings.DatabaseName}' to {targetName} (task: '{_settings.TaskName}')");
+            }, null, threadName);
 
             _threads.Add(thread);
         }
@@ -336,11 +337,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (BackupConfiguration.CanBackupUsing(settings) == false)
                 return;
 
+            var threadName = $"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')";
             var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
             {
                 try
                 {
-                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, _logger);
                     NativeMemory.EnsureRegistered();
 
                     AddInfo($"Starting the delete of backup file from {targetName}.");
@@ -359,7 +361,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, $"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')");
+            }, null, threadName);
 
             _threads.Add(thread);
         }

@@ -107,13 +107,6 @@ ace.define("ace/mode/ravenMapLinq_highlight_rules",["require","exports","module"
                 }
 
             ],
-            "data.prefix": [
-                {
-                    token: "data.suffix",
-                    regex: "[^\\s,]*",
-                    next:"start"
-                }
-            ],
             "start": [
                 {
                     token: "comment",
@@ -123,12 +116,6 @@ ace.define("ace/mode/ravenMapLinq_highlight_rules",["require","exports","module"
                     token: "keyword",
                     regex: "from",
                     next: "from.alias"
-
-                },
-                {
-                    token: "data.prefix",
-                    regex: "\\w+\\.",
-                    next: "data.prefix"
 
                 },
                 DocCommentHighlightRules.getStartRule("doc-start"),
@@ -151,7 +138,8 @@ ace.define("ace/mode/ravenMapLinq_highlight_rules",["require","exports","module"
                     token: "string", start: '@"', end: '"', next: [
                         { token: "constant.language.escape", regex: '""' }
                     ]
-                }, {
+                },
+                {
                     token: "constant.numeric", // hex
                     regex: "0[xX][0-9a-fA-F]+\\b"
                 }, {

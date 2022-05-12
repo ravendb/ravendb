@@ -80,8 +80,8 @@ namespace Raven.Server.Commercial
             {
                 var localCertBytes = Convert.FromBase64String(Certificate);
                 return string.IsNullOrEmpty(Password)
-                      ? new X509Certificate2(localCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
-                      : new X509Certificate2(localCertBytes, Password, X509KeyStorageFlags.MachineKeySet);
+                    ? new X509Certificate2(localCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
+                    : new X509Certificate2(localCertBytes, Password, X509KeyStorageFlags.MachineKeySet);
             }
             catch (Exception e)
             {
@@ -290,6 +290,8 @@ namespace Raven.Server.Commercial
 
     public class SetupProgressAndResult : IOperationResult, IOperationProgress
     {
+        private readonly Action<(string Message, Exception Exception)> _onMessage;
+        
         public long Processed { get; set; }
         public long Total { get; set; }
         public string Certificate { get; set; }
@@ -297,14 +299,13 @@ namespace Raven.Server.Commercial
         public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile; // not sent as part of the result
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-
-        public SetupProgressAndResult()
+        public SetupProgressAndResult(Action<(string Message, Exception Exception)> onMessage)
         {
+            _onMessage = onMessage;
             Messages = new ConcurrentQueue<string>();
             Certificate = null;
         }
-
+        
         public string Message { get; private set; }
 
         public DynamicJsonValue ToJson()
@@ -342,8 +343,7 @@ namespace Raven.Server.Commercial
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
             Messages.Enqueue(Message);
-            if (Logger.IsInfoEnabled)
-                Logger.Info(Message, ex);
+            _onMessage.Invoke((Message, ex));
         }
 
         public bool ShouldPersist => false;
@@ -357,7 +357,9 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
-                [nameof(Nodes)] = Nodes != null ? new DynamicJsonArray(Nodes.Select(x => x.ToJson())) : null
+                [nameof(Nodes)] = Nodes != null
+                    ? new DynamicJsonArray(Nodes.Select(x => x.ToJson()))
+                    : null
             };
         }
 

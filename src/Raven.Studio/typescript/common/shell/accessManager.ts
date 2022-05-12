@@ -10,7 +10,7 @@ class accessManager {
     static databasesAccess: dictionary<databaseAccessLevel> = {};
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
-    unsecureServer = ko.observable<boolean>(false);
+    secureServer = ko.observable<boolean>(true);
 
     private allLevels = ko.pureComputed(() => true);
     
@@ -43,7 +43,7 @@ class accessManager {
     }
     
     getAccessLevelText(accessLevel: accessLevel): string {
-        if (this.unsecureServer()) {
+        if (!this.secureServer()) {
             return "";
         }
         

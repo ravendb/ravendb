@@ -620,8 +620,7 @@ namespace RachisTests.DatabaseCluster
 
             for (int i = 0; i < urls.Length; i++)
             {
-                var store = new DocumentStore {Urls = new[] {urls[i]}, Database = database, Conventions = new DocumentConventions {DisableTopologyUpdates = true}}
-                    .Initialize();
+                var store = new DocumentStore { Urls = new[] { urls[i] }, Database = database, Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize();
                 stores[i] = store;
             }
 

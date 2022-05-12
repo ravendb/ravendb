@@ -1,8 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
+using Newtonsoft.Json;
+using Raven.Server.Commercial;
+using Raven.Server.Commercial.SetupWizard;
+using rvn.Parameters;
 using Sparrow.Platform;
+using Voron.Global;
 
 namespace rvn
 {
@@ -16,6 +24,9 @@ namespace rvn
 
         private static CommandLineApplication _app;
 
+        private const string OwnCertificate = "own-certificate";
+        private const string LetsEncrypt = "lets-encrypt";
+
         public static int Run(string[] args)
         {
             if (args == null)
@@ -26,7 +37,7 @@ namespace rvn
                 Name = "rvn",
                 Description = "This utility lets you manage RavenDB offline operations, such as setting encryption mode for the server store. " +
                               "The server store which may contain sensitive information is not encrypted by default (even if it contains encrypted databases). " +
-                              "If you want it encrypted, you must do it manually using this tool."
+                              "If you want it encrypted, you must do it manually using this tool.",
             };
 
             _app.HelpOption(HelpOptionString);
@@ -35,6 +46,7 @@ namespace rvn
             ConfigureAdminChannelCommand();
             ConfigureWindowsServiceCommand();
             ConfigureLogsCommand();
+            ConfigureSetupPackage();
 
             _app.OnExecute(() =>
             {
@@ -50,6 +62,220 @@ namespace rvn
             {
                 return ExitWithError(parsingException.Message, _app);
             }
+        }
+
+        private static void ConfigureSetupPackage()
+        {
+            _app.Command("create-setup-package", cmd =>
+            {
+                cmd.Description = "This command creates a RavenDB setup ZIP file";
+                cmd.ExtendedHelpText = "Usage example:" +
+                                       Environment.NewLine + 
+                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\"" + Environment.NewLine;
+                
+                cmd.HelpOption(HelpOptionString);
+
+                var mode = ConfigureModeOption(cmd);
+                var setupParam = ConfigureSetupParameters(cmd);
+                var packageOutPath = ConfigurePackageOutputFile(cmd);
+                var certPath = ConfigureCertPath(cmd);
+                var certPass = ConfigureCertPassword(cmd);
+
+                cmd.OnExecuteAsync(async token =>
+                {
+                    var modeVal = mode.Value();
+                    var setupParamVal = setupParam.Value();
+                    var packageOutPathVal = packageOutPath.Value();
+                    var certPathVal = certPath.Value();
+                    var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
+
+                    return await CreateSetupPackage(new CreateSetupPackageParameters
+                    {
+                        SetupJsonPath = setupParamVal,
+                        PackageOutputPath = packageOutPathVal,
+                        Command = cmd,
+                        Mode = modeVal,
+                        CertificatePath = certPathVal,
+                        CertPassword = certPassTuple,
+                        Progress = new SetupProgressAndResult(tuple =>
+                        {
+                            if (tuple.Message != null)
+                            {
+                                Console.WriteLine(tuple.Message);
+                            }
+
+                            if (tuple.Exception != null)
+                            {
+                                Console.Error.WriteLine(tuple.Exception.Message);
+                            }
+                        }),
+                        CancellationToken = token
+                    });
+                });
+            });
+        }
+
+        private static async Task<int> CreateSetupPackage(CreateSetupPackageParameters parameters)
+        {
+            byte[] zipFile;
+            SetupInfo setupInfo;
+
+            try
+            {
+                ExtractSetupInfoObjectFromFile(parameters, out setupInfo);
+                ValidateSetupInfoAndSetDefaultSetupParametersIfNeeded(setupInfo, parameters);
+                ValidateSetupOptions(parameters);
+            }
+            catch (InvalidOperationException e)
+            {
+                return ExitWithError(e.Message, parameters.Command);
+            }
+
+            switch (parameters.Mode)
+            {
+                case OwnCertificate:
+                {
+                    var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
+                    var certBase64 = Convert.ToBase64String(certBytes);
+                    setupInfo.Certificate = certBase64;
+                    zipFile = await OwnCertificateSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
+                    break;
+                }
+                case LetsEncrypt:
+                {
+                    zipFile = await LetsEncryptSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
+                    break;
+                }
+                default:
+                    return ExitWithError("Invalid mode provided.", parameters.Command);
+            }
+
+            try
+            {
+                await File.WriteAllBytesAsync(parameters.PackageOutputPath, zipFile, parameters.CancellationToken);
+            }
+            catch (Exception e)
+            {
+                return ExitWithError($"Failed to write ZIP file to this path: {parameters.PackageOutputPath}\nError: {e}", parameters.Command);
+            }
+
+            parameters.Progress.AddInfo($"ZIP file was successfully added to this location: {parameters.PackageOutputPath}");
+
+            return 0;
+        }
+
+        private static void ExtractSetupInfoObjectFromFile(CreateSetupPackageParameters parameters, out SetupInfo setupInfo)
+        {
+            if (string.IsNullOrEmpty(parameters.SetupJsonPath))
+            {
+                throw new InvalidOperationException("-s|--setup-json-path not provided");
+            }
+
+            if (File.Exists(parameters.SetupJsonPath) == false)
+            {
+                throw new InvalidOperationException($"-s|--setup-json-path path:{parameters.SetupJsonPath} not found");
+            }
+
+            try
+            {
+                using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
+                {
+                    JsonSerializer serializer = new();
+                    setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to deserialize {nameof(setupInfo)} object from this path {parameters.SetupJsonPath}", ex);
+            }
+        }
+
+        private static void ValidateSetupInfoAndSetDefaultSetupParametersIfNeeded(SetupInfo setupInfo, CreateSetupPackageParameters parameters)
+        {
+            var ex = new List<Exception>();
+            if (setupInfo.License == null)
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License)} must be set");
+            }
+
+            if (setupInfo.License.Keys is null || setupInfo.License.Keys.Any() == false)
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License.Keys)} must be set");
+            }
+
+            if (string.IsNullOrEmpty(setupInfo.License.Id.ToString()))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License.Id)} must be set");
+            }
+
+            if (string.IsNullOrEmpty(setupInfo.License.Name))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License.Name)} must be set");
+            }
+
+            if (string.IsNullOrEmpty(setupInfo.Email))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.Email)} must be set");
+            }
+
+            if (string.IsNullOrEmpty(setupInfo.Domain))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.Domain)} must be set");
+            }
+
+            if (string.IsNullOrEmpty(setupInfo.RootDomain))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.RootDomain)} must be set");
+            }
+
+            if (setupInfo.NodeSetupInfos is null || setupInfo.NodeSetupInfos.Any() == false)
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.NodeSetupInfos)} must be set");
+            }
+            
+            foreach (var tag in setupInfo.NodeSetupInfos.Keys.Where(tag => IsValidNodeTag(tag) == false))
+            {
+                ex.Add(new InvalidOperationException($"'{tag}'"));
+            }
+
+            if (ex.Count > 0)
+                throw new AggregateException($"Node tags must contain only capital letters.Maximum length should be up to 4 characters{Environment.NewLine}Node tags - ",ex);
+
+            foreach (var nodeInfoNode in setupInfo.NodeSetupInfos.Values)
+            {
+                if (nodeInfoNode?.Addresses is null)
+                {
+                    throw new InvalidOperationException($"Addresses must be set inside {nameof(setupInfo.NodeSetupInfos)}");
+                }
+
+                if (nodeInfoNode.Port == 0)
+                {
+                    nodeInfoNode.Port = Raven.Client.Constants.Network.DefaultSecuredRavenDbHttpPort;
+                }
+
+                if (nodeInfoNode.TcpPort == 0)
+                {
+                    nodeInfoNode.TcpPort = Raven.Client.Constants.Network.DefaultSecuredRavenDbTcpPort;
+                }
+            }
+
+            parameters.PackageOutputPath ??= setupInfo.Domain;
+
+            if (string.IsNullOrEmpty(parameters.CertPassword) == false)
+            {
+                setupInfo.Password = parameters.CertPassword;
+            }
+            
+            if (Path.HasExtension(parameters.PackageOutputPath) == false)
+            {
+                parameters.PackageOutputPath += ".zip";
+            }
+            else if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException("--package-output-path file name must end with an extension of .zip");
+            }
+
+            parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
         }
 
         private static void ConfigureLogsCommand()
@@ -94,7 +320,8 @@ namespace rvn
         {
             _app.Command("admin-channel", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Open RavenDB CLI session on local machine (using piped name connection). If PID omitted - will try auto pid discovery.";
+                cmd.ExtendedHelpText = cmd.Description =
+                    "Open RavenDB CLI session on local machine (using piped name connection). If PID omitted - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
                 var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
                 cmd.OnExecute(() =>
@@ -266,7 +493,8 @@ namespace rvn
                         });
                     }, multipleValues: true);
 
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Restores the encryption key on a new machine and protects it for the current OS user or the current Master Key (whichever method was chosen to protect secrets). " +
+                    subcmd.ExtendedHelpText = Environment.NewLine +
+                                              "Restores the encryption key on a new machine and protects it for the current OS user or the current Master Key (whichever method was chosen to protect secrets). " +
                                               "This is typically used as part of the restore process of an encrypted server store on a new machine";
                 });
 
@@ -315,7 +543,8 @@ namespace rvn
 
                 cmd.Command("decrypt", subcmd =>
                 {
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." +
+                    subcmd.ExtendedHelpText = Environment.NewLine +
+                                              "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." +
                                               Environment.NewLine + EncryptionCommandsNote;
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.Description = "Decrypts RavenDB files";
@@ -339,9 +568,36 @@ namespace rvn
 
         private static int ExitWithError(string errMsg, CommandLineApplication cmd)
         {
-            cmd.Error.WriteLine(errMsg);
+            cmd.Error.WriteLine();
+            cmd.Error.WriteLine($"Error: {errMsg}");
+            cmd.Error.WriteLine();
             cmd.ShowHelp();
             return 1;
+        }
+
+        private static CommandOption ConfigureModeOption(CommandLineApplication cmd)
+        {
+            return cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt' or 'own-certificate'", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
+        {
+            return cmd.Option("-s|--setup-json-path", "Path to JSON file which includes the setup attributes", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
+        {
+            return cmd.Option("-o|--package-output-path", "Setup package output path (default is $DOMAIN.zip where $DOMAIN comes from setup-json file)", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigureCertPath(CommandLineApplication cmd)
+        {
+            return cmd.Option("-c|--cert-path", "Certificate path", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigureCertPassword(CommandLineApplication cmd)
+        {
+            return cmd.Option("-p|--password", $"Certificate password{Environment.NewLine}Password can be set from ENV:{Environment.NewLine}Windows - $env:RVN_CERT_PASS=password\nLinux - export RVN_CERT_PASS=password", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
@@ -376,12 +632,12 @@ namespace rvn
 
             if (directory.Exists == false)
             {
-                throw new InvalidOperationException($"Directory does not exist: { argument.Value }.");
+                throw new InvalidOperationException($"Directory does not exist: {argument.Value}.");
             }
 
             if (directory.Name.Equals("System"))
             {
-                if (File.Exists(Path.Combine(directory.FullName, Voron.Global.Constants.DatabaseFilename)) == false)
+                if (File.Exists(Path.Combine(directory.FullName, Constants.DatabaseFilename)) == false)
                     throw new InvalidOperationException("Please provide a valid System directory.");
             }
             else
@@ -391,6 +647,32 @@ namespace rvn
             }
         }
 
+        private static void ValidateSetupOptions(CreateSetupPackageParameters parameters)
+        {
+            switch (parameters.Mode)
+            {
+                case OwnCertificate when string.IsNullOrEmpty(parameters.CertificatePath):
+                    throw new InvalidOperationException($"-c|--cert-path option must be set when using '{OwnCertificate}' mode.");
+                
+                case LetsEncrypt when string.IsNullOrEmpty(parameters.CertificatePath) == false:
+                    throw new InvalidOperationException($"-c|--cert-path option must be set only when using '{OwnCertificate}' mode.");
+                
+                case LetsEncrypt when string.IsNullOrEmpty(parameters.CertPassword) == false:
+                    throw new InvalidOperationException($"-p|--password option must be set only when using '{OwnCertificate}' mode.");
+
+                case LetsEncrypt: return;
+
+                case OwnCertificate: return;
+                
+                default: throw new InvalidOperationException($"{parameters.Mode} mode is invalid{Environment.NewLine}-m|--mode option must be set. Please use either '{OwnCertificate}' or '{LetsEncrypt}'");
+            }
+        }
+        
+        private static bool IsValidNodeTag(string str)
+        {
+            return Regex.IsMatch(str, @"^[A-Z]{1,4}$");
+        }
+        
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
         {
             try
