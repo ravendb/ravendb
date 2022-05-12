@@ -351,7 +351,7 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             {
                 //Recording
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 using (var session = store.OpenSession())
                 {
@@ -367,7 +367,7 @@ namespace SlowTests.Server
 
                 Indexes.WaitForIndexing(store);
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -375,7 +375,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
@@ -450,7 +450,7 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             {
                 //Recording
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 using (var session = store.OpenSession())
                 {
@@ -458,14 +458,14 @@ namespace SlowTests.Server
                     session.SaveChanges();
                 }
 
-                store.Commands().Delete(id, null);
+                await store.Commands().DeleteAsync(id, null);
 
                 //Wait for all tombstones to exhaust their purpose
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    await WaitFor(() =>
+                    await WaitForAsync(async () =>
                     {
-                        database.TombstoneCleaner.ExecuteCleanup().GetAwaiter().GetResult();
+                        await database.TombstoneCleaner.ExecuteCleanup();
                         using (context.OpenReadTransaction())
                         {
                             var tombstones = database.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
@@ -473,7 +473,7 @@ namespace SlowTests.Server
                         }
                     });
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -481,7 +481,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -512,7 +512,7 @@ namespace SlowTests.Server
                 });
 
                 //Recording
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 using (var session = store.OpenSession())
                 {
@@ -523,7 +523,7 @@ namespace SlowTests.Server
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -536,7 +536,7 @@ namespace SlowTests.Server
                 });
 
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
 
                 var error = Assert.Throws<RavenException>(() =>
                 {
@@ -563,16 +563,16 @@ namespace SlowTests.Server
                 });
 
                 //Recording
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
-                store.Commands().Put(id, null, user);
+                await store.Commands().PutAsync(id, null, user);
 
-                store.Maintenance.Send(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
                 {
                     DocumentIds = new[] { id }
                 }));
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -585,7 +585,7 @@ namespace SlowTests.Server
                 });
 
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
@@ -608,7 +608,7 @@ namespace SlowTests.Server
             {
 
                 //Recording
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 var message = new ReplicationMessageReply
                 {
@@ -625,7 +625,7 @@ namespace SlowTests.Server
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TxMerger.Enqueue(command);
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -633,7 +633,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -658,7 +658,7 @@ namespace SlowTests.Server
             {
 
                 //Recording
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 var command = new IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommand(
                     expectedChangeVector, 5, Guid.NewGuid().ToString(), new AsyncManualResetEvent(), new ReplicationLoader.PullReplicationParams
@@ -669,7 +669,7 @@ namespace SlowTests.Server
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TxMerger.Enqueue(command);
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -677,7 +677,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -702,7 +702,7 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             {
                 //Recording
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 await ExpirationHelper.SetupExpiration(store, Server.ServerStore, new ExpirationConfiguration
                 {
@@ -721,9 +721,9 @@ namespace SlowTests.Server
                     await session.SaveChangesAsync();
                 }
 
-                await WaitFor(() => null == store.Commands().Get(id));
+                await WaitForAsync(async () => null == await store.Commands().GetAsync(id));
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -731,11 +731,11 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 //Assert
-                Assert.Null(store.Commands().Get(id));
+                Assert.Null(await store.Commands().GetAsync(id));
             }
         }
 
@@ -747,14 +747,14 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 for (var i = 0; i < 1000; i++)
                 {
                     await store.Commands().PutAsync("user/", null, new User { Name = $"someName{i}" });
                 }
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -762,7 +762,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
 
                 var task = Task.Run(() => { store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result)); });
 
@@ -813,37 +813,37 @@ namespace SlowTests.Server
                 await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
 
                 //Recording
-                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await slave.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
-                master.Commands().Put(id, null, user);
-                await WaitFor(() =>
-                    null != slave.Commands().Get(id));
+                await master.Commands().PutAsync(id, null, user);
+                await WaitForAsync(async () =>
+                    null != await slave.Commands().GetAsync(id));
 
 
                 const string attachmentName = "someAttachmentName";
                 master.Operations.Send(new PutAttachmentOperation(id, attachmentName, attachmentStream));
-                await WaitFor(() =>
-                    null != slave.Operations.Send(new GetAttachmentOperation(id, attachmentName, AttachmentType.Document, null)));
+                await WaitForAsync(async () =>
+                    null != await slave.Operations.SendAsync(new GetAttachmentOperation(id, attachmentName, AttachmentType.Document, null)));
 
 
-                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await slave.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, "someAttachmentName", AttachmentType.Document, null));
 
                 //Assert
-                Assert.Equal(expected, attachmentResult.Stream.ReadData());
+                Assert.Equal(expected, await attachmentResult.Stream.ReadDataAsync());
             }
         }
 
-        private static async Task WaitFor(Func<bool> canContinue)
+        private static async Task WaitForAsync(Func<ValueTask<bool>> canContinue)
         {
             const int maxSecondToWait = 15;
 
@@ -854,7 +854,7 @@ namespace SlowTests.Server
                 {
                     throw new TimeoutException($"The replication takes more than {maxSecondToWait} seconds.");
                 }
-                if (canContinue())
+                if (await canContinue())
                 {
                     break;
                 }
@@ -888,20 +888,20 @@ namespace SlowTests.Server
                 await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
 
                 //Recording
-                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await slave.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
-                master.Commands().Put(id, null, expected);
-                await WaitFor(() =>
-                    null != slave.Commands().Get(id));
+                await master.Commands().PutAsync(id, null, expected);
+                await WaitForAsync(async () =>
+                    null != await slave.Commands().GetAsync(id));
 
-                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await slave.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
@@ -932,9 +932,9 @@ namespace SlowTests.Server
                 await secondStore.Conventions.AsyncDocumentIdGenerator(secondStore.Database, user);
 
                 //Recording
-                firstStore.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                await firstStore.Maintenance.SendAsync(new StartTransactionsRecordingOperation(filePath));
                 secondStore.Dispose();
-                firstStore.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await firstStore.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
 
                 expected = await secondStore.Conventions.AsyncDocumentIdGenerator(firstStore.Database, user);
             }
@@ -946,7 +946,7 @@ namespace SlowTests.Server
                 await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
 
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var actual = await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
@@ -973,9 +973,9 @@ namespace SlowTests.Server
             {
                 store2.Initialize();
 
-                store1.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                await store1.Maintenance.SendAsync(new StartTransactionsRecordingOperation(filePath));
                 await store1.Conventions.AsyncDocumentIdGenerator(store1.Database, user);
-                store1.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store1.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
 
                 expected = await store2.Conventions.AsyncDocumentIdGenerator(store1.Database, user);
             }
@@ -985,7 +985,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var actual = await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
@@ -1018,14 +1018,14 @@ namespace SlowTests.Server
                 Assert.NotNull(result.RaftCommandIndex);
 
                 //Recording
-                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await slave.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
 
-                slave.Commands().Put(id, null, expected);
+                await slave.Commands().PutAsync(id, null, expected);
 
                 expected.Age = 67;
-                master.Commands().Put(id, null, expected);
+                await master.Commands().PutAsync(id, null, expected);
 
                 await Replication.WaitForConflict(slave, id);
 
@@ -1033,7 +1033,7 @@ namespace SlowTests.Server
 
                 await WaitForConflictToBeResolved(slave, id);
 
-                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await slave.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -1043,7 +1043,7 @@ namespace SlowTests.Server
                 store.Maintenance.Server.Send(new ModifyConflictSolverOperation(store.Database));
 
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
@@ -1098,7 +1098,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 await store.Commands().PutAsync(id, null, user, new Dictionary<string, object>
                 {
@@ -1107,9 +1107,9 @@ namespace SlowTests.Server
 
                 store.Operations.Send(new PutAttachmentOperation(id, fileName, attachmentStream, "application/pdf"));
 
-                store.Operations.Send(new DeleteAttachmentOperation(id, fileName));
+                await store.Operations.SendAsync(new DeleteAttachmentOperation(id, fileName));
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -1117,7 +1117,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, fileName, AttachmentType.Document, null));
@@ -1145,7 +1145,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 await store.Commands().PutAsync(id, null, user, new Dictionary<string, object>
                 {
@@ -1154,7 +1154,7 @@ namespace SlowTests.Server
 
                 store.Operations.Send(new PutAttachmentOperation(id, fileName, attachmentStream, "application/pdf"));
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -1162,11 +1162,11 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, fileName, AttachmentType.Document, null));
-                var actual = attachmentResult.Stream.ReadData();
+                var actual = await attachmentResult.Stream.ReadDataAsync();
 
                 //Assert
                 Assert.Equal(actual, expected);
@@ -1381,7 +1381,7 @@ namespace SlowTests.Server
                     Default = new RevisionsCollectionConfiguration()
                 });
 
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(filePath));
                 DateTime last;
                 using (var session = store.OpenSession())
                 {
@@ -1402,7 +1402,7 @@ namespace SlowTests.Server
                         token: token);
                 }
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -1415,7 +1415,7 @@ namespace SlowTests.Server
                 });
 
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
@@ -1684,12 +1684,12 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFilePath);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -1697,7 +1697,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
@@ -1724,7 +1724,7 @@ namespace SlowTests.Server
             //Recording
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 foreach (var user in expectedUsers)
                 {
@@ -1734,7 +1734,7 @@ namespace SlowTests.Server
                     });
                 }
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -1742,7 +1742,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
