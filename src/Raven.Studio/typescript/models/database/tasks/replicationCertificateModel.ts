@@ -37,7 +37,7 @@ class replicationCertificateModel {
             this.expirationClass("text-danger");
         } else {
             this.expirationText(dateFormatted);
-            this.expirationIcon("icon-clock");
+            this.expirationIcon("icon-expiration");
             this.expirationClass("");
         }
         
