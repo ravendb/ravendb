@@ -10,8 +10,8 @@ on:
         - v4.2
 
 env:
-  DOTNET_VERSION: 3.1.418
-  DOTNET_VERSION_6: 6.0.202
+  DOTNET_VERSION: 3.1.419
+  DOTNET_VERSION_6: 6.0.203
 
 jobs:
   release:
