@@ -14,6 +14,12 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
     {
     }
 
+    public async Task<IShardedDatabaseChanges> EnsureConnectedNow()
+    {
+        var changes = await EnsureConnectedNowAsync().ConfigureAwait(false);
+        return changes as IShardedDatabaseChanges;
+    }
+
     public IChangesObservable<BlittableJsonReaderObject> ForDocument(string docId)
     {
         if (string.IsNullOrWhiteSpace(docId))
