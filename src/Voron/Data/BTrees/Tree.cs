@@ -1382,7 +1382,6 @@ namespace Voron.Data.BTrees
             using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
             return CompactTreeFor(keySlice);
         }
-
         
         public CompactTree CompactTreeFor(Slice key)
         {

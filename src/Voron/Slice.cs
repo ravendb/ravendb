@@ -302,8 +302,6 @@ namespace Voron
 
         public override string ToString()
         {
-            if (this.Content[^1] == '\0')
-                return this.Content.Substring(this.Size - 1);
             return this.Content.ToString(Encodings.Utf8);
         }
 
