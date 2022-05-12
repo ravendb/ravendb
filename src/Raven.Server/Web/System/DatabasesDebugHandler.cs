@@ -74,6 +74,8 @@ namespace Raven.Server.Web.System
 
             public int NumberOfChangesApiConnections { get; set; }
 
+            public int NumberOfSubscriptionConnections { get; set; }
+
             public bool HasActiveOperations { get; set; }
 
             public List<string> Explanations { get; set; }
