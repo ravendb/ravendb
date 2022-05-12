@@ -8,9 +8,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Client.Changes;
 
-public class BasicChangesTests : RavenTestBase
+public class BasicChangesDocumentsTests : RavenTestBase
 {
-    public BasicChangesTests(ITestOutputHelper output) : base(output)
+    public BasicChangesDocumentsTests(ITestOutputHelper output) : base(output)
     {
     }
 

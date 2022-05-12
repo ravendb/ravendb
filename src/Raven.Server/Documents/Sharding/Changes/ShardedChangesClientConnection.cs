@@ -31,6 +31,8 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     private readonly ConcurrentDictionary<DocumentIdAndNamePair, IDisposable> _matchingDocumentTimeSeries = new();
 
+    private readonly ConcurrentDictionary<string, IDisposable> _matchingIndexes = new(StringComparer.OrdinalIgnoreCase);
+
     private int _watchAllDocuments;
     private IDisposable _watchAllDocumentsUnsubscribe;
 
@@ -39,6 +41,9 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     private int _watchAllTimeSeries;
     private IDisposable _watchAllTimeSeriesUnsubscribe;
+
+    private int _watchAllIndexes;
+    private IDisposable _watchAllIndexesUnsubscribe;
 
     private readonly ShardedDatabaseContext _context;
     private readonly bool _throttleConnection;
@@ -244,24 +249,31 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         throw new NotImplementedException();
     }
 
-    protected override ValueTask WatchAllIndexesAsync()
+    protected override async ValueTask WatchAllIndexesAsync(CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync(token);
+
+        var value = Interlocked.Increment(ref _watchAllIndexes);
+        if (value == 1)
+            _watchAllIndexesUnsubscribe = await WatchInternalAsync(changes => changes.ForAllIndexes(), token);
     }
 
-    protected override ValueTask UnwatchAllIndexesAsync()
+    protected override ValueTask UnwatchAllIndexesAsync(CancellationToken token)
     {
-        throw new NotImplementedException();
+        UnwatchInternal(ref _watchAllIndexes, _watchAllIndexesUnsubscribe);
+        return ValueTask.CompletedTask;
     }
 
-    protected override ValueTask WatchIndexAsync(string name)
+    protected override async ValueTask WatchIndexAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync(token);
+
+        _matchingIndexes.GetOrAdd(name, n => WatchInternalAsync(changes => changes.ForIndex(n), token).Result);
     }
 
-    protected override ValueTask UnwatchIndexAsync(string name)
+    protected override ValueTask UnwatchIndexAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
+        return UnwatchInternalAsync(name, _matchingIndexes, token);
     }
 
     protected override ValueTask WatchOperationAsync(long operationId)

@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Sharding.Changes;
 
 internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseConnectionState>, IShardedDatabaseChanges
 {
-    public ShardedDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag, bool throttleConnection) 
+    public ShardedDatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag, bool throttleConnection)
         : base(requestExecutor, databaseName, onDispose, nodeTag, throttleConnection)
     {
     }
@@ -117,12 +117,27 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
 
     public IChangesObservable<BlittableJsonReaderObject> ForIndex(string indexName)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(indexName))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(indexName));
+
+        var counter = GetOrAddConnectionState("indexes/" + indexName, "watch-index", "unwatch-index", indexName);
+
+        var taskedObservable = new ChangesObservable<BlittableJsonReaderObject, ShardedDatabaseConnectionState>(
+            counter,
+            filter: null);
+
+        return taskedObservable;
     }
 
     public IChangesObservable<BlittableJsonReaderObject> ForAllIndexes()
     {
-        throw new NotImplementedException();
+        var counter = GetOrAddConnectionState("all-indexes", "watch-indexes", "unwatch-indexes", null);
+
+        var taskedObservable = new ChangesObservable<BlittableJsonReaderObject, ShardedDatabaseConnectionState>(
+            counter,
+            filter: null);
+
+        return taskedObservable;
     }
 
     public IChangesObservable<BlittableJsonReaderObject> ForOperationId(long operationId)
