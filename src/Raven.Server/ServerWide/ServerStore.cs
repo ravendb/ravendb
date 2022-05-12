@@ -2478,6 +2478,21 @@ namespace Raven.Server.ServerWide
                     statistics.Explanations.Add($"Cannot unload database because number of Changes API connections ({numberOfChangesApiConnections}) is greater than 0");
                 }
             }
+            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var numberOfSubscriptionConnections = database.SubscriptionStorage.GetAllRunningSubscriptions(context, false, 0, int.MaxValue).ToList().Count;
+                if (statistics != null)
+                    statistics.NumberOfSubscriptionConnections = numberOfSubscriptionConnections;
+
+                if (numberOfSubscriptionConnections > 0)
+                {
+                    if (statistics == null)
+                        return false;
+
+                    statistics.Explanations.Add($"Cannot unload database because number of Subscriptions connections ({numberOfSubscriptionConnections}) is greater than 0");
+                }
+            }
 
             var hasActiveOperations = database.Operations.HasActive;
             if (statistics != null)
