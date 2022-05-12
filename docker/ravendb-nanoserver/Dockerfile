@@ -28,4 +28,4 @@ WORKDIR C:/RavenDB/Server
 
 ADD settings.json https://ravendb-docker.s3.amazonaws.com/vcruntime140.dll .\
 
-CMD pwsh -File C:\RavenDB\run-raven.ps1
+CMD [ "pwsh.exe", "-File", "C:\\RavenDB\\run-raven.ps1" ]

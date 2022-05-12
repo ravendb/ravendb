@@ -16,6 +16,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -1896,11 +1898,11 @@ namespace Raven.Server.Documents.Indexes
                     throw new NotSupportedException($"Unknown priority: {priority}");
             }
 
-            var currentPriority = Thread.CurrentThread.Priority;
+            var currentPriority = ThreadHelper.GetThreadPriority();
             if (currentPriority == newPriority)
                 return;
 
-            Thread.CurrentThread.Priority = newPriority;
+            ThreadHelper.TrySetThreadPriority(newPriority, IndexingThreadName, _logger);
         }
 
         private void PersistIndexDefinition()
@@ -3706,7 +3708,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void ThrowCompactionInProgress()
         {
-            throw new InvalidOperationException($"Index '{Name}' is currently being compacted.");
+            throw new IndexCompactionInProgressException($"Index '{Name}' is currently being compacted.");
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
@@ -4583,6 +4585,8 @@ namespace Raven.Server.Documents.Indexes
 
                     using (RestartEnvironment(onBeforeEnvironmentDispose: Optimize))
                     {
+                        DocumentDatabase.IndexStore?.ForTestingPurposes?.IndexCompaction?.Invoke();
+
                         if (Type.IsMapReduce())
                         {
                             result.AddMessage($"Skipping data compaction of '{Name}' index because data compaction of map-reduce indexes isn't supported");

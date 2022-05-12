@@ -10,7 +10,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
@@ -18,14 +17,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Sdk;
 using Xunit.Abstractions;
@@ -36,6 +37,32 @@ namespace SlowTests.Server.Documents.Revisions
     {
         public RevisionsReplication(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [Fact]
+        public async Task RevisionsWillBeReplicatedEvenIfTheyAreNotConfiguredOnTheDestinationNode()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisionsAsync(store1);
+                //await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database); // not setting up revisions on purpose
+
+                var op = new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments);
+                await store1.Maintenance.SendAsync(op);
+
+                await SetupReplicationAsync(store1, store2);
+
+                WaitForMarker(store1, store2);
+                //WaitForUserToContinueTheTest(store1);
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var o = await session.LoadAsync<Order>("orders/830-A");
+                    Assert.NotNull(o);
+                    var orders = await session.Advanced.Revisions.GetForAsync<Order>("orders/830-A", pageSize: int.MaxValue);
+                    Assert.Equal(29, orders.Count);
+                }
+            }
         }
 
         private void WaitForMarker(DocumentStore store1, DocumentStore store2)
@@ -194,32 +221,6 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal("Hibernating Rhinos - RavenDB", users[0].Name);
                     Assert.Equal("Hibernating Rhinos", users[1].Name);
                     Assert.Equal("Hibernating", users[2].Name);
-                }
-            }
-        }
-
-        [Fact]
-        public async Task ShouldRevisionOnReplication()
-        {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
-            {
-                await RevisionsHelper.SetupRevisionsAsync(store2);
-                await SetupReplicationAsync(store1, store2);
-
-                using (var session = store1.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "Hibernating" }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                Assert.True(WaitForDocument(store2, "users/1"));
-
-                using (var session = store2.OpenAsyncSession())
-                {
-                    var user = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
-                    Assert.NotNull(user);
-                    Assert.Equal(1, user.Count);
                 }
             }
         }
@@ -684,7 +685,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (var session = store2.OpenAsyncSession())
                 {
                     var revisions = await session.Advanced.Revisions.GetForAsync<User>("users/1-A");
-                    Assert.Equal(0, revisions.Count);
+                    Assert.Equal(10, revisions.Count);
                 }
 
                 /*
@@ -928,7 +929,19 @@ namespace SlowTests.Server.Documents.Revisions
 
                 WaitForMarker(store1, store2);
 
-                WaitForUserToContinueTheTest(store2);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
+
+                EnforceConfigurationResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                {
+                    result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token: token);
+                }
+
+                Assert.Equal(11, result.ScannedRevisions);
+                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(10, result.RemovedRevisions);
+
+                await EnsureReplicatingAsync(store1, store2);
 
                 using (var session = store2.OpenSession())
                 {

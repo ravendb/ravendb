@@ -76,13 +76,13 @@ namespace RachisTests.DatabaseCluster
         {
             await base.ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdateWithoutLoad_ShouldFail();
         }
-        
+
         [RavenFact(RavenTestCategory.ClusterTransactions)]
         public override async Task ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
         {
             await base.ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate();
         }
-        
+
         [RavenFact(RavenTestCategory.ClusterTransactions)]
         public override async Task ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
         {

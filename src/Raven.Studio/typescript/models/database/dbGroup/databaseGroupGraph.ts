@@ -4,6 +4,7 @@ import graphHelper = require("common/helpers/graph/graphHelper");
 import { d3adaptor, ID3StyleLayoutAdaptor, Link, Node, Layout } from "webcola";
 import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
+import icomoonHelpers from "common/helpers/view/icomoonHelpers";
 
 abstract class layoutable {
     x: number;
@@ -530,11 +531,11 @@ class databaseGroupGraph {
         const nodeIcon = (node: databaseNode) => {
             switch (node.type) {
                 case "Member":
-                    return "&#xe9c0;";
+                    return icomoonHelpers.getCodePointForCanvas("dbgroup-member");
                 case "Promotable":
-                    return "&#xe9c1;";
+                    return icomoonHelpers.getCodePointForCanvas("dbgroup-promotable");
                 case "Rehab":
-                    return "&#xe9c4;";
+                    return icomoonHelpers.getCodePointForCanvas("dbgroup-rehab");
             }
             return "";
         };
@@ -551,28 +552,28 @@ class databaseGroupGraph {
         const taskIcon = (node: taskNode) => {
             if (node.name.startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer)) {
                 // special case: server-wide backup
-                return "&#xea25;";
+                return icomoonHelpers.getCodePointForCanvas("server-wide-backup");
             }
             
             switch (node.type) {
                 case "Backup":
-                    return "&#xe9b6;";
+                    return icomoonHelpers.getCodePointForCanvas("backup2");
                 case "RavenEtl":
-                    return "&#xe9b8;";
+                    return icomoonHelpers.getCodePointForCanvas("ravendb-etl");
                 case "Replication":
-                    return "&#xe9b7;";
+                    return icomoonHelpers.getCodePointForCanvas("external-replication");
                 case "SqlEtl":
-                    return "&#xe9b9;";
+                    return icomoonHelpers.getCodePointForCanvas("sql-etl");
                 case "OlapEtl":
-                    return "&#xea46;";
+                    return icomoonHelpers.getCodePointForCanvas("olap-etl");
                 case "ElasticSearchEtl":
-                    return "&#xea51;";
+                    return icomoonHelpers.getCodePointForCanvas("elastic-search-etl");
                 case "Subscription":
-                    return "&#xe9b5;";
+                    return icomoonHelpers.getCodePointForCanvas("subscription");
                 case "PullReplicationAsHub":
-                    return "&#xea1c;";
+                    return icomoonHelpers.getCodePointForCanvas("pull-replication-hub");
                 case "PullReplicationAsSink":
-                    return "&#xea1b;";
+                    return icomoonHelpers.getCodePointForCanvas("pull-replication-agent");
             }
             return "";
         };

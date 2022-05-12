@@ -26,4 +26,4 @@ WORKDIR /opt/RavenDB/Server
 
 VOLUME /opt/RavenDB/Server/RavenData /opt/RavenDB/config
 
-CMD /opt/RavenDB/run-raven.sh
+CMD [ "/bin/bash", "/opt/RavenDB/run-raven.sh" ]

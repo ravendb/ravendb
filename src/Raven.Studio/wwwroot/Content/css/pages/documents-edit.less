@@ -261,7 +261,7 @@
 }
 
 .virtual-row {
-    .deleted-revision {
+    .typed-revision {
         a {
             color: lighten(desaturate(@link-color,60%),5%);
 
@@ -272,7 +272,42 @@
             &:after {
                 margin-left: 5px;
                 .icon-style;
+            }
+        }
+    }
+    
+    .deleted-revision {
+        a {
+            &:after {
                 content: @trash;
+            }
+        }
+    }
+
+    .conflict-revision {
+        a {
+            color: lighten(desaturate(@brand-warning, 30%), 5%);
+
+            &:hover {
+                color: lighten(desaturate(@brand-warning, 2%), 3%);
+            }
+            
+            &:after {
+                content: @conflicts;
+            }
+        }
+    }
+
+    .resolved-revision {
+        a {
+            color: lighten(desaturate(@brand-success, 30%), 5%);
+
+            &:hover {
+                color: lighten(desaturate(@brand-success, 2%), 3%);
+            }
+            
+            &:after {
+                content: @tick-character;
             }
         }
     }

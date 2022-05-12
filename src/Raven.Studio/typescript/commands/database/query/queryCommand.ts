@@ -10,7 +10,7 @@ class queryCommand extends commandBase {
     private static readonly missingEndOfQuery = "Expected end of query";
     
     constructor(private db: database, private skip: number, private take: number, private criteria: queryCriteria,
-                private disableCache?: boolean, private disableAutoIndexCreation?: boolean) {
+                private disableCache?: boolean, private disableAutoIndexCreation?: boolean, private queryId?: string) {
         super();
     }
 
@@ -138,7 +138,8 @@ f();
             addSpatialProperties: true,
             metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
             ignoreLimit: this.criteria.ignoreIndexQueryLimit(),
-            disableAutoIndexCreation: this.disableAutoIndexCreation
+            disableAutoIndexCreation: this.disableAutoIndexCreation,
+            clientQueryId: this.queryId
         };
         
         let urlArgs = this.urlEncodeArgs(argsForPOST);

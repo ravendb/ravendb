@@ -25,6 +25,7 @@ import genUtils = require("common/generalUtils");
 import certificateUtils = require("common/certificateUtils");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import shardedDatabase from "models/resources/shardedDatabase";
@@ -40,7 +41,7 @@ class editReplicationHubTask extends shardViewModelBase {
     private taskId: number = null;
     isNewTask = ko.observable<boolean>(true);
     
-    canDefineCertificates = location.protocol === "https:";
+    canDefineCertificates = accessManager.default.secureServer();
     
     possibleMentors = ko.observableArray<string>([]);
 

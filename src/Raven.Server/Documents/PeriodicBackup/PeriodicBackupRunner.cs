@@ -623,11 +623,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, tcs, onProgress), null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
+            var threadName = $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'";
+            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, threadName, tcs, onProgress), null, threadName);
             return tcs.Task;
         }
 
-        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
+        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, string threadName, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
             BackupResult backupResult = null;
             var runningBackupStatus = new PeriodicBackupStatus
@@ -651,7 +652,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, _logger);
                 NativeMemory.EnsureRegistered();
 
                 using (_database.PreventFromUnloadingByIdleOperations())

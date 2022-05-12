@@ -1780,6 +1780,8 @@ namespace Raven.Server.Documents
 
             internal Action CollectionRunnerBeforeOpenReadTransaction;
 
+            internal Action CompactionAfterDatabaseUnload;
+
             internal bool SkipDrainAllRequests = false;
 
             internal Action<string, string> DisposeLog;

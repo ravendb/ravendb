@@ -3,7 +3,7 @@
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
-type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters" | "Artificial" | "HasTimeSeries";
+type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters" | "Artificial" | "HasTimeSeries" | "Conflicted" | "Resolved";
 
 interface revisionCounter {
     name: string;

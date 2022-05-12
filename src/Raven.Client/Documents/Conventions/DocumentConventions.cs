@@ -193,6 +193,7 @@ namespace Raven.Client.Documents.Conventions
                 return null;
             };
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
+            ResolveTypeFromClrTypeName = Type.GetType;
 
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
@@ -258,6 +259,7 @@ namespace Raven.Client.Documents.Conventions
 
         private Func<Type, string> _findClrTypeName;
         private Func<string, BlittableJsonReaderObject, string> _findClrType;
+        private Func<string, Type> _resolveTypeFromClrTypeName;
         private bool _useOptimisticConcurrency;
         private bool _throwIfQueryPageSizeIsNotSet;
         private bool _addIdFieldToDynamicObjects;
@@ -591,6 +593,19 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _findClrTypeName = value;
+            }
+        }
+
+        /// <summary>
+        ///     Gets or sets the function to resolve the clr type from a clr type name.
+        /// </summary>
+        public Func<string, Type> ResolveTypeFromClrTypeName
+        {
+            get => _resolveTypeFromClrTypeName;
+            set
+            {
+                AssertNotFrozen();
+                _resolveTypeFromClrTypeName = value;
             }
         }
 

@@ -82,7 +82,11 @@ class editDocument extends shardViewModelBase {
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     rawJsonUrl: KnockoutComputed<string>;
+    
     isDeleteRevision: KnockoutComputed<boolean>;
+    isConflictRevision: KnockoutComputed<boolean>;
+    isResolvedRevision: KnockoutComputed<boolean>;
+    revisionText: KnockoutComputed<string>;
 
     createTimeSeriesUrl: KnockoutComputed<string>;
 
@@ -406,6 +410,44 @@ class editDocument extends shardViewModelBase {
             }
         });
 
+        this.isConflictRevision = ko.pureComputed(() => {
+            const doc = this.document();
+            if (doc) {
+                return doc.__metadata.hasFlag("Conflicted");
+            } else {
+                return false;
+            }
+        });
+
+        this.isResolvedRevision = ko.pureComputed(() => {
+            const doc = this.document();
+            if (doc) {
+                return doc.__metadata.hasFlag("Resolved");
+            } else {
+                return false;
+            }
+        });
+
+        this.revisionText = ko.pureComputed(() => {
+            if (!this.inReadOnlyMode()) {
+                return "";
+            }
+           
+            if (this.isDeleteRevision()) {
+                return "| DELETE REVISION";
+            }
+            
+            if (this.isConflictRevision()) {
+                return "| CONFLICT REVISION";
+            }
+
+            if (this.isResolvedRevision()) {
+                return "| RESOLVED REVISION";
+            }
+           
+            return "| REVISION";
+        });
+
         this.document.subscribe(doc => {
             if (doc) {
                 const docDto = doc.toDto(true);
@@ -546,7 +588,9 @@ class editDocument extends shardViewModelBase {
         }
         
         if (change.Type === 'Delete') {
-            this.displayDocumentDeleted(true);
+            if (this.editedDocId() === change.Id) {
+                this.displayDocumentDeleted(true);
+            }
         } else {
             this.displayDocumentChange(true);
         }
@@ -1104,6 +1148,7 @@ class editDocument extends shardViewModelBase {
             viewModel.deletionTask.done(() => {
                 this.dirtyFlag().reset();
                 this.connectedDocuments.onDocumentDeleted();
+                this.displayDocumentDeleted(false);
             });
             app.showBootstrapDialog(viewModel, editDocument.editDocSelector);
         } 
@@ -1421,6 +1466,27 @@ class normalCrudActions implements editDocumentCrudActions {
     fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
         const doc = this.document();
 
+        if (doc.__metadata.hasFlag("Revision")) {
+            let timeSeries = doc.__metadata.revisionTimeSeries();
+
+            if (nameFilter) {
+                timeSeries = timeSeries.filter(ts => ts.name.toLocaleLowerCase().includes(nameFilter));
+            }
+            
+            return $.when({
+                items: timeSeries.map(x => {
+                    return {
+                        
+                        name: x.name,
+                        numberOfEntries: x.count,
+                        startDate: x.start,
+                        endDate: x.end
+                    };
+                }),
+                totalResultCount: timeSeries.length
+            });
+        }
+        
         if (!doc.__metadata.hasFlag("HasTimeSeries")) {
             return connectedDocuments.emptyDocResult<timeSeriesItem>();
         }

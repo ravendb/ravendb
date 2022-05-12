@@ -151,16 +151,27 @@ namespace Raven.Server.Documents.Revisions
         public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None)
         {
             if (Configuration == null)
-                return ConflictConfiguration.Default;
+            {
+                if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
+                {
+                    return ConflictConfiguration.Default;
+                }
+
+                return _emptyConfiguration;
+            }
 
             if (Configuration.Collections != null &&
                 Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
                 return configuration;
 
-            if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
+            if (Configuration.Default == null)
             {
-                return ConflictConfiguration.Default;
+                if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
+                {
+                    return ConflictConfiguration.Default;
+                }
             }
+
             return Configuration.Default ?? _emptyConfiguration;
         }
 
@@ -170,7 +181,10 @@ namespace Raven.Server.Documents.Revisions
             long? lastModifiedTicks,
             ref DocumentFlags documentFlags, out RevisionsCollectionConfiguration configuration)
         {
-            configuration = GetRevisionsConfiguration(collectionName.Name);
+            configuration = GetRevisionsConfiguration(collectionName.Name, documentFlags);
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                return false;
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
                 return false;
@@ -248,7 +262,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public bool ShouldVersionOldDocument(DocumentsOperationContext context, DocumentFlags flags, BlittableJsonReaderObject oldDoc, string changeVector, CollectionName collectionName = null)
+        public bool ShouldVersionOldDocument(DocumentsOperationContext context, DocumentFlags flags, BlittableJsonReaderObject oldDoc, string changeVector, CollectionName collectionName)
         {
             if (oldDoc == null)
                 return false; // no document to version
@@ -293,10 +307,12 @@ namespace Raven.Server.Documents.Revisions
             if (collectionName == null)
                 collectionName = _database.DocumentsStorage.ExtractCollectionName(context, document);
             if (configuration == null)
-                configuration = GetRevisionsConfiguration(collectionName.Name);
+                configuration = GetRevisionsConfiguration(collectionName.Name, flags);
 
             if (configuration.Disabled &&
-                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation) == false && 
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false)
                 return false;
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
@@ -526,7 +542,10 @@ namespace Raven.Server.Documents.Revisions
             RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks)
         {
             var moreRevisionToDelete = false;
-            if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                return false;
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
 
             if (configuration.MinimumRevisionsToKeep.HasValue == false &&

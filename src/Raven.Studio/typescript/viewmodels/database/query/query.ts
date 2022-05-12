@@ -49,6 +49,7 @@ import shardedDatabase from "models/resources/shardedDatabase";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import { shardingTodo } from "common/developmentHelper";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import killQueryCommand from "commands/database/query/killQueryCommand";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -130,6 +131,7 @@ class includedRevisions {
 
 class query extends shardViewModelBase {
 
+    static readonly clientQueryId = "studio_" + new Date().getTime();
     static readonly dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
 
     view = require("views/database/query/query.html");
@@ -190,6 +192,9 @@ class query extends shardViewModelBase {
     });
 
     inSaveMode = ko.observable<boolean>();
+    
+    showKillQueryButton = ko.observable<boolean>(false);
+    killQueryTimeoutId: ReturnType<typeof setTimeout>;
     
     querySaveName = ko.observable<string>();
     saveQueryValidationGroup: KnockoutValidationGroup;
@@ -329,7 +334,8 @@ class query extends shardViewModelBase {
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
             "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab", "plotTimeSeries",
-            "closeTimeSeriesTab", "goToSpatialMapTab", "loadMoreSpatialResultsToMap", "goToIncludesRevisionsTab");
+            "closeTimeSeriesTab", "goToSpatialMapTab", "loadMoreSpatialResultsToMap", "goToIncludesRevisionsTab",
+            "killQuery");
     }
 
     private initObservables(): void {
@@ -945,6 +951,20 @@ class query extends shardViewModelBase {
         this.updateUrl(url);
     }
 
+    killQuery() {
+        const db = this.activeDatabase();
+        this.confirmationMessage("Abort the query", "Do you want to abort currently running query?")
+            .done(result => {
+                if (result.can) {
+                    this.showKillQueryButton(false);
+                    if (this.spinners.isLoading()) {
+                        killQueryCommand.byClientQueryId(db, query.clientQueryId)
+                            .execute();
+                    }
+                }
+            });
+    }
+    
     runQuery(optionalSavedQueryName?: string): void {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
@@ -1005,7 +1025,8 @@ class query extends shardViewModelBase {
             const resultsFetcher = (skip: number, take: number) => {
                 const criteriaForFetcher = this.lastCriteriaExecuted;
                 
-                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, criteriaForFetcher, disableCache, disableAutoIndexCreation);
+                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, criteriaForFetcher, disableCache, disableAutoIndexCreation, query.clientQueryId);
+                this.onQueryRun();
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = criteriaForFetcher.showFields();
@@ -1019,6 +1040,7 @@ class query extends shardViewModelBase {
                 command.execute()
                     .always(() => {
                         this.spinners.isLoading(false);
+                        this.afterQueryRun();
                     })
                     .done((queryResults: pagedResultExtended<document>) => {
                         this.hasMoreUnboundedResults(false);
@@ -1159,6 +1181,18 @@ class query extends shardViewModelBase {
             this.queryFetcher(resultsFetcher);
             this.updateBrowserUrl(this.criteria());
         }
+    }
+    
+    onQueryRun() {
+        this.killQueryTimeoutId = setTimeout(() => {
+            this.showKillQueryButton(true);
+        }, 5000);
+    }
+    
+    afterQueryRun() {
+        clearTimeout(this.killQueryTimeoutId);
+        this.killQueryTimeoutId = null;
+        this.showKillQueryButton(false);
     }
     
     explainIndex(): void {
