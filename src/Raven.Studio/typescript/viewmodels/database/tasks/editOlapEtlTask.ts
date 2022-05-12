@@ -196,16 +196,21 @@ class olapTaskTestMode {
             new testOlapEtlCommand(this.db, dto)
                 .execute()
                 .done((testResult: Raven.Server.Documents.ETL.Providers.OLAP.Test.OlapEtlTestScriptResult) => {
-                    this.testResults(testResult.ItemsByPartition.map(x => new partitionTable(x)));
+                    const $testResults = '.test-container a[href="#testResults"]';
+                    
+                    // wait for tabs animation (if needed)
+                    setTimeout(() => {
+                        this.testResults(testResult.ItemsByPartition.map(x => new partitionTable(x)));
+                    }, 300);
                     this.debugOutput(testResult.DebugOutput);
                     this.transformationErrors(testResult.TransformationErrors);
 
                     if (this.warningsCount()) {
                         $('.test-container a[href="#warnings"]').tab('show');
                     } else {
-                        $('.test-container a[href="#testResults"]').tab('show');
+                        $($testResults).tab('show');
                     }
-
+                    
                     this.testAlreadyExecuted(true);
                 })
                 .always(() => this.spinners.test(false));

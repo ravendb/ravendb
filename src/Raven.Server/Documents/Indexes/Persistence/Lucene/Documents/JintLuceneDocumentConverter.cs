@@ -79,6 +79,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new InvalidOperationException($"Invalid boosted value. Expected object but got '{boostedValue.Type}' with value '{boostedValue}'.");
 
                 documentToProcess = boostedValue.AsObject();
+
+                Document.Boost = documentBoost.Value;
+            }
+            else
+            {
+                Document.Boost = LuceneDefaultBoost;
             }
 
             foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
@@ -213,7 +219,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 for (int idx = fields.Count - 1; numberOfCreatedFields > 0; numberOfCreatedFields--, idx--)
                 {
                     var luceneField = fields[idx];
-                    luceneField.Boost = boost.Value;
                     luceneField.OmitNorms = false;
                 }
             }

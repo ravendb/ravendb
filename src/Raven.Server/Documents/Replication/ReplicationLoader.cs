@@ -93,6 +93,8 @@ namespace Raven.Server.Documents.Replication
 
         private HubInfoForCleaner _hubInfoForCleaner;
 
+        public event Action<IncomingReplicationHandler, int> AttachmentStreamsReceived;
+
         private class HubInfoForCleaner
         {
             public long LastEtag;
@@ -557,6 +559,7 @@ namespace Raven.Server.Documents.Replication
 
                         instance.Failed -= RetryPullReplication;
                         instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
+                        instance.AttachmentStreamsReceived -= OnAttachmentStreamsReceived;
                         if (_log.IsInfoEnabled)
                             _log.Info($"Pull replication Sink handler has thrown an unhandled exception. ({instance.FromToString})", e);
                     }
@@ -565,6 +568,11 @@ namespace Raven.Server.Documents.Replication
                     AddAndStartOutgoingReplication(destination);
                 }
             }
+        }
+
+        private void OnAttachmentStreamsReceived(IncomingReplicationHandler source, int attachmentsStreamCount)
+        {
+            AttachmentStreamsReceived?.Invoke(source, attachmentsStreamCount);
         }
 
         private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationParams pullReplicationParams)
@@ -647,6 +655,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
+            newIncoming.AttachmentStreamsReceived += OnAttachmentStreamsReceived;
             return newIncoming;
         }
 
@@ -1830,6 +1839,7 @@ namespace Raven.Server.Documents.Replication
 
                 instance.Failed -= OnIncomingReceiveFailed;
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
+                instance.AttachmentStreamsReceived -= OnAttachmentStreamsReceived;
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Incoming replication handler has thrown an unhandled exception. ({instance.FromToString})", e);

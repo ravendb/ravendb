@@ -24,6 +24,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import studioSettings = require("common/settings/studioSettings");
 import licenseModel = require("models/auth/licenseModel");
 import generalUtils = require("common/generalUtils");
+import accessManager = require("common/shell/accessManager");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -45,7 +46,7 @@ class createDatabase extends dialogViewModelBase {
     clusterNodes: clusterNode[] = [];
     
     encryptionSection: setupEncryptionKey;
-    usingHttps = location.protocol === "https:"; 
+    isSecureServer = accessManager.default.secureServer();
     operationNotSupported: boolean;
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
@@ -93,7 +94,7 @@ class createDatabase extends dialogViewModelBase {
 
         this.operationNotSupported = mode === "legacyMigration" && clusterTopologyManager.default.nodeInfo().OsInfo.Type !== "Windows";
         
-        const canCreateEncryptedDatabases = ko.pureComputed(() => this.usingHttps && licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
+        const canCreateEncryptedDatabases = ko.pureComputed(() => this.isSecureServer && licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
         this.databaseModel = new databaseCreationModel(mode, canCreateEncryptedDatabases);
         this.recentPathsAutocomplete = new lastUsedAutocomplete("createDatabasePath", this.databaseModel.path.dataPath);
         this.dataExporterAutocomplete = new lastUsedAutocomplete("dataExporterPath", this.databaseModel.legacyMigration.dataExporterFullPath);

@@ -19,6 +19,7 @@ import prefixPathModel = require("models/database/tasks/prefixPathModel");
 import endpoints = require("endpoints");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import accessManager = require("common/shell/accessManager");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 
@@ -48,7 +49,7 @@ class editReplicationSinkTask extends shardViewModelBase {
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
 
-    canDefineCertificates = location.protocol === "https:";
+    canDefineCertificates = accessManager.default.secureServer();
     serverCertificateModel = ko.observable<replicationCertificateModel>();
     exportCertificateUrl = endpoints.global.adminCertificates.adminCertificatesExport;
     private readonly serverCertificateName = "Server Certificate";

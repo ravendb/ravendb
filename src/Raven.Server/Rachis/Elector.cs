@@ -37,17 +37,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                try
-                {
-                    Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
-                }
-                catch (Exception e)
-                {
-                    if (_engine.Log.IsInfoEnabled)
-                    {
-                        _engine.Log.Info("Elector was unable to set the thread priority, will continue with the same priority", e);
-                    }
-                }
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, ToString(), _engine.Log);
 
                 using (this)
                 {

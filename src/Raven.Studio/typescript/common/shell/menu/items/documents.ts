@@ -11,7 +11,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             route: "databases/documents",
             moduleId: require("viewmodels/database/documents/documents"),
             shardingMode: "allShards",
-            title: "List of documents",
+            title: "All Documents",
             nav: false,
             css: "icon-documents",
             dynamicHash: appUrls.documents

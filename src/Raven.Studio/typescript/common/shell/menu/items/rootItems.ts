@@ -33,7 +33,7 @@ function clusterDashboard() {
         title: 'Cluster Dashboard',
         tooltip: "Cluster Dashboard",
         nav: true, // todo - this needs issue RavenDB-16618 to work...
-        css: 'icon-cluster-dashbaord',
+        css: 'icon-cluster-dashboard',
         dynamicHash: appUrl.forClusterDashboard
     }); 
 }

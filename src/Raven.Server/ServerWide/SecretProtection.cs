@@ -18,8 +18,8 @@ using Org.BouncyCastle.Utilities.Collections;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
 using Raven.Server.Commercial;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
@@ -80,6 +80,7 @@ namespace Raven.Server.ServerWide
                         var err = Marshal.GetLastWin32Error();
                         Syscall.ThrowLastError(err, $"when opening {filepath}");
                     }
+
                     try
                     {
                         var ret = Syscall.flock(fd, Syscall.FLockOperations.LOCK_EX);
@@ -109,10 +110,12 @@ namespace Raven.Server.ServerWide
                                     var err = Marshal.GetLastWin32Error();
                                     Syscall.ThrowLastError(err, $"failed to read {filepath}");
                                 }
+
                                 if (read == 0)
                                     break;
                                 amountRead += read;
                             }
+
                             if (amountRead != buffer.Length)
                                 throw new FileLoadException($"Failed to read the full key size from {filepath}, expected to read {buffer.Length} but go only {amountRead}");
                         }
@@ -162,6 +165,7 @@ namespace Raven.Server.ServerWide
                             Syscall.ThrowLastError(err, $"Failed to close the secret key file : {filepath}");
                         }
                     }
+
                     return buffer;
                 }
             }
@@ -210,8 +214,7 @@ namespace Raven.Server.ServerWide
 
         private static byte[] EncryptProtectedData(byte[] secret, byte[] key)
         {
-            var protectedData = new byte[secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()
-                 + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
+            var protectedData = new byte[secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes() + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
 
             fixed (byte* pContext = EncryptionContext)
             fixed (byte* pSecret = secret)
@@ -325,9 +328,118 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
+        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, LicenseType licenseType, SetupProgressAndResult progress = null)
+        {
+            if (loadedCertificate.NotAfter < DateTime.UtcNow)
+            {
+                string msg = $"The provided certificate '{loadedCertificate.FriendlyName}' from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}";
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+
+                progress?.AddError(msg);
+                throw new InvalidOperationException(msg);
+            }
+
+
+            if (licenseType == LicenseType.Developer)
+            {
+                // Do not allow long range certificates in developer mode.
+                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
+                {
+                    const string msg = "The server certificate expiration date is more than 4 months from now. " +
+                                       "This is not allowed when using Developer license. " +
+                                       "Developer license is not allowed for production use. " +
+                                       "Either switch the license or use a short term certificate.";
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations(msg);
+
+                    progress?.AddError(msg);
+                    throw new InvalidOperationException(msg);
+                }
+            }
+        }
+
+        public static CertificateUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, LicenseType licenseType, bool validateCertKeyUsages, SetupProgressAndResult progress = null)
+        {
+            ValidateExpiration(source, loadedCertificate, licenseType, progress);
+
+            ValidatePrivateKey(source, password, rawBytes, out var privateKey, progress);
+
+            ValidateKeyUsages(source, loadedCertificate, validateCertKeyUsages, progress);
+
+            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password, progress);
+
+            return new CertificateUtils.CertificateHolder
+            {
+                Certificate = loadedCertificate,
+                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
+                PrivateKey = privateKey
+            };
+        }
+
+        public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate, bool validateKeyUsages, SetupProgressAndResult progress = null)
+        {
+            var clientCert = false;
+            var serverCert = false;
+            var keyUsages = false;
+
+            foreach (var extension in loadedCertificate.Extensions)
+            {
+                if (extension is X509KeyUsageExtension kue)
+                {
+                    if (kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) && kue.KeyUsages.HasFlag(X509KeyUsageFlags.KeyEncipherment))
+                        keyUsages = true;
+                }
+
+                if (extension is X509EnhancedKeyUsageExtension ekue) //Enhanced Key Usage extension
+                {
+                    foreach (var usage in ekue.EnhancedKeyUsages)
+                    {
+                        switch (usage.Value)
+                        {
+                            case "1.3.6.1.5.5.7.3.2":
+                                clientCert = true;
+                                break;
+                            case "1.3.6.1.5.5.7.3.1":
+                                serverCert = true;
+                                break;
+                        }
+                    }
+                }
+            }
+
+            var shouldThrow = clientCert == false || serverCert == false;
+            if (validateKeyUsages && keyUsages == false)
+                shouldThrow = true;
+
+            if (shouldThrow == false)
+                return;
+
+            var sb = new StringBuilder($"Server certificate {loadedCertificate.FriendlyName} from {source} must be defined with:");
+
+            if (validateKeyUsages && keyUsages == false)
+            {
+                sb.AppendLine("- Key Usage: DigitalSignature");
+                sb.AppendLine("- Key Usage: KeyEncipherment");
+            }
+
+            sb.AppendLine("- Enhanced Key Usage: Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
+            sb.AppendLine("- Enhanced Key Usage: Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
+
+            var msg = sb.ToString();
+
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations(msg);
+            progress?.AddInfo(msg);
+
+            throw new EncryptionException(msg);
+        }
+
 #if !RVN
 
-        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
+
+        public CertificateUtils.CertificateHolder LoadCertificateWithExecutable(string executable, string args, LicenseType licenseType, bool certificateValidationKeyUsages)
         {
             Process process;
 
@@ -373,6 +485,7 @@ namespace Raven.Server.ServerWide
                 process.Kill();
                 throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
             }
+
             try
             {
                 readStdOut.Wait(_config.CertificateExecTimeout.AsTimeSpan);
@@ -380,9 +493,7 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException(
-                    $"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}",
-                    e);
+                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
             }
 
             if (Logger.IsOperationsEnabled)
@@ -395,8 +506,7 @@ namespace Raven.Server.ServerWide
 
             if (process.ExitCode != 0)
             {
-                throw new InvalidOperationException(
-                    $"Unable to get certificate by executing {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
             }
 
             var rawData = ms.ToArray();
@@ -406,16 +516,16 @@ namespace Raven.Server.ServerWide
             {
                 // may need to send this over the cluster, so use exportable here
                 loadedCertificate = new X509Certificate2(rawData, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                ValidateExpiration(executable, loadedCertificate, serverStore);
+                ValidateExpiration(executable, loadedCertificate, licenseType);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
-                ValidateKeyUsages(executable, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
+                ValidateKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Got invalid certificate via {executable} {args}", e);
             }
 
-            return new RavenServer.CertificateHolder
+            return new CertificateUtils.CertificateHolder
             {
                 Certificate = loadedCertificate,
                 CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
@@ -423,7 +533,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64, ServerStore serverStore)
+        public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64)
         {
             Process process;
 
@@ -490,8 +600,7 @@ namespace Raven.Server.ServerWide
 
             if (process.ExitCode != 0)
             {
-                throw new InvalidOperationException(
-                    $"Unable to execute {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to execute {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
             }
         }
 
@@ -544,6 +653,7 @@ namespace Raven.Server.ServerWide
 
                 throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
             }
+
             try
             {
                 readStdOut.Wait(_config.MasterKeyExecTimeout.AsTimeSpan);
@@ -562,8 +672,7 @@ namespace Raven.Server.ServerWide
 
             if (process.ExitCode != 0)
             {
-                throw new InvalidOperationException(
-                    $"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
             }
 
             var rawData = ms.ToArray();
@@ -571,34 +680,13 @@ namespace Raven.Server.ServerWide
             var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
             if (rawData.Length != expectedKeySize)
             {
-                throw new InvalidOperationException(
-                    $"Got wrong master key after executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the size of the key must be {expectedKeySize * 8} bits, but was {rawData.Length * 8} bits.");
+                throw new InvalidOperationException($"Got wrong master key after executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the size of the key must be {expectedKeySize * 8} bits, but was {rawData.Length * 8} bits.");
             }
 
             return rawData;
         }
 
-#if !RVN
-
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
-        {
-            ValidateExpiration(source, loadedCertificate, serverStore);
-
-            ValidatePrivateKey(source, password, rawBytes, out var privateKey);
-
-            ValidateKeyUsages(source, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
-
-            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
-
-            return new RavenServer.CertificateHolder
-            {
-                Certificate = loadedCertificate,
-                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                PrivateKey = privateKey
-            };
-        }
-
-        public static void AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(X509Certificate2 loadedCertificate, byte[] rawBytes, string password)
+        public static void AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(X509Certificate2 loadedCertificate, byte[] rawBytes, string password, SetupProgressAndResult progress = null)
         {
             // we have to add all the certs in the pfx file provides to the CA store for the current user
             // to avoid a remote call on any incoming connection by the SslStream infrastructure
@@ -613,7 +701,7 @@ namespace Raven.Server.ServerWide
 
             var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
             using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser,
-                System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
+                       System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
             {
                 foreach (var cert in collection)
                 {
@@ -659,16 +747,19 @@ namespace Raven.Server.ServerWide
                         }
                         catch (CryptographicException e)
                         {
-                            // Access denied?
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Tried to clean expired certificates from the OS user intermediate store but got an exception when removing a certificate with subject name '{element.Certificate.SubjectName.Name}' and thumbprint '{element.Certificate.Thumbprint}'.", e);
+                            var msg = $"Tried to clean expired certificates from the OS user intermediate store but got an exception when removing a certificate with subject name '{element.Certificate.SubjectName.Name}' and thumbprint '{element.Certificate.Thumbprint}'.";
+
+                            if (Logger is { IsInfoEnabled: true })
+                                Logger.Info(msg, e);
+                            progress?.AddError(msg, e);
                         }
                     }
                 }
             }
         }
 
-        public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password, ServerStore serverStore)
+        public CertificateUtils.CertificateHolder LoadCertificateFromPath(string path, string password, LicenseType licenseType, bool certificateValidationKeyUsages)
+
         {
             try
             {
@@ -678,13 +769,13 @@ namespace Raven.Server.ServerWide
                 // we need to load it as exportable because we might need to send it over the cluster
                 var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
-                ValidateExpiration(path, loadedCertificate, serverStore);
+                ValidateExpiration(path, loadedCertificate, licenseType);
 
                 ValidatePrivateKey(path, password, rawData, out var privateKey);
 
-                ValidateKeyUsages(path, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
+                ValidateKeyUsages(path, loadedCertificate, certificateValidationKeyUsages);
 
-                return new RavenServer.CertificateHolder
+                return new CertificateUtils.CertificateHolder
                 {
                     Certificate = loadedCertificate,
                     CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
@@ -697,99 +788,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-#endif
-
-        public byte[] LoadMasterKeyFromPath()
-        {
-            try
-            {
-                var key = File.ReadAllBytes(_config.MasterKeyPath);
-                var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
-
-                // we require that the key will exists (so admin will generate proper permissions)
-                // but if the size is zero, we'll generate a random key and save it to the specified
-                // file
-
-                if (key.Length == 0)
-                {
-                    key = Sodium.GenerateRandomBuffer(expectedKeySize);
-                    File.WriteAllBytes(_config.MasterKeyPath, key);
-                }
-
-                if (key.Length != expectedKeySize)
-                {
-                    throw new InvalidOperationException(
-                        $"The size of the key must be {expectedKeySize * 8} bits, but was {key.Length * 8} bits.");
-                }
-                return key;
-            }
-            catch (Exception e)
-            {
-                throw new CryptographicException(
-                    $"Unable to open the master secret key at {_config.MasterKeyPath}, won't proceed because losing this key will lose access to all user encrypted information. Admin assistance required.",
-                    e);
-            }
-        }
-
-#if !RVN
-
-        internal static void ValidateExpiration(string source, ServerStore serverStore, LicenseStatus newLicenseStatus)
-        {
-            
-            var currentLicenseType = serverStore.LicenseManager.LicenseStatus.Type;
-
-            if (newLicenseStatus.Type != LicenseType.Developer) return;
-            if (serverStore.Server.Certificate.Certificate == null) return;
-            
-            var certificateNotAfter = serverStore.Server.Certificate.Certificate.NotAfter;
-            var certificateNotBefore = serverStore.Server.Certificate.Certificate.NotBefore;
-            var certificateMaxDuration = certificateNotBefore.AddMonths(MaxDeveloperCertificateValidityDurationInMonths);
-            string msg;
-            
-            if (certificateNotAfter > certificateMaxDuration)
-            {
-                msg = $"The server certificate total duration is greater than {MaxDeveloperCertificateValidityDurationInMonths} months." +
-                      $"This is not allowed when using {LicenseType.Developer} license." +
-                      $"Use short term certificate duration for up to {MaxDeveloperCertificateValidityDurationInMonths}";
-                    
-                throw new InvalidOperationException(msg);
-            }
-            
-            // Do not allow long range certificates in developer mode if the certificate uploaded from another license type.
-            if (certificateNotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
-            {
-                msg = $"The server certificate expiration date is more than {MaxDeveloperCertificateValidityDurationInMonths} months from now. " +
-                      $"This is not allowed when trying to change the license from {currentLicenseType} the {LicenseType.Developer} license. " +
-                      "Use short term certificate before changing the license";
-                    
-                throw new InvalidOperationException(msg);
-            }
-        }
-        
-        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
-        {
-            if (loadedCertificate.NotAfter < DateTime.UtcNow)
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
-
-            if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
-            {
-                // Do not allow long range certificates in developer mode.
-                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
-                {
-                    const string msg = "The server certificate expiration date is more than 4 months from now. " +
-                                       "This is not allowed when using the developer license. " +
-                                       "The developer license is not allowed for production use. " +
-                                       "Either switch the license or use a short term certificate.";
-
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(msg);
-                    throw new InvalidOperationException(msg);
-                }
-            }
-        }
-
-        internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
+        internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk, SetupProgressAndResult progress = null)
         {
             pk = null;
             foreach (string alias in GetAliases(certificatePassword, rawData, out var getKey))
@@ -802,8 +801,11 @@ namespace Raven.Server.ServerWide
             if (pk == null)
             {
                 var msg = "Unable to find the private key in the provided certificate from " + source;
+
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
+                progress?.AddInfo(msg);
+
                 throw new EncryptionException(msg);
             }
 
@@ -840,60 +842,66 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate, bool validateKeyUsages)
+
+        internal static void ValidateExpiration(string source, LicenseType currentLicenseType, LicenseType licenseType, X509Certificate2 certificate, DateTime certificateNotBefore, DateTime certificateNotAfter)
         {
-            var clientCert = false;
-            var serverCert = false;
-            var keyUsages = false;
 
-            foreach (var extension in loadedCertificate.Extensions)
-            {
-                if (extension is X509KeyUsageExtension kue)
-                {
-                    if (kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) && kue.KeyUsages.HasFlag(X509KeyUsageFlags.KeyEncipherment))
-                        keyUsages = true;
-                }
-                if (extension is X509EnhancedKeyUsageExtension ekue) //Enhanced Key Usage extension
-                {
-                    foreach (var usage in ekue.EnhancedKeyUsages)
-                    {
-                        switch (usage.Value)
-                        {
-                            case "1.3.6.1.5.5.7.3.2":
-                                clientCert = true;
-                                break;
-                            case "1.3.6.1.5.5.7.3.1":
-                                serverCert = true;
-                                break;
-                        }
-                    }
-                }
-            }
-
-            var shouldThrow = clientCert == false || serverCert == false;
-            if (validateKeyUsages && keyUsages == false)
-                shouldThrow = true;
-
-            if (shouldThrow == false)
+            if (licenseType != LicenseType.Developer)
+                return;
+            if (certificate == null)
                 return;
 
-            var sb = new StringBuilder($"Server certificate {loadedCertificate.FriendlyName} from {source} must be defined with:");
+            var certificateMaxDuration = certificateNotBefore.AddMonths(MaxDeveloperCertificateValidityDurationInMonths);
+            string msg;
 
-            if (validateKeyUsages && keyUsages == false)
+            if (certificateNotAfter > certificateMaxDuration)
             {
-                sb.AppendLine("- Key Usage: DigitalSignature");
-                sb.AppendLine("- Key Usage: KeyEncipherment");
+                msg = $"The server certificate total duration is greater than {MaxDeveloperCertificateValidityDurationInMonths} months." +
+                      $"This is not allowed when using {LicenseType.Developer} license." +
+                      $"Use short term certificate duration for up to {MaxDeveloperCertificateValidityDurationInMonths}";
+
+                throw new InvalidOperationException(msg);
             }
 
-            sb.AppendLine("- Enhanced Key Usage: Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
-            sb.AppendLine("- Enhanced Key Usage: Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
+            // Do not allow long range certificates in developer mode if the certificate uploaded from another license type.
+            if (certificateNotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
+            {
+                msg = $"The server certificate expiration date is more than {MaxDeveloperCertificateValidityDurationInMonths} months from now. " +
+                      $"This is not allowed when trying to change the license from {currentLicenseType} the {LicenseType.Developer} license. " +
+                      "Use short term certificate before changing the license";
 
-            var msg = sb.ToString();
+                throw new InvalidOperationException(msg);
+            }
+        }
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations(msg);
+        public byte[] LoadMasterKeyFromPath()
+        {
+            try
+            {
+                var key = File.ReadAllBytes(_config.MasterKeyPath);
+                var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
 
-            throw new EncryptionException(msg);
+                // we require that the key will exists (so admin will generate proper permissions)
+                // but if the size is zero, we'll generate a random key and save it to the specified
+                // file
+
+                if (key.Length == 0)
+                {
+                    key = Sodium.GenerateRandomBuffer(expectedKeySize);
+                    File.WriteAllBytes(_config.MasterKeyPath, key);
+                }
+
+                if (key.Length != expectedKeySize)
+                {
+                    throw new InvalidOperationException($"The size of the key must be {expectedKeySize * 8} bits, but was {key.Length * 8} bits.");
+                }
+
+                return key;
+            }
+            catch (Exception e)
+            {
+                throw new CryptographicException($"Unable to open the master secret key at {_config.MasterKeyPath}, won't proceed because losing this key will lose access to all user encrypted information. Admin assistance required.", e);
+            }
         }
 
         private class PkcsStoreWorkaroundFor30946
@@ -1231,6 +1239,7 @@ namespace Raven.Server.ServerWide
                         {
                             orig.Remove(k);
                         }
+
                         keys[upper] = alias;
                         orig[alias] = value;
                     }
@@ -1324,35 +1333,33 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            internal class CertId
+            private class CertId
             {
-                private readonly byte[] id;
+                private readonly byte[] _id;
 
                 internal CertId(AsymmetricKeyParameter pubKey)
                 {
-                    this.id = PkcsStoreWorkaroundFor30946.CreateSubjectKeyID(pubKey).GetKeyIdentifier();
+                    _id = CreateSubjectKeyID(pubKey).GetKeyIdentifier();
                 }
 
-                internal CertId(
-                    byte[] id)
+                internal CertId(byte[] id)
                 {
-                    this.id = id;
+                    _id = id;
                 }
 
                 internal byte[] Id
                 {
-                    get { return id; }
+                    get { return _id; }
                 }
 
                 public override int GetHashCode()
                 {
 #pragma warning disable RS1024 // Compare symbols correctly
-                    return Arrays.GetHashCode(id);
+                    return Arrays.GetHashCode(_id);
 #pragma warning restore RS1024 // Compare symbols correctly
                 }
 
-                public override bool Equals(
-                    object obj)
+                public override bool Equals(object obj)
                 {
                     if (obj == this)
                         return true;
@@ -1362,11 +1369,11 @@ namespace Raven.Server.ServerWide
                     if (other == null)
                         return false;
 
-                    return Arrays.AreEqual(id, other.id);
+                    return Arrays.AreEqual(_id, other._id);
                 }
             }
         }
 
-#endif
     }
 }
+

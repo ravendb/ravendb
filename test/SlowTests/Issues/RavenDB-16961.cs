@@ -102,6 +102,7 @@ namespace SlowTests.Issues
                 }
 
                 await EnsureReplicatingAsync(store1, store2);
+                WaitForUserToContinueTheTest(store2);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store2, store2.Database);
                 var val2 = await WaitForValueAsync(() =>
@@ -112,9 +113,10 @@ namespace SlowTests.Issues
                             var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
                             return rev.Count;
                         }
-                    }, 1
+                    }, 4
                 );
-                Assert.Equal(1, val2);
+
+                Assert.Equal(4, val2);
                 await RevisionsHelper.SetupRevisionsAsync(store1, configuration: new RevisionsConfiguration());
 
                 db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);

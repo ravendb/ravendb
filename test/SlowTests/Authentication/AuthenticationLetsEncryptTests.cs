@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Commercial;
+using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Sparrow.Json;

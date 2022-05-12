@@ -167,7 +167,7 @@ public partial class RavenTestBase
                 {
                     CertificateUtils.CreateSelfSignedClientCertificate(
                         name,
-                        new RavenServer.CertificateHolder
+                        new CertificateUtils.CertificateHolder
                         {
                             Certificate = serverCertificate,
                             PrivateKey = pk
