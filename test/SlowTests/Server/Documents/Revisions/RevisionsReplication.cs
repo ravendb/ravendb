@@ -10,7 +10,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
@@ -22,7 +21,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -47,7 +45,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database);
+                await RevisionsHelper.SetupRevisionsAsync(store1);
                 //await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database); // not setting up revisions on purpose
 
                 var op = new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments);

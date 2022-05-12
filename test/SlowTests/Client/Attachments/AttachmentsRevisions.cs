@@ -48,7 +48,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                 }
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = true;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
@@ -113,7 +113,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                 }
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = true;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
@@ -180,7 +180,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                 }
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = true;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
@@ -242,7 +242,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
                 }
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration =>
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = true;
                     configuration.Collections["Users"].MinimumRevisionsToKeep = 4;

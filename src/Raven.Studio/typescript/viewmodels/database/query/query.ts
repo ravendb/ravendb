@@ -194,7 +194,7 @@ class query extends shardViewModelBase {
     inSaveMode = ko.observable<boolean>();
     
     showKillQueryButton = ko.observable<boolean>(false);
-    killQueryTimeoutId: number;
+    killQueryTimeoutId: ReturnType<typeof setTimeout>;
     
     querySaveName = ko.observable<string>();
     saveQueryValidationGroup: KnockoutValidationGroup;
@@ -1191,7 +1191,7 @@ class query extends shardViewModelBase {
     
     afterQueryRun() {
         clearTimeout(this.killQueryTimeoutId);
-        this.killQueryTimeoutId = -1;
+        this.killQueryTimeoutId = null;
         this.showKillQueryButton(false);
     }
     

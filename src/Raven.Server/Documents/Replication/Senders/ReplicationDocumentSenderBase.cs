@@ -41,19 +41,17 @@ namespace Raven.Server.Documents.Replication.Senders
         public bool MissingAttachmentsInLastBatch { get; private set; }
         private HashSet<Slice> _deduplicatedAttachmentHashes = new(SliceComparer.Instance);
         private Queue<Slice> _deduplicatedAttachmentHashesLru = new();
-        private int _numberOfAttachmentsTrackedForDeduplication;
-        private ByteStringContext _context; // required to clone the hashes 
+        private readonly int _numberOfAttachmentsTrackedForDeduplication;
+        private readonly ByteStringContext _context; // required to clone the hashes 
 
-
-        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log, string[] pathsToSend, string[] destinationAcceptablePaths)
+        protected ReplicationDocumentSenderBase(Stream stream, OutgoingReplicationHandlerBase parent, Logger log)
         {
             Log = log;
             _stream = stream;
             _parent = parent;
-            
+
             _numberOfAttachmentsTrackedForDeduplication = parent._database.Configuration.Replication.MaxNumberOfAttachmentsTrackedForDeduplication;
             _context = new ByteStringContext(SharedMultipleUseFlag.None);
-
         }
 
         protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
@@ -528,8 +526,8 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (item is AttachmentReplicationItem attachment)
             {
-                if(ShouldSendAttachmentStream(attachment)) 
-                _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
+                if (ShouldSendAttachmentStream(attachment))
+                    _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
 
                 if (MissingAttachmentsInLastBatch)
                     state.MissingAttachmentBase64Hashes?.Remove(attachment.Base64Hash);
@@ -548,14 +546,14 @@ namespace Raven.Server.Documents.Replication.Senders
                 // destination, so we need to send it again
                 return true;
             }
-                    
+
             // RavenDB does de-duplication of attachments on storage, but not over the wire
             // Here we implement the same idea, if (in the current connection), we already sent
             // an attachment, we will skip sending it to the other side since we _know_ it is 
             // already there.
             if (_deduplicatedAttachmentHashes.Contains(attachment.Base64Hash))
                 return false; // we already sent it over during the current run
-                    
+
             var clone = attachment.Base64Hash.Clone(_context);
             _deduplicatedAttachmentHashes.Add(clone);
             _deduplicatedAttachmentHashesLru.Enqueue(clone);
@@ -569,7 +567,7 @@ namespace Raven.Server.Documents.Replication.Senders
             return true;
         }
 
-        private bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        protected virtual bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             switch (item)
             {
@@ -580,7 +578,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         skippedReplicationItemsInfo.Update(item, isArtificial: true);
                         return true;
                     }
-                    
+
                     if (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision))
                     {
                         // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
@@ -617,7 +615,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             return false;
         }
-        
+
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
             if (Log.IsInfoEnabled)
@@ -698,12 +696,6 @@ namespace Raven.Server.Documents.Replication.Senders
             public OutgoingReplicationStatsScope TimeSeriesRead;
         }
 
-        public void Dispose()
-        {
-            _pathsToSend?.Dispose();
-            _destinationAcceptablePaths?.Dispose();
-            _context.Dispose();
-        }
         private class ReplicationState
         {
             public HashSet<Slice> MissingAttachmentBase64Hashes;
@@ -720,7 +712,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
         public virtual void Dispose()
         {
-            
+            _context.Dispose();
         }
     }
 }
