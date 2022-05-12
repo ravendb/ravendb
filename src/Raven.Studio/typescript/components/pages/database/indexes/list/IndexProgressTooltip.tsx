@@ -1,5 +1,7 @@
 ﻿import { IndexNodeInfo, IndexNodeInfoDetails, IndexSharedInfo, Progress } from "../../../../models/indexes";
 
+import moment = require("moment");
+
 const shardImg = require("Content/img/sharding/shard.svg");
 const nodeImg = require("Content/img/node.svg");
 
@@ -8,6 +10,7 @@ import { PopoverWithHover } from "../../../../common/PopoverWithHover";
 import classNames from "classnames";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IndexUtils from "../../../../utils/IndexUtils";
+import genUtils from "common/generalUtils";
 
 interface IndexProgressTooltipProps {
     target: string;
@@ -55,7 +58,8 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                     </div>
                     {nodeInfo.details.stale ? (
                         <div className="details-item status updating">
-                            <i className="icon-waiting" /> Updating
+                            <i className="icon-waiting" />{" "}
+                            {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
                         </div>
                     ) : (
                         <div className="details-item status">
@@ -168,4 +172,62 @@ function badgeText(index: IndexSharedInfo, details: IndexNodeInfoDetails, global
     }
 
     return "Normal";
+}
+
+function isCompleted(progress: Progress, stale: boolean) {
+    return progress.processed === progress.total && !stale;
+}
+
+function isDisabled(status: IndexRunningStatus) {
+    return status === "Disabled" || status === "Paused";
+}
+
+function formatTimeLeftToProcess(progress: Progress, nodeDetails: IndexNodeInfoDetails) {
+    if (!progress) {
+        return "Updating...";
+    }
+
+    const { total, processed, processedPerSecond } = progress;
+
+    if (isDisabled(nodeDetails.status)) {
+        return "Overall progress";
+    }
+
+    if (isCompleted(progress, nodeDetails.stale)) {
+        return "Indexing completed";
+    }
+
+    const leftToProcess = total - processed;
+    if (leftToProcess === 0 || processedPerSecond === 0) {
+        return formatDefaultTimeLeftMessage(progress, nodeDetails);
+    }
+
+    const timeLeftInSec = leftToProcess / processedPerSecond;
+    if (timeLeftInSec <= 0) {
+        return formatDefaultTimeLeftMessage(progress, nodeDetails);
+    }
+
+    const formattedDuration = genUtils.formatDuration(moment.duration(timeLeftInSec * 1000), true, 2, true);
+    if (!formattedDuration) {
+        return formatDefaultTimeLeftMessage(progress, nodeDetails);
+    }
+
+    let message = `Estimated time left: ${formattedDuration}`;
+
+    if (leftToProcess !== 0 && processedPerSecond !== 0) {
+        message += ` (${(processedPerSecond | 0).toLocaleString()} / sec)`;
+    }
+
+    return message;
+}
+
+function formatDefaultTimeLeftMessage(progress: Progress, details: IndexNodeInfoDetails) {
+    const { total, processed } = progress;
+    const { stale } = details;
+
+    if (total === processed && stale) {
+        return "Processed all documents and tombstones, finalizing";
+    }
+
+    return isDisabled(details.status) ? "Index is " + details.status : "Overall progress";
 }
