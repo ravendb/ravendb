@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 namespace Raven.Client.Documents.Changes
 {
     public interface IConnectableChanges<TChanges> : IDisposable
-        where TChanges : IDatabaseChanges
     {
         bool Connected { get; }
 

@@ -8,6 +8,7 @@ public interface IShardedDatabaseChanges :
     IIndexChanges<BlittableJsonReaderObject>,
     IOperationChanges<BlittableJsonReaderObject>,
     ICounterChanges<BlittableJsonReaderObject>,
-    ITimeSeriesChanges<BlittableJsonReaderObject> 
+    ITimeSeriesChanges<BlittableJsonReaderObject>,
+    IConnectableChanges<IShardedDatabaseChanges>
 {
 }

@@ -55,16 +55,20 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         _releaseQueueContext = ContextPool.AllocateOperationContext(out _queueContext);
     }
 
-    private ValueTask EnsureConnectedAsync()
+    private async ValueTask EnsureConnectedAsync(CancellationToken token)
     {
         if (_changes != null)
-            return ValueTask.CompletedTask;
+            return;
 
+        var tasks = new Task[_context.NumberOfShardNodes];
         _changes = new ShardedDatabaseChanges[_context.NumberOfShardNodes];
         for (var i = 0; i < _changes.Length; i++)
+        {
             _changes[i] = new ShardedDatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(i), ShardHelper.ToShardName(_context.DatabaseName, i), onDispose: null, nodeTag: null, _throttleConnection);
+            tasks[i] = _changes[i].EnsureConnectedNow();
+        }
 
-        return ValueTask.CompletedTask;
+        await Task.WhenAll(tasks).WithCancellation(token);
     }
 
     protected override ValueTask WatchTopologyAsync()
@@ -75,7 +79,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchDocumentAsync(string docId, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         _matchingDocuments.GetOrAdd(docId, id => WatchInternalAsync(changes => changes.ForDocument(id), token).Result);
     }
@@ -87,7 +91,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchAllDocumentsAsync(CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         var value = Interlocked.Increment(ref _watchAllDocuments);
         if (value == 1)
@@ -102,7 +106,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchCounterAsync(string name, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         _matchingCounters.GetOrAdd(name, n => WatchInternalAsync(changes => changes.ForCounter(n), token).Result);
     }
@@ -114,7 +118,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchDocumentCountersAsync(string docId, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         _matchingDocumentCounters.GetOrAdd(docId, id => WatchInternalAsync(changes => changes.ForCountersOfDocument(id), token).Result);
     }
@@ -126,7 +130,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchDocumentCounterAsync(BlittableJsonReaderArray parameters, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         var val = GetParameters(parameters);
 
@@ -142,7 +146,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchAllCountersAsync(CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         var value = Interlocked.Increment(ref _watchAllCounters);
         if (value == 1)
@@ -157,7 +161,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchTimeSeriesAsync(string name, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         _matchingTimeSeries.GetOrAdd(name, n => WatchInternalAsync(changes => changes.ForTimeSeries(n), token).Result);
     }
@@ -169,7 +173,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchAllDocumentTimeSeriesAsync(string docId, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         _matchingAllDocumentTimeSeries.GetOrAdd(docId, id => WatchInternalAsync(changes => changes.ForTimeSeriesOfDocument(id), token).Result);
     }
@@ -181,7 +185,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchDocumentTimeSeriesAsync(BlittableJsonReaderArray parameters, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         var val = GetParameters(parameters);
 
@@ -197,7 +201,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     protected override async ValueTask WatchAllTimeSeriesAsync(CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         var value = Interlocked.Increment(ref _watchAllTimeSeries);
         if (value == 1)
@@ -338,7 +342,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     private async ValueTask UnwatchInternalAsync<TKey>(TKey key, ConcurrentDictionary<TKey, IDisposable> subscriptions, CancellationToken token)
     {
-        await EnsureConnectedAsync();
+        await EnsureConnectedAsync(token);
 
         if (subscriptions.TryRemove(key, out var unsubscribe) == false)
             return;
