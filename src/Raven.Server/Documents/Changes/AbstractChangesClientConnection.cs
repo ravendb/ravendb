@@ -100,13 +100,13 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected abstract ValueTask UnwatchDocumentOfTypeAsync(string name);
 
-    protected abstract ValueTask WatchAllIndexesAsync();
+    protected abstract ValueTask WatchAllIndexesAsync(CancellationToken token);
 
-    protected abstract ValueTask UnwatchAllIndexesAsync();
+    protected abstract ValueTask UnwatchAllIndexesAsync(CancellationToken token);
 
-    protected abstract ValueTask WatchIndexAsync(string name);
+    protected abstract ValueTask WatchIndexAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask UnwatchIndexAsync(string name);
+    protected abstract ValueTask UnwatchIndexAsync(string name, CancellationToken token);
 
     protected abstract ValueTask WatchOperationAsync(long operationId);
 
@@ -262,19 +262,19 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
         if (Match(command, "watch-index"))
         {
-            await WatchIndexAsync(commandParameter);
+            await WatchIndexAsync(commandParameter, token);
         }
         else if (Match(command, "unwatch-index"))
         {
-            await UnwatchIndexAsync(commandParameter);
+            await UnwatchIndexAsync(commandParameter, token);
         }
         else if (Match(command, "watch-indexes"))
         {
-            await WatchAllIndexesAsync();
+            await WatchAllIndexesAsync(token);
         }
         else if (Match(command, "unwatch-indexes"))
         {
-            await UnwatchAllIndexesAsync();
+            await UnwatchAllIndexesAsync(token);
         }
         else if (Match(command, "watch-doc"))
         {

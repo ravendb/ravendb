@@ -455,25 +455,25 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchAllIndexesAsync()
+        protected override ValueTask WatchAllIndexesAsync(CancellationToken token)
         {
             Interlocked.Increment(ref _watchAllIndexes);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchAllIndexesAsync()
+        protected override ValueTask UnwatchAllIndexesAsync(CancellationToken token)
         {
             Interlocked.Decrement(ref _watchAllIndexes);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchIndexAsync(string name)
+        protected override ValueTask WatchIndexAsync(string name, CancellationToken token)
         {
             _matchingIndexes.TryAdd(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchIndexAsync(string name)
+        protected override ValueTask UnwatchIndexAsync(string name, CancellationToken token)
         {
             _matchingIndexes.TryRemove(name);
             return ValueTask.CompletedTask;
