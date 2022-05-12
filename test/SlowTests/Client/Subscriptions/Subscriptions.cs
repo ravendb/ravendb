@@ -308,8 +308,7 @@ namespace SlowTests.Client.Subscriptions
                             }
                         }));
 
-                        Assert.ThrowsAsync<SubscriptionInUseException>(() => firstRun).Wait();
-
+                        await Assert.ThrowsAsync<SubscriptionInUseException>(() => firstRun);
 
                         await CreateDocuments(store, 5);
 
