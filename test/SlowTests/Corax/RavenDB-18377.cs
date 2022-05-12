@@ -53,9 +53,9 @@ public class RavenDB_18377 : RavenTestBase
         {
             //StaticIndex
             using var session = store.OpenSession();
-            var result = session.Query<Item, NestedArray>().Where(p => p.Data.Any(data => data < 10)).ToList();
+            var result = session.Query<Item, NestedArray>().Where(p => p.Data.Any(data => data > 10)).ToList();
             Assert.Empty(result);
-            result = session.Query<Item, NestedArray>().Where(p => p.Data.Any(data => data > 10)).ToList();
+            result = session.Query<Item, NestedArray>().Where(p => p.Data.Any(data => data < 10)).ToList();
             Assert.Single(result);
         }
         {
