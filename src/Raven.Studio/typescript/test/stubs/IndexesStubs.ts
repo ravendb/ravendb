@@ -62,6 +62,7 @@ export class IndexesStubs {
         const progress = IndexesStubs.getGenericProgress();
         progress.IsStale = true;
         progress.Name = stats.Name;
+        progress.ProcessedPerSecond = 2;
         progress.Collections = IndexesStubs.collectionStats();
 
         return [stats, progress];
