@@ -101,6 +101,7 @@ namespace FastTests.Corax
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("CE").AsSpan()) == 0);
         }
 
+        
 
         [Fact]
         public void IterationReads()

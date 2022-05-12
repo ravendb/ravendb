@@ -24,14 +24,14 @@ namespace SlowTests.Tests.Spatial
             public SpatialIdx()
             {
                 Map = docs => from e in docs
-                              select new { e.Capacity, e.Venue, e.Date, Coordinates = CreateSpatialField(e.Latitude, e.Longitude) };
+                    select new {e.Capacity, e.Venue, e.Date, Coordinates = CreateSpatialField(e.Latitude, e.Longitude)};
 
                 Index(x => x.Venue, FieldIndexing.Search);
             }
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_do_spatial_search_with_client_api(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -64,13 +64,32 @@ namespace SlowTests.Tests.Spatial
                 }
             }
         }
-
-        [Theory]
-        [CriticalCultures]
-        public void Can_do_spatial_search_with_client_api3(CultureInfo cultureInfo)
+        public enum CultureInfoTest
         {
-            using (CultureHelper.EnsureCulture(cultureInfo))
-            using (var store = GetDocumentStore())
+            Invariant,
+            CurrentCulture,
+            Netherlands,
+            Turkey
+        }
+
+        public CultureInfo GetCultureInfo(CultureInfoTest culture) => culture switch
+        {
+            CultureInfoTest.Invariant => CultureInfo.InvariantCulture,
+            CultureInfoTest.CurrentCulture => CultureInfo.CurrentCulture,
+            CultureInfoTest.Netherlands => new CultureInfo("NL"),
+            CultureInfoTest.Turkey => new CultureInfo("tr-TR") 
+    };
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(CultureInfoTest.Invariant, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(CultureInfoTest.CurrentCulture, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(CultureInfoTest.Netherlands, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(CultureInfoTest.Turkey, SearchEngineMode = RavenSearchEngineMode.All)]
+        [CriticalCultures]
+        public void Can_do_spatial_search_with_client_api3(Options options, CultureInfoTest cultureInfo)
+        {
+            using (CultureHelper.EnsureCulture(GetCultureInfo(cultureInfo)))
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -93,7 +112,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_do_spatial_search_with_client_api2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -119,7 +138,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_do_spatial_search_with_client_api_within_given_capacity(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -187,7 +206,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_do_spatial_search_with_client_api_addorder(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Corax.Utils;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -42,7 +44,7 @@ namespace SlowTests.MailingList
                         Coordinate = new Coordinate { latitude = 12.233, longitude = -73.995 }
                     });
                     await session.SaveChangesAsync();
-                    WaitForUserToContinueTheTest(db);
+                    //WaitForUserToContinueTheTest(db);
                     Indexes.WaitForIndexing(db);
 
                     var result = await session.Query<Promo, Promos_Index>()
@@ -83,6 +85,10 @@ namespace SlowTests.MailingList
                                     p.Coordinate,
                                     Coordinates = CreateSpatialField(p.Coordinate.latitude, p.Coordinate.longitude)
                                 };
+                Index("Coordinate", FieldIndexing.No);
+
+             //   Spatial(x => x.Coordinate, x => x.Geography.Default(Raven.Client.Documents.Indexes.Spatial.SpatialUnits.Kilometers));
+
             }
         }
     }
