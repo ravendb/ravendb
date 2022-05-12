@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return new RecursiveFunction(item, func).Execute();
         }
 
-        protected dynamic CreateField(string name, object value, CreateFieldOptions options)
+        protected IEnumerable<AbstractField> CreateField(string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return result;
         }
 
-        protected dynamic CreateField(string name, object value, bool stored = false, bool? analyzed = null)
+        protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
