@@ -34,7 +34,8 @@ namespace Corax
         Tuple = 1 << 1,
         List = 1 << 2,
         Raw = 1 << 3,
-        
+
+        EmptyList = 1 << 13, 
         HasNulls = 1 << 14, // Helper for list writer.
         Invalid = 1 << 15,
 
@@ -175,9 +176,6 @@ namespace Corax
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
 
-            if (value.Length == 0)
-                return;
-
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
@@ -193,9 +191,12 @@ namespace Corax
             dataLocation += VariableSizeEncoding.Write(_buffer, value.Length, dataLocation);
 
             // Copy the actual string data. 
-            ref var src = ref Unsafe.AsRef(value[0]);
-            ref var dest = ref _buffer[dataLocation];
-            Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
+            if (value.Length != 0)
+            {
+                ref var src = ref Unsafe.AsRef(value[0]);
+                ref var dest = ref _buffer[dataLocation];
+                Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
+            }
 
             _dataIndex = dataLocation + value.Length;
         }    
@@ -204,9 +205,6 @@ namespace Corax
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
-
-            if (values.Length == 0)
-                return;
 
             int dataLocation = _dataIndex;
 
@@ -224,15 +222,26 @@ namespace Corax
             var stringPtrTableLocation = _buffer.Slice(dataLocation, sizeof(int));
             dataLocation += sizeof(int);
 
+            // Copy the actual string data. 
+            if (values.Length == 0)
+            {
+                MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
+                _dataIndex = dataLocation;
+
+                // Signal that we will have to deal with the nulls.
+                Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.EmptyList);
+                return;
+            }
+
+            int[] stringLengths = ArrayPool<int>.Shared.Rent(values.Length);
+
             // We start to write the strings in a place we know where it is from implicit positioning...
             // 4b 
-            int[] stringLengths = ArrayPool<int>.Shared.Rent(values.Length);
             for (int i = 0; i < values.Length; i++)
             {
                 var value = values[i];
                 value.CopyTo(_buffer[dataLocation..]);
                 dataLocation += value.Length;
-
                 stringLengths[i] = value.Length;
             }
 
@@ -282,9 +291,6 @@ namespace Corax
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
             Debug.Assert(values.Length == longValues.Length && values.Length == doubleValues.Length);
 
-            if (values.Length == 0)
-                return;
-
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
@@ -308,6 +314,17 @@ namespace Corax
             var doubleValuesList = MemoryMarshal.Cast<byte, double>(_buffer.Slice(dataLocation, values.Length * sizeof(double)));
             doubleValues.CopyTo(doubleValuesList);
             dataLocation += values.Length * sizeof(double);
+
+            if (values.Length == 0)
+            {
+                // Write the pointer to the location.
+                MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
+                _dataIndex = dataLocation;
+
+                // Signal that we will have to deal with the nulls.
+                Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.EmptyList);
+                return;
+            }                
 
             // We start to write the strings in a place we know where it is from implicit positioning...
             // 4b + 4b + len(values) * 8b
@@ -576,6 +593,8 @@ namespace Corax
             }
         }
 
+        public bool IsEmpty => !IsNull && Count == 0;
+
         public ReadOnlySpan<byte> Sequence
         {
             get
@@ -713,7 +732,7 @@ namespace Corax
             {
                 type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
                 if (type == IndexEntryFieldType.Null)
-                    goto IsNull;
+                    goto IsNull;                                
 
                 intOffset += sizeof(IndexEntryFieldType);
 
@@ -853,7 +872,15 @@ namespace Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read(int field, out Span<byte> value, int elementIdx = 0)
         {
-            return Read(field, out IndexEntryFieldType _, out value, elementIdx);
+            bool result = Read(field, out IndexEntryFieldType type, out value, elementIdx);
+
+            // When we dont ask about the type, we dont usually care about the empty lists either.
+            // The behavior in those cases is that trying to access an element by index when the list is empty
+            // should return false (as in failure). 
+            if (type.HasFlag(IndexEntryFieldType.EmptyList))
+                return false;
+
+            return result;
         }
 
         public bool Read(int field, out IndexEntryFieldType type, out Span<byte> value, int elementIdx = 0)
@@ -873,6 +900,10 @@ namespace Corax
                         goto IsNull;
                     else
                         goto FailNull;
+                }
+                else if (type.HasFlag(IndexEntryFieldType.EmptyList))
+                {
+                    goto EmptyList;
                 }
 
                 intOffset += sizeof(IndexEntryFieldType);
@@ -956,8 +987,11 @@ namespace Corax
             value = _buffer.Slice(intOffset, stringLength);            
             return true;
 
+        EmptyList:
+            value = Span<byte>.Empty;
+            return true;
         HasNull:
-            type = IndexEntryFieldType.HasNulls;            
+            type = IndexEntryFieldType.HasNulls;
             value = Span<byte>.Empty;
             return true;
         IsNull:
@@ -975,7 +1009,15 @@ namespace Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read(int field, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
         {
-            return Read(field, out var _, out longValue, out doubleValue, out sequenceValue);
+            bool result = Read(field, out var type, out longValue, out doubleValue, out sequenceValue);
+
+            // When we dont ask about the type, we dont usually care about the empty lists either.
+            // The behavior in those cases is that trying to access an element by index when the list is empty
+            // should return false (as in failure). 
+            if (type.HasFlag(IndexEntryFieldType.EmptyList))
+                return false;
+
+            return result;
         }
 
         public unsafe bool Read(int field, out IndexEntryFieldType type, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
