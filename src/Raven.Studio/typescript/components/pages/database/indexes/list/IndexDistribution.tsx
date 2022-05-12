@@ -176,6 +176,4 @@ function IndexState(props: IndexStateProps) {
 
 const indexNodeInfoKey = (nodeInfo: IndexNodeInfo) => nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;
 
-function isCompleted(progress: Progress, stale: boolean) {
-    return progress.processed === progress.total && !stale;
-}
+
