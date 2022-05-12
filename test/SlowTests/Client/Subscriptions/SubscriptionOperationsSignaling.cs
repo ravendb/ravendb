@@ -222,11 +222,11 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Fact]
-        public void WaitOnSubscriptionStopDueToSubscriberError()
+        public async Task WaitOnSubscriptionStopDueToSubscriberError()
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create<User>();
+                var subscriptionId = await store.Subscriptions.CreateAsync<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
 
                 using (var session = store.OpenSession())
@@ -237,7 +237,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var task = subscription.Run(_ => throw new InvalidCastException());
 
-                var innerException = Assert.Throws<AggregateException>(() => task.Wait(TimeSpan.FromMinutes(1))).InnerException;
+                var innerException = await Assert.ThrowsAsync<SubscriberErrorException>(() => task);
                 Assert.IsType<SubscriberErrorException>(innerException);
                 Assert.IsType<InvalidCastException>(innerException.InnerException);
             }
