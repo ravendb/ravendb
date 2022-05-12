@@ -47,9 +47,16 @@
                         </div>
                     </div>
                     <div class="query-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: _.partial(runQuery, null), css: { 'btn-spinner': spinners.isLoading }, enable: criteria().queryText().trim()">
+                        <button class="btn btn-primary btn-block btn-lg text-center run-query" 
+                                data-bind="click: _.partial(runQuery, null), css: { 'btn-spinner': spinners.isLoading }, enable: criteria().queryText().trim() && !spinners.isLoading()">
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                        </button>
+
+                        <button class="btn btn-default btn-block"
+                                data-bind="click: killQuery, visible: showKillQueryButton">
+                            <i class="icon-force"></i>
+                            <span>Abort query</span>
                         </button>
                     </div>
                 </div>
@@ -328,7 +335,7 @@
         </div>
         <div class="toggle margin-left">
             <input id="disableAutoIndex" type="checkbox" data-bind="checked: disableAutoIndexCreation">
-            <label for="disableAutoIndex">Disable creating new Auto-Indexes</label>
+            <label for="disableAutoIndex">Don't create a new Auto-Index</label>
         </div>
         <div class="toggle margin-left">
             <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">

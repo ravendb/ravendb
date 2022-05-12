@@ -130,7 +130,9 @@ namespace Lucene.Net.Search.Vectorhighlight
                         };
             foreach (var item in items)
             {
-                var headerIndex = item.to.startOffset - adjustedStart;
+                // If the term starts with ', ', this will be stripped, but then the start term and
+                // the actual term are different, this ensures that we aren't going to far back there.
+                var headerIndex = Math.Max(0, item.to.startOffset - adjustedStart);
                 var matchLen = item.to.endOffset - item.to.startOffset;
                 var startLen = Math.Max(0, Math.Min(headerIndex - srcIndex, (fragCharSize - matchLen) / 2));
 

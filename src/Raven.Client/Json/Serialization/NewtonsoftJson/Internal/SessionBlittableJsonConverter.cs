@@ -50,7 +50,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     var documentTypeAsString = _session.Conventions.GetClrType(id, json);
                     if (documentTypeAsString != null)
                     {
-                        var documentType = Type.GetType(documentTypeAsString);
+                        var documentType = _session.Conventions.ResolveTypeFromClrTypeName(documentTypeAsString);
                         if (documentType != null && type.IsAssignableFrom(documentType))
                         {
                             entity = _session.Conventions.Serialization.DeserializeEntityFromBlittable(documentType, json);

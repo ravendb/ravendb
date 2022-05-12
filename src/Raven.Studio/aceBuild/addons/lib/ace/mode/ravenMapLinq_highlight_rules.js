@@ -60,13 +60,6 @@ define(function(require, exports, module) {
                 }
 
             ],
-            "data.prefix": [
-                {
-                    token: "data.suffix",
-                    regex: "[^\\s,]*",
-                    next:"start"
-                }
-            ],
             "start": [
                 {
                     token: "comment",
@@ -76,12 +69,6 @@ define(function(require, exports, module) {
                     token: "keyword",
                     regex: "from",
                     next: "from.alias"
-
-                },
-                {
-                    token: "data.prefix",
-                    regex: "\\w+\\.",
-                    next: "data.prefix"
 
                 },
                 DocCommentHighlightRules.getStartRule("doc-start"),
@@ -104,7 +91,8 @@ define(function(require, exports, module) {
                     token: "string", start: '@"', end: '"', next: [
                         { token: "constant.language.escape", regex: '""' }
                     ]
-                }, {
+                },
+                {
                     token: "constant.numeric", // hex
                     regex: "0[xX][0-9a-fA-F]+\\b"
                 }, {

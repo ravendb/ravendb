@@ -42,5 +42,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Replication.MaxSizeToSendInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? MaxSizeToSend { get; set; }
+        
+        [Description("The number of duplicate attachments that should be tracked for de-duplication per outgoing replication connection.")]
+        [DefaultValue(16*1024)]
+        [ConfigurationEntry("Replication.MaxNumberOfAttachmentsTrackedForDeduplication", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxNumberOfAttachmentsTrackedForDeduplication { get; set; }
     }
 }

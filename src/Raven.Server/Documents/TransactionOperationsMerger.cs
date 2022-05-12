@@ -299,17 +299,7 @@ namespace Raven.Server.Documents
 
         private void MergeOperationThreadProc()
         {
-            try
-            {
-                Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
-            }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info("Unable to elevate the transaction merger thread for " + _parent.Name, e);
-                }
-            }
+            ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, TransactionMergerThreadName, _log);
 
             var oomTimer = new Stopwatch();// this is allocated here to avoid OOM when using it
 

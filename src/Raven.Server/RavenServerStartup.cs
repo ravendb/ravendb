@@ -418,6 +418,12 @@ namespace Raven.Server
                 return;
             }
 
+            if (exception is IndexCompactionInProgressException)
+            {
+                response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                return;
+            }
+
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }

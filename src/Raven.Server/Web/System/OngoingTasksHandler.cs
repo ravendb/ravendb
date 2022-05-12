@@ -465,6 +465,7 @@ namespace Raven.Server.Web.System
                     };
 
                     var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
+                    var threadName = $"Backup thread {backupName} for database '{Database.Name}'";
 
                     var t = Database.Operations.AddOperation(
                         null,
@@ -477,7 +478,7 @@ namespace Raven.Server.Web.System
                             {
                                 try
                                 {
-                                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                                    ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, Logger);
                                     NativeMemory.EnsureRegistered();
 
                                     using (Database.PreventFromUnloadingByIdleOperations())
@@ -503,7 +504,7 @@ namespace Raven.Server.Web.System
                                 {
                                     ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
                                 }
-                            }, null, $"Backup thread {backupName} for database '{Database.Name}'");
+                            }, null, threadName);
                             return tcs.Task;
                         },
                         id: operationId, token: cancelToken);
