@@ -10,6 +10,7 @@ using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Debugging;
 using SpatialRelation = Corax.Utils.SpatialRelation;
 
 namespace Corax.Queries;
@@ -18,26 +19,20 @@ public class SpatialMatch : IQueryMatch
 {
     private readonly IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
-    private readonly SpecialEntryFieldType _specialEntryFieldType;
+    private readonly ExtendedEntryFieldType _extendedEntryFieldType;
     private readonly string _fieldName;
     private readonly double _error;
     private readonly IShape _shape;
-    private readonly List<string> _geohashsTermMatch;
-    private readonly List<string> _geohashsNeedsToBeChecked;
     private readonly CompactTree _tree;
-
-
-    private int currentGeohashId = 0;
-    private StartWithTermProvider _startsWithProvider;
+    private IEnumerator<(string Geohash, bool isTermMatch)> _termGenerator;
     private TermMatch _currentMatch;
     private readonly ByteStringContext _allocator;
     private readonly int _fieldId;
     private readonly SpatialRelation _spatialRelation;
     private bool _isTermMatch;
-    private int _alreadySeen = 0;
     private IDisposable _startsWithDisposeHandler;
     private Slice _startsWith;
-    private Trie _trie;
+    private HashSet<long> _alreadyReturned;
 
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, Spatial4n.Core.Context.SpatialContext spatialContext, string fieldName, IShape shape,
         CompactTree tree,
@@ -52,90 +47,28 @@ public class SpatialMatch : IQueryMatch
         _tree = tree;
         _allocator = allocator;
         _spatialRelation = spatialRelation;
-        _trie = new();
-        //We build two lists while filling in the shape. The first one is filled with geohashs that
-        //are definitely in the body of the figure. This allows us to create a TermMatch. The second list
-        //is filled with boundary points, which we are not able to determine (unless we build more and more
-        //accurate meshes for the figure, which is very expensive). In this case, we need to check all the
-        //hashes with prefix X, and evaluate each of them individually if they are in our figure.
-        SpatialHelper.FulfillShape(SpatialContext.GEO, shape, _geohashsTermMatch = new(), _geohashsNeedsToBeChecked = new(), maxPrecision: 4);
-        
-        _alreadyReturned = new HashSet<Slice>(SliceComparer.Instance);
-
-        // At the beginning we are will returns ALL items that we are sure 
-        _isTermMatch = _geohashsTermMatch.Count > 0;
-
+        _termGenerator = SpatialHelper.GetGeohashes(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
+        DebugStuff.RenderAndShow(tree);
         GoNextMatch();
     }
 
-    private int _geoTermMatchId = 0;
-    private int _geoStartsWithId = 0;
-    
-    /// <summary>
-    ///  We've persist all prefixes already returned to the user.
-    /// This is only for startsWith calls. This happends because we have to p
-    /// </summary>
-    private HashSet<Slice> _alreadyReturned;
-
-    private bool GoNextMatch(bool requireReload = false)
+    private bool GoNextMatch()
     {
-        if (_isTermMatch && _geohashsTermMatch.Count > 0 && _geoTermMatchId < _geohashsTermMatch.Count)
+        if (_termGenerator.MoveNext())
         {
-            _startsWithDisposeHandler = Slice.From(_allocator, _geohashsTermMatch[_geoTermMatchId], out _startsWith);
-            _currentMatch = _indexSearcher.TermQuery(_fieldName, _startsWith);
-            
-            _geoTermMatchId++;
+            var result = _termGenerator.Current;
+            _startsWithDisposeHandler?.Dispose();
+            _startsWithDisposeHandler = Slice.From(_allocator, result.Geohash, out var term);
+            _isTermMatch = result.isTermMatch;
+            _currentMatch = _indexSearcher.TermQuery(_tree, term);
 
             return true;
         }
 
-        if (_isTermMatch)
-        {
-            //We are out of TermMatches. Now we are gonna do SEEK and check every single element;
-            _isTermMatch = false;
-
-            if (_geohashsNeedsToBeChecked.Count == 0)
-            {
-                return false;
-            }
-
-            StartsWithFetcher();
-        }
-
-
-        while (true)
-        {
-            //   _currentMatch.
-            if (_startsWithProvider.Next(out _currentMatch, out _startsWith) == false || requireReload)
-            {
-                if (_geohashsNeedsToBeChecked.Count == 0 || _geohashsNeedsToBeChecked.Count <= _geoStartsWithId)
-                {
-                    return false;
-                }
-
-                StartsWithFetcher();
-            }
-            else
-            {
-                _trie.TryGetValue(_startsWith, out var alreadyReturned);
-                if (alreadyReturned)
-                    continue;
-                
-                return true;
-            }
-        }
-
-
-        void StartsWithFetcher()
-        {
-            //_startsWithDisposeHandler?.Dispose();
-            _startsWithDisposeHandler = Slice.From(_allocator, _geohashsNeedsToBeChecked[_geoStartsWithId], out _startsWith);
-            _startsWithProvider = new(_indexSearcher, _allocator, _tree, _fieldName, _fieldId, _startsWith);
-            _geoStartsWithId++;
-        }
+        return false;
     }
 
-    public long Count => throw new NotSupportedException();
+    public long Count => -1;
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting { get; }
 
@@ -151,6 +84,7 @@ public class SpatialMatch : IQueryMatch
                 {
                     return currentIdx;
                 }
+
                 continue;
             }
 
@@ -158,14 +92,14 @@ public class SpatialMatch : IQueryMatch
             {
                 currentIdx += read;
             }
-            else
+            else if (read > 0)
             {
-                var figure = Spatial4n.Core.Util.GeohashUtils.DecodeBoundary(_startsWith.ToString(), _spatialContext);
-                if (IsTrue(figure.Relate(_shape)))
+                for (int i = 0; i < read; ++i)
                 {
-                    _trie.Add(_startsWith, true);
-                    GoNextMatch(true);
-                    currentIdx += read;
+                    if (CheckEntryManually(matches[i]))
+                    {
+                        matches[currentIdx++] = matches[i];
+                    }
                 }
             }
         } while (currentIdx != matches.Length);
@@ -173,18 +107,66 @@ public class SpatialMatch : IQueryMatch
         return currentIdx;
     }
 
+    private bool CheckEntryManually(long id)
+    {
+        var reader = _indexSearcher.GetReaderFor(id);
+        var type = reader.GetFieldType(_fieldId, out _);
+        if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
+        {
+            return false;
+        }
+        
+        if (type.HasFlag(IndexEntryFieldType.List))
+        {
+            _alreadyReturned ??= new HashSet<long>();
+            var iterator = reader.ReadManySpatialPoint(_fieldId);
+            while (iterator.ReadNext())
+            {
+                var point = new Point(iterator.Longitude, iterator.Latitude, _spatialContext);
+                if (IsTrue(point.Relate(_shape)))
+                {
+                    _alreadyReturned.Add(id);
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            reader.Read(_fieldId, out (double Lat, double Lon) coorinate);
+            var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
+            if (IsTrue(point.Relate(_shape)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
     public bool IsTrue(Spatial4n.Core.Shapes.SpatialRelation answer) => answer switch
     {
         Spatial4n.Core.Shapes.SpatialRelation.WITHIN or Spatial4n.Core.Shapes.SpatialRelation.CONTAINS => _spatialRelation is SpatialRelation.Within
             or SpatialRelation.Contains,
         Spatial4n.Core.Shapes.SpatialRelation.DISJOINT => _spatialRelation is SpatialRelation.Disjoint,
-        Spatial4n.Core.Shapes.SpatialRelation.INTERSECTS => true,
+        Spatial4n.Core.Shapes.SpatialRelation.INTERSECTS => _spatialRelation is SpatialRelation.Intersects,
         _ => throw new NotSupportedException()
     };
 
     public int AndWith(Span<long> buffer, int matches)
     {
-        throw new NotImplementedException();
+        var currentIdx = 0;
+        for (int i = 0; i < matches; ++i)
+        {
+            var reader = _indexSearcher.GetReaderFor(buffer[i]);
+            reader.Read(_fieldId, out (double Lat, double Lon) coorinate);
+            var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
+            if (IsTrue(point.Relate(_shape)))
+            {
+                buffer[currentIdx++] = buffer[i];
+            }
+        }
+
+        return currentIdx;
     }
 
     public void Score(Span<long> matches, Span<float> scores)
@@ -199,31 +181,9 @@ public class SpatialMatch : IQueryMatch
             {
                 {"Field", _fieldName},
                 {"FieldId", _fieldId.ToString()},
-                {"TermMatchGeoHashs", string.Join(", ", _geohashsTermMatch)},
-                {"GeohashsToCheck", string.Join(", ", _geohashsNeedsToBeChecked)},
                 {"Shape", _shape.ToString()},
                 {"Error", _error.ToString(CultureInfo.InvariantCulture)},
                 {"SpatialRelation", _spatialRelation.ToString()},
             });
-    }
-
-    private string GenerateJSListOfGeohashsForGEOJsonVisualiser()
-    {
-        var json = _geohashsTermMatch.Concat(_geohashsNeedsToBeChecked).ToList();
-        var sb = new StringBuilder();
-        sb.Append('[');
-        bool notAddComa = true;
-        foreach (var jItem in json)
-        {
-            if (notAddComa == false)
-                sb.Append(',');
-            else
-                notAddComa = false;
-
-            sb.Append($"'{jItem}'");
-        }
-
-        sb.Append("];");
-        return sb.ToString();
     }
 }

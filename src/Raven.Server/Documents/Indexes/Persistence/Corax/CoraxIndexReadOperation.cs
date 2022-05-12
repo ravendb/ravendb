@@ -528,10 +528,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (binding.FieldIndexingMode is FieldIndexingMode.No || binding.FieldNameAsString is Client.Constants.Documents.Indexing.Fields.AllStoredFields)
                         continue;
                     var type = reader.GetFieldType(binding.FieldId, out var intOffset);
-                    bool isASpatialList = (type & IndexEntryFieldType.Special) != 0 && reader.GetSpecialFieldType(binding.FieldId, ref intOffset) is SpecialEntryFieldType.SpatialWkt or SpecialEntryFieldType.SpatialLongLat;
                     
                     
-                    if ((type & IndexEntryFieldType.List) != 0 || isASpatialList)
+                    if ((type & IndexEntryFieldType.List) != 0)
                     {
                         reader.TryReadMany(binding.FieldId, out var iterator);
                         var enumerableEntries = new List<object>();

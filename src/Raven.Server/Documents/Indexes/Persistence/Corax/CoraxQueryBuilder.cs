@@ -14,6 +14,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Spatial4n.Core.Context;
 using Spatial4n.Core.Shapes;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.IndexSearcher;
@@ -687,7 +688,7 @@ public static class CoraxQueryBuilder
             
             //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
 
-            return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, global::Corax.Utils.SpatialRelation.Within);
+            return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, SpatialContext.GEO, global::Corax.Utils.SpatialRelation.Within);
         }
     
     private static IQueryMatch OrderBy(IndexSearcher indexSearcher, IQueryMatch match,
