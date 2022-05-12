@@ -7,9 +7,9 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
+using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
-using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
@@ -42,7 +42,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     protected readonly IndexFieldsMapping _knownFields;
     protected readonly ByteStringContext _allocator;
 
-    private const int InitialSizeOfEnumerableBuffer = 128;
+    private const int InitialSizeOfEnumerableBuffer = 32;
 
     private bool EnumerableDataStructExist =>
         StringsListForEnumerableScope is not null && LongsListForEnumerableScope is not null && DoublesListForEnumerableScope is not null;
@@ -51,6 +51,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<long> LongsListForEnumerableScope;
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
+    public List<CoraxSpatialPointEntry> CoraxSpatialPointEntryListForEnumerableScope;
 
 
     public abstract Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
@@ -79,7 +80,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
             knownFields = knownFields.AddBinding(field.Id, value, null, 
                 hasSuggestion: field.HasSuggestions, 
-                fieldIndexingMode: TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(field.Indexing));
+                fieldIndexingMode: TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(field.Indexing),
+                field.Spatial is not null);
         }
 
         if (index.Type.IsMapReduce())
@@ -233,14 +235,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     LongsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
                     DoublesListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
                     BlittableJsonReaderObjectsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+                    CoraxSpatialPointEntryListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
                 }
 
                 var canFinishEnumerableWriting = false;
                 if (scope is not EnumerableWriterScope enumerableWriterScope)
                 {
                     canFinishEnumerableWriting = true;
-                    enumerableWriterScope = new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope,
-                        BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
+                    enumerableWriterScope = new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, CoraxSpatialPointEntryListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
                 }
                
                 foreach (var item in iterator)
@@ -304,8 +306,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.EmptyString:
                 scope.Write(field.Id, EmptyString.Span, ref entryWriter);
                 return;
-            case ValueType.CoraxSpatialEntry:
-                scope.Write(field.Id, (CoraxSpatialEntry)value, ref entryWriter);
+            case ValueType.CoraxSpatialPointEntry:
+                scope.Write(field.Id, (CoraxSpatialPointEntry)value, ref entryWriter);
                 return;
             case ValueType.Stream:
                 throw new NotImplementedException();

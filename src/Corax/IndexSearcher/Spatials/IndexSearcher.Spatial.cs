@@ -6,9 +6,9 @@ using SpatialRelation = Corax.Utils.SpatialRelation;
 
 namespace Corax;
 
-public unsafe partial class IndexSearcher
+public partial class IndexSearcher
 {
-    public SpatialMatch SpatialQuery(string fieldName, int fieldId, double error, IShape shape, SpatialRelation spatialRelation, bool isNegated = false)
+    public SpatialMatch SpatialQuery(string fieldName, int fieldId, double error, IShape shape, SpatialContext spatialContext, SpatialRelation spatialRelation, bool isNegated = false)
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields?.CompactTreeFor(fieldName);
@@ -24,6 +24,6 @@ public unsafe partial class IndexSearcher
             throw new NotImplementedException();
         }
         
-        return new SpatialMatch(this, _transaction.Allocator, SpatialContext.GEO, fieldName, shape, terms, error, fieldId, spatialRelation);
+        return new SpatialMatch(this, _transaction.Allocator, spatialContext, fieldName, shape, terms, error, fieldId, spatialRelation);
     }
 }

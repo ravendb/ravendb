@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Corax.Utils;
 using GeoAPI;
 using Lucene.Net.Documents;
 using Lucene.Net.Spatial;
@@ -9,7 +10,6 @@ using Microsoft.Extensions.Azure;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using Raven.Client;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow.Json;
@@ -17,6 +17,10 @@ using Spatial4n.Core.Context.Nts;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
 using Spatial4n.Util;
+using SpatialFieldType = Raven.Client.Documents.Indexes.Spatial.SpatialFieldType;
+using SpatialOptions = Raven.Client.Documents.Indexes.Spatial.SpatialOptions;
+using SpatialSearchStrategy = Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
+using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
@@ -84,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             {
                 var fields = Strategy.CreateIndexableFields(shape);
                 Array.Resize(ref fields, fields.Length + 1);
-                fields[fields.Length - 1] = new Field(Constants.Documents.Indexing.Fields.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO);
+                fields[^1] = new Field(Constants.Documents.Indexing.Fields.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO);
 
                 return fields;
             }
@@ -92,24 +96,24 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return Array.Empty<AbstractField>();
         }
 
-        public CoraxSpatialEntry CoraxCreateIndexableFields(object value)
+        public CoraxSpatialPointEntry[] CoraxCreateIndexableFields(object value)
         {
             var shape = value as IShape;
             if (shape != null || TryReadShape(value, out shape))
             {
                 if (shape.HasArea)
-                    throw new IndexInvalidException("You cannot index area. Your data should be a point.");
+                    throw new NotSupportedException("We do not support indexing of figure.");
                 // Notice its a point so bounding box is just Point
                
                 var geohashRaw = Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(shape.Center.Y ,shape.Center.X, _options?.MaxTreeLevel ?? SpatialOptions.DefaultGeohashLevel);
 
-                var geohash = Enumerable.Range(1, geohashRaw.Length).Select(i => geohashRaw.Substring(0, i)).ToList();
-                
-                
-                return new CoraxSpatialEntry(shape.Center.Y, shape.Center.X, geohash);
+                return new []
+                {
+                    new CoraxSpatialPointEntry(shape.Center.Y, shape.Center.X, geohashRaw)
+                };
             }
 
-            return default;
+            return Array.Empty<CoraxSpatialPointEntry>();
         }
 
         private bool TryReadShape(object value, out IShape shape)

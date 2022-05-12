@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Corax.Utils;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -138,8 +139,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             if (value is TimeOnly)
                 return ValueType.TimeOnly;
 
-            if (value is CoraxSpatialEntry)
-                return ValueType.CoraxSpatialEntry;
+            if (value is CoraxSpatialPointEntry)
+                return ValueType.CoraxSpatialPointEntry;
 
             return ValueType.ConvertToJson;
         }
@@ -257,7 +258,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
             TimeOnly,
             
-            CoraxSpatialEntry,
+            CoraxSpatialPointEntry,
         }
 
         protected class ConversionScope : IDisposable

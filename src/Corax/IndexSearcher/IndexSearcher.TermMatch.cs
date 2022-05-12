@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Queries;
+using Sparrow.Server.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -71,5 +72,31 @@ public unsafe partial class IndexSearcher
         matches.Term = term.ToString();
 #endif
         return matches;
+    }
+
+
+    internal long TermAmount(CompactTree tree, Slice term)
+    {
+        if (tree.TryGetValue(term.AsReadOnlySpan(), out var value) == false)
+            return 0;
+
+        if ((value & (long)TermIdMask.Set) != 0)
+        {
+            var setId = value & Constants.StorageMask.ContainerType;
+            var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
+            ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+            return setState.NumberOfEntries;
+        }
+        
+        if ((value & (long)TermIdMask.Small) != 0)
+        {
+            var smallSetId = value & Constants.StorageMask.ContainerType;
+            var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
+            var itemsCount = ZigZagEncoding.Decode<int>(small.ToSpan(), out var len);
+
+            return itemsCount;
+        }
+
+        return 1;
     }
 }

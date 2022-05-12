@@ -7,8 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
+using Corax.Utils;
 using K4os.Compression.LZ4.Internal;
-using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -22,18 +22,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         private readonly List<Memory<byte>> _stringValues;
         private readonly List<long> _longValues;
         private readonly List<double> _doubleValues;
+        private readonly List<CoraxSpatialPointEntry> _spatialValues;
         private const int MaxSizePerBlittable = (2 << 11);
         private readonly List<BlittableJsonReaderObject> _blittableJsonReaderObjects;
-        private (int Strings, int Longs, int Doubles, int Raws) _count;
+        private (int Strings, int Longs, int Doubles, int Raws, int Spatials) _count;
 
 
-        public EnumerableWriterScope(List<Memory<byte>> stringValues, List<long> longValues, List<double> doubleValues,
+        public EnumerableWriterScope(List<Memory<byte>> stringValues, List<long> longValues, List<double> doubleValues, List<CoraxSpatialPointEntry> spatialValues,
             List<BlittableJsonReaderObject> blittableJsonReaderObjects, ByteStringContext allocator)
         {
-            _count = (0, 0, 0, 0);
+            _count = (0, 0, 0, 0, 0);
             _doubleValues = doubleValues;
             _longValues = longValues;
             _stringValues = stringValues;
+            _spatialValues = spatialValues;
             _blittableJsonReaderObjects = blittableJsonReaderObjects;
             _allocator = allocator;
         }
@@ -90,13 +92,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _count.Raws++;
         }
 
-        public void Write(int field, in CoraxSpatialEntry entry, ref IndexEntryWriter entryWriter)
+        public void Write(int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
         {
-            throw new NotImplementedException();
+            _count.Spatials++;
+            _spatialValues.Add(entry);
         }
 
         public void Finish(int field, ref IndexEntryWriter entryWriter)
         {
+            if (_count.Spatials != 0)
+            {
+                if (_count.Spatials == 1)
+                    entryWriter.WriteSpatial(field, _spatialValues[0]);
+                else
+                    entryWriter.WriteSpatial(field, CollectionsMarshal.AsSpan(_spatialValues));
+            }
+            
             if (_count.Raws > 0 && (_count.Longs | _count.Doubles | _count.Strings) != 0)
             {
                 // This basically should not happen but I want to make sure on whole SlowTests.
@@ -130,6 +141,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _longValues.Clear();
             _doubleValues.Clear();
             _blittableJsonReaderObjects.Clear();
+            _spatialValues.Clear();
         }
 
         private struct StringArrayIterator : IReadOnlySpanIndexer

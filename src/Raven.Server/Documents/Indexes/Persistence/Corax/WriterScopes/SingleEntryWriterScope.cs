@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Corax;
+using Corax.Utils;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow;
@@ -61,9 +62,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             scope.Write(field, ref entryWriter);
         }
 
-        public void Write(int field, in CoraxSpatialEntry entry, ref IndexEntryWriter entryWriter)
+        public void Write(int field, CoraxSpatialPointEntry entry, ref IndexEntryWriter entryWriter)
         {
-            entryWriter.WriteSpatialRaw(field, entry.Latitude, entry.Longitude,  new StringArrayIterator(entry.Geohash));
+            entryWriter.WriteSpatial(field, entry);
         }
         
         private struct StringArrayIterator : IReadOnlySpanEnumerator

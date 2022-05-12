@@ -27,11 +27,11 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
         _fieldsList = new List<IndexFieldBinding>();
     }
 
-    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal)
+    public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestion = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
     {
         if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
         {
-            var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, hasSuggestion, fieldIndexingMode);
+            var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
             _fields[fieldName] = binding;
             _fieldsById[fieldId] = binding;
             _fieldsList.Add(binding);
@@ -56,7 +56,7 @@ public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
 
         foreach (var ifb in CollectionsMarshal.AsSpan(_fieldsList))
         {
-            if (ifb.FieldIndexingMode == FieldIndexingMode.Exact)
+            if (ifb.FieldIndexingMode == FieldIndexingMode.Exact || ifb.HasSpatial == true)
                 continue;
 
             ifb.Analyzer ??= analyzers.DefaultAnalyzer;
@@ -114,16 +114,18 @@ public class IndexFieldBinding
     public readonly Slice FieldName;
     public Corax.Analyzer Analyzer;
     public readonly bool HasSuggestions;
+    public readonly bool HasSpatial;
     public readonly FieldIndexingMode FieldIndexingMode;
     private string _fieldName;
 
-    public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal)
+    public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool hasSuggestions = false, FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal, bool hasSpatial = false)
     {
         FieldId = fieldId;
         FieldName = fieldName;
         Analyzer = analyzer;
         HasSuggestions = hasSuggestions;
         FieldIndexingMode = fieldIndexingMode;
+        HasSpatial = hasSpatial;
     }
 
     public string FieldNameAsString
@@ -131,6 +133,22 @@ public class IndexFieldBinding
         get
         {
             return _fieldName ?? (_fieldName = FieldName.ToString());
+        }
+    }
+    
+    public bool IsAnalyzed
+    {
+        get
+        {
+            return Analyzer is not null && FieldIndexingMode is not FieldIndexingMode.Exact && HasSpatial is false;
+        }
+    }
+
+    public bool IsIndexed
+    {
+        get
+        {
+            return FieldIndexingMode != FieldIndexingMode.No;
         }
     }
 }

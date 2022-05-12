@@ -34,7 +34,7 @@ namespace Corax
         public static class IndexWriter
         {
             public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice;
-
+            public const int KnownFieldMask = unchecked((int)0x80000000);
             static IndexWriter()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))

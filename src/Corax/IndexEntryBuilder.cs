@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -34,21 +35,22 @@ namespace Corax
         Tuple = 1 << 1,
         List = 1 << 2,
         Raw = 1 << 3,
-        Special = 1 << 5,
+        Extended = 1 << 5,
 
         EmptyList = 1 << 13, 
         HasNulls = 1 << 14, // Helper for list writer.
         Invalid = 1 << 15,
 
+        ExtendedList = List | Extended,
         TupleList = List | Tuple,
         RawList = List | Raw
     }
 
     [Flags]
-    public enum SpecialEntryFieldType : byte
+    public enum ExtendedEntryFieldType : byte
     {
         Null = 0,
-        SpatialLongLat = 1,
+        SpatialPoint = 1,
         SpatialWkt = 1 << 2,
     }
 
@@ -166,7 +168,7 @@ namespace Corax
 
             int dataLocation = _dataIndex;
             // Write known field.
-            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
 
             Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Raw);
             dataLocation += sizeof(IndexEntryFieldType);
@@ -178,77 +180,87 @@ namespace Corax
 
             _dataIndex = dataLocation;
         }
-
-
-        public unsafe struct RawSpatialEntry
+        
+        public void WriteSpatial(int field, CoraxSpatialPointEntry entry)
         {
-            public readonly double Latitude;
-            public readonly double Longitude;
-
-            public RawSpatialEntry(double latitude, double longitude)
-            {
-                Latitude = latitude;
-                Longitude = longitude;
-            }
-
-            // public RawSpatialEntry(string wkt, IReadOnlySpanEnumerator geohash)
-            // {
-            //     Latitude = null;
-            //     Longitude = null;
-            //     Wkt = wkt;
-            //     Geohash = geohash;
-            // }
-        }
-
-        public void WriteSpatialRaw<TEnumerator>(int field, double latitude, double longitude, TEnumerator geohash)
-            where TEnumerator : IReadOnlySpanEnumerator
-        {
-            //<type><lat><long>
-            //<type: List><amount_of_geohashes><pointer_to_string_length_table><geohash>
-            //Here we use a trick to get compatibility with the regular list :) 
-
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
 
-            if (geohash.Length == 0)
+            if (entry.Geohash.Length == 0)
                 return;
 
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
-            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
 
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.Special, dataLocation);
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)SpecialEntryFieldType.SpatialLongLat, dataLocation);
+            // Write the tuple information. 
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.Extended, dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)ExtendedEntryFieldType.SpatialPoint, dataLocation);
 
-            Unsafe.WriteUnaligned(ref _buffer[dataLocation], latitude);
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], entry.Latitude);
+            dataLocation += sizeof(double);
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], entry.Longitude);
             dataLocation += sizeof(double);
 
+            // Copy the actual string data.
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)entry.Geohash.Length, dataLocation);
 
-            Unsafe.WriteUnaligned(ref _buffer[dataLocation], longitude);
-            dataLocation += sizeof(double);
+            
+            Span<byte> encodedGeohash = Encodings.Utf8.GetBytes(entry.Geohash);
+            ref var src = ref Unsafe.AsRef(encodedGeohash[0]);
+            ref var dest = ref _buffer[dataLocation];
+            Unsafe.CopyBlock(ref dest, ref src, (uint)entry.Geohash.Length);
 
-            //We can just give _buffer[list_header..end] and read as normal list 
-            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.List, dataLocation);
+            _dataIndex = dataLocation + encodedGeohash.Length;
+        }
 
-            dataLocation += VariableSizeEncoding.Write(_buffer, geohash.Length, dataLocation); // Size of list.
+        public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries, int geohashLevel = SpatialOptions.DefaultGeohashLevel)
+        {
+            //<type:byte><extended_type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
+            //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
+            Debug.Assert(field < _knownFields.Count);
+            Debug.Assert(_knownFieldsLocations[field] == Invalid);
 
-            var stringPtrTableLocation = _buffer.Slice(dataLocation, sizeof(int));
+            if (entries.Length == 0)
+                return;
+
+            int dataLocation = _dataIndex;
+
+            // Write known field pointer.
+            _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
+
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.ExtendedList, dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)ExtendedEntryFieldType.SpatialPoint, dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, entries.Length, dataLocation); // Size of list.
+            
+            dataLocation += VariableSizeEncoding.Write(_buffer, geohashLevel, dataLocation); // geohash lvl
+            
+            var geohashPtrTableLocation = _buffer.Slice(dataLocation, sizeof(int));
+            dataLocation += sizeof(int);
+            
+            
+            var longitudesPtrLocation = _buffer.Slice(dataLocation, sizeof(int));
             dataLocation += sizeof(int);
 
-            int[] stringLengths = ArrayPool<int>.Shared.Rent(geohash.Length);
-            for (int i = 0; i < geohash.Length; i++)
+            
+            var latitudesList = MemoryMarshal.Cast<byte, double>(_buffer.Slice(dataLocation, entries.Length * sizeof(double)));
+            for (int i = 0; i < entries.Length; ++i)
+                latitudesList[i] = entries[i].Latitude;
+            dataLocation += entries.Length * sizeof(double);
+            
+            MemoryMarshal.Write(longitudesPtrLocation, ref dataLocation);
+            var longitudesList = MemoryMarshal.Cast<byte, double>(_buffer.Slice(dataLocation, entries.Length * sizeof(double)));
+            for (int i = 0; i < entries.Length; ++i)
+                longitudesList[i] = entries[i].Longitude;
+            dataLocation += entries.Length * sizeof(double);
+            
+            MemoryMarshal.Write(geohashPtrTableLocation, ref dataLocation);
+            for (int i = 0; i < entries.Length; ++i)
             {
-                var value = geohash[i];
-                value.CopyTo(_buffer[dataLocation..]);
-                dataLocation += value.Length;
-
-                stringLengths[i] = value.Length;
+                entries[i].GeohashAsBytes.CopyTo(_buffer[dataLocation..]);
+                dataLocation += geohashLevel;
             }
-
-            MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
-            dataLocation += VariableSizeEncoding.WriteMany<int>(_buffer, stringLengths[..geohash.Length], dataLocation);
-            ArrayPool<int>.Shared.Return(stringLengths);
 
             _dataIndex = dataLocation;
         }
@@ -261,7 +273,7 @@ namespace Corax
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
-            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
 
             // Write the tuple information. 
             Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Tuple);
@@ -291,7 +303,7 @@ namespace Corax
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
-            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
 
             // Write the list metadata information. 
             int indexEntryFieldLocation = dataLocation;
@@ -376,7 +388,7 @@ namespace Corax
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
-            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
 
             // Write the list metadata information. 
             int indexEntryFieldLocation = dataLocation;
@@ -544,7 +556,7 @@ namespace Corax
                 {
                     location |= Unsafe.SizeOf<T>() switch
                     {
-                        sizeof(int) => unchecked((int)0x80000000),
+                        sizeof(int) => Constants.IndexWriter.KnownFieldMask,
                         sizeof(short) => 0x8000,
                         sizeof(byte) => 0x80,
                         _ => 0
@@ -795,8 +807,8 @@ namespace Corax
                 offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
                 if (offset == unchecked((int)0xFFFF_FFFF))
                     goto Fail;
-                isTyped = (offset & unchecked((int)0x80000000)) != 0;
-                offset &= ~unchecked((int)0x80000000);
+                isTyped = (offset & Constants.IndexWriter.KnownFieldMask) != 0;
+                offset &= ~Constants.IndexWriter.KnownFieldMask;
                 goto End;
             }
 
@@ -891,13 +903,13 @@ namespace Corax
                     throw new NotSupportedException($"The type {nameof(T)} is unsupported.");
                 }
 
-                if ((type & IndexEntryFieldType.Special) != 0)
+                if ((type & IndexEntryFieldType.Extended) != 0)
                 {
                     //<type><lat><long><amount_of_geohashes><pointer_to_string_length_table><geohash>
-                    SpecialEntryFieldType specialEntryFieldType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
+                    ExtendedEntryFieldType extendedEntryFieldType = (ExtendedEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
                     intOffset += length;
 
-                    if (specialEntryFieldType.HasFlag(SpecialEntryFieldType.SpatialLongLat))
+                    if (extendedEntryFieldType.HasFlag(ExtendedEntryFieldType.SpatialPoint))
                     {
                         if (typeof(T) == typeof((double, double)))
                         {
@@ -910,7 +922,7 @@ namespace Corax
                     }
                     else
                     {
-                        throw new NotImplementedException($"{specialEntryFieldType} not implemented yet.");
+                        throw new NotImplementedException($"{extendedEntryFieldType} not implemented yet.");
                     }
                 }
 
@@ -950,14 +962,23 @@ namespace Corax
             return IndexEntryFieldType.Simple;
         }
 
-        public SpecialEntryFieldType GetSpecialFieldType(int fieldType, ref int intOffset)
+        public ExtendedEntryFieldType GetSpecialFieldType(ref int intOffset)
         {
-            var specialType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
-            intOffset += length;
-
+            var specialType = (ExtendedEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
             return specialType;
         }
 
+        //<type:byte><extended_type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
+        //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
+        public SpatialPointFieldIterator ReadManySpatialPoint(int field)
+        {
+            var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
+            if (intOffset == Invalid)
+                return new SpatialPointFieldIterator();
+
+            return new SpatialPointFieldIterator(_buffer, intOffset);
+        }
+        
         public IndexEntryFieldIterator ReadMany(int field)
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
@@ -968,14 +989,14 @@ namespace Corax
             {
                 var type = (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
 
-                if ((type & IndexEntryFieldType.Special) != 0)
+                if ((type & IndexEntryFieldType.Extended) != 0)
                 {
                     intOffset += length;
 
-                    var specialType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
+                    var specialType = (ExtendedEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
                     // We're moving our pointer to Geohash list. This is what we actually want to index.
 
-                    if ((specialType & SpecialEntryFieldType.SpatialLongLat) != 0)
+                    if ((specialType & ExtendedEntryFieldType.SpatialPoint) != 0)
                     {
                         intOffset += length + 2 * sizeof(double);
                     }
@@ -1011,14 +1032,14 @@ namespace Corax
 
             var type = (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
 
-            if ((type & IndexEntryFieldType.Special) != 0)
+            if ((type & IndexEntryFieldType.Extended) != 0)
             {
                 intOffset += length;
 
-                var specialType = (SpecialEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
+                var specialType = (ExtendedEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
                 // We're moving our pointer to Geohash list. This is what we actually want to index.
 
-                if ((specialType & SpecialEntryFieldType.SpatialLongLat) != 0)
+                if ((specialType & ExtendedEntryFieldType.SpatialPoint) != 0)
                 {
                     intOffset += length + 2 * sizeof(double);
                 }
@@ -1139,6 +1160,14 @@ namespace Corax
 
                     stringLength = VariableSizeEncoding.Read<int>(_buffer, out int readOffset, intOffset);
                     intOffset += readOffset;
+                }
+                else if ((type & IndexEntryFieldType.Extended) != 0)
+                {
+                    var extendedType = VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset); // Skip
+                    intOffset += length + 2 * sizeof(double);
+                    stringLength = VariableSizeEncoding.Read<byte>(_buffer, out length, intOffset);
+                    intOffset += length;
+                    type = IndexEntryFieldType.Extended;
                 }
             }
             else

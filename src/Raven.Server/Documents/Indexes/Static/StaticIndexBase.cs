@@ -561,7 +561,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return CreateSpatialField(spatialField, ConvertToDouble(lat), ConvertToDouble(lng));
         }
 
-        internal static dynamic CreateSpatialField(SpatialField spatialField, double? lat, double? lng)
+        internal static IEnumerable CreateSpatialField(SpatialField spatialField, double? lat, double? lng)
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
