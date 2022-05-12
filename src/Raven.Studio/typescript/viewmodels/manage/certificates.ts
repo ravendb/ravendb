@@ -582,7 +582,7 @@ class certificates extends viewModelBase {
                 cert.isExpired = true;
             } else if (expirationDate.isAfter(nowPlusMonth)) {
                 cert.expirationText = expirationDateFormatted;
-                cert.expirationIcon = "icon-clock"; // TODO.. RavenDB-18518
+                cert.expirationIcon = "icon-expiration"; 
                 cert.expirationClass = "";
             } else {
                 cert.expirationText = expirationDateFormatted;
@@ -597,7 +597,7 @@ class certificates extends viewModelBase {
                 cert.validFromText = "Unavailable"
             }
             
-            cert.validFromIcon = "icon-clock"; // TODO.. RavenDB-18518
+            cert.validFromIcon = "icon-generation";
             cert.validFromClass = "";
             
             cert.expirationNumber = expirationDate.unix();

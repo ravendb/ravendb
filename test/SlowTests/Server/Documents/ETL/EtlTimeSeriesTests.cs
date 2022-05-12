@@ -1374,11 +1374,20 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             {
                 using var session = dest.OpenAsyncSession();
                 var destUsers = await session.Query<User>().ToArrayAsync();
-                return destUsers.Length == usersCount && destUsers.All(u =>
+
+                if (destUsers.Length == usersCount)
                 {
-                    var ts = session.TimeSeriesFor(u.Id, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue).GetAwaiter().GetResult();
-                    return ts?.Count() == timeSeriesCount;
-                });
+                    foreach (var u in destUsers)
+                    {
+                        var ts = await session.TimeSeriesFor(u.Id, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
+                        if (ts?.Length != timeSeriesCount)
+                            return false;
+                    }
+
+                    return true;
+                }
+
+                return false;
             });
         }
 
@@ -1786,8 +1795,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 }
 
                 var etlDone = WaitForEtl(src, (_, statistics) => statistics.LastProcessedEtag >= lastEtag);
-                AddEtl(src, dest, collections, script, applyToAllDocuments : collections.Length == 0);
-                
+                AddEtl(src, dest, collections, script, applyToAllDocuments: collections.Length == 0);
+
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 TimeSeriesEntry[] actual = null;
