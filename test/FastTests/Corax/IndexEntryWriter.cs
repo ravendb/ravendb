@@ -287,5 +287,77 @@ namespace FastTests.Corax
                 i++;
             }
         }
+
+        [Fact]
+        public void SimpleWriteEmpty()
+        {
+            Span<byte> buffer = new byte[64000];
+
+            using var _ = StorageEnvironment.GetStaticContext(out var ctx);
+            Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
+            Slice.From(ctx, "B", ByteStringType.Immutable, out Slice bSlice);
+            Slice.From(ctx, "C", ByteStringType.Immutable, out Slice cSlice);
+            Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
+
+            // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
+
+            var knownFields = new IndexFieldsMapping(ctx)
+                                    .AddBinding(0, aSlice)
+                                    .AddBinding(1, bSlice)
+                                    .AddBinding(2, cSlice)
+                                    .AddBinding(3, dSlice);
+
+            string[] values = { };
+            Span<long> longValues = new long[] { };
+            Span<double> doubleValues = new double[] { };
+
+            var writer = new IndexEntryWriter(buffer, knownFields);
+            writer.Write(0, new StringArrayIterator(values));
+            writer.Write(1, new StringArrayIterator(values), longValues, doubleValues);
+            var length = writer.Finish(out var element);
+
+            var reader = new IndexEntryReader(element);
+            Assert.True(reader.Read(1, out var type, out var longValue, out var doubleValue, out var sequenceValue));
+            Assert.True(type.HasFlag(IndexEntryFieldType.EmptyList));
+            Assert.True(type.HasFlag(IndexEntryFieldType.List));
+            Assert.Equal(0, sequenceValue.Length);
+
+            Assert.True(reader.Read(1, out type, out sequenceValue));
+            Assert.True(type.HasFlag(IndexEntryFieldType.EmptyList));
+            Assert.True(type.HasFlag(IndexEntryFieldType.List));
+            Assert.Equal(0, sequenceValue.Length);
+
+            Assert.False(reader.TryReadMany(2, out var fieldIterator));
+
+            fieldIterator = reader.ReadMany(1);
+            Assert.Equal(0, fieldIterator.Count);
+            Assert.True(fieldIterator.IsEmpty);
+            Assert.False(fieldIterator.IsNull);
+
+            try
+            { var __ = fieldIterator.Sequence; }
+            catch (IndexOutOfRangeException) { }
+            try
+            { var __ = fieldIterator.Double; }
+            catch (IndexOutOfRangeException) { }
+            try
+            { var __ = fieldIterator.Long; }
+            catch (IndexOutOfRangeException) { }
+
+            fieldIterator = reader.ReadMany(0);
+            Assert.Equal(0, fieldIterator.Count);
+            Assert.True(fieldIterator.IsEmpty);
+            Assert.False(fieldIterator.IsNull);
+
+            try
+            { var __ = fieldIterator.Sequence; }
+            catch (IndexOutOfRangeException) { }
+            try
+            { var __ = fieldIterator.Double; }
+            catch (InvalidOperationException) { }
+            try
+            { var __ = fieldIterator.Long; }
+            catch (InvalidOperationException) { }            
+        }
     }
 }
