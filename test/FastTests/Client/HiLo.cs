@@ -32,7 +32,7 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void Hilo_Cannot_Go_Down()
+        public async Task Hilo_Cannot_Go_Down()
         {
             using (var store = GetDocumentStore())
             {
@@ -48,7 +48,7 @@ namespace FastTests.Client
                     var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
                         store.Conventions.IdentityPartsSeparator);
 
-                    var ids = new HashSet<long> { hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult() };
+                    var ids = new HashSet<long> { await hiLoKeyGenerator.NextIdAsync() };
 
                     hiloDoc.Max = 12;
                     session.Store(hiloDoc, null, "Raven/Hilo/users");
@@ -56,7 +56,7 @@ namespace FastTests.Client
 
                     for (int i = 0; i < 128; i++)
                     {
-                        var nextId = hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult();
+                        var nextId = await hiLoKeyGenerator.NextIdAsync();
                         Assert.True(ids.Add(nextId), "Failed at " + i);
                     }
 
@@ -72,7 +72,7 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void HiLo_Async_MultiDb()
+        public async Task HiLo_Async_MultiDb()
         {
             using (var store = GetDocumentStore())
             {
@@ -93,17 +93,17 @@ namespace FastTests.Client
 
                     var multiDbHiLo = new AsyncMultiDatabaseHiLoIdGenerator(store);
 
-                    var generateDocumentKey = multiDbHiLo.GenerateDocumentIdAsync(null, new User()).GetAwaiter().GetResult();
+                    var generateDocumentKey = await multiDbHiLo.GenerateDocumentIdAsync(null, new User());
                     Assert.Equal("users/65-A", generateDocumentKey);
 
-                    generateDocumentKey = multiDbHiLo.GenerateDocumentIdAsync(null, new Product()).GetAwaiter().GetResult();
+                    generateDocumentKey = await multiDbHiLo.GenerateDocumentIdAsync(null, new Product());
                     Assert.Equal("products/129-A", generateDocumentKey);
                 }
             }
         }
 
         [Fact]
-        public void Generate_HiLo_Ids()
+        public async Task Generate_HiLo_Ids()
         {
             using (var store = GetDocumentStore())
             {
@@ -113,36 +113,36 @@ namespace FastTests.Client
                 var productsIds = new ConcurrentSet<long>();
                 var count = 10;
 
-                Parallel.For(0, count, _ =>
+                await Parallel.ForEachAsync(Enumerable.Range(0, count), async (_, _) =>
                 {
-                    var id = multiDbHiLo.GenerateNextIdForAsync(null, "Users").GetAwaiter().GetResult();
+                    var id = await multiDbHiLo.GenerateNextIdForAsync(null, "Users");
                     Assert.True(usersIds.TryAdd(id));
 
-                    id = multiDbHiLo.GenerateNextIdForAsync(null, "Products").GetAwaiter().GetResult();
+                    id = await multiDbHiLo.GenerateNextIdForAsync(null, "Products");
                     Assert.True(productsIds.TryAdd(id));
                 });
 
                 Assert.Equal(count, usersIds.Count);
                 Assert.Equal(count, productsIds.Count);
 
-                Parallel.For(0, count, _ =>
+                await Parallel.ForEachAsync(Enumerable.Range(0, count), async (_, _) =>
                 {
-                    var id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users").GetAwaiter().GetResult();
+                    var id = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users");
                     Assert.True(usersIds.TryAdd(id));
 
-                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Products").GetAwaiter().GetResult();
+                    id = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Products");
                     Assert.True(productsIds.TryAdd(id));
 
-                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User)).GetAwaiter().GetResult();
+                    id = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User));
                     Assert.True(usersIds.TryAdd(id));
 
-                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, new Product()).GetAwaiter().GetResult();
+                    id = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new Product());
                     Assert.True(productsIds.TryAdd(id));
 
-                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User()).GetAwaiter().GetResult();
+                    id = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User());
                     Assert.True(usersIds.TryAdd(id));
 
-                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(Product)).GetAwaiter().GetResult();
+                    id = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(Product));
                     Assert.True(productsIds.TryAdd(id));
                 });
 
@@ -152,7 +152,7 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void Capacity_Should_Double()
+        public async Task Capacity_Should_Double()
         {
             using (var store = GetDocumentStore())
             {
@@ -169,7 +169,7 @@ namespace FastTests.Client
                     session.SaveChanges();
 
                     for (var i = 0; i < 32; i++)
-                        hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();
+                        await hiLoKeyGenerator.GenerateDocumentIdAsync(new User());
                 }
 
                 using (var session = store.OpenSession())
@@ -179,7 +179,7 @@ namespace FastTests.Client
                     Assert.Equal(max, 96);
 
                     //we should be receiving a range of 64 now
-                    hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();
+                    await hiLoKeyGenerator.GenerateDocumentIdAsync(new User());
                 }
 
                 using (var session = store.OpenSession())
@@ -266,8 +266,8 @@ namespace FastTests.Client
 
                 WaitForMarkerDocumentAndAllPrecedingDocumentsToReplicate(store2);
 
-                var nextId = new AsyncHiLoIdGenerator("users", store2, store2.Database,
-                    store2.Conventions.IdentityPartsSeparator).NextIdAsync().GetAwaiter().GetResult();
+                var nextId = await new AsyncHiLoIdGenerator("users", store2, store2.Database,
+                    store2.Conventions.IdentityPartsSeparator).NextIdAsync();
                 Assert.Equal(nextId, 129);
             }
         }
@@ -357,15 +357,15 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void HiLoKeyGenerator_works_without_aggressive_caching()
+        public async Task HiLoKeyGenerator_works_without_aggressive_caching()
         {
             using (var store = GetDocumentStore())
             {
                 var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
                     store.Conventions.IdentityPartsSeparator);
 
-                Assert.Equal(1L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
-                Assert.Equal(2L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
+                Assert.Equal(1L, await hiLoKeyGenerator.NextIdAsync());
+                Assert.Equal(2L, await hiLoKeyGenerator.NextIdAsync());
             }
         }
 
@@ -386,7 +386,7 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void HiLoKeyGenerator_hangs_when_aggressive_caching_enabled()
+        public async Task HiLoKeyGenerator_hangs_when_aggressive_caching_enabled()
         {
             using (var store = GetDocumentStore())
             {
@@ -395,14 +395,14 @@ namespace FastTests.Client
                     var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", store, store.Database,
                         store.Conventions.IdentityPartsSeparator);
 
-                    Assert.Equal(1L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
-                    Assert.Equal(2L, hiLoKeyGenerator.NextIdAsync().GetAwaiter().GetResult());
+                    Assert.Equal(1L, await hiLoKeyGenerator.NextIdAsync());
+                    Assert.Equal(2L, await hiLoKeyGenerator.NextIdAsync());
                 }
             }
         }
 
         [Fact]
-        public void HiLoKeyGenerator_hangs_when_aggressive_caching_enabled_on_other_documentstore()
+        public async Task HiLoKeyGenerator_hangs_when_aggressive_caching_enabled_on_other_documentstore()
         {
             using (var server = GetNewServer())
             using (var otherServer = GetNewServer())
@@ -413,8 +413,8 @@ namespace FastTests.Client
                 {
                     var hilo = new AsyncHiLoIdGenerator("users", store, store.Database,
                         store.Conventions.IdentityPartsSeparator);
-                    Assert.Equal(1L, hilo.NextIdAsync().GetAwaiter().GetResult());
-                    Assert.Equal(2L, hilo.NextIdAsync().GetAwaiter().GetResult());
+                    Assert.Equal(1L, await hilo.NextIdAsync());
+                    Assert.Equal(2L, await hilo.NextIdAsync());
                 }
             }
         }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -12,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Nito.Disposables;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
@@ -27,8 +27,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         private readonly string _cloudPathPrefix = $"{nameof(RestoreFromGoogleCloud)}-{Guid.NewGuid()}";
 
         [Fact]
-        public void restore_google_cloud_settings_tests()
+        public async Task restore_google_cloud_settings_tests()
         {
+            await using (CleanupAsync())
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_2"
@@ -60,6 +61,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [GoogleCloudFact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore()
         {
+            await using (CleanupAsync())
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -71,8 +73,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var googleCloudSettings = GetGoogleCloudSettings();
                 var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
-                var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(Backup.GetBackupOperationId(store, backupTaskId))).Result;
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(await Backup.GetBackupOperationIdAsync(store, backupTaskId))).Result;
                 Assert.NotNull(backupResult);
                 Assert.True(backupResult.Counters.Processed);
                 Assert.Equal(1, backupResult.Counters.ReadCount);
@@ -86,7 +88,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = Backup.RunBackupAndReturnStatus(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -130,6 +132,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [GoogleCloudFact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot()
         {
+            await using (CleanupAsync())
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -156,7 +159,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var googleCloudSettings = GetGoogleCloudSettings();
                 var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, googleCloudSettings: googleCloudSettings);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -169,7 +172,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = Backup.RunBackupAndReturnStatus(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
                 // restore the database with a different name
                 string databaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
@@ -232,10 +235,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             };
         }
 
-        public override void Dispose()
+        private IAsyncDisposable CleanupAsync()
         {
-            base.Dispose();
-
+            return new AsyncDisposable(async () =>
+            {
             var settings = GetGoogleCloudSettings();
             if (settings == null)
                 return;
@@ -244,13 +247,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             {
                 using (var client = new RavenGoogleCloudClient(settings, DefaultConfiguration))
                 {
-                    var cloudObjects = client.ListObjectsAsync(settings.RemoteFolderName).GetAwaiter().GetResult();
+                        var cloudObjects = await client.ListObjectsAsync(settings.RemoteFolderName);
 
                     foreach (var cloudObject in cloudObjects)
                     {
                         try
                         {
-                            client.DeleteObjectAsync(cloudObject.Name).GetAwaiter().GetResult();
+                                await client.DeleteObjectAsync(cloudObject.Name);
                         }
                         catch (Exception)
                         {
@@ -263,6 +266,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             {
                 // ignored
             }
+            });
         }
     }
 }
