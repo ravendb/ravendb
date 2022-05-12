@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Logging;
 using Voron.Global;
@@ -514,8 +515,7 @@ namespace SlowTests.SparrowTests
                     for (var i = 0; i < 100; i++)
                     {
                         var task = secondLogger.OperationsAsync("Some message");
-                        Task.WhenAny(task, Task.Delay(taskTimeout)).GetAwaiter().GetResult();
-                        if (task.IsCompleted == false)
+                        if (task.WaitWithTimeout(TimeSpan.FromMilliseconds(taskTimeout)).GetAwaiter().GetResult() == false)
                             throw new TimeoutException($"The log task took more then one second");
                     }
                 }

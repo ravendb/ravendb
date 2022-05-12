@@ -30,7 +30,8 @@ namespace SlowTests.Client.Subscriptions
 
                 var subscriptionId = store.Subscriptions.Create<User>(options: subscriptionCreationParams);
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("get-users") {
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("get-users")
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
@@ -70,12 +71,13 @@ namespace SlowTests.Client.Subscriptions
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
                 var users = new BlockingCollection<User>();
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -126,7 +128,7 @@ namespace SlowTests.Client.Subscriptions
 
                     Assert.Throws(typeof(AggregateException), () => subscirptionLifetimeTask.Wait(_reasonableWaitTime));
 
-                    Assert.True(subscirptionLifetimeTask .IsFaulted);
+                    Assert.True(subscirptionLifetimeTask.IsFaulted);
 
                     Assert.Equal(typeof(SubscriptionInUseException), subscirptionLifetimeTask.Exception.InnerException.GetType());
                 }
@@ -139,22 +141,23 @@ namespace SlowTests.Client.Subscriptions
                     throw threadException;
             }
         }
-        
+
         [Fact]
-        public void WaitOnSubscriptionTaskWhenSubscriptionIsDeleted()
+        public async Task WaitOnSubscriptionTaskWhenSubscriptionIsDeleted()
         {
             using (var store = GetDocumentStore())
             {
-                
-                var subscriptionId = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+
+                var subscriptionId = await store.Subscriptions.CreateAsync<User>();
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
                 subscription.AfterAcknowledgment += b => { beforeAckMre.WaitOne(); return Task.CompletedTask; };
-               
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -171,7 +174,7 @@ namespace SlowTests.Client.Subscriptions
 
                 Assert.True(users.TryTake(out var _, _reasonableWaitTime));
 
-                store.Subscriptions.DeleteAsync(subscriptionId).Wait();
+                await store.Subscriptions.DeleteAsync(subscriptionId);
                 beforeAckMre.Set();
 
                 Assert.Throws(typeof(AggregateException), () => subscriptionLifetimeTask.Wait(_reasonableWaitTime));
@@ -186,7 +189,8 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
                 var users = new BlockingCollection<User>();
@@ -219,13 +223,13 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Fact]
-        public void WaitOnSubscriptionStopDueToSubscriberError()
+        public async Task WaitOnSubscriptionStopDueToSubscriberError()
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create<User>();
+                var subscriptionId = await store.Subscriptions.CreateAsync<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -234,7 +238,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var task = subscription.Run(_ => throw new InvalidCastException());
 
-                var innerException = Assert.Throws<AggregateException>(()=> task .Wait()).InnerException;
+                var innerException = await Assert.ThrowsAsync<SubscriberErrorException>(() => task);
                 Assert.IsType<SubscriberErrorException>(innerException);
                 Assert.IsType<InvalidCastException>(innerException.InnerException);
             }
