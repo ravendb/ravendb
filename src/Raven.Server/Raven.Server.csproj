@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net6.0</TargetFramework>
-    <RuntimeFrameworkVersion>6.0.4</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>6.0.5</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -159,11 +159,11 @@
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="NEST" Version="7.17.1" />
     <PackageReference Include="Npgsql" Version="5.0.13" />
-    <PackageReference Include="NuGet.Commands" Version="6.1.0" Alias="NGC" />
-    <PackageReference Include="NuGet.ProjectModel" Version="6.1.0" />
-    <PackageReference Include="NuGet.Resolver" Version="6.1.0" />
-    <PackageReference Include="NuGet.PackageManagement" Version="6.1.0" />
-    <PackageReference Include="NuGet.Protocol" Version="6.1.0" />
+    <PackageReference Include="NuGet.Commands" Version="6.2.0" Alias="NGC" />
+    <PackageReference Include="NuGet.ProjectModel" Version="6.2.0" />
+    <PackageReference Include="NuGet.Resolver" Version="6.2.0" />
+    <PackageReference Include="NuGet.PackageManagement" Version="6.2.0" />
+    <PackageReference Include="NuGet.Protocol" Version="6.2.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.61" />
     <PackageReference Include="Parquet.Net" Version="3.9.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />

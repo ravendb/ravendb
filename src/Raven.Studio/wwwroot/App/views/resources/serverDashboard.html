@@ -7,7 +7,7 @@
                         <h2 title="Node Tag" class="text-primary">
                             <i data-bind="attr: { class: osIcon }"></i><span data-bind="text: 'Node ' + clusterManager.localNodeTag()"></span>
                         </h2>
-                        <div title="Node url">
+                        <div title="Node url" data-bind="visible: !clusterManager.topology().isPassive()">
                             <i class="icon-link"></i><span data-bind="text: clusterManager.localNodeUrl"></span>
                         </div>
                         <div data-bind="attr: { title: 'Server start time: ' + formattedStartTime() }">
@@ -16,8 +16,18 @@
                         <div data-bind="visible: isSecureServer">
                             <i class="icon-lock"></i><span>Secured <small><a href="#" data-bind="attr: { href: certificatesUrl }, visible: showCertificatesLink">Manage certificates</a></small></span>
                         </div>
-                        <div class="flex-horizontal" data-bind="with: clusterManager.topology">
-                            <div><i class="icon-cluster"></i><span>Cluster</span></div>
+                        <div data-bind="visible: clusterManager.topology().isPassive()">
+                            <div class="text-info bg-info margin-top-sm padding padding-xs">
+                                <div class="small">
+                                    <span>The node is in a Passive state.</span><br />
+                                    <span>It is not part of a cluster yet.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-horizontal" data-bind="visible: !clusterManager.topology().isPassive(), with: clusterManager.topology">
+                            <div>
+                                <i class="icon-cluster"></i><span>Cluster</span>
+                            </div>
                             <div title="Members count" data-bind="visible: membersCount">
                                 <i class="icon-cluster-member"></i> <span data-bind="text: membersCount"></span>
                             </div>
