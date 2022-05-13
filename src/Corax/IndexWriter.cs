@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow.Json;
@@ -58,6 +59,7 @@ namespace Corax
         private readonly long _postingListContainerId, _entriesContainerId;
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
+        
         private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
 
 #pragma warning disable CS0169
@@ -161,7 +163,16 @@ namespace Corax
 
             int tokenField = binding.FieldId;
             var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
-            if (fieldType.HasFlag(IndexEntryFieldType.List))
+            if (fieldType == IndexEntryFieldType.Null)
+            {
+                if (field.TryGetValue(Constants.NullValueSlice, out var term) == false)
+                {
+                    field[Constants.NullValueSlice] = term = new List<long>();
+                }
+
+                AddMaybeAvoidDuplicate(term, entryId);
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.List))
             {
                 // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
                 //       that will ensure faster turnaround and more efficient execution. 
@@ -171,6 +182,16 @@ namespace Corax
                 var iterator = entryReader.ReadMany(tokenField);
                 while (iterator.ReadNext())
                 {
+                    // If null, we just add it and be done with it. 
+                    if (iterator.IsNull)
+                    {
+                        if (field.TryGetValue(Constants.NullValueSlice, out var term) == false)
+                            field[Constants.NullValueSlice] = term = new List<long>();
+
+                        AddMaybeAvoidDuplicate(term, entryId);
+                        continue;
+                    }
+
                     // Because of how we store the data, either this is a sequence or a tuple, which also contains a sequence. 
                     var value = iterator.Sequence;
 
@@ -199,12 +220,20 @@ namespace Corax
             else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) ||
                      fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
             {
+                // If raw data, we are not going to be indexing it and therefore will be ignored.
                 if (fieldType.HasFlag(IndexEntryFieldType.Raw))
+                    return;
+
+                // However, if it is null, we have to index it as such.
+                entryReader.Read(tokenField, out fieldType, out var value);
+                if (fieldType == IndexEntryFieldType.Null)
                 {
+                    if (field.TryGetValue(Constants.NullValueSlice, out var term) == false)
+                        field[Constants.NullValueSlice] = term = new List<long>();
+
+                    AddMaybeAvoidDuplicate(term, entryId);
                     return;
                 }
-
-                entryReader.Read(tokenField, out var value);
 
                 var words = new Span<byte>(tempWordsSpace, bufferSize);
                 var tokens = new Span<Token>(tempTokenSpace, tokenSize);
@@ -303,15 +332,35 @@ namespace Corax
         {
             int tokenField = binding.FieldId;
             var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
-            if (fieldType.HasFlag(IndexEntryFieldType.List))
+
+            if (fieldType == IndexEntryFieldType.Null)
+            {
+                if (field.TryGetValue(Constants.NullValueSlice, out var term) == false)
+                    field[Constants.NullValueSlice] = term = new List<long>();
+
+                AddMaybeAvoidDuplicate(term, entryId);
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.List))
             {
                 var iterator = entryReader.ReadMany(tokenField);
                 while (iterator.ReadNext())
                 {
+                    List<long> term;
+                    
+                    // If null, we just add it and be done with it. 
+                    if (iterator.IsNull)
+                    {
+                        if (field.TryGetValue(Constants.NullValueSlice, out term) == false)
+                            field[Constants.NullValueSlice] = term = new List<long>();
+
+                        AddMaybeAvoidDuplicate(term, entryId);
+                        continue;
+                    }
+                    
                     var value = iterator.Sequence;
 
                     using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
-                    if (field.TryGetValue(slice, out var term) == false)
+                    if (field.TryGetValue(slice, out term) == false)
                     {
                         var fieldName = slice.Clone(context);
                         field[fieldName] = term = new List<long>();
@@ -329,17 +378,27 @@ namespace Corax
                     return;
 
                 entryReader.Read(tokenField, out var value);
-                using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
-                if (field.TryGetValue(slice, out var term) == false)
+
+                List<long> term;
+                if (fieldType == IndexEntryFieldType.Null)
                 {
-                    var fieldName = slice.Clone(context);
-                    field[fieldName] = term = new List<long>();
+                    if (field.TryGetValue(Constants.NullValueSlice, out term) == false)
+                        field[Constants.NullValueSlice] = term = new List<long>();
                 }
+                else
+                {
+                    using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+                    if (field.TryGetValue(slice, out term) == false)
+                    {
+                        var fieldName = slice.Clone(context);
+                        field[fieldName] = term = new List<long>();
+                    }
+
+                    if (binding.HasSuggestions)
+                        AddSuggestions(binding, slice);
+                };
 
                 AddMaybeAvoidDuplicate(term, entryId);
-
-                if (binding.HasSuggestions)
-                    AddSuggestions(binding, slice);
             }
         }
 
@@ -385,7 +444,11 @@ namespace Corax
                     Analyzer analyzer = binding.Analyzer;
 
                     var fieldType = entryReader.GetFieldType(fieldId, out var intOffset);
-                    if (fieldType.HasFlag(IndexEntryFieldType.List))
+                    if (fieldType == IndexEntryFieldType.Null)
+                    {
+                        DeleteField(id, fieldName, tmpBuf, Constants.NullValueSlice.AsReadOnlySpan());
+                    }
+                    else if (fieldType.HasFlag(IndexEntryFieldType.List))
                     {
                         var it = entryReader.ReadMany(fieldId);
 
@@ -400,6 +463,12 @@ namespace Corax
                             }
                             else
                             {
+                                if (it.Type == IndexEntryFieldType.Null)
+                                {
+                                    DeleteField(id, fieldName, tmpBuf, Constants.NullValueSlice.AsReadOnlySpan());
+                                    continue;
+                                }
+
                                 var value = it.Sequence;
                                 var words = tempWordsSpace.Slice(0, buffersLength[fieldId * 2]);
                                 var tokens = tempTokenSpace.Slice(0, buffersLength[fieldId * 2 + 1]);
@@ -421,7 +490,13 @@ namespace Corax
                     }
                     else
                     {
-                        entryReader.Read(fieldId, out var termValue);
+                        entryReader.Read(fieldId, out fieldType, out var termValue);
+
+                        if (fieldType == IndexEntryFieldType.Null)
+                        {
+                            DeleteField(id, fieldName, tmpBuf, Constants.NullValueSlice.AsReadOnlySpan());
+                            continue;
+                        }
 
                         if (binding.FieldIndexingMode is FieldIndexingMode.Exact || analyzer is null)
                         {

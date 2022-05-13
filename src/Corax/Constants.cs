@@ -6,6 +6,19 @@ namespace Corax
 {
     public static class Constants
     {
+        public const string NullValue = "NULL_VALUE";
+        public const string EmptyValue = "EMPTY_VALUE";
+        public static readonly Slice NullValueSlice, EmptyValueSlice;
+
+        static Constants()
+        {
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
+                Slice.From(ctx, EmptyValue, ByteStringType.Immutable, out EmptyValueSlice);
+            }
+        }
+
         public static class Boosting
         {
             public static float ScoreEpsilon = 1e-8F;

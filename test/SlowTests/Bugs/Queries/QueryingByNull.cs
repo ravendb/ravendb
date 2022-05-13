@@ -22,7 +22,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryByNullUsingLinq(Options options)
         {
             using (var store = GetDocumentStore(options))

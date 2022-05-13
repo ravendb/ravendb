@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-WaitForUserToContinueTheTest(store);
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<User, LastAccessPerUserDateTimeIndex>()
@@ -258,7 +258,7 @@ WaitForUserToContinueTheTest(store);
             public LastAccessPerUserDateTimeIndex()
             {
                 Map = users =>
-                    from user in users
+                    from user in users                    
                     select new Result
                     {
                         LastAccess = user.LoginsByDate.Last().Value

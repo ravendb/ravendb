@@ -20,14 +20,13 @@ public unsafe partial class IndexSearcher
             return TermMatch.CreateEmpty();
         }
 
-        var termSlice = EncodeAndApplyAnalyzer(term, fieldId);
+        var termSlice = term != Constants.NullValue ? EncodeAndApplyAnalyzer(term, fieldId) : Constants.NullValueSlice;
         return TermQuery(terms, termSlice, fieldId);
     }
 
     //This overload will die with current impl of InQuery
     internal TermMatch TermQuery(CompactTree tree, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
-
         return TermQuery(tree, EncodeAndApplyAnalyzer(term, fieldId), fieldId);
     }
 
