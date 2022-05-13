@@ -22,6 +22,7 @@ using Voron;
 using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
+using System.Diagnostics;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -284,16 +285,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 HandleObject((BlittableJsonReaderObject)value, field, indexContext, ref entryWriter, scope);
                 return;
 
-            case ValueType.DynamicNull:
+            case ValueType.DynamicNull:       
                 var dynamicNull = (DynamicNullObject)value;
                 if (dynamicNull.IsExplicitNull || _indexImplicitNull)
                 {
-                    scope.Write(field.Id, NullValue.Span, ref entryWriter);
+                    scope.WriteNull(field.Id, ref entryWriter);
                 }
                 return;
 
             case ValueType.Null:
-                scope.Write(field.Id, NullValue.Span, ref entryWriter);
+                scope.WriteNull(field.Id, ref entryWriter);
                 return;
             case ValueType.BoostedValue:
                 //todo maciej

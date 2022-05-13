@@ -16,6 +16,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         {
             _allocator = allocator;
         }
+
+
+        public void WriteNull(int field, ref IndexEntryWriter entryWriter)
+        {
+            entryWriter.WriteNull(field);
+        }
         
         public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
@@ -52,5 +58,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             using var scope = new BlittableWriterScope(reader);
             scope.Write(field, ref entryWriter);
         }
+
     }
 }
