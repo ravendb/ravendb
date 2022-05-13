@@ -60,7 +60,30 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var intOffset);
                     var isMatch = false;
 
-                    if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
+                    if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
+                    {
+                        var iterator = reader.ReadMany(match._fieldId);
+
+                        //If we query unary, we want to find items where at least one element is valid for our conditions, so we look for the first match.
+                        //For example: Terms [1,2,3] Q: 'where Term < 3'. We check '1 < 3' and thats it.
+                        //The only difference is with NotMatch. We have to look through the whole collection and check if there are elements that accept our condition.
+                        var answer = match._distinct == false;
+                        isMatch = match._distinct;
+
+                        while (iterator.ReadNext())
+                        {
+                            if (iterator.IsNull)
+                                continue;
+
+                            var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
+                            if (comparer.Compare(currentType, analyzedTerm) == answer)
+                            {
+                                isMatch = answer;
+                                break;
+                            }
+                        }
+                    }
+                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                     {
                         var read = reader.Read(match._fieldId, out var resultX);
                         var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
@@ -68,26 +91,6 @@ namespace Corax.Queries
                         {
                             // We found a match.
                             isMatch = true;
-                        }
-                    }
-                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
-                    {
-                        var iterator = reader.ReadMany(match._fieldId);
-                        
-                        //If we query unary, we want to find items where at least one element is valid for our conditions, so we look for the first match.
-                        //For example: Terms [1,2,3] Q: 'where Term < 3'. We check '1 < 3' and thats it.
-                        //The only difference is with NotMatch. We have to look through the whole collection and check if there are elements that accept our condition.
-                        var answer = match._distinct == false;
-                        isMatch = match._distinct;
-                        
-                        while (iterator.ReadNext())
-                        {
-                            var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
-                            if (comparer.Compare(currentType, analyzedTerm) == answer)
-                            {
-                                isMatch = answer;
-                                break;
-                            }
                         }
                     }
                     

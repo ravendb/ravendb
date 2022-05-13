@@ -21,7 +21,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
     private IPropertyAccessor _propertyAccessor;
 
     public AnonymousCoraxDocumentConverter(Index index, bool storeValue = false)
-        : base(index, storeValue, false, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+        : base(index, storeValue, index.Configuration.IndexEmptyEntries, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
     {
         _isMultiMap = index.IsMultiMap;
     }
@@ -55,8 +55,6 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
             var value = property.Value;
 
             IndexField field;
-
-
             if (_knownFields.TryGetByFieldName(property.Key, out var binding))
             {
                 field = _fields[property.Key];
@@ -65,8 +63,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
             else
             {
                 throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
-            }
-
+            }            
 
             if (storedValue is not null)
             {
@@ -82,18 +79,19 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
             InsertRegularField(field, value, indexContext, ref entryWriter, scope);
         }
 
-        if (entryWriter.IsEmpty())
-            return Span<byte>.Empty;
-
         if (storedValue is not null)
         {
             var bjo = indexContext.ReadObject(storedValue, "corax field as json");
             scope.Write(_knownFields.Count - 1, bjo, ref entryWriter);
         }
 
+        if (entryWriter.IsEmpty() == true)
+            return Span<byte>.Empty;
+        
         id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
         scope.Write(0, id.AsSpan(), ref entryWriter);
         entryWriter.Finish(out var output);
+
         return output;
     }
 }

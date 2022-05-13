@@ -546,7 +546,7 @@ public static class QueryBuilderHelper
         string s => s,
         long l => l.ToString(CultureInfo.InvariantCulture),
         double d => d.ToString(CultureInfo.InvariantCulture),
-        null => Constants.Documents.Indexing.Fields.NullValue,
+        null => Corax.Constants.NullValue,
         _ => value?.ToString()
     };
 
