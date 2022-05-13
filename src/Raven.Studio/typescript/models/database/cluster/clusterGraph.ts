@@ -224,11 +224,13 @@ class clusterGraph {
 
             switch (node.type()) {
                 case "Member":
-                    return "&#xe9ca;";
+                    return icomoonHelpers.getCodePointForCanvas("cluster-member");
                 case "Promotable":
-                    return "&#xe9cc;";
+                    return icomoonHelpers.getCodePointForCanvas("cluster-promotable");
                 case "Watcher":
-                    return leaderTag ? "&#xe9cd;" : "&#xe9a9;";
+                    return leaderTag 
+                        ? icomoonHelpers.getCodePointForCanvas("cluster-watcher")
+                        : icomoonHelpers.getCodePointForCanvas("waiting")
             }
             return "";
         };
