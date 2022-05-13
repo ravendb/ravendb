@@ -75,7 +75,7 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
 
     public IChangesObservable<BlittableJsonReaderObject> ForDocumentsInCollection<TEntity>()
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException("This is a Client API method only. Should not happen!");
     }
 
     public IChangesObservable<BlittableJsonReaderObject> ForAllCounters()
