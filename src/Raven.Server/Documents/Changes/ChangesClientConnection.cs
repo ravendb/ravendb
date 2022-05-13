@@ -22,8 +22,6 @@ namespace Raven.Server.Documents.Changes
 
         private readonly ConcurrentSet<string> _matchingDocumentsInCollection = new(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<string> _matchingDocumentsOfType = new(StringComparer.OrdinalIgnoreCase);
-
         private readonly ConcurrentSet<string> _matchingCounters = new(StringComparer.OrdinalIgnoreCase);
 
         private readonly ConcurrentSet<string> _matchingDocumentCounters = new(StringComparer.OrdinalIgnoreCase);
@@ -419,39 +417,27 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchDocumentPrefixAsync(string name)
+        protected override ValueTask WatchDocumentPrefixAsync(string name, CancellationToken token)
         {
             _matchingDocumentPrefixes.TryAdd(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchDocumentPrefixAsync(string name)
+        protected override ValueTask UnwatchDocumentPrefixAsync(string name, CancellationToken token)
         {
             _matchingDocumentPrefixes.TryRemove(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchDocumentInCollectionAsync(string name)
+        protected override ValueTask WatchDocumentInCollectionAsync(string name, CancellationToken token)
         {
             _matchingDocumentsInCollection.TryAdd(name);
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask UnwatchDocumentInCollectionAsync(string name)
+        protected override ValueTask UnwatchDocumentInCollectionAsync(string name, CancellationToken token)
         {
             _matchingDocumentsInCollection.TryRemove(name);
-            return ValueTask.CompletedTask;
-        }
-
-        protected override ValueTask WatchDocumentOfTypeAsync(string name)
-        {
-            _matchingDocumentsOfType.TryAdd(name);
-            return ValueTask.CompletedTask;
-        }
-
-        protected override ValueTask UnwatchDocumentOfTypeAsync(string name)
-        {
-            _matchingDocumentsOfType.TryRemove(name);
             return ValueTask.CompletedTask;
         }
 
