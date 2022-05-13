@@ -37,6 +37,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
             _allocator = allocator;
         }
 
+        public void WriteNull(int field, ref IndexEntryWriter entryWriter)
+        {
+            // We cannot know if we are writing a tuple or a list. But we know that at finish
+            // we will be able to figure out based on the stored counts. Therefore,
+            // we will write a null here and then write the real value in the finish method.
+            _stringValues.Add(default(Memory<byte>));
+            _longValues.Add(0);
+            _doubleValues.Add(float.NaN);
+        }
+
         public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
             _count.Strings++;
@@ -87,8 +97,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 throw new InvalidDataException($"{nameof(EnumerableWriterScope)}: Some raws were mixed with normal literal.");
             }
 
+            // Even in the case of stored null values, the number of strings and doubles would match. 
             if (_count.Strings == _count.Doubles && _count.Raws == 0)
-            {
+            {                
                 entryWriter.Write(field, new StringArrayIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
             }
             else if (_count is { Raws: > 0, Strings: 0 })
@@ -131,7 +142,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 if (i < 0 || i >= Length)
                     throw new ArgumentOutOfRangeException();
 
-                return false;                
+                return _values[i].Length == 0;
             }
 
             public ReadOnlySpan<byte> this[int i] => _values[i].Span;
