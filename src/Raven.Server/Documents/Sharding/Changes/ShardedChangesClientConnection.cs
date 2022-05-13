@@ -19,6 +19,12 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 {
     private readonly ConcurrentDictionary<string, IDisposable> _matchingDocuments = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly ConcurrentDictionary<string, IDisposable> _matchingIndexes = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, IDisposable> _matchingDocumentPrefixes = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, IDisposable> _matchingDocumentsInCollection = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly ConcurrentDictionary<string, IDisposable> _matchingCounters = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ConcurrentDictionary<string, IDisposable> _matchingDocumentCounters = new(StringComparer.OrdinalIgnoreCase);
@@ -30,8 +36,6 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     private readonly ConcurrentDictionary<string, IDisposable> _matchingAllDocumentTimeSeries = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ConcurrentDictionary<DocumentIdAndNamePair, IDisposable> _matchingDocumentTimeSeries = new();
-
-    private readonly ConcurrentDictionary<string, IDisposable> _matchingIndexes = new(StringComparer.OrdinalIgnoreCase);
 
     private int _watchAllDocuments;
     private IDisposable _watchAllDocumentsUnsubscribe;
@@ -219,34 +223,28 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         return ValueTask.CompletedTask;
     }
 
-    protected override ValueTask WatchDocumentPrefixAsync(string name)
+    protected override async ValueTask WatchDocumentPrefixAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync(token);
+
+        _matchingDocumentPrefixes.GetOrAdd(name, p => WatchInternalAsync(changes => changes.ForDocumentsStartingWith(p), token).Result);
     }
 
-    protected override ValueTask UnwatchDocumentPrefixAsync(string name)
+    protected override ValueTask UnwatchDocumentPrefixAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
+        return UnwatchInternalAsync(name, _matchingDocumentPrefixes, token);
     }
 
-    protected override ValueTask WatchDocumentInCollectionAsync(string name)
+    protected override async ValueTask WatchDocumentInCollectionAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
+        await EnsureConnectedAsync(token);
+
+        _matchingDocumentsInCollection.GetOrAdd(name, c => WatchInternalAsync(changes => changes.ForDocumentsInCollection(c), token).Result);
     }
 
-    protected override ValueTask UnwatchDocumentInCollectionAsync(string name)
+    protected override ValueTask UnwatchDocumentInCollectionAsync(string name, CancellationToken token)
     {
-        throw new NotImplementedException();
-    }
-
-    protected override ValueTask WatchDocumentOfTypeAsync(string name)
-    {
-        throw new NotImplementedException();
-    }
-
-    protected override ValueTask UnwatchDocumentOfTypeAsync(string name)
-    {
-        throw new NotImplementedException();
+        return UnwatchInternalAsync(name, _matchingDocumentsInCollection, token);
     }
 
     protected override async ValueTask WatchAllIndexesAsync(CancellationToken token)

@@ -47,12 +47,30 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
 
     public IChangesObservable<BlittableJsonReaderObject> ForDocumentsStartingWith(string docIdPrefix)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(docIdPrefix))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(docIdPrefix));
+
+        var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", docIdPrefix);
+
+        var taskedObservable = new ChangesObservable<BlittableJsonReaderObject, ShardedDatabaseConnectionState>(
+            counter,
+            filter: null);
+
+        return taskedObservable;
     }
 
     public IChangesObservable<BlittableJsonReaderObject> ForDocumentsInCollection(string collectionName)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(collectionName))
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(collectionName));
+
+        var counter = GetOrAddConnectionState("collections/" + collectionName, "watch-collection", "unwatch-collection", collectionName);
+
+        var taskedObservable = new ChangesObservable<BlittableJsonReaderObject, ShardedDatabaseConnectionState>(
+            counter,
+            filter: null);
+
+        return taskedObservable;
     }
 
     public IChangesObservable<BlittableJsonReaderObject> ForDocumentsInCollection<TEntity>()

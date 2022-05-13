@@ -88,17 +88,13 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected abstract ValueTask UnwatchAllTimeSeriesAsync(CancellationToken token);
 
-    protected abstract ValueTask WatchDocumentPrefixAsync(string name);
+    protected abstract ValueTask WatchDocumentPrefixAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask UnwatchDocumentPrefixAsync(string name);
+    protected abstract ValueTask UnwatchDocumentPrefixAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask WatchDocumentInCollectionAsync(string name);
+    protected abstract ValueTask WatchDocumentInCollectionAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask UnwatchDocumentInCollectionAsync(string name);
-
-    protected abstract ValueTask WatchDocumentOfTypeAsync(string name);
-
-    protected abstract ValueTask UnwatchDocumentOfTypeAsync(string name);
+    protected abstract ValueTask UnwatchDocumentInCollectionAsync(string name, CancellationToken token);
 
     protected abstract ValueTask WatchAllIndexesAsync(CancellationToken token);
 
@@ -294,27 +290,19 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         }
         else if (Match(command, "watch-prefix"))
         {
-            await WatchDocumentPrefixAsync(commandParameter);
+            await WatchDocumentPrefixAsync(commandParameter, token);
         }
         else if (Equals(command, "unwatch-prefix"))
         {
-            await UnwatchDocumentPrefixAsync(commandParameter);
+            await UnwatchDocumentPrefixAsync(commandParameter, token);
         }
         else if (Match(command, "watch-collection"))
         {
-            await WatchDocumentInCollectionAsync(commandParameter);
+            await WatchDocumentInCollectionAsync(commandParameter, token);
         }
         else if (Equals(command, "unwatch-collection"))
         {
-            await UnwatchDocumentInCollectionAsync(commandParameter);
-        }
-        else if (Match(command, "watch-type"))
-        {
-            await WatchDocumentOfTypeAsync(commandParameter);
-        }
-        else if (Equals(command, "unwatch-type"))
-        {
-            await UnwatchDocumentOfTypeAsync(commandParameter);
+            await UnwatchDocumentInCollectionAsync(commandParameter, token);
         }
         else if (Equals(command, "watch-operation"))
         {
