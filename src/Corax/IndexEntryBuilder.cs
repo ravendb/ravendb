@@ -118,12 +118,11 @@ namespace Corax
         }
 
         public void WriteNull(int field)
-        {
-            int dataLocation = _dataIndex;
-            
+        {           
             // Write known field.
-            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
-            Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Null);
+            _knownFieldsLocations[field] = _dataIndex | unchecked((int)0x80000000);
+            Unsafe.WriteUnaligned(ref _buffer[_dataIndex], IndexEntryFieldType.Null);
+            _dataIndex += sizeof(IndexEntryFieldType);
         }
 
         public void Write(int field, ReadOnlySpan<byte> value)
@@ -167,7 +166,7 @@ namespace Corax
 
             binaryValue.CopyTo(_buffer.Slice(dataLocation));
             dataLocation += binaryValue.Length;
-            
+
             _dataIndex = dataLocation;
         }
 
@@ -831,7 +830,7 @@ namespace Corax
 
             if (isTyped)
             {
-                return (IndexEntryFieldType)_buffer[intOffset];
+                return Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);                
             }
 
             return IndexEntryFieldType.Simple;
