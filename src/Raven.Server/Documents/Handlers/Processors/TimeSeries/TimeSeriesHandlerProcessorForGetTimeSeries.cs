@@ -26,9 +26,11 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return ValueTask.FromResult<TimeSeriesRangeResult>(null);
                 }
-                
+
+                bool shouldGetMissingIncludes = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
+
                 var includesCommand = includeDoc || includeTags
-                    ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, docId, includeDoc, includeTags)
+                    ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, docId, includeDoc, includeTags, shouldGetMissingIncludes)
                     : null;
 
                 bool incrementalTimeSeries = CheckIfIncrementalTs(name);

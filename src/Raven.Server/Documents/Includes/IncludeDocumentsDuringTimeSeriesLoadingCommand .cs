@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Includes
         private DynamicJsonValue _includes;
         private  readonly HashSet<string> _missingIncludes;
 
-        public IncludeDocumentsDuringTimeSeriesLoadingCommand(DocumentsOperationContext context, string docId, bool includeDocument, bool includeTags)
+        public IncludeDocumentsDuringTimeSeriesLoadingCommand(DocumentsOperationContext context, string docId, bool includeDocument, bool includeTags, bool missingIncludes = false)
         {
             _docId = docId ?? throw new ArgumentException(nameof(docId));
             _context = context;
@@ -28,14 +28,15 @@ namespace Raven.Server.Documents.Includes
             _includeTags = includeTags;
 
             _includesDictionary = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-            _missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if(missingIncludes)
+                _missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public void InitializeNewRangeResult(byte* state)
         {
             _state = state;
             _includes = new DynamicJsonValue();
-            _missingIncludes.Clear();
+            _missingIncludes?.Clear();
 
             if (_includeDoc == false)
                 return;
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Includes
             if (rangeResult == null)
                 return;
 
-            rangeResult.MissingIncludes = _missingIncludes.ToList();
+            rangeResult.MissingIncludes = _missingIncludes?.ToList();
 
             if (_includes?.Properties.Count > 0 == false)
                 return;
@@ -68,8 +69,8 @@ namespace Raven.Server.Documents.Includes
         {
             if (_includesDictionary.ContainsKey(id))
             {
-                if (_includesDictionary[id] == null && _missingIncludes.Contains(id) == false)
-                    _missingIncludes.Add(id);
+                if (_includesDictionary[id] == null && _missingIncludes?.Contains(id) == false)
+                    _missingIncludes?.Add(id);
                 return;
             }
             
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Includes
 
             if (doc?.Data == null)
             {
-                _missingIncludes.Add(id);
+                _missingIncludes?.Add(id);
                 return;
             }
 

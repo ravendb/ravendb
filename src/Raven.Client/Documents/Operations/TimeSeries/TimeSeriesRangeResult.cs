@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal string Hash;
 
         public BlittableJsonReaderObject Includes;
-        public List<string> MissingIncludes;
+        internal List<string> MissingIncludes;
 
         [OnDeserialized]
         internal void OnNewtonSoftJsonDeserialized(StreamingContext context)

@@ -24,6 +24,19 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
         {
         }
 
+        protected static void AddInternalFieldsToResultForSharded(TimeSeriesRangeResult rangeResult, BlittableJsonReaderObject responseRange)
+        {
+            if (responseRange.TryGet(nameof(TimeSeriesRangeResult.MissingIncludes), out BlittableJsonReaderArray missingBlittable))
+            {
+                rangeResult.MissingIncludes = new List<string>();
+                for (int i = 0; i < missingBlittable.Length; i++)
+                {
+                    rangeResult.MissingIncludes.Add(missingBlittable.GetStringByIndex(i));
+                }
+            }
+            responseRange.TryGet(nameof(TimeSeriesRangeResult.Hash), out rangeResult.Hash);
+        }
+
         protected async Task SendConfigurationResponseAsync(TransactionOperationContext context, long index)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -298,9 +311,14 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
                 if (rangeResult.MissingIncludes != null)
                 {
-                    // add included documents to the response
+                    // add missing includes for sharded endpoint
                     writer.WriteComma();
                     writer.WriteArray(nameof(TimeSeriesRangeResult.MissingIncludes), rangeResult.MissingIncludes);
+
+                    //we are returning this result to a sharded EP so we also need the hash
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TimeSeriesRangeResult.Hash));
+                    writer.WriteString(rangeResult.Hash);
                 }
             }
 
