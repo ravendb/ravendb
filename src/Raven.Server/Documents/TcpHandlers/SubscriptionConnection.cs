@@ -1048,7 +1048,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             catch (Exception ex)
             {
-                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})", ex);
+                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})", canReconnect: ex is OperationCanceledException, ex);
             }
 
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
