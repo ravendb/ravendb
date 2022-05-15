@@ -80,8 +80,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_not_send_attachments_metadata_when_using_script(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_not_send_attachments_metadata_when_using_script(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

@@ -54,10 +54,10 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanPatchWithFilter(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPatchWithFilter(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -102,10 +102,10 @@ Object.keys(this.Trie).filter(function(key) {
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanPatchDictionaryUsingArgs(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPatchDictionaryUsingArgs(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

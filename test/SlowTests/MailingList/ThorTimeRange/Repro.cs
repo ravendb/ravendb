@@ -148,10 +148,10 @@ namespace SlowTests.MailingList.ThorTimeRange
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanPersistAndLoad_FAILS(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanPersistAndLoad_FAILS(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 Utility.CreateTestData(store);
 

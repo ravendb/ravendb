@@ -17,8 +17,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_delete_all_entries_from_compressed_tree_in_map_reduce_index(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_delete_all_entries_from_compressed_tree_in_map_reduce_index(Options options)
         {
             var path = NewDataPath();
             var options = Options.ForJavaScriptEngine(jsEngineType);

@@ -70,10 +70,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void IndexingOfLoadDocumentWhileChanged(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void IndexingOfLoadDocumentWhileChanged(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulk = store.BulkInsert())
                 {
@@ -197,10 +197,10 @@ update {
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void IndexingOfLoadDocumentWhileChanged_UnderLowMemory(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void IndexingOfLoadDocumentWhileChanged_UnderLowMemory(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var bulk = store.BulkInsert())
                 {

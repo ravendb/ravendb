@@ -20,10 +20,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ShouldThrowBetterErrorOnUndefinedJavaScriptDate(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldThrowBetterErrorOnUndefinedJavaScriptDate(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new Times1().Execute(store);
 
@@ -74,10 +74,10 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ShouldThrowBetterErrorOnTooBigJavaScriptDate(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldThrowBetterErrorOnTooBigJavaScriptDate(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new Times2().Execute(store);
 

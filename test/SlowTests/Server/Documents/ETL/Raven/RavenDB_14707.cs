@@ -16,8 +16,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_delete_existing_document_when_filtered_by_script(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_delete_existing_document_when_filtered_by_script(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

@@ -16,12 +16,12 @@ namespace SlowTests.Issues
         private const string StatusPostfix = "/status";
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ProjectionWithLoadFails(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ProjectionWithLoadFails(Options options)
         {
             const string documentId = "document-id";
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

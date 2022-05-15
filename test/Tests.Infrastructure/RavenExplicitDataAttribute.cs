@@ -26,7 +26,7 @@ public class RavenExplicitDataAttribute : DataAttribute
     {
         foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
         {
-            foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
+            foreach (var (searchMode, o) in RavenDataAttribute.FillSearchOptions(options, SearchEngineMode))
             {
                 var length = 1;
                 if (Data is { Length: > 0 })

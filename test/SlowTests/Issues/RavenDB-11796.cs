@@ -15,10 +15,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ToStringOnNonStoredMissingFieldShouldNotThrow(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ToStringOnNonStoredMissingFieldShouldNotThrow(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 // Arrange  
                 store.ExecuteIndex(new BookingIndexFullNameIsFullNameMapStartToBegin());

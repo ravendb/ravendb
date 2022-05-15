@@ -81,10 +81,10 @@ update
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ErrorInInvocationShouldReportLineAndColumnNumber(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ErrorInInvocationShouldReportLineAndColumnNumber(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

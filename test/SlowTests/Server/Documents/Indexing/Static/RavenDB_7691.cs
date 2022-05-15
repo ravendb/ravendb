@@ -19,7 +19,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
         {
         }
 
-    private string QueryWithScalarToRawStringForAllValues(string jsEngineType)
+    private string QueryWithScalarToRawStringForAllValues(Options options)
         {
             var prefix = jsEngineType == "Jint" ? "u=> u." : "\"";
             var postfix = jsEngineType == "Jint" ? "" : "\"";
@@ -172,7 +172,7 @@ from EdgeCaseValues as e select MyProjection(e)";
         // TODO [shlomo] RavenDB-18121: V8 version should be activated
         [Theory]
         [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
-        public async Task CanParseNumericEdgeCasesRawValuesInJSProjection(string jsEngineType)
+        public async Task CanParseNumericEdgeCasesRawValuesInJSProjection(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
 
@@ -202,7 +202,7 @@ from EdgeCaseValues as e select MyProjection(e)";
         // TODO [shlomo] RavenDB-18121: V8 version should be activated
         [Theory]
         [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
-        public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection(string jsEngineType)
+        public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCasePercisionValues();
 
@@ -232,7 +232,7 @@ from EdgeCaseValues as e select MyProjection(e)";
         // TODO [shlomo] RavenDB-18121: V8 version should be activated
         [Theory]
         [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
-        public async Task ScalarToRawThrowsOnIllegalLambdas(string jsEngineType)
+        public async Task ScalarToRawThrowsOnIllegalLambdas(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
             using (var store = GetDocumentStore(new Options()
@@ -302,8 +302,8 @@ from EdgeCaseValues as e select MyProjection(e)"
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanModifyRawAndOriginalValuesTogether(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanModifyRawAndOriginalValuesTogether(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
 

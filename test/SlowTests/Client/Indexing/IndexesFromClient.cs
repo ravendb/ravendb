@@ -94,10 +94,10 @@ namespace SlowTests.Client.Indexing
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task UpdateByQuery(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task UpdateByQuery(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

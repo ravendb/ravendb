@@ -22,10 +22,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Can_patch_expires_in_metadata(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Can_patch_expires_in_metadata(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -57,10 +57,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Test_patch_should_return_original_doc_if_patch_status_is_not_modified(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Test_patch_should_return_original_doc_if_patch_status_is_not_modified(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

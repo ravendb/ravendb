@@ -20,8 +20,8 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanAddNewTimeSeriesAndNewCounterViaPatch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanAddNewTimeSeriesAndNewCounterViaPatch(Options options)
         {
             const string timeseries = "HeartRate";
             const string ctr = "Likes";
@@ -29,7 +29,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -79,15 +79,15 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanAddNewTimeSeriesOnLoadedDocumentViaPatch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanAddNewTimeSeriesOnLoadedDocumentViaPatch(Options options)
         {
             const string documentId = "companies/1";
             const string employeeId = "employees/1";
 
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -149,15 +149,15 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanDeleteTimeSeriesOnLoadedDocumentViaPatch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanDeleteTimeSeriesOnLoadedDocumentViaPatch(Options options)
         {
             const string documentId = "companies/1";
             const string employeeId = "employees/1";
 
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

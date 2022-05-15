@@ -21,10 +21,10 @@ namespace SlowTests.Client.Subscriptions
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ShouldSupportProjectionAndFilter(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ShouldSupportProjectionAndFilter(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()
                 {

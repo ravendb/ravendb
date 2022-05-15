@@ -19,8 +19,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Docs_are_transformed_according_to_provided_collection_specific_scripts(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Docs_are_transformed_according_to_provided_collection_specific_scripts(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var master = GetDocumentStore(options))

@@ -33,14 +33,14 @@ namespace SlowTests.Server.Documents.ETL.Olap
         private const string CollectionName = "Orders";
 
         [AzureTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanUploadToAzure(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanUploadToAzure(Options options)
         {
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -109,14 +109,14 @@ loadToOrders(partitionBy(key),
         }
 
         [AzureTheory]
-        [JavaScriptEngineClassData]
-        public async Task SimpleTransformation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SimpleTransformation(Options options)
         {
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -217,15 +217,15 @@ loadToOrders(partitionBy(key),
         }
 
         [AzureTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanLoadToMultipleTables(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanLoadToMultipleTables(Options options)
         {
             const string salesTableName = "Sales";
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -400,14 +400,14 @@ loadToOrders(partitionBy(key), orderData);
         }
 
         [AzureTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanModifyPartitionColumnName(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanModifyPartitionColumnName(Options options)
         {
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     const string partitionColumn = "order_date";
 
@@ -496,13 +496,13 @@ loadToOrders(partitionBy(['order_date', key]),
         }
 
         [AzureTheory]
-        [JavaScriptEngineClassData]
-        public async Task SimpleTransformation_NoPartition(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SimpleTransformation_NoPartition(Options options)
         {
             var settings = GetAzureSettings();
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
 
@@ -606,15 +606,15 @@ loadToOrders(noPartition(),
         }
 
         [AzureTheory]
-        [JavaScriptEngineClassData]
-        public async Task SimpleTransformation_MultiplePartitions(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SimpleTransformation_MultiplePartitions(Options options)
         {
             var settings = GetAzureSettings();
             var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = DateTime.SpecifyKind(new DateTime(2020, 1, 1), DateTimeKind.Utc);
 
@@ -744,13 +744,13 @@ loadToOrders(partitionBy(
         }
 
         [AzureTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanUseCustomPrefix(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanUseCustomPrefix(Options options)
         {
             var settings = GetAzureSettings();
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 

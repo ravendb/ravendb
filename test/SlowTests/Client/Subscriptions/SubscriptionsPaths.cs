@@ -24,8 +24,8 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PositivePathWithCollectionsTyped(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PositivePathWithCollectionsTyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -46,7 +46,7 @@ namespace SlowTests.Client.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -71,8 +71,8 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PositivePathWithCollectionsUntyped(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PositivePathWithCollectionsUntyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -93,7 +93,7 @@ namespace SlowTests.Client.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -132,8 +132,8 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void NegativePathWithCollectionsTyped(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void NegativePathWithCollectionsTyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -154,7 +154,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -179,8 +179,8 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void NegativePathWithCollectionsUntyped(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void NegativePathWithCollectionsUntyped(Options options)
         {
             var nestedNode = new Node
             {
@@ -201,7 +201,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

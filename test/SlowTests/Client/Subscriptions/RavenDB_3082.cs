@@ -24,10 +24,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task StronglyTypedDataSubscriptions(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task StronglyTypedDataSubscriptions(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

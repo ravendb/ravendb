@@ -17,10 +17,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void SearchBooking_ProjectionWithDateTimeToStringAndFormat_ReturnsResult(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void SearchBooking_ProjectionWithDateTimeToStringAndFormat_ReturnsResult(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 // Arrange  
                 store.ExecuteIndex(new BookingIndex());
@@ -62,10 +62,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void DateToStringWithInvariantCulture(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void DateToStringWithInvariantCulture(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -102,10 +102,10 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void DateToStringWithCurrentCulture(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void DateToStringWithCurrentCulture(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -144,10 +144,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void DateToStringWithFormatAndCurrentCulture(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void DateToStringWithFormatAndCurrentCulture(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -185,10 +185,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void DateToStringWithFormatAndInvariantCulture(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void DateToStringWithFormatAndInvariantCulture(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var start = DateTime.Parse("2018-01-01T11:11:11");
 
@@ -225,10 +225,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void NumberToStringWithFormat(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void NumberToStringWithFormat(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 
@@ -264,10 +264,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void NumberToStringWithInvariantCulture(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void NumberToStringWithInvariantCulture(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 
@@ -304,10 +304,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void NumberToStringWithCurrentCulture(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void NumberToStringWithCurrentCulture(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 
@@ -344,10 +344,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void NumberToStringWithFormatAndCulture(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void NumberToStringWithFormatAndCulture(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var num = 12345000;
 

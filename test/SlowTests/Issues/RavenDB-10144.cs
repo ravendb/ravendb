@@ -18,10 +18,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void DocumentQuerySelectFields(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void DocumentQuerySelectFields(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {                
                 var definition = new IndexDefinitionBuilder<Order>("OrderByCompanyCountryIndex")
                 {

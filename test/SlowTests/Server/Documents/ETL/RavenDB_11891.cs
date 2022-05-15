@@ -172,8 +172,8 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
 
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_filter_out_deletions_using_generic_delete_behavior(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_filter_out_deletions_using_generic_delete_behavior(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

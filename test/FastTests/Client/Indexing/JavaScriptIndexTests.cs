@@ -5,6 +5,7 @@ using FastTests.Server.Documents.Indexing;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -21,7 +22,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseJavaScriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -44,7 +45,7 @@ namespace FastTests.Client.Indexing
 
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanIndexTimeSpan(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -72,7 +73,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseJavaScriptIndexWithAdditionalSources(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -94,7 +95,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanIndexArrayProperties(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -125,8 +126,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanIndexMapWithFanout(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -157,8 +158,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -191,8 +192,8 @@ namespace FastTests.Client.Indexing
         }
         
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanIndexMapReduceWithFanout(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -223,8 +224,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanUseJavaScriptIndexWithDynamicFields(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -248,7 +249,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseJavaScriptMultiMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -275,14 +276,14 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseJavaScriptIndexWithLoadDocument(Options options)
         {
             CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>(options);
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseJavaScriptIndexWithExternalLoadDocument(Options options)
         {
             CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>(options);
@@ -317,7 +318,7 @@ namespace FastTests.Client.Indexing
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void CanElivateSimpleFunctions(Options options)
+        public void CanElivateSimpleFunctions(Options options, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -339,7 +340,7 @@ namespace FastTests.Client.Indexing
         }
         
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseJavaScriptMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -365,8 +366,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanUseSpatialFields(Options options)
         {
             var kalab = 10;
@@ -378,8 +379,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanUseDynamicSpatialFields(Options options)
         {
             var kalab = 10;
@@ -416,7 +417,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanReduceNullValues(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -444,7 +445,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanReduceWithReturnSyntax(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -468,7 +469,7 @@ namespace FastTests.Client.Indexing
         }
         
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseJsIndexWithArrowObjectFunctionInMap(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -494,7 +495,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -506,8 +507,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void OutputReduceToCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -533,8 +534,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void DateCheckMapReduce(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -584,8 +585,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanQueryBySubObjectAsString(Options options)
         {
             var address = new Address
@@ -614,8 +615,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint, Skip = "RavenDB-17966")]
         public void CanIndexSwitchCases(Options options)
         {
             using (var store = GetDocumentStore(options))

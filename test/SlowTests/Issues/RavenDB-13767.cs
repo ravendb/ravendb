@@ -15,8 +15,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task PatchingClusterTransactionDocumentShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task PatchingClusterTransactionDocumentShouldWork(Options options)
         {
             var (_, leader) = await CreateRaftCluster(3);
             using (var leaderStore = GetDocumentStore(new Options

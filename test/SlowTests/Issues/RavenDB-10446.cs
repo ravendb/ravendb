@@ -51,18 +51,18 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionTypedCreationOptionsShouldSupportConstantValuesWithIndirectPath(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionTypedCreationOptionsShouldSupportConstantValuesWithIndirectPath(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 await TestWrappedValues(store);
             }
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionTypedCreationOptionsShouldSupportConstantValuesWithIndirectPathAndSaveEnumsAsIntegers(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionTypedCreationOptionsShouldSupportConstantValuesWithIndirectPathAndSaveEnumsAsIntegers(Options options)
         {
             using (var store = GetDocumentStore(new Options
             {

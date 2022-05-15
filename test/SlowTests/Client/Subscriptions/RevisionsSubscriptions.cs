@@ -197,12 +197,12 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RevisionsSubscriptionsWithCustomScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RevisionsSubscriptionsWithCustomScript(Options options)
         {
             var optChaining = jsEngineType == "Jint" ? "" : "?";
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
@@ -289,10 +289,10 @@ select {{ Id: id(d.Current), Age: d.Current{optChaining}.Age }}
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RevisionsSubscriptionsWithCustomScriptCompareDocs(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RevisionsSubscriptionsWithCustomScriptCompareDocs(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
 
                 var optChaining = jsEngineType == "Jint" ? "" : "?";

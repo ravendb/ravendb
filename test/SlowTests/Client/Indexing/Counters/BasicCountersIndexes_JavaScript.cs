@@ -43,7 +43,7 @@ return {
 
         private class MyCounterIndex_Load : AbstractJavaScriptCountersIndexCreationTask
         {
-            public MyCounterIndex_Load(string jsEngineType)
+            public MyCounterIndex_Load(Options options)
             {
                 var optChaining = jsEngineType == "Jint" ? "" : "?";
                 Maps = new HashSet<string>
@@ -105,7 +105,7 @@ return {
                 public long Count { get; set; }
             }
 
-            public AverageHeartRate_WithLoad(string jsEngineType)
+            public AverageHeartRate_WithLoad(Options options)
             {
                 var optChaining = jsEngineType == "Jint" ? "" : "?";
 
@@ -221,7 +221,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void BasicMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -429,7 +429,7 @@ return ({
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public async Task BasicMapIndexWithLoad(Options options)
+        public async Task BasicMapIndexWithLoad(Options options, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -591,7 +591,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void BasicMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -751,7 +751,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -898,7 +898,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanMapAllCountersFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1064,7 +1064,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanMapAllCounters(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1164,7 +1164,7 @@ return ({
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task BasicMultiMapIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1224,7 +1224,7 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CounterNamesFor(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -52,7 +52,7 @@ namespace SlowTests.Client.TimeSeries.Patch
         {
             const string documentId = "users/ayende";
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new { Name = "Oren" }, documentId);
@@ -94,7 +94,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             const string timeseries = "Heartrate";
             const string documentId = "users/ayende";
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
@@ -136,15 +136,15 @@ namespace SlowTests.Client.TimeSeries.Patch
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanAppendTimeSeriesByPatch_WhenDocAsIdAndTimeAsDateObject(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanAppendTimeSeriesByPatch_WhenDocAsIdAndTimeAsDateObject(Options options)
         {
             double[] values = {59d};
             const string tag = "watches/fitbit";
             const string timeseries = "Heartrate";
             const string documentId = "users/ayende";
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
@@ -191,7 +191,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             const string timeseries = "Heartrate";
             const string documentId = "users/ayende";
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
@@ -227,8 +227,8 @@ namespace SlowTests.Client.TimeSeries.Patch
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanAppendTimeSeriesByPatch_WhenAppendMultipleItems(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanAppendTimeSeriesByPatch_WhenAppendMultipleItems(Options options)
         {
             double[] values = {59d};
             string[] tags = {"tag/1", "tag/2", "tag/3", "tag/4"};
@@ -240,7 +240,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                 .Select(i => new Tuple<DateTime, double[], string>(baseline.AddMilliseconds(i), values, tags[i % tags.Length]))
                 .ToArray();
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -282,8 +282,8 @@ for(i = 0; i < args.toAppend.length; i++){
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenDB_15193(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenDB_15193(Options options)
         {
             const string tag = "watches/fitbit";
             const string timeseries = "Heartrate";
@@ -299,7 +299,7 @@ for(i = 0; i < args.toAppend.length; i++){
             var todeleteTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -390,7 +390,7 @@ for(i = 0; i < args.toAppend.length; i++){
             var todeleteTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -477,7 +477,7 @@ for(i = 0; i < args.toAppend.length; i++){
             var todeleteTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -528,8 +528,8 @@ for(i = 0; i < args.toAppend.length; i++){
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Patch_ReuseTimeSeriesEntries(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Patch_ReuseTimeSeriesEntries(Options options)
         {
             const string timeseries = "Heartrate";
             const string documentId = "users/1";
@@ -583,8 +583,8 @@ for(i = 0; i < args.toAppend.length; i++){
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanPerformMultipleOperationsOnSingleTimeSeriesInstanceByPatch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPerformMultipleOperationsOnSingleTimeSeriesInstanceByPatch(Options options)
         {
             double[] values = { 59d };
             string[] tags = { "tag/1", "tag/2", "tag/3", "tag/4" };
@@ -596,7 +596,7 @@ for(i = 0; i < args.toAppend.length; i++){
                 .Select(i => new Tuple<DateTime, double[], string>(baseline.AddMilliseconds(i), values, tags[i % tags.Length]))
                 .ToArray();
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -693,14 +693,14 @@ for (var i = 0; i < args.todelete.length; i++)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task GetStatsTestAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task GetStatsTestAsync(Options options)
         {
             var id = "users/1-A";
             var baseline = RavenTestHelper.UtcToday.EnsureMilliseconds();
             var name = "Heartrate";
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

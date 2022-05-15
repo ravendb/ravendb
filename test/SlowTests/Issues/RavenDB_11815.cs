@@ -200,10 +200,10 @@ groupBy(x => x.Total.Currency)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanUseNestedFieldValueInGroupBy(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanUseNestedFieldValueInGroupBy(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 /*new MapReduceIndexWithNestedField().Execute(store);
                 new MapReduceIndexWithNestedField2().Execute(store);

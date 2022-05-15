@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         {
         }
 
-        private string ScriptWithNoIdMethodUsage(string jsEngineType)
+        private string ScriptWithNoIdMethodUsage(Options options)
         {
             var optChaining = jsEngineType == "Jint" ? "" : "?";
             return @$"
@@ -48,10 +48,10 @@ loadTo" + OrdersIndexName + @"(orderData);
         }
 
         [RequiresElasticSearchTheory]
-        [JavaScriptEngineClassData]
-        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage(jsEngineType), DefaultIndexes, new List<string> { "Orders" });
@@ -105,10 +105,10 @@ loadTo" + OrdersIndexName + @"(orderData);
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task TestScriptWillHaveDocumentIdPropertiesNotAddedExplicitlyInTheScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task TestScriptWillHaveDocumentIdPropertiesNotAddedExplicitlyInTheScript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

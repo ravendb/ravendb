@@ -22,7 +22,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanUseIdMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -62,7 +62,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]        
         public async Task CanUseGetMetadataMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

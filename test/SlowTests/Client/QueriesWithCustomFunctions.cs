@@ -90,10 +90,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Timespan(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Timespan(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -121,10 +121,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_Timespan_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_Timespan_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -152,10 +152,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_DateTime_Properties(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_DateTime_Properties(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var birthdayLocal = new DateTime(1942, 8, 1);
                 var birthday = DateTime.SpecifyKind(birthdayLocal, DateTimeKind.Utc);
@@ -198,10 +198,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_DateTime_Properties_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_DateTime_Properties_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var birthdayLocal = new DateTime(1942, 8, 1);
                 var birthday = DateTime.SpecifyKind(birthdayLocal, DateTimeKind.Utc);
@@ -244,10 +244,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Numbers_And_Booleans(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Numbers_And_Booleans(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -282,10 +282,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_Numbers_And_Booleans_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_Numbers_And_Booleans_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -320,10 +320,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_Inside_Select_Nested(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_Inside_Select_Nested(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -358,10 +358,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_Inside_Select_Nested_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_Inside_Select_Nested_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -396,10 +396,10 @@ namespace SlowTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Simple_Let(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Simple_Let(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -434,10 +434,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_Simple_Let_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_Simple_Let_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -472,10 +472,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Let(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Let(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -510,10 +510,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_Let_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_Let_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -548,10 +548,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Multiple_Lets(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Multiple_Lets(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -590,10 +590,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_Multiple_Lets_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_Multiple_Lets_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -632,10 +632,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_Throw_When_Let_Is_Before_Where(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_Throw_When_Let_Is_Before_Where(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -659,10 +659,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Should_Throw_When_Let_Is_Before_Where_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Should_Throw_When_Let_Is_Before_Where_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -686,10 +686,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_Where_and_Load(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_Where_and_Load(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -728,10 +728,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Function_With_Where_and_Load_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Function_With_Where_and_Load_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -767,10 +767,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_Multiple_Loads(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_Multiple_Loads(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -820,10 +820,10 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Function_With_Multiple_Loads_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Function_With_Multiple_Loads_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -873,10 +873,10 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Let_And_Load(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Let_And_Load(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -921,10 +921,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_Let_And_Load_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_Let_And_Load_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -969,10 +969,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_Where_and_Load_Array(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_Where_and_Load_Array(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1015,10 +1015,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Function_With_Where_and_Load_Array_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Function_With_Where_and_Load_Array_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1061,10 +1061,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_Where_and_Load_List(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_Where_and_Load_List(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1107,10 +1107,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Function_With_Where_and_Load_List_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Function_With_Where_and_Load_List_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1153,10 +1153,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Multiple_Where_And_Let(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Multiple_Where_And_Let(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1202,10 +1202,10 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Functions_With_Multiple_Where_And_Let_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Functions_With_Multiple_Where_And_Let_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1251,10 +1251,10 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_Math_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_Math_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1284,10 +1284,10 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Project_Into_Class(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Project_Into_Class(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1316,10 +1316,10 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Project_Into_Class_With_Let(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Project_Into_Class_With_Let(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1358,10 +1358,10 @@ from 'Users' as user select output(user)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_DateTime_Object(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_DateTime_Object(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1396,10 +1396,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Escape_Hatch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Escape_Hatch(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1429,10 +1429,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Escape_Hatch_Inside_LetUTC(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Escape_Hatch_Inside_LetUTC(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var birthdayLocal = new DateTime(1942, 8, 1);
                 var birthday = DateTime.SpecifyKind(birthdayLocal, DateTimeKind.Utc);
@@ -1485,10 +1485,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory(Skip = "This test will fail as long as we set UTC time zone to JS engine")]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Escape_Hatch_Inside_LetLocal(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Escape_Hatch_Inside_LetLocal(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var birthday = new DateTime(1942, 8, 1);
 
@@ -1545,10 +1545,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_Escape_Hatch_With_Path(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_Escape_Hatch_With_Path(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1577,10 +1577,10 @@ from 'Users' as u select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_Complex_Loads(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_Complex_Loads(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1640,10 +1640,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_Throw_With_Proper_Message_When_Using_Wrong_Load(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_Throw_With_Proper_Message_When_Using_Wrong_Load(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1672,10 +1672,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_ToList_And_ToArray(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_ToList_And_ToArray(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1718,10 +1718,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_Null_Coalescing_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_Null_Coalescing_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1760,10 +1760,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_ValueTypeParse_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_ValueTypeParse_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1824,10 +1824,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_Nested_Conditional_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_Nested_Conditional_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1876,10 +1876,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_String_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_String_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1980,10 +1980,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_ToDictionary_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_ToDictionary_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2043,10 +2043,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_First_And_FirstOrDefault_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_First_And_FirstOrDefault_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2097,10 +2097,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_Nested_Query(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_Nested_Query(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2156,10 +2156,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Query_On_Index_With_Load(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Query_On_Index_With_Load(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
                 {
@@ -2210,10 +2210,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Query_On_Index_With_Load_Into_Class(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Query_On_Index_With_Load_Into_Class(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
                 {
@@ -2264,10 +2264,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_GetMetadataFor(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_GetMetadataFor(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2308,10 +2308,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Custom_Function_With_GetMetadataFor_Async(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Custom_Function_With_GetMetadataFor_Async(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2352,10 +2352,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_Static_Value(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_Static_Value(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2397,10 +2397,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_RavenQueryMetadata(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_RavenQueryMetadata(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2441,10 +2441,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task QueryCompareExchangeValue(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task QueryCompareExchangeValue(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
                 var result = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
@@ -2476,10 +2476,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SingleProjectionQueryCompareExchange(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SingleProjectionQueryCompareExchange(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
                 var result = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
@@ -2505,10 +2505,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task QueryCompareExchangeInnerValue(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task QueryCompareExchangeInnerValue(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User
                 {
@@ -2544,10 +2544,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void QueryCompareExchangeWithNullValue(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void QueryCompareExchangeWithNullValue(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2694,10 +2694,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_Add_An_Alias_To_Where_Tokens(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_Add_An_Alias_To_Where_Tokens(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2752,10 +2752,10 @@ from 'Users' as u load u?.FriendId as _doc_0 select output(u, _doc_0)", query.To
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_Sum(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_Sum(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var o1 = new Order
                 {
@@ -2856,12 +2856,12 @@ from 'Orders' as o select output(o)", complexLinqQuery.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_project_id_property_to_any_name(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_project_id_property_to_any_name(Options options)
         {
             //https://issues.hibernatingrhinos.com/issue/RavenDB-9260
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2909,10 +2909,10 @@ from 'Orders' as o load o?.Employee as employee select output(o, employee)", que
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_quote_alias_if_its_a_reserved_word(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_quote_alias_if_its_a_reserved_word(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2950,10 +2950,10 @@ from 'Orders' as o load o?.Employee as employee select output(o, employee)", que
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Function_With_ToString(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Function_With_ToString(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2993,10 +2993,10 @@ from 'Orders' as o load o?.Employee as employee select output(o, employee)", que
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_Linq_Methods_Support(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_Linq_Methods_Support(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var user = new User
                 {
@@ -3074,10 +3074,10 @@ from 'Orders' as o load o?.Employee as employee select output(o, employee)", que
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_With_Argument_That_Has_Computation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_With_Argument_That_Has_Computation(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3146,10 +3146,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Project_With_Json_Property_Rename(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Project_With_Json_Property_Rename(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 session.Store(new Document
@@ -3195,10 +3195,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_DefaultIfEmpty(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_DefaultIfEmpty(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var lists = new Lists
                 {
@@ -3248,10 +3248,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_SelectMany(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_SelectMany(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var nestedNode = new Node
                 {
@@ -3309,10 +3309,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Can_SelectMany_From_Dictionary(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Can_SelectMany_From_Dictionary(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -3366,10 +3366,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Nested_Loads_Simple(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Nested_Loads_Simple(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3418,10 +3418,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Custom_Functions_With_Nested_Loads_Complex(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Custom_Functions_With_Nested_Loads_Complex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3486,11 +3486,11 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_SingleDocument_When_Declare(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_SingleDocument_When_Declare(Options options)
         {
             //RavenDB-9637
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3527,12 +3527,12 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_Old_Document_With_Undefined_Member(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_Old_Document_With_Undefined_Member(Options options)
         {
             //RavenDB-9638
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3567,10 +3567,10 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Do_Null_Comparison_On_Undefined_Member(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Do_Null_Comparison_On_Undefined_Member(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3602,10 +3602,10 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void IsNullOrEmptySupport(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void IsNullOrEmptySupport(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3638,10 +3638,10 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void IsNullOrWhitespaceSupport(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void IsNullOrWhitespaceSupport(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3708,10 +3708,10 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void WrappedConstantSupportShouldKnowHowToHandleCallExpressionsOnWrappedConstantObject(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void WrappedConstantSupportShouldKnowHowToHandleCallExpressionsOnWrappedConstantObject(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var birthdayLocal = new DateTime(1942, 8, 1);
                 var birthday = DateTime.SpecifyKind(birthdayLocal, DateTimeKind.Utc);
@@ -3832,10 +3832,10 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
             }
 
             [Theory]
-            [JavaScriptEngineClassData]
-            public void CanProjectWithArrayParameters(string jsEngineType)
+            [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+            public void CanProjectWithArrayParameters(Options options)
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     SetUp(store);
 
@@ -3885,10 +3885,10 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
             }
 
             [Theory]
-            [JavaScriptEngineClassData]
-            public void CanProjectWithListParameters(string jsEngineType)
+            [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+            public void CanProjectWithListParameters(Options options)
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     SetUp(store);
 
@@ -3939,10 +3939,10 @@ from 'Orders' as o load o?.Company as company select output(o, company)", query.
             }
 
             [Theory]
-            [JavaScriptEngineClassData]
-            public void CanProjectWithStringParameter(string jsEngineType)
+            [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+            public void CanProjectWithStringParameter(Options options)
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     SetUp(store);
 

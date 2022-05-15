@@ -18,11 +18,11 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanIncrementOnNull(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanIncrementOnNull(Options options)
         {
             var id = "data";
-            using (var ds = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var ds = GetDocumentStore(options))
             {
                 using (var session = ds.OpenAsyncSession())
                 {

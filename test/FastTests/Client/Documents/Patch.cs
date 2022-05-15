@@ -1,4 +1,5 @@
 ﻿using FastTests.Server.JavaScript;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,10 @@ namespace FastTests.Client.Documents
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchOnEnumShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchOnEnumShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(/*Options.ForJavaScriptEngine(jsEngineType)*/))
             {
                 string id;
                 using (var session = store.OpenSession())

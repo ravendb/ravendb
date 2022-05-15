@@ -6,6 +6,7 @@ using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -69,14 +70,15 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanPatch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanPatch(Options options)
+        //Options options
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = stuff };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -114,12 +116,12 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanPatchAndModify(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanPatchAndModify(Options options)
         {
             var user = new User { Numbers = new[] { 66 } };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -141,14 +143,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanPatchComplex(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanPatchComplex(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -208,14 +210,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanAddToArray(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanAddToArray(Options options)
         {
             var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -268,14 +270,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanAddToArrayUsingParamsOverload(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanAddToArrayUsingParamsOverload(Options options)
         {
             var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -326,15 +328,15 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanRemoveFromArray(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanRemoveFromArray(Options options)
         {
             var stuff = new Stuff[2];
             stuff[0] = new Stuff { Key = 6 };
             stuff[1] = new Stuff { Phone = "123456" };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2, 3 } };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -363,14 +365,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanIncrement(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanIncrement(Options options)
         {
             Stuff[] s = new Stuff[3];
             s[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = s };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -404,8 +406,8 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ShouldMergePatchCalls(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldMergePatchCalls(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
@@ -414,7 +416,7 @@ namespace FastTests.Client
             var docId2 = "users/2-A";
 
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -462,8 +464,8 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanRemoveAllFromArray(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanRemoveAllFromArray(Options options)
         {
             var customer = new Customer
             {
@@ -479,7 +481,7 @@ namespace FastTests.Client
                 }
             };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -534,14 +536,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanPatchAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPatchAsync(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = stuff };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -579,12 +581,12 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanPatchAndModifyAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPatchAndModifyAsync(Options options)
         {
             var user = new User { Numbers = new[] { 66 } };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -606,14 +608,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanPatchComplexAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPatchComplexAsync(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -673,14 +675,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanAddToArrayAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanAddToArrayAsync(Options options)
         {
             var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -731,15 +733,15 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanRemoveFromArrayAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanRemoveFromArrayAsync(Options options)
         {
             var stuff = new Stuff[2];
             stuff[0] = new Stuff { Key = 6 };
             stuff[1] = new Stuff { Phone = "123456" };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2, 3 } };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -768,14 +770,14 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanIncrementAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanIncrementAsync(Options options)
         {
             Stuff[] s = new Stuff[3];
             s[0] = new Stuff { Key = 6 };
             var user = new User { Numbers = new[] { 66 }, Stuff = s };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -810,8 +812,8 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ShouldMergePatchCallsAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ShouldMergePatchCallsAsync(Options options)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
@@ -820,7 +822,7 @@ namespace FastTests.Client
             var docId2 = "users/2-A";
 
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -868,8 +870,8 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanRemoveAllFromArrayAsync(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanRemoveAllFromArrayAsync(Options options)
         {
             var customer = new Customer
             {
@@ -885,7 +887,7 @@ namespace FastTests.Client
                 }
             };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -939,10 +941,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchNullField_ExpectFieldSetToNull(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchNullField_ExpectFieldSetToNull(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 string entityId;
                 using (var session = store.OpenSession())
@@ -980,10 +982,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanUseLinq(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanUseLinq(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const string changeVector = "ravendb-logo.png";
                 const string id = "doc";
@@ -1025,10 +1027,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanUseNullableType(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanUseNullableType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "doc";
                 const int newSize = 2;

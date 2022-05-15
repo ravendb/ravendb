@@ -13,8 +13,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Docs_from_two_collections_loaded_to_single_one(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Docs_from_two_collections_loaded_to_single_one(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

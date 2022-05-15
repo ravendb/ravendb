@@ -17,8 +17,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanDisableStrictMode(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanDisableStrictMode(Options options)
         {
             using (var store = GetDocumentStore(new Options
             {

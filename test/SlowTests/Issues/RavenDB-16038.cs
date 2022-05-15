@@ -20,10 +20,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ShouldReturnLastModifiedInUtc(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldReturnLastModifiedInUtc(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

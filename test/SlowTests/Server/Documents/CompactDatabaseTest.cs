@@ -24,8 +24,8 @@ namespace SlowTests.Server.Documents
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanCompactDatabase(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanCompactDatabase(Options options)
         {
             var path = NewDataPath();
             using (var store = GetDocumentStore(new Options

@@ -123,10 +123,10 @@ namespace SlowTests.Verifications
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void SmallLogTransformerTest(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void SmallLogTransformerTest(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var sw = new Stopwatch();
                 sw.Restart();

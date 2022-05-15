@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.ETL
     {
         private const int _waitInterval = 1000;
 
-        private Options GetOptions(string jsEngineType)
+        private Options GetOptions(Options options)
         {
             return Debugger.IsAttached
                 ? new Options { ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Settings[RavenConfiguration.GetKey(x => x.Etl.ExtractAndTransformTimeout)] = "300") }
@@ -209,8 +209,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RavenEtlWithTimeSeries_WhenDefinedLoadBehaviorOfUnEtledCollection_ShouldThrow(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RavenEtlWithTimeSeries_WhenDefinedLoadBehaviorOfUnEtledCollection_ShouldThrow(Options options)
         {
             XunitLogging.EnableExceptionCapture();
             const string script = @"
@@ -303,8 +303,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory(Skip = "RavenDB-17540")]
-        [JavaScriptEngineClassData]
-        public async Task IncrementalEtlShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task IncrementalEtlShouldWork(Options options)
         {
             string[] collections = { "Users" };
             //The script clone because the same object can't be loaded twice - https://issues.hibernatingrhinos.com/issue/RavenDB-15065
@@ -348,8 +348,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory(Skip = "RavenDB-17540")]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithIncrementalTimeSeries(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithIncrementalTimeSeries(Options options)
         {
             const string docId = "users/1";
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
@@ -389,8 +389,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task BlockRavenEtlWithIncrementalTimeSeries(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task BlockRavenEtlWithIncrementalTimeSeries(Options options)
         {
             const string docId = "users/1";
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
@@ -420,8 +420,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndLoadToAnotherCollectionToo_ShouldSrcBeAsDest(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndLoadToAnotherCollectionToo_ShouldSrcBeAsDest(Options options)
         {
             string[] collections = { "Users" };
             //The script clone because the same object can't be loaded twice - https://issues.hibernatingrhinos.com/issue/RavenDB-15065
@@ -464,8 +464,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenLoadToDifferentCollectionAndScriptCheckForTimeSeriesExistence(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenLoadToDifferentCollectionAndScriptCheckForTimeSeriesExistence(Options options)
         {
             const string collection = "Users";
             const string script = @"
@@ -522,8 +522,8 @@ if(timeSeries !== null){
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenLoadTwoRangeAndAdd(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenLoadTwoRangeAndAdd(Options options)
         {
             string[] collections = { "Users" };
             const string script = @"
@@ -572,8 +572,8 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 20), new Date(2
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenUpdateTimeSeriesOfUnloadedDocument(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenUpdateTimeSeriesOfUnloadedDocument(Options options)
         {
             string[] collections = { "Users" };
             string script = @"
@@ -661,7 +661,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
         }
 
         [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
-        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice(RavenTestParameters config)
         {
             const int batchSize = 3;
@@ -811,8 +811,8 @@ function loadCountersOfUsersBehavior(docId, counter)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters2(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters2(Options options)
         {
             const string collection = "Users";
             const string script = @"
@@ -858,8 +858,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeries(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeries(Options options)
         {
             const string collection = "Users";
             const string script = @"
@@ -906,8 +906,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndAttachment(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndAttachment(Options options)
         {
             const string collection = "Users";
             string script = @"
@@ -956,8 +956,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenUseAddAttachmentAndLoadTimeSeriesBehaviorFunctionTogether(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenUseAddAttachmentAndLoadTimeSeriesBehaviorFunctionTogether(Options options)
         {
             const string collection = "Users";
             const string script = @"
@@ -1026,8 +1026,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenUseTimeSeriesExplicitlyWithNoRange(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenUseTimeSeriesExplicitlyWithNoRange(Options options)
         {
             const string collection = "Users";
             const string script = @"
@@ -1271,8 +1271,8 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFromTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFromTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(Options options)
         {
             const string script = @"
 loadToUsers(this);
@@ -1326,8 +1326,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(Options options)
         {
             const string script = @"
 loadToUsers(this);
@@ -1381,8 +1381,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFrom_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFrom_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(Options options)
         {
             const string script = @"
 loadToUsers(this);
@@ -2080,8 +2080,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenConditionallyLoadOneDocumentAndOneNot(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenConditionallyLoadOneDocumentAndOneNot(Options options)
         {
             const string script = @"
 if (this.Age >= 18)
@@ -2155,8 +2155,8 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenLoadDocWithoutTimeSeries_ShouldNotSendCountersMetadata(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenLoadDocWithoutTimeSeries_ShouldNotSendCountersMetadata(Options options)
         {
             const string timeSeriesName = "Heartrate";
             const string tag = "fitbit";
@@ -2197,8 +2197,8 @@ loadToUsers(this);";
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenDefineTwoLoadBehaviorFunctions(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenDefineTwoLoadBehaviorFunctions(Options options)
         {
             string[] collections = { "Users", "Employees" };
             const string script = @"
@@ -2264,8 +2264,8 @@ function loadTimeSeriesOfEmployeesBehavior(doc, timeSeries)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task RavenEtlWithTimeSeries_WhenUseHasTimeSeriesAndGetTimeSeriesInScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RavenEtlWithTimeSeries_WhenUseHasTimeSeriesAndGetTimeSeriesInScript(Options options)
         {
             string[] collections = { "Users", "Employees" };
             const string script = @"

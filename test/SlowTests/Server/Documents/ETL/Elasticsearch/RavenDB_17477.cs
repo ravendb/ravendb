@@ -18,10 +18,10 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchTheory]
-        [JavaScriptEngineClassData]
-        public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             using (GetElasticClient(out var client))
             {
                 client.Indices.Create(OrdersIndexName, c => c

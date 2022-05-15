@@ -24,8 +24,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatcherCanOutputObjectsCorrectly(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatcherCanOutputObjectsCorrectly(Options options)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: RavenTestBase.Options.ModifyConfigurationForJavaScriptEngine(jsEngineType)))
             {

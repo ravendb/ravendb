@@ -21,10 +21,10 @@ namespace SlowTests.Client
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void WillPreserverRemovedPropertiesAcrossSaves(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void WillPreserverRemovedPropertiesAcrossSaves(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

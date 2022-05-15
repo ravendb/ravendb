@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString, "V8")]
         public void Can_convert_stored_null_value_and_empty_string(string str, string jsEngineType)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

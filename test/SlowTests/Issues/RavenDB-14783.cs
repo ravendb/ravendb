@@ -22,8 +22,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ShouldWork(Options options)
         {
             var dummyDump = CreateDummyDump(1);
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                 await bjro.WriteJsonToAsync(zipStream);
                 await zipStream.FlushAsync();
                 ms.Position = 0;
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
                     {

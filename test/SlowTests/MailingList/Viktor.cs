@@ -79,10 +79,10 @@ namespace SlowTests.MailingList
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanUseToCharArrayInsideProjection(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanUseToCharArrayInsideProjection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

@@ -150,8 +150,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Script_defined_for_all_documents(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Script_defined_for_all_documents(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -253,8 +253,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

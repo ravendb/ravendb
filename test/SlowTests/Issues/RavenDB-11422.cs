@@ -304,7 +304,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void VerifyIndexScore_Map_JsProjection_CollectionQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -348,7 +348,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void VerifyIndexScore_Map_JsProjection_AutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -393,7 +393,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void VerifyIndexScore_Map_JsProjection_StaticIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -439,7 +439,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void VerifyIndexScore_MapReduce_JsProjection_StaticIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

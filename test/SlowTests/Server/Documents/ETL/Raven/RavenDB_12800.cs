@@ -36,7 +36,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5")
             }))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var dest = GetDocumentStore(options))
             {
                 using (var session = src.OpenSession())
                 {

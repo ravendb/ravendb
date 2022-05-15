@@ -30,8 +30,8 @@ namespace SlowTests.Server.Documents.ETL.Olap
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task OlapTaskShouldBeHighlyAvailable(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task OlapTaskShouldBeHighlyAvailable(Options options)
         {
             var cluster = await CreateRaftCluster(3);
             var leader = cluster.Leader;

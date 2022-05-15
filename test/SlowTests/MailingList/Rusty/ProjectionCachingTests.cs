@@ -16,10 +16,10 @@ namespace SlowTests.MailingList.Rusty
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Projection_Fails_To_Update_Property_After_Associated_Document_Updates(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Projection_Fails_To_Update_Property_After_Associated_Document_Updates(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex( new PersonIndex() );
 
@@ -60,10 +60,10 @@ namespace SlowTests.MailingList.Rusty
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Projection_Updates_Property_When_After_Document_Updates_If_Index_Loads_Association(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Projection_Updates_Property_When_After_Document_Updates_If_Index_Loads_Association(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex( new PersonWithCompanyIndex() );
 

@@ -1797,7 +1797,7 @@ namespace FastTests.Server.Documents.Revisions
         [InlineData(true, "V8")] // TODO [shlomo] to switch on after fix
         public async Task DeleteRevisionsBeforeFromConsole(bool useConsole, string jsEngineType)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 

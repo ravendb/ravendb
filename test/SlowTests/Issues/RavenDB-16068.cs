@@ -237,7 +237,7 @@ namespace SlowTests.Issues
         [InlineData("from @all_docs", "V8")]
         public async Task PatchByStartsWithQuery(string baseQuery, string jsEngineType)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const int totalDocs = 1024 * 2;
                 using (var bulkInsert = store.BulkInsert())
@@ -268,7 +268,7 @@ namespace SlowTests.Issues
         [InlineData("from @all_docs", "V8")]
         public async Task PatchByStartsWithQueryWithNewDocument(string baseQuery, string jsEngineType)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const int totalDocs = 1024 * 2;
                 using (var bulkInsert = store.BulkInsert())

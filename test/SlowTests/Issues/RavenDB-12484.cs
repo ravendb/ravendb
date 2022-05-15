@@ -15,8 +15,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ProjectionAgainstMissingBasicValueTypes(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ProjectionAgainstMissingBasicValueTypes(Options options)
         {
             const string documentId = "document-id";
 

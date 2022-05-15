@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Patching)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUsePagingWhilePatchingOrDeleting(Options options)
         {
             using (var store = GetDocumentStore(options))

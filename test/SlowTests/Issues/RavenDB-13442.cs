@@ -17,10 +17,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_project_with_two_loads_when_2nd_load_argument_defined_in_let_between_the_loads(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_project_with_two_loads_when_2nd_load_argument_defined_in_let_between_the_loads(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 

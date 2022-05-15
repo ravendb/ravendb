@@ -31,14 +31,14 @@ namespace SlowTests.Server.Documents.ETL.Olap
         private const string CollectionName = "Orders";
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanUploadToGoogleCloud(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanUploadToGoogleCloud(Options options)
         {
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -106,14 +106,14 @@ loadToOrders(partitionBy(key),
         }
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task SimpleTransformation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SimpleTransformation(Options options)
         {
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -212,15 +212,15 @@ loadToOrders(partitionBy(key),
         }
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanLoadToMultipleTables(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanLoadToMultipleTables(Options options)
         {
             const string salesTableName = "Sales";
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -393,14 +393,14 @@ loadToOrders(partitionBy(key), orderData);
         }
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanModifyPartitionColumnName(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanModifyPartitionColumnName(Options options)
         {
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     const string partitionColumn = "order_date";
 
@@ -489,13 +489,13 @@ loadToOrders(partitionBy(['order_date', key]),
         }
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task SimpleTransformation_NoPartition(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SimpleTransformation_NoPartition(Options options)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
 
@@ -598,13 +598,13 @@ loadToOrders(noPartition(),
         }
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task SimpleTransformation_MultiplePartitions(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SimpleTransformation_MultiplePartitions(Options options)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = DateTime.SpecifyKind(new DateTime(2020, 1, 1), DateTimeKind.Utc);
 
@@ -683,13 +683,13 @@ loadToOrders(partitionBy(
         }
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanPartitionByCustomDataFieldViaScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPartitionByCustomDataFieldViaScript(Options options)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -757,13 +757,13 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
         }
 
         [GoogleCloudTheory]
-        [JavaScriptEngineClassData]
-        public async Task CanHandleSpecialCharsInFolderPath(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanHandleSpecialCharsInFolderPath(Options options)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+                using (var store = GetDocumentStore(options))
                 {
                     using (var session = store.OpenAsyncSession())
                     {

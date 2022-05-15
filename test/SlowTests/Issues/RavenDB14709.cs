@@ -21,10 +21,10 @@ namespace SlowTests.Issues
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(20);
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanQueryMetadataForSubscriptions(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanQueryMetadataForSubscriptions(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             store.Subscriptions.Create(options: new SubscriptionCreationOptions
             {

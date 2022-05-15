@@ -17,10 +17,10 @@ namespace SlowTests.Verifications
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void TaskLiveProjection(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void TaskLiveProjection(Options options)
         {
-            using (var documentStore = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var documentStore = GetDocumentStore(options))
             {
                 new TaskSummaryIndex().Execute((IDocumentStore)documentStore);
 

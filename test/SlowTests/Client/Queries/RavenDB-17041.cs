@@ -45,7 +45,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task Can_Include_Secondary_Level_With_Alias(Options options)
         {
             using (var store = GetDocumentStore(options))

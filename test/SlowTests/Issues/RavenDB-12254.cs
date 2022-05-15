@@ -28,10 +28,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanUseLetClauseWithConditionalLoad(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanUseLetClauseWithConditionalLoad(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var inputDocumentId = "ravenDocuments/1";
                 var externalDocumentId = "ravenDocuments/100";

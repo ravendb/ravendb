@@ -18,10 +18,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduceWithOutputToCollection().Execute(store);
                 new JavaIndex().Execute(store);
@@ -75,10 +75,10 @@ namespace SlowTests.Issues
 
         // RavenDB-14884
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanCompileScriptWithSwitch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanCompileScriptWithSwitch(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new Index_Rows().Execute(store);
                 var id = "row/1";
@@ -212,7 +212,7 @@ namespace SlowTests.Issues
         private class JavaWithAdditionalSourcesIndex : AbstractJavaScriptIndexCreationTask
         {
             public override string IndexName => "JavaWithAdditionalSourcesIndex";
-            public JavaWithAdditionalSourcesIndex(string jsEngineType)
+            public JavaWithAdditionalSourcesIndex(Options options)
             {
                 Maps = new HashSet<string>
                 {

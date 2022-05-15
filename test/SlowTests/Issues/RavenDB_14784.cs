@@ -61,7 +61,7 @@ namespace SlowTests.Issues
 
         private class Companies_With_Attachments_JavaScript : AbstractJavaScriptIndexCreationTask
         {
-            public Companies_With_Attachments_JavaScript(string jsEngineType)
+            public Companies_With_Attachments_JavaScript(Options options)
             {
                 var optChaining = jsEngineType == "Jint" ? "" : "?";
             
@@ -512,10 +512,10 @@ return attachments.map(attachment => ({
 
         // [shlomo] jint version is going to work after upgrading jint-ravendb
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Index_Attachments_JavaScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Index_Attachments_JavaScript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_With_Attachments_JavaScript(jsEngineType);
                 index.Execute(store);
@@ -710,10 +710,10 @@ return attachments.map(attachment => ({
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Index_Multiple_Attachments_JavaScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Index_Multiple_Attachments_JavaScript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_With_Multiple_Attachments_JavaScript();
                 index.Execute(store);

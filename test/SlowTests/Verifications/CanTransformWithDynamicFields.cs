@@ -147,7 +147,7 @@ namespace SlowTests.Verifications
         }
         
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void WillMapPropertiesOnMapIndexes(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -178,7 +178,7 @@ select {
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void WillMapPropertiesOnMapReduceIndexes(Options options)
         {
             using (var store = GetDocumentStore(options))

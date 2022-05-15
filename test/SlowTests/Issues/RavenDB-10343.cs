@@ -81,7 +81,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanQueryWithLoadFromSelectAndProject(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanQueryWithLoadFromSelectAndProjectWhere(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -309,7 +309,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanQueryWithLoadFromSelectAndProjectWhere_UsingSeassionLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -431,7 +431,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanQueryWithLoadFromSelectAndProjectWhereAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -553,7 +553,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanQueryFromStaticIndexWithLoadFromSelectAndProject(Options options)
         {
             using (var store = GetDocumentStore(options))

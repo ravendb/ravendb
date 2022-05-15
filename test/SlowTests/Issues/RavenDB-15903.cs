@@ -15,10 +15,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Support_TimeSpan_In_Projections(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Support_TimeSpan_In_Projections(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var baseDate = new DateTime(2020, 01, 01, 0, 0, 0, 0);
                 var newDate = baseDate.AddYears(1).AddMonths(3).AddDays(2).AddHours(5).AddMinutes(6).AddSeconds(34).AddMilliseconds(8);

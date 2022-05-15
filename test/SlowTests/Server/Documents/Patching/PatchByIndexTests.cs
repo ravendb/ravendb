@@ -35,10 +35,10 @@ namespace SlowTests.Server.Documents.Patching
         private static readonly TimeSpan CancelAfter = TimeSpan.FromMinutes(10);
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task PatchByIndex_WhenFinish_ShouldFreeInternalUsageMemory(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task PatchByIndex_WhenFinish_ShouldFreeInternalUsageMemory(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var database = await GetDatabase(store.Database);
 

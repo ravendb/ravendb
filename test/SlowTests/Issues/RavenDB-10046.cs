@@ -30,8 +30,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanLoadWithWrappedParameter(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanLoadWithWrappedParameter(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -81,8 +81,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanProjectWithWrappedParameter(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanProjectWithWrappedParameter(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -142,8 +142,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanProjectWithWrappedParameterAndLet(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanProjectWithWrappedParameterAndLet(Options options)
         {
             using (var store = GetDocumentStore())
             {

@@ -20,12 +20,12 @@ namespace SlowTests.Client.Subscriptions
         private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(10);
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ShouldUseIdPropertySupportWhenTranslatingPredicateToJS(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ShouldUseIdPropertySupportWhenTranslatingPredicateToJS(Options options)
         {
             var workspaceId = "workspaces/1";
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

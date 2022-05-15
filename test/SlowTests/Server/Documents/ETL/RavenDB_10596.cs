@@ -20,8 +20,8 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task AggregatesTransformationErrorsInSingleAlert(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task AggregatesTransformationErrorsInSingleAlert(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

@@ -22,10 +22,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanGetArrayWithType(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanGetArrayWithType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var list = new List<int> { 1, 2, 3, 4, 5 };
                 var requestExecuter = store.GetRequestExecutor();
@@ -68,10 +68,10 @@ select doc.Array";
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanGetByteArrayWithType(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanGetByteArrayWithType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var requestExecuter = store.GetRequestExecutor();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))

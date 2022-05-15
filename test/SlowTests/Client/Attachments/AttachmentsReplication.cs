@@ -1924,8 +1924,8 @@ namespace SlowTests.Client.Attachments
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAllMissingAttachmentsAndMergeWithOtherAttachmentsOnResolvedDocument(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAllMissingAttachmentsAndMergeWithOtherAttachmentsOnResolvedDocument(Options options)
         {
             Action<DatabaseRecord> modifyDatabaseRecord1 = record =>
             {
@@ -2052,8 +2052,8 @@ namespace SlowTests.Client.Attachments
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument(Options options)
         {
             Action<DatabaseRecord> modifyDatabaseRecord1 = record =>
             {
@@ -2192,8 +2192,8 @@ namespace SlowTests.Client.Attachments
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ScriptResolver_ShouldNotRemoveAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ScriptResolver_ShouldNotRemoveAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument(Options options)
         {
             Action<DatabaseRecord> modifyDatabaseRecord1 = record =>
             {
@@ -2372,8 +2372,8 @@ namespace SlowTests.Client.Attachments
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ScriptResolver_ShouldNotAddAttachment_ShouldRenameAndMergeDuplicateAttachments(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ScriptResolver_ShouldNotAddAttachment_ShouldRenameAndMergeDuplicateAttachments(Options options)
         {
             Action<DatabaseRecord> modifyDatabaseRecord1 = record =>
             {

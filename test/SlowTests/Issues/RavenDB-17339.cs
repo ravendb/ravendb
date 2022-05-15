@@ -15,10 +15,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanRawProjectOnNestedTypes(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanRawProjectOnNestedTypes(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
             {
                 using var session = store.OpenSession();
                 session.Store(new MyEntity() { Value = 123, Result = new() { RawValue = 1234 } });

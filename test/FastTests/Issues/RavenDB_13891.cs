@@ -16,10 +16,10 @@ namespace FastTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task PatchedDocumentShouldBeReplaced(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task PatchedDocumentShouldBeReplaced(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 string personId = null;
                 using (var s = store.OpenAsyncSession())

@@ -14,10 +14,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void JsConvertorShouldIgnoreValueProperyOfNullable(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void JsConvertorShouldIgnoreValueProperyOfNullable(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {                
                 using (var session = store.OpenSession())
                 {
@@ -57,10 +57,10 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ToDictionaryWithNullableValue(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ToDictionaryWithNullableValue(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var debtor = new Debtor()
                 {

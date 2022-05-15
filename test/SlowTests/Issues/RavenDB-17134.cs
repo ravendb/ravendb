@@ -38,10 +38,10 @@ namespace SlowTests.Issues
         } 
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanProjectNoValuesFromResult(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanProjectNoValuesFromResult(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -72,8 +72,8 @@ select project(u)
         } 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanProjectMultipleValuesFromManyResult(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanProjectMultipleValuesFromManyResult(Options options)
         {
             using var store = GetDocumentStore();
 
@@ -110,10 +110,10 @@ select project(u)
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanProjectMultipleValuesFromSingleResultInCollectionQuery(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanProjectMultipleValuesFromSingleResultInCollectionQuery(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -144,10 +144,10 @@ select project(u)
         } 
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanProjectMultipleValuesFromSingleResultInIndexQuery(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanProjectMultipleValuesFromSingleResultInIndexQuery(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -180,10 +180,10 @@ select project(u)
 
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanProjectTimeSeriesInCollectionQuery(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanProjectTimeSeriesInCollectionQuery(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -220,10 +220,10 @@ select project(e)
         } 
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanProjectTimeSeriesInIndexQuery(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanProjectTimeSeriesInIndexQuery(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {

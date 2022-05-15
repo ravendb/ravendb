@@ -34,8 +34,8 @@ namespace SlowTests.SlowTests.Bugs
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task AwaitAsyncPatchByIndexShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task AwaitAsyncPatchByIndexShouldWork(Options options)
         {
             using (var store = GetDocumentStore(new Options
             {

@@ -74,10 +74,10 @@ namespace SlowTests.MailingList
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchShouldWorkCorrectly(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchShouldWorkCorrectly(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Proficiencies_ConsultantId());
 

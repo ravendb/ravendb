@@ -229,10 +229,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RawQueryJsProjectionWithCounter(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RawQueryJsProjectionWithCounter(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -268,10 +268,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RawQueryJsProjectionWithCounterRawValues(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RawQueryJsProjectionWithCounterRawValues(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -315,10 +315,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RawQuerySimpleProjectionWithParameters(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RawQuerySimpleProjectionWithParameters(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -359,10 +359,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RawQueryJsProjectionWithParameters(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RawQueryJsProjectionWithParameters(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -519,10 +519,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RawQuerySelectCounterFromLoadedDocJsProjection(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RawQuerySelectCounterFromLoadedDocJsProjection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -570,10 +570,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RawQueryGetCounterValueFromMetadata(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RawQueryGetCounterValueFromMetadata(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -605,10 +605,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void RawQueryGetAllCountersValuesFromMetadata(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void RawQueryGetAllCountersValuesFromMetadata(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1106,10 +1106,10 @@ namespace SlowTests.Client.Counters
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void SessionQuerySelectSingleCounterJsProjection_UsingRavenQueryCounter(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void SessionQuerySelectSingleCounterJsProjection_UsingRavenQueryCounter(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1153,10 +1153,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void SessionQuerySelectSingleCounterJsProjection_UsingSessionCountersFor(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void SessionQuerySelectSingleCounterJsProjection_UsingSessionCountersFor(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1247,10 +1247,10 @@ namespace SlowTests.Client.Counters
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void SessionQuerySelectCounterViaLet(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void SessionQuerySelectCounterViaLet(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1299,10 +1299,10 @@ from 'Users' as user select output(user)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void SessionQuerySelectCounterViaLet_UsingSessionCountersFor(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void SessionQuerySelectCounterViaLet_UsingSessionCountersFor(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1351,10 +1351,10 @@ from 'Users' as user select output(user)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void SessionQuerySelectCounterFromLoadedDocJsProjection(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void SessionQuerySelectCounterFromLoadedDocJsProjection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3076,10 +3076,10 @@ from 'Users' as user select output(user)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task AsyncSessionQueryIncludeCountersUsingFromAliasWithSelectAndWhere(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task AsyncSessionQueryIncludeCountersUsingFromAliasWithSelectAndWhere(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

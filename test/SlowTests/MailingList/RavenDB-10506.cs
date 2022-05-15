@@ -15,10 +15,10 @@ namespace SlowTests.MailingList
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Projections_with_multiple_Loads_using_complex_id_reference(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Projections_with_multiple_Loads_using_complex_id_reference(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

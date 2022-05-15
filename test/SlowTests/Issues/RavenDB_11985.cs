@@ -59,10 +59,10 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void JSShouldReceiveValidStoredObjectsArray(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void JSShouldReceiveValidStoredObjectsArray(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new UsersIndexWithStoredArray().Execute(store);
                 using (var session = store.OpenSession())
@@ -105,10 +105,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void MakeSureStoredInexedValueIsNotStoredInDocumentDuringPatchOperation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void MakeSureStoredInexedValueIsNotStoredInDocumentDuringPatchOperation(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new UsersIndexWithStoredArray().Execute(store);
                 using (var session = store.OpenSession())

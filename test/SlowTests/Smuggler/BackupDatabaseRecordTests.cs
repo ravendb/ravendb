@@ -1196,12 +1196,12 @@ namespace SlowTests.Smuggler
             }
 
         [Theory, Trait("Category", "Smuggler")]
-        [JavaScriptEngineClassData]
-        public async Task CanRestoreSubscriptionsFromBackup(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanRestoreSubscriptionsFromBackup(Options options)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();

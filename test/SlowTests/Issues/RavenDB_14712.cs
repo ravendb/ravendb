@@ -18,10 +18,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void JavaScriptIndexesShouldNotIndexImplicitNullValues(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void JavaScriptIndexesShouldNotIndexImplicitNullValues(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 JsIndex index = jsEngineType == "Jint" ? new JsIndexJint() : new JsIndexV8();
                 index.Execute(store);
@@ -189,7 +189,7 @@ namespace SlowTests.Issues
 
         private class JsIndex : AbstractJavaScriptIndexCreationTask
         {
-            public JsIndex(string jsEngineType)
+            public JsIndex(Options options)
             {
                 var optChaining = jsEngineType == "Jint" ? "" : "?";
 

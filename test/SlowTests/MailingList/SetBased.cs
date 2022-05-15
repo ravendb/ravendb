@@ -38,10 +38,10 @@ namespace SlowTests.MailingList
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanSetPropertyOnArrayItem(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanSetPropertyOnArrayItem(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var commands = store.Commands())
                 {

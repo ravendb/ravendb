@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.ETL
         protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(string jsEngineType, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null)
         {
             _src = GetDocumentStore(srcOptions?.SetJavaScriptEngine(jsEngineType) ?? Options.ForJavaScriptEngine(jsEngineType));
-            var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            var dest = GetDocumentStore(options);
 
             var result = AddEtl(_src, dest, collections, script, applyToAllDocuments);
             return (_src, dest, result);

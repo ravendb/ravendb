@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using FastTests;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Config;
 using Xunit.Sdk;
 
@@ -23,9 +24,18 @@ public enum RavenDatabaseMode : byte
     All = Single | Sharded
 }
 
+[Flags]
+public enum RavenJavascriptEngineMode : byte
+{
+    V8 = 1 << 1,
+    Jint = 1 << 2,
+    All = V8 | Jint
+}
+
 public class RavenDataAttribute : DataAttribute
 {
     public RavenSearchEngineMode SearchEngineMode { get; set; } = RavenSearchEngineMode.Lucene;
+    public RavenJavascriptEngineMode JavascriptEngineMode { get; set; } = RavenJavascriptEngineMode.Jint;
 
     public RavenDatabaseMode DatabaseMode { get; set; } = RavenDatabaseMode.Single;
 
@@ -44,19 +54,22 @@ public class RavenDataAttribute : DataAttribute
     {
         foreach (var (databaseMode, options) in GetOptions(DatabaseMode))
         {
-            foreach (var (searchMode, o) in FillOptions(options, SearchEngineMode))
+            foreach (var (searchMode, o1) in FillSearchOptions(options, SearchEngineMode))
             {
-                var length = 1;
-                if (Data is { Length: > 0 })
-                    length += Data.Length;
+                foreach (var (_, o) in FillJavascriptEngineOptions(o1, JavascriptEngineMode))
+                {
+                    var length = 1;
+                    if (Data is { Length: > 0 })
+                        length += Data.Length;
 
-                var array = new object[length];
-                array[0] = o;
+                    var array = new object[length];
+                    array[0] = o;
 
-                for (var i = 1; i < array.Length; i++)
-                    array[i] = Data[i - 1];
+                    for (var i = 1; i < array.Length; i++)
+                        array[i] = Data[i - 1];
 
-                yield return array;
+                    yield return array;
+                }
             }
         }
     }
@@ -70,7 +83,7 @@ public class RavenDataAttribute : DataAttribute
             yield return (RavenDatabaseMode.Sharded, RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
     }
 
-    internal static IEnumerable<(RavenSearchEngineMode SearchMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
+    internal static IEnumerable<(RavenSearchEngineMode SearchEngineMode, RavenTestBase.Options Options)> FillSearchOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
     {
         if (mode.HasFlag(RavenSearchEngineMode.Corax))
         {
@@ -97,5 +110,42 @@ public class RavenDataAttribute : DataAttribute
             luceneOptions.AddToDescription($", {nameof(RavenDataAttribute.SearchEngineMode)} = {nameof(RavenSearchEngineMode.Lucene)}");
             yield return (RavenSearchEngineMode.Lucene, luceneOptions);
         }
+    }
+
+    internal static IEnumerable<(RavenJavascriptEngineMode JavascriptEngineMode, RavenTestBase.Options Options)> FillJavascriptEngineOptions(RavenTestBase.Options options, RavenJavascriptEngineMode mode)
+    {
+        var cloned = options.Clone();
+        if (mode.HasFlag(RavenJavascriptEngineMode.Jint))
+        {
+            cloned.JavascriptEngineMode = RavenJavascriptEngineMode.Jint;
+
+            cloned.ModifyDatabaseRecord += record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = JavaScriptEngineType.Jint.ToString();
+            };
+
+            yield return (RavenJavascriptEngineMode.Jint, cloned);
+        }
+        else if (mode.HasFlag(RavenJavascriptEngineMode.V8))
+        {
+            cloned.JavascriptEngineMode = RavenJavascriptEngineMode.V8;
+
+            cloned.ModifyDatabaseRecord += record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = JavaScriptEngineType.V8.ToString();
+            };
+
+            yield return (RavenJavascriptEngineMode.V8, cloned);
+        }
+        else
+        {
+            if (mode.HasFlag(RavenJavascriptEngineMode.All))
+            {
+                //TODO: egor throw?
+            }
+
+            //TODO: egor throw?
+        }
+
     }
 }

@@ -21,10 +21,10 @@ namespace SlowTests.Client.Subscriptions
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportStartsWith(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportStartsWith(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -68,10 +68,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportEndsWith(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportEndsWith(Options options)
         {            
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -115,10 +115,10 @@ namespace SlowTests.Client.Subscriptions
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportRegex(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportRegex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -166,10 +166,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportExists(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportExists(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -209,10 +209,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportIntersect(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportIntersect(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -252,10 +252,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportIntersectWithComplexRegex(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportIntersectWithComplexRegex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -295,10 +295,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportStartsWithWithEscapedValues(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportStartsWithWithEscapedValues(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
@@ -338,10 +338,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task SubscriptionsRQLSupportEscapedValue(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task SubscriptionsRQLSupportEscapedValue(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {

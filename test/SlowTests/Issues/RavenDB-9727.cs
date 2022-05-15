@@ -13,10 +13,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_with_Argument_that_has_String_Interpolation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_with_Argument_that_has_String_Interpolation(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -62,10 +62,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_inside_Select_with_Argument_Predefined_in_Let_that_has_Complex_String_Interpolation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_inside_Select_with_Argument_Predefined_in_Let_that_has_Complex_String_Interpolation(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -118,10 +118,10 @@ from 'Users' as u select output(u, $p0, $p1)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_inside_Let_with_Argument_Predefined_in_Let_that_has_String_Interpolation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_inside_Let_with_Argument_Predefined_in_Let_that_has_String_Interpolation(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

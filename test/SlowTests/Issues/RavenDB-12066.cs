@@ -14,12 +14,12 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void FilteredMinAndMaxProjectionAgainstEmptyCollection(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void FilteredMinAndMaxProjectionAgainstEmptyCollection(Options options)
         {
             const string documentId = "document-id";
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

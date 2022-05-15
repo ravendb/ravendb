@@ -17,8 +17,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_handle_attachments(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_handle_attachments(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -167,8 +167,8 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_use_get_attachments(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_use_get_attachments(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -223,8 +223,8 @@ for (var i = 0; i < attachments.length; i++) {
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_use_has_attachment(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_use_has_attachment(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

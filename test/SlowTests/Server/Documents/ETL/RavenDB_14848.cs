@@ -60,8 +60,8 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ShouldResetEtl(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldResetEtl(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

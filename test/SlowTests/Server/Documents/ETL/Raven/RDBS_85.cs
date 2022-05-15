@@ -18,8 +18,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task MustNotSkipAnyDocumentsIfTaskIsCanceledDuringLoad(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task MustNotSkipAnyDocumentsIfTaskIsCanceledDuringLoad(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -86,8 +86,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task MustNotSkipAnyDocumentsIfLoadFailsAndThereWereSomeInternalFiltering(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task MustNotSkipAnyDocumentsIfLoadFailsAndThereWereSomeInternalFiltering(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

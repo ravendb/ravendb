@@ -15,9 +15,9 @@ namespace SlowTests.Queries
         {
         }
 
-        protected DocumentStore GetLoadedStore(string jsEngineType)
+        protected DocumentStore GetLoadedStore(Options options)
         {
-            var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            var store = GetDocumentStore(options);
             using (var session = store.OpenSession())
             {
                 session.Store(new Category());
@@ -97,8 +97,8 @@ namespace SlowTests.Queries
             }
         }
         [Theory]
-        [JavaScriptEngineClassData]
-        public void QueriesUsingArrowFunc(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void QueriesUsingArrowFunc(Options options)
         {
             var actual = Query(jsEngineType, @"
 from Employees as e

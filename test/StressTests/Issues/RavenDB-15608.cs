@@ -18,10 +18,10 @@ namespace StressTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ArtificalDocumentsMatchIndexEntries(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ArtificalDocumentsMatchIndexEntries(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 await new SeasonHarvestEstimates_ByDeliverySite().ExecuteAsync(store);
 

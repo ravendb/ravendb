@@ -151,7 +151,7 @@ namespace SlowTests.Core.Commands
         }
 
         [RavenTheory(RavenTestCategory.Patching)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanDeleteAndUpdateDocumentByIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

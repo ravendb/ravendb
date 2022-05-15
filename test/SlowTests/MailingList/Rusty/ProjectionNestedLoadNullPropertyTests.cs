@@ -15,10 +15,10 @@ namespace SlowTests.MailingList.Rusty
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Projection_Returns_Null_For_Nested_Property(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Projection_Returns_Null_For_Nested_Property(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

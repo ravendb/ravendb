@@ -19,10 +19,10 @@ namespace SlowTests.Server.Documents.ETL.Olap
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task ShouldNotReuseCustomPartitionFromPreviousTestRun(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task ShouldNotReuseCustomPartitionFromPreviousTestRun(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var baseline = new DateTime(2020, 1, 1);
 

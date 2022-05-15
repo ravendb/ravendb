@@ -13,10 +13,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanPatchNestedSubclass(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanPatchNestedSubclass(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var cat = new Pet { Id = Guid.NewGuid().ToString(), Name = "Cat" };
                 var john = new Person { Id = Guid.NewGuid().ToString(), Name = "John", Pet = cat };

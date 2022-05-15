@@ -103,8 +103,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanUsePatchWithNodaTime(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanUsePatchWithNodaTime(Options options)
         {
             using (var store = GetDocumentStore(new Options
             {

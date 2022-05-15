@@ -16,8 +16,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void StoreAllFields_Test(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void StoreAllFields_Test(Options options)
         {
             TestDocument documentInInterest = new TestDocument
             {
@@ -25,7 +25,7 @@ namespace SlowTests.Issues
                 ArrayOfStrings = new string[] { "123", "234", "345" }
             };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new MyIndex());
                 store.ExecuteIndex(new MyJSIndex());

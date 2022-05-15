@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void LoadingDocumentInProjectionUsingStoredIndexIdInMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))

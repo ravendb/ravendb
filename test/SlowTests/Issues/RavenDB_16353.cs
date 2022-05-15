@@ -33,8 +33,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Can_Use_No_Tracking_For_Referenced_Items_JavaScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Can_Use_No_Tracking_For_Referenced_Items_JavaScript(Options options)
         {
             var productsBySupplierNoTracking = new Products_BySupplier_NoTracking_JavaScript();
             var productsBySupplier = new Products_BySupplier_JavaScript();

@@ -19,10 +19,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Can_Generate_Correct_Javascript_Projection_for_IDictionary(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Can_Generate_Correct_Javascript_Projection_for_IDictionary(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(

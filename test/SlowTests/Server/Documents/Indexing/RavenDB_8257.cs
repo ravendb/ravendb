@@ -41,10 +41,10 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ReduceIndexProjectionWithoutStoredFields(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ReduceIndexProjectionWithoutStoredFields(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new ReduceIndex().Execute(store);
 
@@ -69,10 +69,10 @@ Count: user.Count
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ReduceIndexProjectionWithStoredFields(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ReduceIndexProjectionWithStoredFields(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new ReduceIndex().Execute(store);
 

@@ -19,10 +19,10 @@ namespace SlowTests.Issues
         }
                         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanHaveArrayInMetadata(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanHaveArrayInMetadata(Options options)
         {             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {             
                 using (var session = store.OpenSession())
                 {

@@ -16,10 +16,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task JsConverterShouldNotStripValueOrKeyFromDictionaryEntity(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task JsConverterShouldNotStripValueOrKeyFromDictionaryEntity(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
             using var session = store.OpenAsyncSession();
 
             var u1 = new User

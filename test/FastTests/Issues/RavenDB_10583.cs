@@ -24,8 +24,8 @@ namespace FastTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void TranslateEnumAsString(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void TranslateEnumAsString(Options options)
         {
             using (var store = GetDocumentStore(new Options()
             {
@@ -63,8 +63,8 @@ namespace FastTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void TranslateEnumAsInteger(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void TranslateEnumAsInteger(Options options)
         {
             using (var store = GetDocumentStore(new Options()
             {

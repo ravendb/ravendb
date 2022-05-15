@@ -22,11 +22,11 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanQueryMinMaxDatesCoalescing(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanQueryMinMaxDatesCoalescing(Options options)
         {
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

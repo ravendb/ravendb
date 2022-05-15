@@ -23,8 +23,8 @@ namespace RachisTests
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected(Options options)
         {
             var customSettings = new Dictionary<string, string>();
             customSettings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = jsEngineType;
@@ -51,8 +51,8 @@ namespace RachisTests
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task FollowerCanCecedeFromCluster(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task FollowerCanCecedeFromCluster(Options options)
         {
             var customSettings = new Dictionary<string, string>();
             customSettings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = jsEngineType;

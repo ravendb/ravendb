@@ -344,7 +344,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_Project_Into_Class(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
@@ -392,7 +392,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_Project_Into_Class_With_Let(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
@@ -675,7 +675,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void PatchOnEnumShouldWork(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
@@ -754,7 +754,7 @@ from 'Users' as user select output(user)", queryAsString);
         private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanPatch(RavenTestParameters config)
         {
             var stuff = new Stuff[3];
@@ -863,7 +863,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanPatchComplex(RavenTestParameters config)
         {
             var stuff = new Stuff[3];
@@ -1073,7 +1073,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanAddToArray(RavenTestParameters config)
         {
             var stuff = new Stuff[1];
@@ -1151,7 +1151,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanRemoveFromArray(RavenTestParameters config)
         {
             var stuff = new Stuff[2];
@@ -1206,7 +1206,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanIncrement(RavenTestParameters config)
         {
             Stuff[] s = new Stuff[3];
@@ -1265,7 +1265,7 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void ShouldMergePatchCalls(RavenTestParameters config)
         {
             var stuff = new Stuff[3];

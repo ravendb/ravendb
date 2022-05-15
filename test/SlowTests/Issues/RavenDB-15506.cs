@@ -30,10 +30,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanUseInOnMetadataInSubscription(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanUseInOnMetadataInSubscription(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
             using (var s = store.OpenAsyncSession())
             {
                 await s.StoreAsync(new Item());
@@ -68,10 +68,10 @@ where doc.'@metadata'.'@collection' in ('Items','Users')"
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanUseMetadataUsingOr(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanUseMetadataUsingOr(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
             using (var s = store.OpenAsyncSession())
             {
                 await s.StoreAsync(new Item());

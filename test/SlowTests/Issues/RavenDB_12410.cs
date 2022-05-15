@@ -44,8 +44,8 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Nested_Documents_Get_Patched(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Nested_Documents_Get_Patched(Options options)
         {
             var now = DateTime.Now;
 
@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                 StamInteger = 322
             };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

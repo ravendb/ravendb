@@ -179,8 +179,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanPassNodeTagToRestorePatchOperation(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanPassNodeTagToRestorePatchOperation(Options options)
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();

@@ -18,10 +18,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_RQL(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_RQL(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -61,10 +61,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Javascript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Javascript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -105,10 +105,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Both_RQL_and_Javascript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Both_RQL_and_Javascript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -150,10 +150,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_Let_with_From_Alias_thats_a_Reserved_Word_in_RQL(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_Let_with_From_Alias_thats_a_Reserved_Word_in_RQL(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -205,10 +205,10 @@ from 'Orders' as __alias0 where __alias0.Company = $p0 select output(__alias0)",
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_Let_with_Multipule_Aliases_that_are_Reserved_Words_in_RQL(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_Let_with_Multipule_Aliases_that_are_Reserved_Words_in_RQL(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -290,10 +290,10 @@ from 'Orders' as __alias0 select output(__alias0)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_via_Let_with_Alias_Thats_a_Reserved_Word_in_RQL(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_via_Let_with_Alias_Thats_a_Reserved_Word_in_RQL(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -333,10 +333,10 @@ from 'Orders' as o load o?.Company as __alias0 select output(o, __alias0)", quer
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_RQL(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_RQL(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -388,10 +388,10 @@ from 'Orders' as o load o?.Company as __alias0 select output(o, __alias0)".Repla
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_do_Multipule_Loads_Where_1st_has_Alias_thats_a_Reserved_Word_and_2nd_has_LoadArg_thats_dependent_on_the_1st_Alias(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_do_Multipule_Loads_Where_1st_has_Alias_thats_a_Reserved_Word_and_2nd_has_LoadArg_thats_dependent_on_the_1st_Alias(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -452,10 +452,10 @@ from 'Orders' as o load o?.Company as __alias0 select output(o, __alias0)", quer
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_Let_with_Variable_Name_thats_a_Reserved_Word_in_Javascript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_Let_with_Variable_Name_thats_a_Reserved_Word_in_Javascript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -504,10 +504,10 @@ from 'Orders' as o select output(o)", query.ToString());
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_Javascript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_Javascript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -604,10 +604,10 @@ from 'Orders' as o load o?.Company as _function select output(o, _function)", qu
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_RQL_Reserved_Words_As_Projections_Names_Complex(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Use_RQL_Reserved_Words_As_Projections_Names_Complex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

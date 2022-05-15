@@ -14,10 +14,10 @@ namespace SlowTests.SlowTests
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanIterateOverBlittableProperties(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanIterateOverBlittableProperties(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

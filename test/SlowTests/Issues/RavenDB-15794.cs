@@ -19,7 +19,7 @@ namespace SlowTests.Issues
 
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CirclesShouldIntersect(Options options)
         {
             using (var store = GetDocumentStore(options))

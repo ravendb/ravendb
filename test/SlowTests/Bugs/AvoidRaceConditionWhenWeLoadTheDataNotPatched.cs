@@ -20,10 +20,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void GetReturnsFilteredResults(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void GetReturnsFilteredResults(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var users = new[]
                 {

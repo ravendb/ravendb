@@ -18,10 +18,10 @@ namespace FastTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void TranslateMathRound(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void TranslateMathRound(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

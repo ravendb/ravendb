@@ -18,10 +18,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void AfterIncrementingMultipleCountersByScriptMetadataShouldHaveAllCountersNames(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void AfterIncrementingMultipleCountersByScriptMetadataShouldHaveAllCountersNames(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var testDoc = new TestDoc
                 {
@@ -90,10 +90,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanModifyDocAndIncrementCounterInSameScript(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanModifyDocAndIncrementCounterInSameScript(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var testDoc = new TestDoc
                 {
@@ -145,10 +145,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void DeletingCountersViaScriptShouldRemoveDeletedCountersNamesFromMetadata(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void DeletingCountersViaScriptShouldRemoveDeletedCountersNamesFromMetadata(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var testDoc = new TestDoc
                 {

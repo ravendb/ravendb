@@ -19,10 +19,10 @@ namespace SlowTests.Issues
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchShouldThrowIfAllowStaleIsSetToFalseAndTimeoutHasPassed(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchShouldThrowIfAllowStaleIsSetToFalseAndTimeoutHasPassed(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_ByName();
                 index.Execute(store);

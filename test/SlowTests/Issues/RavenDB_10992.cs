@@ -49,8 +49,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanGetDefaultNonSerializedEnumValue(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanGetDefaultNonSerializedEnumValue(Options options)
         {
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;
             using (var store = GetDocumentStore(options: new Options

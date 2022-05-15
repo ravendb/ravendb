@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanDoMapOnObject(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -76,7 +76,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanDoMapOnObject2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -108,7 +108,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanDoMapOnObject3(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -145,7 +145,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanDoMapOnObject4(Options options)
         {
             using (var store = GetDocumentStore(options))

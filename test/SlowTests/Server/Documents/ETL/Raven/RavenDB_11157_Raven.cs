@@ -121,8 +121,8 @@ function loadCountersOfUsersBehavior(doc, counter)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_not_send_counters_metadata_when_using_script(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_not_send_counters_metadata_when_using_script(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -163,8 +163,8 @@ function loadCountersOfUsersBehavior(doc, counter)
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_handle_counters(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_handle_counters(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -299,8 +299,8 @@ person.addCounter(loadCounter('down'));
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_use_get_counters(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_use_get_counters(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -355,8 +355,8 @@ for (var i = 0; i < counters.length; i++) {
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_remove_counter_if_add_counter_gets_null_argument(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_remove_counter_if_add_counter_gets_null_argument(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -428,8 +428,8 @@ doc.addCounter(loadCounter('likes'));
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_use_has_counter(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_use_has_counter(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -768,8 +768,8 @@ if (hasCounter('down')) {
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_handle_counters_according_to_behavior_defined_in_script(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_handle_counters_according_to_behavior_defined_in_script(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -858,8 +858,8 @@ function loadCountersOfUsersBehavior(docId, counter)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -908,8 +908,8 @@ loadToUsers(this);");
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(Options options)
         {
             using (var src = GetDocumentStore(new Options()
             {
@@ -1001,8 +1001,8 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Load_counters_behavior_function_can_use_other_function_defined_in_script(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Load_counters_behavior_function_can_use_other_function_defined_in_script(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
@@ -1093,8 +1093,8 @@ function loadCountersOfUsersBehavior(docId, counter)
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_define_multiple_load_counter_behavior_functions(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_define_multiple_load_counter_behavior_functions(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))

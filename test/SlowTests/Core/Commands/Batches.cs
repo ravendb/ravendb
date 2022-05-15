@@ -20,10 +20,10 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanDoBatchOperations(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanDoBatchOperations(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

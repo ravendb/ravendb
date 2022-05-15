@@ -17,7 +17,7 @@ namespace SlowTests.Bugs.LiveProjections
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void ComplexLiveProjection(Options options)
         {
             using (var documentStore = GetDocumentStore(options))

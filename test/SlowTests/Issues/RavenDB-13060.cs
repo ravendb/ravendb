@@ -15,10 +15,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_project_using_let_and_have_nested_query_with_let_that_refers_to_the_outer_let(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_project_using_let_and_have_nested_query_with_let_that_refers_to_the_outer_let(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 const string categoryListId = "reference/categoryList";

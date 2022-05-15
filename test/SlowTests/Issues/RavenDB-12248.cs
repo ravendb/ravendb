@@ -35,8 +35,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchShouldRespectTypeOfSubclass(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchShouldRespectTypeOfSubclass(Options options)
         {
             var entity = new Entity
             {
@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                 }
             };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {             
                 using (var session = store.OpenSession())
                 {
@@ -77,8 +77,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchOnNestedPropertyShouldRespectTypeOfSubclass(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchOnNestedPropertyShouldRespectTypeOfSubclass(Options options)
         {
             var entity = new Entity
             {
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
                 }
             };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -122,8 +122,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchOnArrayElementShouldRespectTypeOfSubclass(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchOnArrayElementShouldRespectTypeOfSubclass(Options options)
         {
             var entity = new Entity
             {
@@ -146,7 +146,7 @@ namespace SlowTests.Issues
                 }
             };
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

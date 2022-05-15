@@ -13,10 +13,10 @@ namespace SlowTests.Issues
     public class RavenDB_16031 : RavenTestBase
     {
         [Theory]
-        [JavaScriptEngineClassData]
-        public void ShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new Index_TestGrouping4().Execute(store);
                 using (var session = store.OpenSession())

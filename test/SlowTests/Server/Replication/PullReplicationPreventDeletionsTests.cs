@@ -30,8 +30,9 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
-        public async Task PreventDeletionOnHubSinkCompromised()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task PreventDeletionOnHubSinkCompromised(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
@@ -154,8 +155,9 @@ namespace SlowTests.Server.Replication
             Assert.True(result, lastError);
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
-        public async Task DeleteWhenAcceptSinkDeletionsFlagOff()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task DeleteWhenAcceptSinkDeletionsFlagOff(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates

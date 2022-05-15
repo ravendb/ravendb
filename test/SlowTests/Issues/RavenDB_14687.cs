@@ -21,8 +21,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task IndexSpecificSettingShouldBeRespected(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task IndexSpecificSettingShouldBeRespected(Options options)
         {
             var initialStrictModeForScript = false;
             var initialMaxStepsForScript = 10;

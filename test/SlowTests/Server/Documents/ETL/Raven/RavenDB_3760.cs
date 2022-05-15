@@ -19,11 +19,11 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_use_metadata_in_transform_script(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_use_metadata_in_transform_script(Options options)
         {
-            using (var master = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var slave = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -56,8 +56,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Null_returned_from_script_means_that_document_is_filtered_out(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Null_returned_from_script_means_that_document_is_filtered_out(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var master = GetDocumentStore(options))

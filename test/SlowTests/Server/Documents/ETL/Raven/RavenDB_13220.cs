@@ -18,8 +18,8 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Etl_from_encrypted_to_non_encrypted_db_will_work(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Etl_from_encrypted_to_non_encrypted_db_will_work(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -114,8 +114,8 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var srcDbName = GetDatabaseName();

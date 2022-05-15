@@ -38,10 +38,10 @@ namespace SlowTests.MailingList
             public IList<string> data { get; set; }
         }
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanSelectValuesWithOnlySingleIdentity(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanSelectValuesWithOnlySingleIdentity(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -90,10 +90,10 @@ namespace SlowTests.MailingList
             }
         }
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task CanSelectValuesWithCollection(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanSelectValuesWithCollection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

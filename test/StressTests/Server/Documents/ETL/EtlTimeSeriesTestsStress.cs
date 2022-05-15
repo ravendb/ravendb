@@ -191,7 +191,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<SuccessTestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<SuccessTestDataType>))]
         [ClassData(typeof(FailedTestDataForDocAndTimeSeriesChangeTracking<FailTestDataType>))]
-        [JavaScriptEngineClassData]
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesInSameSession_ShouldSrcBeAsDest(
             string justForXUint,
             bool shouldEtlTs,
@@ -246,7 +246,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         [Theory]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<TestDataType>))]
-        [JavaScriptEngineClassData]
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task RavenEtlWithTimeSeries_WhenStoreMultipleTimeSeriesOfDocThatHasEtagOfMultipleBatchAhead(
             string justForXUint,
             string[] collections,

@@ -17,8 +17,8 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchPut_WhileContainAttachments_TheNewDocumentShouldNotContainThem(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchPut_WhileContainAttachments_TheNewDocumentShouldNotContainThem(Options options)
         {
             var expectedAttachmentStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6 });
             var employee = new Employee { FirstName = "Avi" };
@@ -27,7 +27,7 @@ namespace SlowTests.Bugs
 
             bool doesHaveAttachments;
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 //Store employee with attachment
                 using (var session = store.OpenSession())
@@ -68,8 +68,8 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void PatchPut_WhileContainCounters_TheNewDocumentShouldNotContainThem(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchPut_WhileContainCounters_TheNewDocumentShouldNotContainThem(Options options)
         {
             var employee = new Employee { FirstName = "Avi" };
             const string newId = "second/1-A";
@@ -77,7 +77,7 @@ namespace SlowTests.Bugs
 
             bool doesHaveCounters;
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 //Store employee with counter
                 using (var session = store.OpenSession())

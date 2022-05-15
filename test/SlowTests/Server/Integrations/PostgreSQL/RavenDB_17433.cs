@@ -176,8 +176,8 @@ limit 1000";
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task QueryWithSingleWhereFilteringAndSelectShouldWork(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task QueryWithSingleWhereFilteringAndSelectShouldWork(Options options)
         {
             const string queryWithSingleWhereCondition = @"select ""_"".""id()"",
     ""_"".""LastName"",
@@ -204,7 +204,7 @@ limit 1000";
 
             DoNotReuseServer(EnablePostgresSqlSettings);
 
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
 

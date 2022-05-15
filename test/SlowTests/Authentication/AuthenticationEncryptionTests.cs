@@ -187,7 +187,7 @@ namespace SlowTests.Authentication
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanCompactEncryptedDb(RavenTestParameters configuration)
         {
             var certificates = Certificates.SetupServerAuthentication();

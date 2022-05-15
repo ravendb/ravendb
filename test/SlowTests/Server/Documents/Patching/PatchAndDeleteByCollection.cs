@@ -49,7 +49,7 @@ namespace SlowTests.Server.Documents.Patching
         [InlineData(1300, "V8")]
         public void CanPatchCollection(int count, string jsEngineType)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var x = store.OpenSession())
                 {

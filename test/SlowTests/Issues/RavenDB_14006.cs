@@ -417,7 +417,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.CompareExchange)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -670,7 +670,7 @@ select incl(c)"
         }
 
         [RavenTheory(RavenTestCategory.CompareExchange)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript(Options options)
         {
             using (var store = GetDocumentStore(options))

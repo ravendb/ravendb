@@ -104,10 +104,10 @@ if (typeof Object.assign !== 'function') {
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanUseComplexObjectInJavascriptMapReduce(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanUseComplexObjectInJavascriptMapReduce(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
             using (var s = store.OpenSession())
             {
                 s.Store(new Item());

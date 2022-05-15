@@ -78,10 +78,10 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task UpdatingSubscriptionScriptShouldNotChangeVector(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task UpdatingSubscriptionScriptShouldNotChangeVector(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
                 {

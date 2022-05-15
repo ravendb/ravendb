@@ -17,10 +17,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldShouldReturnArrayOfNulls(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldShouldReturnArrayOfNulls(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))                
+            using (var store = GetDocumentStore(options))                
             {
                 var executer = store.GetRequestExecutor();
 
@@ -61,10 +61,10 @@ namespace SlowTests.Issues
 
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldWrappedWithObjectShouldReturnArrayOfObjectsWithNulls(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldWrappedWithObjectShouldReturnArrayOfObjectsWithNulls(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var executer = store.GetRequestExecutor();
 

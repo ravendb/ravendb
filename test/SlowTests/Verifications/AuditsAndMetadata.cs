@@ -17,10 +17,10 @@ namespace SlowTests.Verifications
         /// So im not sure if the @last-modified meta-field will ever be filled in this case
         /// </summary>
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CreateDataAndQuery(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CreateDataAndQuery(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

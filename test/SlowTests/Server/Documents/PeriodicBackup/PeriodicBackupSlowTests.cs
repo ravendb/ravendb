@@ -975,11 +975,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Theory, Trait("Category", "Smuggler")]
-        [JavaScriptEngineClassData]
-        public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInIncrementalSnapshot(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInIncrementalSnapshot(Options options)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var entity = new User();
                 using (var session = store.OpenAsyncSession())
@@ -2262,8 +2262,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Theory, Trait("Category", "Smuggler")]
-        [JavaScriptEngineClassData]
-        public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions(Options options)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType);
             var backupPath = NewDataPath(suffix: "BackupFolder");

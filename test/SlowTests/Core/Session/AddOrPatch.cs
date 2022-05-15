@@ -15,10 +15,10 @@ namespace SlowTests.Core.Session
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanAddOrPatch(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanAddOrPatch(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var id = "users/1";
                 using (var session = store.OpenSession())
@@ -76,11 +76,11 @@ namespace SlowTests.Core.Session
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanAddOrPatchAddItemToAnExistingArray(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanAddOrPatchAddItemToAnExistingArray(Options options)
         {
             
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 
                 var id = "users/1";
@@ -157,10 +157,10 @@ namespace SlowTests.Core.Session
         }
         
         [Theory]
-        [JavaScriptEngineClassData]
-        public void CanAddOrPatchIncrement(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanAddOrPatchIncrement(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var id = "users/1";
                 using (var session = store.OpenSession())

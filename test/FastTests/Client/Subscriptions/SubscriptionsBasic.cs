@@ -1093,10 +1093,10 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             const string someProp = "SomeValue";
             using (var session = store.OpenAsyncSession())
@@ -1137,10 +1137,10 @@ namespace FastTests.Client.Subscriptions
         }
 
         [Theory]
-        [JavaScriptEngineClassData]
-        public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction(string jsEngineType)
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction(Options options)
         {
-            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
+            using var store = GetDocumentStore(options);
 
             var entity = new User();
             using (var session = store.OpenAsyncSession())
