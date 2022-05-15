@@ -36,12 +36,14 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                     }
                 }
 
+                bool shouldGetMissingIncludes = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
+
                 var includesCommand = includeDoc || includeTags
-                    ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
+                    ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags, shouldGetMissingIncludes)
                     : null;
 
                 var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includesCommand, returnFullResults);
-
+                
                 var actualEtag = CombineHashesFromMultipleRanges(ranges);
 
                 var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);

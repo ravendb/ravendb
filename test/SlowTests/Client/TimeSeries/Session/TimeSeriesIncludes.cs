@@ -11,6 +11,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -110,11 +111,6 @@ namespace SlowTests.Client.TimeSeries.Session
                 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var result = await store.Operations.SendAsync(new GetTimeSeriesOperation<TimeSeriesEntry>("orders/1-A", "Heartrate", null, null, 0, int.MaxValue,
-                        includes: i => i.IncludeDocument().IncludeTags(), returnFullResults: true));
-                    
-                    Assert.Contains("companies/google", result.MissingIncludes);
-
                     await session.StoreAsync(new Company { Name = "google" }, "companies/google");
 
                     var res = await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(null, null, i => i.IncludeDocument().IncludeTags());
@@ -160,7 +156,6 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
 
                 using (var session = store.OpenAsyncSession())
-                using(var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     //get 3 points so they'll get saved in session
                     await session.TimeSeriesFor("orders/1-A", "Heartrate").GetAsync(from: baseline, to: baseline);
@@ -174,78 +169,6 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("orders/1-A"));
                     Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/apple"));
                     Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/google"));
-                }
-            }
-        }
-
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task MissingIncludesTimeSeriesRanges(Options options)
-        {
-            using (var store = GetDocumentStore(options))
-            {
-                var baseline = RavenTestHelper.UtcToday;
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Order { Company = "companies/apple" }, "orders/1-A");
-                    session.Store(new Company { Name = "apple" }, "companies/apple");
-                    session.Store(new Company { Name = "facebook" }, "companies/facebook");
-                    
-                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
-                    tsf.Append(baseline, new[] { 67d }, "companies/apple");
-                    tsf.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/apple");
-                    tsf.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/google");
-                    tsf.Append(baseline.AddMinutes(15), new[] { 66d }, "companies/overlap");
-
-                    var tsf2 = session.TimeSeriesFor("orders/1-A", "Heartrate2");
-                    tsf2.Append(baseline, new[] { 67d }, "companies/facebook");
-                    tsf2.Append(baseline.AddMinutes(5), new[] { 64d }, "companies/facebook");
-                    tsf2.Append(baseline.AddMinutes(10), new[] { 65d }, "companies/amazon");
-                    tsf2.Append(baseline.AddMinutes(15), new[] { 66d }, "companies/overlap");
-
-                    session.SaveChanges();
-                }
-
-                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
-                {
-                    Assert.NotEqual(Sharding.GetShardNumber(store, "companies/apple"), Sharding.GetShardNumber(store, "companies/google"));
-                    Assert.NotEqual(Sharding.GetShardNumber(store, "companies/facebook"), Sharding.GetShardNumber(store, "companies/amazon"));
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var reqRanges = new List<TimeSeriesRange>()
-                    {
-                        new TimeSeriesRange() {From = null, To = null, Name = "Heartrate"},
-                        new TimeSeriesRange() {From = null, To = null, Name = "Heartrate2"}
-                    };
-
-                    var result = await store.Operations.SendAsync(new GetMultipleTimeSeriesOperation("orders/1-A", reqRanges, 0, int.MaxValue,
-                        includes: i => i.IncludeDocument().IncludeTags()));
-
-                    Assert.True(result.Values.TryGetValue("Heartrate", out var _));
-                    Assert.Equal(1, result.Values["Heartrate"].Count);
-                    Assert.Equal(2, result.Values["Heartrate"][0].MissingIncludes.Count);
-                    Assert.Contains("companies/google", result.Values["Heartrate"][0].MissingIncludes);
-                    Assert.Contains("companies/overlap", result.Values["Heartrate"][0].MissingIncludes);
-
-                    Assert.True(result.Values.TryGetValue("Heartrate2", out var _));
-                    Assert.Equal(1, result.Values["Heartrate2"].Count);
-                    Assert.Equal(2, result.Values["Heartrate2"][0].MissingIncludes.Count);
-                    Assert.Contains("companies/amazon", result.Values["Heartrate2"][0].MissingIncludes);
-                    Assert.Contains("companies/overlap", result.Values["Heartrate2"][0].MissingIncludes);
-
-                    await session.StoreAsync(new Company { Name = "amazon" }, "companies/amazon");
-                    await session.StoreAsync(new Company { Name = "google" }, "companies/google");
-                    await session.StoreAsync(new Company { Name = "overlap" }, "companies/overlap");
-
-                    await session.SaveChangesAsync();
-
-                    var result2 = await store.Operations.SendAsync(new GetMultipleTimeSeriesOperation( "orders/1-A", reqRanges, 0, int.MaxValue,
-                        includes: i => i.IncludeDocument().IncludeTags()));
-
-                    Assert.Equal(0, result2.Values["Heartrate"][0].MissingIncludes.Count);
-                    Assert.Equal(0, result2.Values["Heartrate2"][0].MissingIncludes.Count);
                 }
             }
         }
@@ -298,11 +221,12 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/apple"));
                     Assert.True(inMemoryDocumentSession.IncludedDocumentsById.ContainsKey("companies/amazon"));
                     Assert.Equal(1, resultMultiGet.Values["Heartrate"].Count);
-                    Assert.Equal(0, resultMultiGet.Values["Heartrate"][0].MissingIncludes.Count);
+                    Assert.Null(resultMultiGet.Values["Heartrate"][0].MissingIncludes);
+                    Assert.Null(resultMultiGet.Values["Heartrate"][0].Hash);
                 }
             }
         }
-
+        
         [Fact]
         public async Task AsyncSessionLoadWithIncludeTimeSeries()
         {

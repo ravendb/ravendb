@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 {
-    internal abstract class AbstractTimeSeriesHandlerProcessorForGetTimeSeriesRanges<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractTimeSeriesHandlerProcessorForGetTimeSeriesRanges<TRequestHandler, TOperationContext> : AbstractTimeSeriesHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
