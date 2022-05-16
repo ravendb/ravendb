@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 }
             }
 
-            await WriteTimeSeriesDetails(writeContext: context, docsContext: null, documentId: null, rangesResult, token);
+            await WriteTimeSeriesDetails(writeContext: context, docsContext: null, documentId: null, rangesResult, calcTotalCount: false, token);
         }
 
         internal class ShardedGetMultipleTimeSeriesCommand : GetMultipleTimeSeriesOperation.GetMultipleTimeSeriesCommand

@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
             }
         }
 
-        protected async Task WriteTimeSeriesDetails(JsonOperationContext writeContext, DocumentsOperationContext docsContext, string documentId, TimeSeriesDetails ranges, CancellationToken token)
+        protected async Task WriteTimeSeriesDetails(JsonOperationContext writeContext, DocumentsOperationContext docsContext, string documentId, TimeSeriesDetails ranges, bool calcTotalCount, CancellationToken token)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(writeContext, RequestHandler.ResponseBodyStream()))
             {
@@ -54,14 +54,14 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
-                    await WriteTimeSeriesRangeResultsAsync(docsContext, writer, documentId, ranges.Values, calcTotalCount: false, token);
+                    await WriteTimeSeriesRangeResultsAsync(docsContext, writer, documentId, ranges.Values, calcTotalCount, token);
                 }
                 writer.WriteEndObject();
             }
         }
 
         internal static async ValueTask<int> WriteTimeSeriesRangeResultsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, 
-            Dictionary<string, List<TimeSeriesRangeResult>> dictionary, bool calcTotalCount = false, CancellationToken token = default)
+            Dictionary<string, List<TimeSeriesRangeResult>> dictionary, bool calcTotalCount = true, CancellationToken token = default)
         {
             if (dictionary == null)
             {
