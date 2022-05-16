@@ -80,12 +80,6 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         await Task.WhenAll(tasks).WithCancellation(token);
     }
 
-    protected override ValueTask WatchTopologyAsync()
-    {
-        //no-op
-        return ValueTask.CompletedTask;
-    }
-
     protected override async ValueTask WatchDocumentAsync(string docId, CancellationToken token)
     {
         await EnsureConnectedAsync(token);
@@ -272,26 +266,6 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     protected override ValueTask UnwatchIndexAsync(string name, CancellationToken token)
     {
         return UnwatchInternalAsync(name, _matchingIndexes, token);
-    }
-
-    protected override ValueTask WatchOperationAsync(long operationId)
-    {
-        throw new NotImplementedException();
-    }
-
-    protected override ValueTask UnwatchOperationAsync(long operationId)
-    {
-        throw new NotImplementedException();
-    }
-
-    protected override ValueTask WatchAllOperationsAsync()
-    {
-        throw new NotImplementedException();
-    }
-
-    protected override ValueTask UnwatchAllOperationsAsync()
-    {
-        throw new NotImplementedException();
     }
 
     public override DynamicJsonValue GetDebugInfo()

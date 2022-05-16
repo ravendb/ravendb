@@ -14,8 +14,6 @@ namespace Raven.Client.Documents.Operations
 {
     public class PatchByQueryOperation : IOperation<OperationIdResult>
     {
-        protected static IndexQuery DummyQuery = new IndexQuery();
-
         private readonly IndexQuery _queryToUpdate;
         private readonly QueryOperationOptions _options;
 
@@ -32,23 +30,26 @@ namespace Raven.Client.Documents.Operations
 
         public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchByQueryCommand(conventions, context, _queryToUpdate, _options);
+            return new PatchByQueryCommand<Parameters>(conventions, context, _queryToUpdate, _options);
         }
 
-        private class PatchByQueryCommand : RavenCommand<OperationIdResult>
+        internal class PatchByQueryCommand<T> : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
-            private readonly IndexQuery _queryToUpdate;
+            private readonly IndexQuery<T> _queryToUpdate;
+            private readonly long? _operationId;
             private readonly QueryOperationOptions _options;
 
             public PatchByQueryCommand(DocumentConventions conventions, JsonOperationContext context,
-                IndexQuery queryToUpdate,
-                QueryOperationOptions options = null)
+                IndexQuery<T> queryToUpdate,
+                QueryOperationOptions options = null,
+                long? operationId = null)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
                 _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));
+                _operationId = operationId;
                 _options = options ?? new QueryOperationOptions();
             }
 
@@ -70,6 +71,13 @@ namespace Raven.Client.Documents.Operations
                     path
                         .Append("&staleTimeout=")
                         .Append(_options.StaleTimeout.Value);
+                }
+
+                if (_operationId.HasValue)
+                {
+                    path
+                        .Append("&operationId=")
+                        .Append(_operationId.Value);
                 }
 
                 var request = new HttpRequestMessage

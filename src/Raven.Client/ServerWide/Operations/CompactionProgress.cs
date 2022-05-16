@@ -124,5 +124,17 @@ namespace Raven.Client.ServerWide.Operations
             get => _result.Processed;
             set => _result.Processed = value;
         }
+
+        IOperationProgress IOperationProgress.Clone()
+        {
+            throw new NotImplementedException();
+        }
+
+        bool IOperationProgress.CanMerge => false;
+
+        void IOperationProgress.MergeWith(IOperationProgress progress)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

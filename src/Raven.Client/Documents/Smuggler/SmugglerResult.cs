@@ -121,6 +121,13 @@ namespace Raven.Client.Documents.Smuggler
 
         public bool ShouldPersist => true;
 
+        bool IOperationResult.CanMerge => false;
+
+        void IOperationResult.MergeWith(IOperationResult result)
+        {
+            throw new NotImplementedException();
+        }
+
         public string LegacyLastDocumentEtag { get; set; }
         public string LegacyLastAttachmentEtag { get; set; }
 
@@ -160,6 +167,18 @@ namespace Raven.Client.Documents.Smuggler
                 var json = base.ToJson();
                 json[nameof(Message)] = _result?.Message ?? Message;
                 return json;
+            }
+
+            IOperationProgress IOperationProgress.Clone()
+            {
+                throw new NotImplementedException();
+            }
+
+            bool IOperationProgress.CanMerge => false;
+
+            void IOperationProgress.MergeWith(IOperationProgress progress)
+            {
+                throw new NotImplementedException();
             }
         }
 

@@ -53,7 +53,7 @@ namespace SlowTests.Issues
 
                 var progresses = new List<IOperationProgress>();
 
-                operation.OnProgressChanged += progress =>
+                operation.OnProgressChanged += (_, progress) =>
                 {
                     progresses.Add(progress);
                 };

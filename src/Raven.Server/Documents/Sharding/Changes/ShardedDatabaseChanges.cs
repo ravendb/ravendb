@@ -158,16 +158,6 @@ internal class ShardedDatabaseChanges : AbstractDatabaseChanges<ShardedDatabaseC
         return taskedObservable;
     }
 
-    public IChangesObservable<BlittableJsonReaderObject> ForOperationId(long operationId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IChangesObservable<BlittableJsonReaderObject> ForAllOperations()
-    {
-        throw new NotImplementedException();
-    }
-
     public IChangesObservable<BlittableJsonReaderObject> ForAllTimeSeries()
     {
         var counter = GetOrAddConnectionState("all-timeseries", "watch-all-timeseries", "unwatch-all-timeseries", null);

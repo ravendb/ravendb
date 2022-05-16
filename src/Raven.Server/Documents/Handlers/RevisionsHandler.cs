@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -69,9 +70,9 @@ namespace Raven.Server.Documents.Handlers
             var operationId = ServerStore.Operations.GetNextOperationId();
 
             var t = Database.Operations.AddOperation(
-                Database,
+                Database.Name,
                 $"Revert database '{Database.Name}' to {configuration.Time} UTC.",
-                Operations.Operations.OperationType.DatabaseRevert,
+                OperationType.DatabaseRevert,
                 onProgress => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token),
                 operationId,
                 token: token);

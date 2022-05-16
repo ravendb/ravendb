@@ -22,6 +22,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -584,7 +585,7 @@ namespace Raven.Server.Web.System
                 var operationResult = await ServerStore.Operations.AddOperation(
                     null,
                     "Setting up RavenDB in secured mode.",
-                    Documents.Operations.Operations.OperationType.Setup,
+                    OperationType.Setup,
                     progress => SetupManager.SetupSecuredTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, token: operationCancelToken);
 
@@ -646,7 +647,7 @@ namespace Raven.Server.Web.System
 
                 var operationResult = await ServerStore.Operations.AddOperation(
                     null, "Setting up RavenDB with a Let's Encrypt certificate",
-                    Documents.Operations.Operations.OperationType.Setup,
+                    OperationType.Setup,
                     progress => SetupManager.SetupLetsEncryptTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, token: operationCancelToken);
 
@@ -748,7 +749,7 @@ namespace Raven.Server.Web.System
 
                 await ServerStore.Operations.AddOperation(
                     null, "Continue Cluster Setup.",
-                    Documents.Operations.Operations.OperationType.Setup,
+                    OperationType.Setup,
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, token: operationCancelToken);
             }

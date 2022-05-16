@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Microsoft.Extensions.Caching.Memory;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Changes;
@@ -292,7 +291,7 @@ namespace Raven.Server.ServerWide
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
             return ClusterMaintenanceSupervisor?.GetStats();
         }
-        
+
         internal LicenseType GetLicenseType()
         {
             return LicenseManager.LicenseStatus.Type;
@@ -1137,24 +1136,36 @@ namespace Raven.Server.ServerWide
             NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 
-            foreach (var db in DatabasesLandlord.DatabasesCache)
+            NotifyDatabases(DatabasesLandlord.DatabasesCache, database => database.Changes.RaiseNotifications(new TopologyChange
             {
-                DocumentDatabase dbActual;
-                try
+                Url = topology.GetUrlFromTag(NodeTag),
+                Database = database.Name
+            }));
+
+            NotifyDatabases(DatabasesLandlord.ShardedDatabasesCache, context => context.Changes.RaiseNotifications(new TopologyChange
+            {
+                Url = topology.GetUrlFromTag(NodeTag),
+                Database = context.DatabaseName
+            }));
+
+            static void NotifyDatabases<TItem>(ResourceCache<TItem> cache, Action<TItem> action)
+            {
+                foreach (var kvp in cache)
                 {
-                    if (db.Value.IsCompletedSuccessfully == false)
+                    TItem item;
+                    try
+                    {
+                        if (kvp.Value.IsCompletedSuccessfully == false)
+                            continue;
+                        item = kvp.Value.Result;
+                    }
+                    catch (Exception)
+                    {
                         continue;
-                    dbActual = db.Value.Result;
+                    }
+
+                    action(item);
                 }
-                catch (Exception)
-                {
-                    continue;
-                }
-                dbActual.Changes.RaiseNotifications(new TopologyChange
-                {
-                    Url = topology.GetUrlFromTag(NodeTag),
-                    Database = dbActual.Name
-                });
             }
         }
 
@@ -1783,7 +1794,7 @@ namespace Raven.Server.ServerWide
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
             tree.Delete(name);
         }
-        
+
         public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes, string raftRequestId)
         {
             var deleteCommand = new DeleteDatabaseCommand(db, raftRequestId)

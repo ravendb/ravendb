@@ -71,6 +71,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             public bool ShouldPersist => false;
+
+            bool IOperationResult.CanMerge => false;
+
+            void IOperationResult.MergeWith(IOperationResult result)
+            {
+                throw new System.NotImplementedException();
+            }
         }
 
         public class DumpIndexProgress : IOperationProgress
@@ -91,6 +98,18 @@ namespace Raven.Server.Documents.Handlers.Admin
                     [nameof(CurrentFileSizeInBytes)] = CurrentFileSizeInBytes,
                     [nameof(CurrentFileCopiedBytes)] = CurrentFileCopiedBytes
                 };
+            }
+
+            IOperationProgress IOperationProgress.Clone()
+            {
+                throw new System.NotImplementedException();
+            }
+
+            bool IOperationProgress.CanMerge => false;
+
+            void IOperationProgress.MergeWith(IOperationProgress progress)
+            {
+                throw new System.NotImplementedException();
             }
         }
     }

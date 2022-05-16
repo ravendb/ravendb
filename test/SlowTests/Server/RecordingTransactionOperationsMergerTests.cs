@@ -768,7 +768,7 @@ namespace SlowTests.Server
 
                 var operation = new Operation(store.Commands().RequestExecutor, () => store.Changes(), store.Conventions, command.Result);
                 var operationProgresses = new List<IOperationProgress>();
-                operation.OnProgressChanged += p => operationProgresses.Add(p);
+                operation.OnProgressChanged += (_, progress) => operationProgresses.Add(progress);
 
                 await task; // we need to wait for the task
                             // before executing WaitForCompletionAsync here

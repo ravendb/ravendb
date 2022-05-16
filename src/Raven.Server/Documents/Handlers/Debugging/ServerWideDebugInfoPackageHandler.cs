@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -108,7 +109,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var token = CreateOperationToken();
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
 
-            await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
+            await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", OperationType.DebugPackage, async _ =>
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
@@ -186,7 +187,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
 
-            await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", Operations.Operations.OperationType.DebugPackage, async _ =>
+            await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", OperationType.DebugPackage, async _ =>
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 await using (var ms = new MemoryStream())

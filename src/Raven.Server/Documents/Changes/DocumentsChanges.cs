@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Changes
@@ -14,18 +13,6 @@ namespace Raven.Server.Documents.Changes
         public event Action<TimeSeriesChange> OnTimeSeriesChange;
 
         public event Action<IndexChange> OnIndexChange;
-
-        public event Action<OperationStatusChange> OnOperationStatusChange;
-
-        public event Action<TopologyChange> OnTopologyChange;
-
-        public void RaiseNotifications(TopologyChange topologyChange)
-        {
-            OnTopologyChange?.Invoke(topologyChange);
-
-            foreach (var connection in Connections)
-                connection.Value.SendTopologyChanges(topologyChange);
-        }
 
         public void RaiseNotifications(IndexChange indexChange)
         {
@@ -65,16 +52,6 @@ namespace Raven.Server.Documents.Changes
             {
                 if (!connection.Value.IsDisposed)
                     connection.Value.SendTimeSeriesChanges(timeSeriesChange);
-            }
-        }
-
-        public void RaiseNotifications(OperationStatusChange operationStatusChange)
-        {
-            OnOperationStatusChange?.Invoke(operationStatusChange);
-
-            foreach (var connection in Connections)
-            {
-                connection.Value.SendOperationStatusChangeNotification(operationStatusChange);
             }
         }
     }

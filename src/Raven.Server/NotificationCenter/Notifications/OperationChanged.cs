@@ -26,7 +26,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public DateTime? EndTime { get; private set; }
 
-        public Operations.OperationType TaskType { get; private set; }
+        public OperationType TaskType { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -43,7 +43,7 @@ namespace Raven.Server.NotificationCenter.Notifications
             return result;
         }
 
-        public static OperationChanged Create(string database, long id, Operations.OperationDescription description, OperationState state, bool killable)
+        public static OperationChanged Create(string database, long id, OperationDescription description, OperationState state, bool killable)
         {
             NotificationSeverity severity;
 

@@ -80,7 +80,7 @@ namespace SlowTests.Smuggler
 
                 var progresses = new List<IOperationProgress>();
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
-                operation.OnProgressChanged += progress =>
+                operation.OnProgressChanged += (_, progress) =>
                 {
                     progresses.Add(progress);
                 };

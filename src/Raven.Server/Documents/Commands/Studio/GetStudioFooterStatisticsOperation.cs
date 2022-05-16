@@ -6,7 +6,7 @@ using Raven.Server.Documents.Studio;
 using Raven.Server.Json;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Operations
+namespace Raven.Server.Documents.Commands.Studio
 {
     public class GetStudioFooterStatisticsOperation : IMaintenanceOperation<FooterStatistics>
     {
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Operations
             {
                 url = $"{node.Url}/databases/{node.Database}/studio/footer/stats";
 
-                var request = new HttpRequestMessage {Method = HttpMethod.Get};
+                var request = new HttpRequestMessage { Method = HttpMethod.Get };
 
                 return request;
             }

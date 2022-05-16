@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -188,7 +189,7 @@ namespace Raven.Server.Web.System
                     var t = Database.Operations.AddOperation(
                         null,
                         $"Manual backup for database: {Database.Name}",
-                        Documents.Operations.Operations.OperationType.DatabaseBackup,
+                        OperationType.DatabaseBackup,
                         onProgress =>
                         {
                             var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);

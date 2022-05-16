@@ -259,7 +259,7 @@ namespace Raven.Server.Smuggler.Migration
             var databaseName = databaseMigrationSettings.DatabaseName;
             database.Operations.AddOperation(null,
                 $"Database name: '{databaseName}' from url: {_serverUrl}",
-                Operations.OperationType.DatabaseMigrationRavenDb,
+                OperationType.DatabaseMigrationRavenDb,
                 taskFactory: onProgress => Task.Run(async () =>
                 {
                     onProgress?.Invoke(result.Progress);

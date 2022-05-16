@@ -30,10 +30,10 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -55,7 +55,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Util.Settings;
-using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
 
@@ -688,7 +687,7 @@ namespace Raven.Server.Web.System
                 var t = ServerStore.Operations.AddOperation(
                     null,
                     $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
-                    Documents.Operations.Operations.OperationType.DatabaseRestore,
+                    OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
                     id: operationId, token: cancelToken);
 
@@ -1125,7 +1124,7 @@ namespace Raven.Server.Web.System
                 var t = ServerStore.Operations.AddOperation(
                     null,
                     "Compacting database: " + compactSettings.DatabaseName,
-                    Documents.Operations.Operations.OperationType.DatabaseCompact,
+                    OperationType.DatabaseCompact,
                     taskFactory: onProgress => Task.Run(async () =>
                     {
                         try
@@ -1330,7 +1329,7 @@ namespace Raven.Server.Web.System
 
             // don't await here - this operation is async - all we return is operation id
             var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
-                Documents.Operations.Operations.OperationType.MigrationFromLegacyData,
+                OperationType.MigrationFromLegacyData,
                 onProgress =>
                 {
                     return Task.Run(async () =>

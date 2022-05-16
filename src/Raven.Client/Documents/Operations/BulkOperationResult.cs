@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations
         public long AttachmentsProcessed { get; set; }
         public long CountersProcessed { get; set; }
         public long TimeSeriesProcessed { get; set; }
-        
+
         public string Query { get; set; }
 
         public string Message => $"Processed {Total:#,#0} items.";
@@ -45,6 +45,21 @@ namespace Raven.Client.Documents.Operations
         }
 
         public bool ShouldPersist => false;
+
+        bool IOperationResult.CanMerge => true;
+
+        void IOperationResult.MergeWith(IOperationResult result)
+        {
+            if (result is not BulkOperationResult r)
+                return;
+
+            AttachmentsProcessed += r.AttachmentsProcessed;
+            CountersProcessed += r.CountersProcessed;
+            //Details // TODO [ppekrol]
+            DocumentsProcessed += r.DocumentsProcessed;
+            TimeSeriesProcessed += r.TimeSeriesProcessed;
+            Total += r.Total;
+        }
 
         public class PatchDetails : IBulkOperationDetails
         {

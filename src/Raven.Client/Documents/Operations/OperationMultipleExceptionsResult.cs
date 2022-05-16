@@ -30,4 +30,11 @@ public class OperationMultipleExceptionsResult : IOperationResult
     }
 
     public bool ShouldPersist { get; }
+
+    bool IOperationResult.CanMerge => false;
+
+    void IOperationResult.MergeWith(IOperationResult result)
+    {
+        throw new System.NotImplementedException();
+    }
 }

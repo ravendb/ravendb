@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations
         private TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
-        public Action<IOperationProgress> OnProgressChanged;
+        public EventHandler<IOperationProgress> OnProgressChanged;
         private JsonOperationContext _context;
         private IDisposable _subscription;
 
@@ -248,7 +248,7 @@ namespace Raven.Client.Documents.Operations
                     case OperationStatus.InProgress:
                         if (onProgress != null && change.State.Progress != null)
                         {
-                            onProgress(change.State.Progress);
+                            onProgress.Invoke(this, change.State.Progress);
                         }
 
                         break;

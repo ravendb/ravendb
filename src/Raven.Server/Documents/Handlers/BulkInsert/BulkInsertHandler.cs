@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.BulkInsert;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Handlers.BulkInsert
@@ -13,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.BulkInsert
             var id = GetLongQueryString("id");
             var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 
-            await Database.Operations.AddOperation(Database, "Bulk Insert", Operations.Operations.OperationType.BulkInsert,
+            await Database.Operations.AddOperation(Database.Name, "Bulk Insert", OperationType.BulkInsert,
                 async progress =>
                 {
                     using (var bulkInsertProcessor = new BulkInsertHandlerProcessor(this, Database, progress, skipOverwriteIfUnchanged, operationCancelToken.Token))
