@@ -5,12 +5,9 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
@@ -39,86 +36,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscriptions/update", "POST")]
         public async Task Update()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                var options = JsonDeserializationServer.SubscriptionUpdateOptions(json);
-                var id = options.Id;
-
-                SubscriptionState state;
-
-                try
-                {
-                    if (id == null)
-                    {
-                        state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseContext.DatabaseName, options.Name);
-                        id = state.SubscriptionId;
-                    }
-                    else
-                    {
-                        state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, DatabaseContext.DatabaseName, id.Value);
-
-                        // keep the old subscription name
-                        if (options.Name == null)
-                            options.Name = state.SubscriptionName;
-                    }
-                }
-                catch (SubscriptionDoesNotExistException)
-                {
-                    if (options.CreateNew)
-                    {
-                        if (id == null)
-                        {
-                            // subscription with such name doesn't exist, add new subscription
-                            await CreateSubscriptionInternalAsync(json, id: null, disabled: false, options, context);
-                            return;
-                        }
-
-                        if (options.Name == null)
-                        {
-                            // subscription with such id doesn't exist, add new subscription using id
-                            await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
-                            return;
-                        }
-
-                        // this is the case when we have both name and id, and there no subscription with such id
-                        try
-                        {
-                            // check the name
-                            state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseContext.DatabaseName, options.Name);
-                            id = state.SubscriptionId;
-                        }
-                        catch (SubscriptionDoesNotExistException)
-                        {
-                            // subscription with such id or name doesn't exist, add new subscription using both name and id
-                            await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-
-                if (options.ChangeVector == null)
-                    options.ChangeVector = state.ChangeVectorForNextBatchStartingPoint;
-
-                if (options.MentorNode == null)
-                    options.MentorNode = state.MentorNode;
-
-                if (options.Query == null)
-                    options.Query = state.Query;
-
-                if (SubscriptionsHandler.SubscriptionHasChanges(options, state) == false)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
-
-                await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
-            }
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForPostSubscription(this))
+                await processor.ExecuteAsync();
         }
         
         public async Task CreateSubscriptionInternalAsync(BlittableJsonReaderObject bjro, long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context)
