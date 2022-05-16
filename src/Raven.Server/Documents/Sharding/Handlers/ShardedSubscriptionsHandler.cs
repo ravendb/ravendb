@@ -161,9 +161,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscriptions", "DELETE")]
         public async Task Delete()
         {
-            var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
-            await SubscriptionStorage.DeleteSubscriptionInternal(ServerStore, DatabaseContext.DatabaseName, subscriptionName, GetRaftRequestIdFromQuery());
-            await NoContent();
+            using (var processor = new ShardedSubscriptionHandlerProcessorForDeleteSubscription(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/subscriptions", "GET")]
