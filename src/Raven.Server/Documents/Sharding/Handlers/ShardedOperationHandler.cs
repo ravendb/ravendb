@@ -20,6 +20,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/operations", "GET")]
+        public async Task GetAll()
+        {
+            using (var processor = new ShardedOperationsHandlerProcessorForGetAll(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/operations/state", "GET")]
         public async Task State()
         {

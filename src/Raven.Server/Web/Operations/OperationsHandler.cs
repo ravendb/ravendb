@@ -1,12 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Operations;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Operations.Processors;
-using Sparrow.Json;
 
 namespace Raven.Server.Web.Operations
 {
@@ -29,32 +24,8 @@ namespace Raven.Server.Web.Operations
         [RavenAction("/databases/*/operations", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAll()
         {
-            var id = GetLongQueryString("id", required: false);
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                IEnumerable<Operation> operations;
-                if (id.HasValue == false)
-                    operations = Database.Operations.GetAll();
-                else
-                {
-                    var operation = Database.Operations.GetOperation(id.Value);
-                    if (operation == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    operations = new List<Operation> { operation };
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray(context, "Results", operations, (w, c, operation) => c.Write(w, operation.ToJson()));
-                    writer.WriteEndObject();
-                }
-            }
+            using (var processor = new OperationsHandlerProcessorForGetAll(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/operations/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
