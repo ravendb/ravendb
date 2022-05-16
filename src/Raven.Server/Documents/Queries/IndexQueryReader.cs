@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json;
@@ -40,8 +41,10 @@ public struct IndexQueryReader
         {
             queryType = QueryType.Update;
 
-            if (json.TryGet("Query", out BlittableJsonReaderObject q))
-                json = q;
+            if (json.TryGet("Query", out BlittableJsonReaderObject q) == false || q == null)
+                throw new BadRequestException("Missing 'Query' property.");
+
+            json = q;
         }
 
         return IndexQueryServerSide.Create(_httpContext, json, _queryMetadataCache, tracker, _addSpatialProperties, database: _database, queryType: queryType);

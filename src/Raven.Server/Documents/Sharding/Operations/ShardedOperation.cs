@@ -1,11 +1,13 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Operations;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
 public class ShardedOperation : AbstractOperation
 {
+    [JsonDeserializationIgnore]
     public MultiOperation Operation;
 
     public override async ValueTask KillAsync(bool waitForCompletion, CancellationToken token)
