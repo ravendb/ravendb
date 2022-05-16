@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
@@ -488,86 +489,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions/update", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Update()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                var options = JsonDeserializationServer.SubscriptionUpdateOptions(json);
-
-                var id = options.Id;
-                SubscriptionState state;
-
-                try
-                {
-                    if (id == null)
-                    {
-                        state = Database.SubscriptionStorage.GetSubscriptionFromServerStore(options.Name);
-                        id = state.SubscriptionId;
-                    }
-                    else
-                    {
-                        state = Database.SubscriptionStorage.GetSubscriptionFromServerStoreById(id.Value);
-
-                        // keep the old subscription name
-                        if (options.Name == null)
-                            options.Name = state.SubscriptionName;
-                    }
-                }
-                catch (SubscriptionDoesNotExistException)
-                {
-                    if (options.CreateNew)
-                    {
-                        if (id == null)
-                        {
-                            // subscription with such name doesn't exist, add new subscription
-                            await CreateInternalAsync(json, options, context, id: null, disabled: false);
-                            return;
-                        }
-
-                        if (options.Name == null)
-                        {
-                            // subscription with such id doesn't exist, add new subscription using id
-                            await CreateInternalAsync(json, options, context, id, disabled: false);
-                            return;
-                        }
-
-                        // this is the case when we have both name and id, and there no subscription with such id
-                        try
-                        {
-                            // check the name
-                            state = Database.SubscriptionStorage.GetSubscriptionFromServerStore(options.Name);
-                            id = state.SubscriptionId;
-                        }
-                        catch (SubscriptionDoesNotExistException)
-                        {
-                            // subscription with such id or name doesn't exist, add new subscription using both name and id
-                            await CreateInternalAsync(json, options, context, id, disabled: false);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-
-                if (options.ChangeVector == null)
-                    options.ChangeVector = state.ChangeVectorForNextBatchStartingPoint;
-
-                if (options.MentorNode == null)
-                    options.MentorNode = state.MentorNode;
-
-                if (options.Query == null)
-                    options.Query = state.Query;
-
-                if (SubscriptionHasChanges(options, state) == false)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
-                }
-
-                await CreateInternalAsync(json, options, context, id, disabled: false);
-            }
+            using (var processor = new SubscriptionsHandlerProcessorForPostSubscription(this))
+                await processor.ExecuteAsync();
         }
 
         public static bool SubscriptionHasChanges(SubscriptionCreationOptions options, SubscriptionState state)
