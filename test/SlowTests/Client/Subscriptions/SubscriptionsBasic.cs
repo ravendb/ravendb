@@ -1276,12 +1276,19 @@ namespace SlowTests.Client.Subscriptions
             var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = Guid.NewGuid().ToString() });
             using var subsWorker1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId));
             var mreConnect1 = new AsyncManualResetEvent();
-            subsWorker1.OnEstablishedSubscriptionConnection += () =>
+            subsWorker1.AfterAcknowledgment += _ =>
             {
                 mreConnect1.Set();
+                return Task.CompletedTask;
             };
             var t1 = subsWorker1.Run(_ => { }).ContinueWith(res => { });
-            
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User(), "Users/1");
+                session.SaveChanges();
+            }
+
             Assert.True(await mreConnect1.WaitAsync(_reasonableWaitTime));
             List<SubscriptionState> states;
             var re =  store.GetRequestExecutor();
