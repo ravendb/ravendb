@@ -46,13 +46,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            //if (query.DisableCaching)
-            //{
-            //    writer.WritePropertyName(nameof(query.DisableCaching));
-            //    writer.WriteBool(query.DisableCaching);
-            //    writer.WriteComma();
-            //}
-
             if (query.SkipDuplicateChecking)
             {
                 writer.WritePropertyName(nameof(query.SkipDuplicateChecking));
