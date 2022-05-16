@@ -60,20 +60,8 @@ namespace Raven.Server.Web.Operations
         [RavenAction("/databases/*/operations/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task State()
         {
-            var id = GetLongQueryString("id");
-            // ReSharper disable once PossibleInvalidOperationException
-            var state = Database.Operations.GetOperation(id)?.State;
-
-            if (state == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await InternalGetStateAsync(state, context);
-            }
+            using (var processor = new OperationsHandlerProcessorForState(this))
+                await processor.ExecuteAsync();
         }
     }
 }
