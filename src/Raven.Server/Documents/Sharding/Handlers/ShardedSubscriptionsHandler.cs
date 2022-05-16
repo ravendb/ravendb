@@ -165,6 +165,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/subscriptions/state", "GET")]
+        public async Task GetSubscriptionState()
+        {
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForGetSubscriptionState(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/subscriptions", "GET")]
         public async Task GetAll()
         {
