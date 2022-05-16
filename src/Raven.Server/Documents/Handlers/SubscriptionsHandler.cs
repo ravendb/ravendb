@@ -184,13 +184,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Delete()
         {
-            var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
-
-            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
-
-            Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(subscriptionName);
-
-            await NoContent();
+            using (var processor = new SubscriptionHandlerProcessorForDeleteSubscription(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/subscriptions/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
