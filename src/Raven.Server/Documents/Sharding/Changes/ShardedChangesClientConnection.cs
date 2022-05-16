@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -270,7 +271,24 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     public override DynamicJsonValue GetDebugInfo()
     {
-        throw new NotImplementedException();
+        var djv = base.GetDebugInfo();
+
+        djv["WatchAllDocuments"] = _watchAllDocuments > 0;
+        djv["WatchAllIndexes"] = _watchAllIndexes > 0;
+        djv["WatchAllCounters"] = _watchAllCounters > 0;
+        djv["WatchAllTimeSeries"] = _watchAllTimeSeries > 0;
+        djv["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray();
+        djv["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray();
+        djv["WatchIndexes"] = _matchingIndexes.ToArray();
+        djv["WatchDocuments"] = _matchingDocuments.ToArray();
+        djv["WatchCounters"] = _matchingCounters.ToArray();
+        djv["WatchCounterOfDocument"] = _matchingDocumentCounter.Select(x => x.Key.ToJson()).ToArray();
+        djv["WatchCountersOfDocument"] = _matchingDocumentCounters.ToArray();
+        djv["WatchTimeSeries"] = _matchingTimeSeries.ToArray();
+        djv["WatchTimeSeriesOfDocument"] = _matchingDocumentTimeSeries.Select(x => x.Key.ToJson()).ToArray();
+        djv["WatchAllTimeSeriesOfDocument"] = _matchingAllDocumentTimeSeries.ToArray();
+
+        return djv;
     }
 
     public void OnCompleted()
