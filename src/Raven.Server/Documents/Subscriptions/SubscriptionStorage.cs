@@ -454,6 +454,24 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
+        public int GetNumberOfRunningSubscriptions()
+        {
+            using (_db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var c = 0;
+                foreach ((_, SubscriptionConnectionsState value) in _subscriptions)
+                {
+                    if (value.IsSubscriptionActive() == false)
+                        continue;
+
+                    c++;
+                }
+
+                return c;
+            }
+        }
+
         public SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long? id, string name, bool history)
         {
             SubscriptionGeneralDataAndStats subscription;
