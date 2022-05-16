@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
                 var result = new TimeSeriesDetails() {Id = documentId, Values = ranges};
 
-                await WriteTimeSeriesDetails(writeContext: context, docsContext: context, documentId, result, token);
+                await WriteTimeSeriesDetails(writeContext: context, docsContext: context, documentId, result, calcTotalCount: true, token);
             }
         }
 

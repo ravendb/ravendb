@@ -26,6 +26,9 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
         protected static void AddInternalFieldsToResultForSharded(TimeSeriesRangeResult rangeResult, BlittableJsonReaderObject responseRange)
         {
+            if (responseRange == null || rangeResult == null)
+                return;
+
             if (responseRange.TryGet(nameof(TimeSeriesRangeResult.MissingIncludes), out BlittableJsonReaderArray missingBlittable))
             {
                 rangeResult.MissingIncludes = new List<string>();
