@@ -113,7 +113,7 @@ namespace SlowTests.Core.Utils.Entities
 		public object LastName { get; set; } 
 		public object Name { get; set; } 
 	}
-}", commandResult);
+}", RavenTestHelper.NormalizeNewLines(commandResult));
                 }
             }
         }
