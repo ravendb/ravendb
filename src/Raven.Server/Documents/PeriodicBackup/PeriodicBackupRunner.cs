@@ -15,6 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -547,7 +548,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var task = _database.Operations.AddOperation(
                         null,
                         $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'",
-                        Operations.Operations.OperationType.DatabaseBackup,
+                        OperationType.DatabaseBackup,
                         taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, tcs, onProgress),
                         id: operationId,
                         token: backupTask.TaskCancelToken);

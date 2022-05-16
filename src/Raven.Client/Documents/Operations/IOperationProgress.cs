@@ -6,6 +6,12 @@ namespace Raven.Client.Documents.Operations
     public interface IOperationProgress
     {
         DynamicJsonValue ToJson();
+
+        IOperationProgress Clone();
+
+        bool CanMerge { get; }
+
+        void MergeWith(IOperationProgress progress);
     }
 
     /// <summary>
@@ -24,6 +30,26 @@ namespace Raven.Client.Documents.Operations
                 ["Total"] = Total
             };
         }
+
+        IOperationProgress IOperationProgress.Clone()
+        {
+            return new DeterminateProgress
+            {
+                Processed = Processed,
+                Total = Total
+            };
+        }
+
+        bool IOperationProgress.CanMerge => true;
+
+        void IOperationProgress.MergeWith(IOperationProgress progress)
+        {
+            if (progress is not DeterminateProgress p)
+                return;
+
+            Processed += p.Processed;
+            Total += p.Total;
+        }
     }
 
     /// <summary>
@@ -39,6 +65,24 @@ namespace Raven.Client.Documents.Operations
             {
                 ["Processed"] = Processed
             };
+        }
+
+        IOperationProgress IOperationProgress.Clone()
+        {
+            return new IndeterminateProgressCount
+            {
+                Processed = Processed
+            };
+        }
+
+        bool IOperationProgress.CanMerge => true;
+
+        void IOperationProgress.MergeWith(IOperationProgress progress)
+        {
+            if (progress is not IndeterminateProgressCount p)
+                return;
+
+            Processed += p.Processed;
         }
     }
 
@@ -82,6 +126,18 @@ namespace Raven.Client.Documents.Operations
                 [nameof(TimeSeriesProcessed)] = TimeSeriesProcessed
             };
         }
+
+        IOperationProgress IOperationProgress.Clone()
+        {
+            throw new NotImplementedException();
+        }
+
+        bool IOperationProgress.CanMerge => false;
+
+        void IOperationProgress.MergeWith(IOperationProgress progress)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     /// <summary>
@@ -97,6 +153,18 @@ namespace Raven.Client.Documents.Operations
             {
                 ["Progress"] = Progress
             };
+        }
+
+        IOperationProgress IOperationProgress.Clone()
+        {
+            throw new NotImplementedException();
+        }
+
+        bool IOperationProgress.CanMerge => false;
+
+        void IOperationProgress.MergeWith(IOperationProgress progress)
+        {
+            throw new NotSupportedException();
         }
     }
 }

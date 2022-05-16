@@ -4,6 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -63,7 +64,7 @@ namespace Raven.Server.Web.Studio
                     var collectionsCount = migrationRequest.Settings.Collections.Count;
                     var operationDescription = "Importing " + collectionsCount + " " + (collectionsCount == 1 ? "collection" : "collections") + " from SQL database: " + schema.CatalogName;
 
-                    _ = Database.Operations.AddOperation(Database, operationDescription, Documents.Operations.Operations.OperationType.MigrationFromSql, onProgress =>
+                    _ = Database.Operations.AddOperation(Database.Name, operationDescription, OperationType.MigrationFromSql, onProgress =>
                     {
                         return Task.Run(async () =>
                         {

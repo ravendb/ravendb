@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
@@ -28,6 +29,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public Task Get()
         {
             return HandleQuery(HttpMethod.Get);
+        }
+
+        [RavenShardedAction("/databases/*/queries", "PATCH")]
+        public async Task Patch()
+        {
+            using (var processor = new ShardedQueriesHandlerProcessorForPatch(this))
+                await processor.ExecuteAsync();
         }
 
         public async Task HandleQuery(HttpMethod httpMethod)

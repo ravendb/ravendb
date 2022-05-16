@@ -26,6 +26,25 @@ namespace Raven.Client.Documents.Operations.Revisions
             };
         }
 
+        IOperationProgress IOperationProgress.Clone()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        bool IOperationProgress.CanMerge => false;
+
+        void IOperationProgress.MergeWith(IOperationProgress progress)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        bool IOperationResult.CanMerge => false;
+
+        void IOperationResult.MergeWith(IOperationResult result)
+        {
+            throw new System.NotImplementedException();
+        }
+
         public bool ShouldPersist => false;
     }
 

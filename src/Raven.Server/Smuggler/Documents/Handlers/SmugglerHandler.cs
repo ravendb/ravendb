@@ -405,8 +405,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = CreateOperationToken();
                 var transformScript = migrationConfiguration.TransformScript;
 
-                var t = Database.Operations.AddOperation(Database, $"Migration from: {migrationConfiguration.DatabaseTypeName}",
-                    Operations.OperationType.DatabaseMigration,
+                var t = Database.Operations.AddOperation(Database.Name, $"Migration from: {migrationConfiguration.DatabaseTypeName}",
+                    OperationType.DatabaseMigration,
                     onProgress =>
                     {
                         return Task.Run(async () =>
@@ -518,7 +518,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var collection = GetStringQueryString("collection", false);
                 var operationDescription = collection != null ? "Import collection: " + collection : "Import collection from CSV";
 
-                await Database.Operations.AddOperation(Database, operationDescription, Raven.Server.Documents.Operations.Operations.OperationType.CollectionImportFromCsv,
+                await Database.Operations.AddOperation(Database.Name, operationDescription, OperationType.CollectionImportFromCsv,
                     onProgress =>
                     {
                         return Task.Run(async () =>

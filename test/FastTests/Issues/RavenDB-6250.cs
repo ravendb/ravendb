@@ -27,40 +27,40 @@ namespace FastTests.Issues
         [Fact]
         public void All_operations_has_details_providers()
         {
-            var alreadyHandledInStudio = new HashSet<Operations.OperationType>
+            var alreadyHandledInStudio = new HashSet<OperationType>
             {
-                Operations.OperationType.UpdateByQuery,
-                Operations.OperationType.DeleteByQuery,
-                Operations.OperationType.DeleteByCollection,
-                Operations.OperationType.DatabaseExport,
-                Operations.OperationType.DatabaseImport,
-                Operations.OperationType.DatabaseMigrationRavenDb,
-                Operations.OperationType.DatabaseMigration,
-                Operations.OperationType.DatabaseRestore,
-                Operations.OperationType.BulkInsert,
-                Operations.OperationType.IndexCompact,
-                Operations.OperationType.DatabaseCompact,
-                Operations.OperationType.CertificateGeneration,
-                Operations.OperationType.MigrationFromLegacyData,
-                Operations.OperationType.CollectionImportFromCsv,
-                Operations.OperationType.DatabaseBackup,
-                Operations.OperationType.MigrationFromSql,
-                Operations.OperationType.RecordTransactionCommands,
-                Operations.OperationType.ReplayTransactionCommands,
-                Operations.OperationType.DatabaseRevert,
-                Operations.OperationType.EnforceRevisionConfiguration,
-                Operations.OperationType.DumpRawIndexData
+                OperationType.UpdateByQuery,
+                OperationType.DeleteByQuery,
+                OperationType.DeleteByCollection,
+                OperationType.DatabaseExport,
+                OperationType.DatabaseImport,
+                OperationType.DatabaseMigrationRavenDb,
+                OperationType.DatabaseMigration,
+                OperationType.DatabaseRestore,
+                OperationType.BulkInsert,
+                OperationType.IndexCompact,
+                OperationType.DatabaseCompact,
+                OperationType.CertificateGeneration,
+                OperationType.MigrationFromLegacyData,
+                OperationType.CollectionImportFromCsv,
+                OperationType.DatabaseBackup,
+                OperationType.MigrationFromSql,
+                OperationType.RecordTransactionCommands,
+                OperationType.ReplayTransactionCommands,
+                OperationType.DatabaseRevert,
+                OperationType.EnforceRevisionConfiguration,
+                OperationType.DumpRawIndexData
             };
 
-            var operationWithoutDetails = new HashSet<Operations.OperationType>
+            var operationWithoutDetails = new HashSet<OperationType>
             {
-                Operations.OperationType.Setup, // it is in secured setup,
-                Operations.OperationType.DebugPackage
+                OperationType.Setup, // it is in secured setup,
+                OperationType.DebugPackage
             };
 
-            var allKnownTypes = Enum.GetNames(typeof(Operations.OperationType)).ToHashSet();
+            var allKnownTypes = Enum.GetNames(typeof(OperationType)).ToHashSet();
 
-            var unionSet = new HashSet<Operations.OperationType>(alreadyHandledInStudio);
+            var unionSet = new HashSet<OperationType>(alreadyHandledInStudio);
             unionSet.UnionWith(operationWithoutDetails);
 
             var list = allKnownTypes.Except(unionSet.Select(x => x.ToString())).ToList();

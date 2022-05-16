@@ -71,5 +71,12 @@ namespace Raven.Client.ServerWide.Operations
         }
 
         public bool ShouldPersist => false;
+
+        bool IOperationResult.CanMerge => false;
+
+        void IOperationResult.MergeWith(IOperationResult result)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

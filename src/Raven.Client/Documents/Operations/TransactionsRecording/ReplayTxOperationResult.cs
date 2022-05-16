@@ -18,5 +18,12 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
         }
 
         public bool ShouldPersist => false;
+
+        bool IOperationResult.CanMerge => false;
+
+        void IOperationResult.MergeWith(IOperationResult result)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

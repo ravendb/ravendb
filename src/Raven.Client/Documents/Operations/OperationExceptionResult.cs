@@ -52,5 +52,12 @@ namespace Raven.Client.Documents.Operations
         }
 
         public bool ShouldPersist { get; }
+
+        bool IOperationResult.CanMerge => false;
+
+        void IOperationResult.MergeWith(IOperationResult result)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

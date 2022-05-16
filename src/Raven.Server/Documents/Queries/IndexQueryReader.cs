@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json;
 
@@ -27,28 +28,23 @@ public struct IndexQueryReader
         _addSpatialProperties = addSpatialProperties;
     }
 
-    public ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
+    public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
     {
         if (method == HttpMethod.Get)
+            return await ReadIndexQueryAsync(context, tracker);
+
+        var json = await context.ReadForMemoryAsync(_stream, "index/query");
+        var queryType = QueryType.Select;
+
+        if (method == HttpMethod.Patch)
         {
-            return ReadIndexQueryAsync(context, tracker);
+            queryType = QueryType.Update;
+
+            if (json.TryGet("Query", out BlittableJsonReaderObject q))
+                json = q;
         }
 
-        var read = context.ReadForMemoryAsync(_stream, "index/query");
-        if (read.IsCompleted)
-        {
-
-            var result = IndexQueryServerSide.Create(_httpContext, read.Result, _queryMetadataCache, tracker, _addSpatialProperties, database: _database);
-            return ValueTask.FromResult(result);
-        }
-
-        return ReadIndexQueryAsync(read, tracker);
-    }
-
-    private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(ValueTask<BlittableJsonReaderObject> read, RequestTimeTracker tracker)
-    {
-        var json = await read;
-        return IndexQueryServerSide.Create(_httpContext, json, _queryMetadataCache, tracker, database: _database);
+        return IndexQueryServerSide.Create(_httpContext, json, _queryMetadataCache, tracker, _addSpatialProperties, database: _database, queryType: queryType);
     }
 
     private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker)

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Sparrow.Json;
@@ -25,13 +26,13 @@ namespace Raven.Server.Web.Operations
         }
 
         [RavenAction("/admin/operations/kill", "POST", AuthorizationStatus.Operator)]
-        public Task Kill()
+        public async Task Kill()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            ServerStore.Operations.KillOperation(id);
+            await ServerStore.Operations.KillOperationAsync(id, CancellationToken.None);
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -46,12 +47,12 @@ namespace Raven.Server.Web.Operations
                 return;
             }
 
-            if (operation.Database == null) // server level op
+            if (operation.DatabaseName == null) // server level op
             {
                 if (await IsOperatorAsync() == false)
                     return;
             }
-            else if (await CanAccessDatabaseAsync(operation.Database.Name, requireAdmin: false, requireWrite: false) == false)
+            else if (await CanAccessDatabaseAsync(operation.DatabaseName, requireAdmin: false, requireWrite: false) == false)
             {
                 return;
             }

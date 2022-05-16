@@ -9,6 +9,7 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -44,9 +45,9 @@ namespace Raven.Server.Documents.Handlers
                 using (var operationCancelToken = CreateOperationToken())
                 {
                     var result = await Database.Operations.AddOperation(
-                        database: Database,
+                        databaseName: Database.Name,
                         description: "Replay transaction commands",
-                        operationType: Operations.Operations.OperationType.ReplayTransactionCommands,
+                        operationType: OperationType.ReplayTransactionCommands,
                         taskFactory: progress => Task.Run(async () =>
                         {
                             var reader = new MultipartReader(MultipartRequestHelper.GetBoundary(MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
@@ -177,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var task = ServerStore.Operations.AddOperation(null,
                     "Recording for: '" + Database.Name + ". Output file: '" + parameters.File + "'",
-                    Operations.Operations.OperationType.RecordTransactionCommands,
+                    OperationType.RecordTransactionCommands,
                     progress =>
                     {
                         // push this notification to studio

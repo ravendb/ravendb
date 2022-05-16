@@ -7,8 +7,6 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Pkcs;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
@@ -18,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -64,7 +63,7 @@ namespace Raven.Server.Web.Authentication
                     ServerStore.Operations.AddOperation(
                         null,
                         "Generate certificate: " + certificate.Name,
-                        Documents.Operations.Operations.OperationType.CertificateGeneration,
+                        OperationType.CertificateGeneration,
                         async onProgress =>
                         {
                             certs = await GenerateCertificateInternal(certificate, ServerStore, GetRaftRequestIdFromQuery());

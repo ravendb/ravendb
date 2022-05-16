@@ -4,7 +4,10 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
@@ -31,6 +34,12 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
     protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
     private readonly bool _throttleConnection;
 
+    private readonly ConcurrentSet<long> _matchingOperations = new();
+
+    private int _watchAllOperations;
+
+    private bool _watchTopology;
+
     protected AbstractChangesClientConnection(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken databaseShutdown, bool throttleConnection, bool fromStudio)
     {
         IsChangesConnectionOriginatedFromStudio = fromStudio;
@@ -46,7 +55,11 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     public TimeSpan Age => SystemTime.UtcNow - _startedAt;
 
-    protected abstract ValueTask WatchTopologyAsync();
+    private ValueTask WatchTopologyAsync()
+    {
+        _watchTopology = true;
+        return ValueTask.CompletedTask;
+    }
 
     protected abstract ValueTask WatchDocumentAsync(string docId, CancellationToken token);
 
@@ -104,13 +117,29 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected abstract ValueTask UnwatchIndexAsync(string name, CancellationToken token);
 
-    protected abstract ValueTask WatchOperationAsync(long operationId);
+    private ValueTask WatchOperationAsync(long operationId)
+    {
+        _matchingOperations.TryAdd(operationId);
+        return ValueTask.CompletedTask;
+    }
 
-    protected abstract ValueTask UnwatchOperationAsync(long operationId);
+    private ValueTask UnwatchOperationAsync(long operationId)
+    {
+        _matchingOperations.TryRemove(operationId);
+        return ValueTask.CompletedTask;
+    }
 
-    protected abstract ValueTask WatchAllOperationsAsync();
+    private ValueTask WatchAllOperationsAsync()
+    {
+        Interlocked.Increment(ref _watchAllOperations);
+        return ValueTask.CompletedTask;
+    }
 
-    protected abstract ValueTask UnwatchAllOperationsAsync();
+    private ValueTask UnwatchAllOperationsAsync()
+    {
+        Interlocked.Decrement(ref _watchAllOperations);
+        return ValueTask.CompletedTask;
+    }
 
     public async Task StartSendingNotificationsAsync()
     {
@@ -203,7 +232,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     public bool IsChangesConnectionOriginatedFromStudio { get; }
 
-    private readonly SingleUseFlag _isDisposed = new SingleUseFlag();
+    private readonly SingleUseFlag _isDisposed = new();
 
     public bool IsDisposed => _isDisposed.IsRaised();
 
@@ -394,7 +423,51 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         }
     }
 
-    protected static bool Match(string x, string y)
+    public void SendOperationStatusChangeNotification(OperationStatusChange change)
+    {
+        if (_watchAllOperations > 0)
+        {
+            Send(change);
+            return;
+        }
+
+        if (_matchingOperations.Contains(change.OperationId))
+        {
+            Send(change);
+        }
+    }
+
+    public void SendTopologyChanges(TopologyChange change)
+    {
+        if (_watchTopology)
+        {
+            Send(change);
+        }
+    }
+
+    private void Send(OperationStatusChange change)
+    {
+        var value = CreateValueToSend(nameof(OperationStatusChange), change.ToJson());
+
+        AddToQueue(new SendQueueItem
+        {
+            ValueToSend = value,
+            AllowSkip = false
+        });
+    }
+
+    private void Send(TopologyChange change)
+    {
+        var value = CreateValueToSend(nameof(TopologyChange), change.ToJson());
+
+        AddToQueue(new SendQueueItem
+        {
+            ValueToSend = value,
+            AllowSkip = true
+        });
+    }
+
+    private static bool Match(string x, string y)
     {
         return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
     }
@@ -408,7 +481,17 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
             ["CloseStatus"] = _webSocket.CloseStatus,
             ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
             ["SubProtocol"] = _webSocket.SubProtocol,
-            ["Age"] = Age
+            ["Age"] = Age,
+            ["WatchAllOperations"] = _watchAllOperations > 0
+        };
+    }
+
+    protected static DynamicJsonValue CreateValueToSend(string type, DynamicJsonValue value)
+    {
+        return new DynamicJsonValue
+        {
+            ["Type"] = type,
+            ["Value"] = value
         };
     }
 

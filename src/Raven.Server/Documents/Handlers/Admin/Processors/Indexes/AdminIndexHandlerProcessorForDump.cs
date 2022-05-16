@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -34,9 +35,9 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             var token = RequestHandler.CreateTimeLimitedQueryOperationToken();
 
             _ = RequestHandler.Database.Operations.AddOperation(
-                RequestHandler.Database,
+                RequestHandler.Database.Name,
                 "Dump index " + name + " to " + path,
-                Operations.Operations.OperationType.DumpRawIndexData,
+                OperationType.DumpRawIndexData,
                 onProgress =>
                 {
                     var totalFiles = index.Dump(path, onProgress);

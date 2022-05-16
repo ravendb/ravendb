@@ -4,7 +4,6 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -34,12 +33,7 @@ namespace Raven.Server.Documents.Changes
 
         private readonly ConcurrentSet<DocumentIdAndNamePair> _matchingDocumentTimeSeries = new();
 
-        private readonly ConcurrentSet<long> _matchingOperations = new();
-
-        private bool _watchTopology;
-
         private int _watchAllDocuments;
-        private int _watchAllOperations;
         private int _watchAllIndexes;
         private int _watchAllCounters;
         private int _watchAllTimeSeries;
@@ -47,20 +41,6 @@ namespace Raven.Server.Documents.Changes
         public ChangesClientConnection(WebSocket webSocket, DocumentDatabase database, bool throttleConnection, bool fromStudio)
             : base(webSocket, database.DocumentsStorage.ContextPool, database.DatabaseShutdown, throttleConnection, fromStudio)
         {
-        }
-
-        public void SendOperationStatusChangeNotification(OperationStatusChange change)
-        {
-            if (_watchAllOperations > 0)
-            {
-                Send(change);
-                return;
-            }
-
-            if (_matchingOperations.Contains(change.OperationId))
-            {
-                Send(change);
-            }
         }
 
         public void SendCounterChanges(CounterChange change)
@@ -183,36 +163,6 @@ namespace Raven.Server.Documents.Changes
             }
         }
 
-        public void SendTopologyChanges(TopologyChange change)
-        {
-            if (_watchTopology)
-            {
-                Send(change);
-            }
-        }
-
-        private void Send(OperationStatusChange change)
-        {
-            var value = CreateValueToSend(nameof(OperationStatusChange), change.ToJson());
-
-            AddToQueue(new SendQueueItem
-            {
-                ValueToSend = value,
-                AllowSkip = false
-            });
-        }
-
-        private void Send(TopologyChange change)
-        {
-            var value = CreateValueToSend(nameof(TopologyChange), change.ToJson());
-
-            AddToQueue(new SendQueueItem
-            {
-                ValueToSend = value,
-                AllowSkip = true
-            });
-        }
-
         private void Send(CounterChange change)
         {
             var value = CreateValueToSend(nameof(CounterChange), change.ToJson());
@@ -279,12 +229,6 @@ namespace Raven.Server.Documents.Changes
                     return true;
             }
             return false;
-        }
-
-        protected override ValueTask WatchTopologyAsync()
-        {
-            _watchTopology = true;
-            return ValueTask.CompletedTask;
         }
 
         protected override ValueTask WatchDocumentAsync(string docId, CancellationToken token)
@@ -465,30 +409,6 @@ namespace Raven.Server.Documents.Changes
             return ValueTask.CompletedTask;
         }
 
-        protected override ValueTask WatchOperationAsync(long operationId)
-        {
-            _matchingOperations.TryAdd(operationId);
-            return ValueTask.CompletedTask;
-        }
-
-        protected override ValueTask UnwatchOperationAsync(long operationId)
-        {
-            _matchingOperations.TryRemove(operationId);
-            return ValueTask.CompletedTask;
-        }
-
-        protected override ValueTask WatchAllOperationsAsync()
-        {
-            Interlocked.Increment(ref _watchAllOperations);
-            return ValueTask.CompletedTask;
-        }
-
-        protected override ValueTask UnwatchAllOperationsAsync()
-        {
-            Interlocked.Decrement(ref _watchAllOperations);
-            return ValueTask.CompletedTask;
-        }
-
         public override DynamicJsonValue GetDebugInfo()
         {
             var djv = base.GetDebugInfo();
@@ -497,7 +417,6 @@ namespace Raven.Server.Documents.Changes
             djv["WatchAllIndexes"] = _watchAllIndexes > 0;
             djv["WatchAllCounters"] = _watchAllCounters > 0;
             djv["WatchAllTimeSeries"] = _watchAllTimeSeries > 0;
-            djv["WatchAllOperations"] = _watchAllOperations > 0;
             djv["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray();
             djv["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray();
             djv["WatchIndexes"] = _matchingIndexes.ToArray();
@@ -510,15 +429,6 @@ namespace Raven.Server.Documents.Changes
             djv["WatchAllTimeSeriesOfDocument"] = _matchingAllDocumentTimeSeries.ToArray();
 
             return djv;
-        }
-
-        private static DynamicJsonValue CreateValueToSend(string type, DynamicJsonValue value)
-        {
-            return new DynamicJsonValue
-            {
-                ["Type"] = type,
-                ["Value"] = value
-            };
         }
     }
 }

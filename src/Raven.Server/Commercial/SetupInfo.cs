@@ -291,7 +291,7 @@ namespace Raven.Server.Commercial
     public class SetupProgressAndResult : IOperationResult, IOperationProgress
     {
         private readonly Action<(string Message, Exception Exception)> _onMessage;
-        
+
         public long Processed { get; set; }
         public long Total { get; set; }
         public string Certificate { get; set; }
@@ -305,7 +305,7 @@ namespace Raven.Server.Commercial
             Messages = new ConcurrentQueue<string>();
             Certificate = null;
         }
-        
+
         public string Message { get; private set; }
 
         public DynamicJsonValue ToJson()
@@ -322,6 +322,25 @@ namespace Raven.Server.Commercial
                 json[nameof(Certificate)] = Certificate;
 
             return json;
+        }
+
+        IOperationProgress IOperationProgress.Clone()
+        {
+            throw new NotImplementedException();
+        }
+
+        bool IOperationProgress.CanMerge => false;
+
+        void IOperationResult.MergeWith(IOperationResult result)
+        {
+            throw new NotImplementedException();
+        }
+
+        bool IOperationResult.CanMerge => false;
+
+        void IOperationProgress.MergeWith(IOperationProgress progress)
+        {
+            throw new NotImplementedException();
         }
 
         public void AddWarning(string message)

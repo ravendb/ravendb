@@ -1,8 +1,7 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
-using Raven.Server.Json;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Operations;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
@@ -12,15 +11,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/operations/next-operation-id", "GET")]
         public async Task GetNextOperationId()
         {
-            var nextId = ServerStore.Operations.GetNextOperationId();
+            using (var processor = new ShardedOperationsHandlerProcessorForGetNextOperationId(this))
+                await processor.ExecuteAsync();
+        }
 
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteNextOperationIdAndNodeTag(nextId, Server.ServerStore.NodeTag);
-                }
-            }
+        [RavenShardedAction("/databases/*/operations/kill", "POST")]
+        public async Task Kill()
+        {
+            using (var processor = new ShardedOperationsHandlerProcessorForKill(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/operations/state", "GET")]
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             var id = GetLongQueryString("id");
 
-            var state = ServerStore.Operations.GetOperation(id)?.State;
+            var state = DatabaseContext.Operations.GetOperation(id)?.State;
 
             if (state == null)
             {

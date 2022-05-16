@@ -13,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -274,7 +275,7 @@ namespace Raven.Server.Documents.Handlers
 
                     await ExecuteQueryOperation(query,
                         (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, queryContext, onProgress, token),
-                        queryContext, Operations.Operations.OperationType.DeleteByQuery);
+                        queryContext, OperationType.DeleteByQuery);
                 }
             }
             catch
@@ -387,7 +388,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Patch()
         {
             var queryContext = QueryOperationContext.Allocate(Database); // we don't dispose this as operation is async
-            
+
             try
             {
                 var reader = await queryContext.Documents.ReadForMemoryAsync(RequestBodyStream(), "queries/patch");
@@ -397,7 +398,7 @@ namespace Raven.Server.Documents.Handlers
                     throw new BadRequestException("Missing 'Query' property.");
 
                 var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, queryType: QueryType.Update);
-                
+
                 query.DisableAutoIndexCreation = GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 
                 if (TrafficWatchManager.HasRegisteredClients)
@@ -408,7 +409,7 @@ namespace Raven.Server.Documents.Handlers
                 await ExecuteQueryOperation(query,
                     (runner, options, onProgress, token) => runner.ExecutePatchQuery(
                         query, options, patch, query.QueryParameters, queryContext, onProgress, token),
-                    queryContext, Operations.Operations.OperationType.UpdateByQuery);
+                    queryContext, OperationType.UpdateByQuery);
             }
             catch
             {
@@ -428,12 +429,12 @@ namespace Raven.Server.Documents.Handlers
                 Action<IOperationProgress>, OperationCancelToken,
                 Task<IOperationResult>> operation,
                 IDisposable returnContextToPool,
-                Operations.Operations.OperationType operationType)
+                OperationType operationType)
         {
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedQueryOperationToken();
 
-            var operationId = Database.Operations.GetNextOperationId();
+            var operationId = GetLongQueryString("operationId", required: false) ?? Database.Operations.GetNextOperationId();
 
             var indexName = query.Metadata.IsDynamic
                 ? (query.Metadata.IsCollectionQuery ? "collection/" : "dynamic/") + query.Metadata.CollectionName
@@ -445,7 +446,7 @@ namespace Raven.Server.Documents.Handlers
             };
 
             var task = Database.Operations.AddOperation(
-                Database,
+                Database.Name,
                 indexName,
                 operationType,
                 onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);

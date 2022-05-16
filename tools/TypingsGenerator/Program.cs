@@ -68,7 +68,6 @@ using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Spatial;
-using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -107,6 +106,7 @@ using TypeScripter.TypeScript;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
+using Operation = Raven.Server.Documents.Operations.Operation;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Size = Sparrow.Size;
 
@@ -257,7 +257,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
-            scripter.AddType(typeof(Operations.Operation));
+            scripter.AddType(typeof(Operation));
             scripter.AddType(typeof(NewVersionAvailableDetails));
             scripter.AddType(typeof(MessageDetails));
             scripter.AddType(typeof(ExceptionDetails));

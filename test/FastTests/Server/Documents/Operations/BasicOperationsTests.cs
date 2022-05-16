@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -32,7 +33,7 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation(null, "Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
+                db.Operations.AddOperation(null, "Operations Test", 0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         var p = new DeterminateProgress
@@ -100,7 +101,7 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation(null, "Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
+                db.Operations.AddOperation(null, "Operations Test", 0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         throw new Exception("Something bad happened");
@@ -134,7 +135,7 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation(null, "Cancellation Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
+                db.Operations.AddOperation(null, "Cancellation Test", 0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         token.Token.ThrowIfCancellationRequested();
@@ -206,6 +207,13 @@ namespace FastTests.Server.Documents.Operations
             }
 
             public bool ShouldPersist => false;
+
+            bool IOperationResult.CanMerge => false;
+
+            void IOperationResult.MergeWith(IOperationResult result)
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 }

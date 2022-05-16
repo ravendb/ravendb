@@ -2,9 +2,10 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
-using Raven.Server.Json;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Operations.Processors;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Operations
@@ -14,25 +15,15 @@ namespace Raven.Server.Web.Operations
         [RavenAction("/databases/*/operations/next-operation-id", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetNextOperationId()
         {
-            var nextId = Database.Operations.GetNextOperationId();
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteNextOperationIdAndNodeTag(nextId, Server.ServerStore.NodeTag);
-                }
-            }
+            using (var processor = new OperationsHandlerProcessorForGetNextOperationId(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/operations/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task Kill()
+        public async Task Kill()
         {
-            var id = GetLongQueryString("id");
-            // ReSharper disable once PossibleInvalidOperationException
-            Database.Operations.KillOperation(id);
-
-            return NoContent();
+            using (var processor = new OperationsHandlerProcessorForKill(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/operations", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -42,7 +33,7 @@ namespace Raven.Server.Web.Operations
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                IEnumerable<Documents.Operations.Operations.Operation> operations;
+                IEnumerable<Operation> operations;
                 if (id.HasValue == false)
                     operations = Database.Operations.GetAll();
                 else
@@ -54,7 +45,7 @@ namespace Raven.Server.Web.Operations
                         return;
                     }
 
-                    operations = new List<Documents.Operations.Operations.Operation> { operation };
+                    operations = new List<Operation> { operation };
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

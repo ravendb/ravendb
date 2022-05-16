@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
-        private readonly ResourceCache<ShardedDatabaseContext> _shardedDatabases = new ResourceCache<ShardedDatabaseContext>();
+        public readonly ResourceCache<ShardedDatabaseContext> ShardedDatabasesCache = new ResourceCache<ShardedDatabaseContext>();
 
         private readonly Logger _logger;
         private readonly ServerStore _serverStore;
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents
 
                             // we need to update this upon any shard topology change
                             // and upon migration completion
-                            if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var databaseContextTask))
+                            if (ShardedDatabasesCache.TryGetValue(rawRecord.DatabaseName, out var databaseContextTask))
                             {
                                 var databaseContext = databaseContextTask.Result; // this isn't really a task
                                 databaseContext.UpdateDatabaseRecord(rawRecord, index);
@@ -610,7 +610,7 @@ namespace Raven.Server.Documents
                 };
             }
 
-            if (_shardedDatabases.TryGetValue(databaseName, out var database))
+            if (ShardedDatabasesCache.TryGetValue(databaseName, out var database))
             {
                 return new DatabaseSearchResult
                 {
@@ -635,7 +635,7 @@ namespace Raven.Server.Documents
                 if (databaseRecord.IsSharded())
                 {
                     var newTask = new Task<ShardedDatabaseContext>(() => new ShardedDatabaseContext(_serverStore, databaseRecord));
-                    var currentTask = _shardedDatabases.GetOrAdd(databaseName, newTask);
+                    var currentTask = ShardedDatabasesCache.GetOrAdd(databaseName, newTask);
 
                     ShardedDatabaseContext databaseContext;
                     try
@@ -647,7 +647,7 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception)
                     {
-                        _shardedDatabases.TryRemove(databaseName, out _);
+                        ShardedDatabasesCache.TryRemove(databaseName, out _);
 
                         throw;
                     }

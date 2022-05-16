@@ -15,6 +15,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
@@ -86,9 +87,9 @@ namespace Raven.Server.Web
             var token = CreateOperationToken();
 
             await operations.AddOperation(
-                documentDatabase,
+                documentDatabase.Name,
                 "Export database: " + databaseName,
-                Documents.Operations.Operations.OperationType.DatabaseExport,
+                OperationType.DatabaseExport,
                 onProgress => onExport(options, startDocumentEtag, startRaftIndex, onProgress, context, token), operationId, token: token);
 
         }
@@ -176,9 +177,9 @@ namespace Raven.Server.Web
 
             var result = new SmugglerResult();
             BlittableJsonReaderObject blittableJson = null;
-            await operations.AddOperation(documentDatabase
+            await operations.AddOperation(documentDatabase.Name
                 , "Import to: " + databaseName,
-                Documents.Operations.Operations.OperationType.DatabaseImport,
+                OperationType.DatabaseImport,
                 onProgress =>
                 {
                     return Task.Run(async () =>

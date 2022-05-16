@@ -32,6 +32,8 @@ namespace Raven.Client.Documents.Operations
         string Message { get; }
         DynamicJsonValue ToJson();
         bool ShouldPersist { get; }
+        bool CanMerge { get; }
+        void MergeWith(IOperationResult result);
     }
 
     public interface IOperationDetailedDescription

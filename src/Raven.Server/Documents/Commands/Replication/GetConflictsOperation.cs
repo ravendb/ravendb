@@ -11,7 +11,7 @@ using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Json;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Operations
+namespace Raven.Server.Documents.Commands.Replication
 {
     internal class GetConflictsOperation : IMaintenanceOperation<GetConflictsPreviewResult>
     {

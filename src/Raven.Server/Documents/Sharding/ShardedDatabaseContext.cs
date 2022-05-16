@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Sharding
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
             Changes = new ShardedDocumentsChanges(this);
+            Operations = new ShardedOperations(this);
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
         }
 

@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio
 {
@@ -41,10 +39,10 @@ namespace Raven.Server.Web.Studio
             }
 
             await ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, 0, long.MaxValue, options, onProgress, token)),
-                context, returnContextToPool, Documents.Operations.Operations.OperationType.DeleteByCollection, excludeIds);
+                context, returnContextToPool, OperationType.DeleteByCollection, excludeIds);
         }
 
-        private async Task ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext docsContext, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<string> excludeIds)
+        private async Task ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext docsContext, IDisposable returnContextToPool, OperationType operationType, HashSet<string> excludeIds)
         {
             var collectionName = GetStringQueryString("name");
 
@@ -57,7 +55,7 @@ namespace Raven.Server.Web.Studio
             // use default options
             var options = new CollectionOperationOptions();
 
-            var task = Database.Operations.AddOperation(Database, collectionName, operationType, onProgress =>
+            var task = Database.Operations.AddOperation(Database.Name, collectionName, operationType, onProgress =>
                      operation(collectionRunner, collectionName, options, onProgress, token), operationId, token: token);
 
             _ = task.ContinueWith(_ => returnContextToPool.Dispose());

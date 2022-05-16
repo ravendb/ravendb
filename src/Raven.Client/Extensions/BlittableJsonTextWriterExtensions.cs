@@ -6,7 +6,7 @@ namespace Raven.Client.Extensions
 {
     internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteIndexQuery(this AbstractBlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, IndexQuery query)
+        public static void WriteIndexQuery<T>(this AbstractBlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, IndexQuery<T> query)
         {
             writer.WriteStartObject();
 
@@ -46,12 +46,12 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (query.DisableCaching)
-            {
-                writer.WritePropertyName(nameof(query.DisableCaching));
-                writer.WriteBool(query.DisableCaching);
-                writer.WriteComma();
-            }
+            //if (query.DisableCaching)
+            //{
+            //    writer.WritePropertyName(nameof(query.DisableCaching));
+            //    writer.WriteBool(query.DisableCaching);
+            //    writer.WriteComma();
+            //}
 
             if (query.SkipDuplicateChecking)
             {
@@ -62,7 +62,12 @@ namespace Raven.Client.Extensions
 
             writer.WritePropertyName(nameof(query.QueryParameters));
             if (query.QueryParameters != null)
-                writer.WriteObject(conventions.Serialization.DefaultConverter.ToBlittable(query.QueryParameters, context));
+            {
+                BlittableJsonReaderObject queryParameters = query.QueryParameters as BlittableJsonReaderObject
+                    ?? conventions.Serialization.DefaultConverter.ToBlittable(query.QueryParameters, context);
+
+                writer.WriteObject(queryParameters);
+            }
             else
                 writer.WriteNull();
 
