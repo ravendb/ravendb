@@ -160,14 +160,14 @@ namespace FastTests
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
-            var converted = ConvertRespectingNewLines(expected);
+            var converted = NormalizeNewLines(expected);
 
             Assert.Equal(converted, actual);
         }
 
         public static void AssertStartsWithRespectingNewLines(string expected, string actual)
         {
-            var converted = ConvertRespectingNewLines(expected);
+            var converted = NormalizeNewLines(expected);
 
             Assert.StartsWith(converted, actual);
         }
@@ -211,7 +211,7 @@ namespace FastTests
             }
         }
 
-        private static string ConvertRespectingNewLines(string toConvert)
+        internal static string NormalizeNewLines(string toConvert)
         {
             if (string.IsNullOrEmpty(toConvert))
                 return toConvert;
