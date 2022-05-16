@@ -44,7 +44,8 @@ public partial class ShardedDatabaseContext
 
         protected override void RaiseNotifications(OperationStatusChange change, ShardedOperation operation)
         {
-            // TODO [ppekrol]
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "handle notification center");
+
             base.RaiseNotifications(change, operation);
         }
 

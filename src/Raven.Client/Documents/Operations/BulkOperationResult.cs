@@ -55,7 +55,10 @@ namespace Raven.Client.Documents.Operations
 
             AttachmentsProcessed += r.AttachmentsProcessed;
             CountersProcessed += r.CountersProcessed;
-            //Details // TODO [ppekrol]
+
+            if (r.Details is { Count: > 0 })
+                Details.AddRange(r.Details);
+
             DocumentsProcessed += r.DocumentsProcessed;
             TimeSeriesProcessed += r.TimeSeriesProcessed;
             Total += r.Total;
