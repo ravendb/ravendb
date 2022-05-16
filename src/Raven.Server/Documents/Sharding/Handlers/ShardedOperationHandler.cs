@@ -1,8 +1,6 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Operations;
 using Raven.Server.Routing;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -25,20 +23,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/operations/state", "GET")]
         public async Task State()
         {
-            var id = GetLongQueryString("id");
-
-            var state = DatabaseContext.Operations.GetOperation(id)?.State;
-
-            if (state == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
-            }
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await InternalGetStateAsync(state, context);
-            }
+            using (var processor = new ShardedOperationsHandlerProcessorForState(this))
+                await processor.ExecuteAsync();
         }
     }
 }

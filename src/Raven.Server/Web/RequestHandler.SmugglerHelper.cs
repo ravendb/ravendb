@@ -258,17 +258,6 @@ namespace Raven.Server.Web
             }
         }
 
-        internal async Task InternalGetStateAsync(OperationState state, JsonOperationContext context)
-        {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, state.ToJson());
-                // writes Patch response
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
-            }
-        }
-
         internal void TrafficWatchQuery(IndexQueryServerSide indexQuery)
         {
             var sb = new StringBuilder();
