@@ -1181,30 +1181,30 @@ namespace Raven.Server.Documents.PeriodicBackup
                 BackupTaskType = lastBackupStatus?.TaskId == 0 ? BackupTaskType.OneTime : BackupTaskType.Periodic,
                 Destinations = AddDestinations(lastBackupStatus)
             };
+        }
 
-            static List<string> AddDestinations(PeriodicBackupStatus backupStatus)
-            {
-                if (backupStatus == null)
-                    return null;
+        internal static List<string> AddDestinations(PeriodicBackupStatus backupStatus)
+        {
+            if (backupStatus == null)
+                return null;
 
-                var destinations = new List<string>();
-                if (backupStatus.UploadToAzure?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.Azure));
-                if (backupStatus.UploadToGlacier?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonGlacier));
-                if (backupStatus.UploadToFtp?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.FTP));
-                if (backupStatus.UploadToGoogleCloud?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.GoogleCloud));
-                if (backupStatus.UploadToS3?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonS3));
-                if (backupStatus.LocalBackup?.TempFolderUsed == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.Local));
-                if (destinations.Count == 0)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.None));
+            var destinations = new List<string>();
+            if (backupStatus.UploadToAzure?.Skipped == false)
+                destinations.Add(nameof(BackupConfiguration.BackupDestination.Azure));
+            if (backupStatus.UploadToGlacier?.Skipped == false)
+                destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonGlacier));
+            if (backupStatus.UploadToFtp?.Skipped == false)
+                destinations.Add(nameof(BackupConfiguration.BackupDestination.FTP));
+            if (backupStatus.UploadToGoogleCloud?.Skipped == false)
+                destinations.Add(nameof(BackupConfiguration.BackupDestination.GoogleCloud));
+            if (backupStatus.UploadToS3?.Skipped == false)
+                destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonS3));
+            if (backupStatus.LocalBackup?.TempFolderUsed == false)
+                destinations.Add(nameof(BackupConfiguration.BackupDestination.Local));
+            if (destinations.Count == 0)
+                destinations.Add(nameof(BackupConfiguration.BackupDestination.None));
 
-                return destinations;
-            }
+            return destinations;
         }
 
         public RunningBackup OnGoingBackup(long taskId)

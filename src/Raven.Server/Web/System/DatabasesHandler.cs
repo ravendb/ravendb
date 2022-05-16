@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
@@ -14,6 +15,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
@@ -409,9 +411,46 @@ namespace Raven.Server.Web.System
 
                 if (online == false)
                 {
+                    BackupInfo bi = null;
                     // if state of database is found in the cache we can continue
                     if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
                     {
+                        if (dbRecord.PeriodicBackups!=null && dbRecord.PeriodicBackups.Count > 0)
+                        {
+                            var intervalUntilNextBackupInSec = long.MaxValue;
+                            bool firstIter = false;
+                            PeriodicBackupStatus lastInfo = default;
+                            var lastBackup = 0L;
+                            foreach (var pb in dbRecord.PeriodicBackups)
+                            {
+                                var info = PeriodicBackupRunner.GetBackupStatusFromCluster(ServerStore, context, databaseName, pb.TaskId);
+                                if (firstIter == false)
+                                {
+                                    firstIter = true;
+                                    lastInfo = info;
+                                }
+                                else if (info.LastFullBackup != null && info.LastFullBackup.Value.Ticks > lastBackup)
+                                {
+                                    lastBackup = info.LastIncrementalBackup.Value.Ticks;
+                                    lastInfo = info;
+                                }
+                                else if (info.LastIncrementalBackup != null && info.LastIncrementalBackup.Value.Ticks > lastBackup)
+                                {
+                                    lastBackup = info.LastIncrementalBackup.Value.Ticks;
+                                    lastInfo = info;
+                                }
+                            }
+
+                            bi = new BackupInfo
+                            {
+                                LastBackup = lastBackup == 0L ? (DateTime?)null : new DateTime(lastBackup),
+                                IntervalUntilNextBackupInSec = intervalUntilNextBackupInSec,
+                                BackupTaskType = lastInfo?.TaskId == 0 ? BackupTaskType.OneTime : BackupTaskType.Periodic,
+                                Destinations = PeriodicBackupRunner.AddDestinations(lastInfo)
+                            };
+                        }
+                        
+
                         databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                         {
                             [nameof(DatabaseInfo.Disabled)] = disabled,
@@ -419,8 +458,10 @@ namespace Raven.Server.Web.System
                             [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus,
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
                             [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress),
-                            [nameof(DatabaseInfo.Environment)] = studioEnvironment
-                        };
+                            [nameof(DatabaseInfo.Environment)] = studioEnvironment,
+                            [nameof(DatabaseInfo.BackupInfo)] = bi
+
+                    };
 
                         context.Write(writer, databaseInfoJson);
                     }))
@@ -541,7 +582,8 @@ namespace Raven.Server.Web.System
         private static BackupInfo GetBackupInfo(DocumentDatabase db, TransactionOperationContext context)
         {
             var periodicBackupRunner = db?.PeriodicBackupRunner;
-            return periodicBackupRunner?.GetBackupInfo(context);
+            var results = periodicBackupRunner?.GetBackupInfo(context);
+            return results;
         }
 
         private static TimeSpan GetUptime(DocumentDatabase db)
