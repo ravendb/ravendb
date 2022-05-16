@@ -191,30 +191,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetSubscriptionState()
         {
-            var subscriptionName = GetStringQueryString("name", false);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                if (string.IsNullOrEmpty(subscriptionName))
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return;
-                }
-
-                var subscriptionState = Database
-                    .SubscriptionStorage
-                    .GetSubscriptionFromServerStore(subscriptionName);
-
-                if (subscriptionState == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                context.Write(writer, subscriptionState.ToJson());
-            }
+            using (var processor = new SubscriptionsHandlerProcessorForGetSubscriptionState(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/debug/subscriptions/resend", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
