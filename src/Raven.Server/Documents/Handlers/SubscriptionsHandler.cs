@@ -421,42 +421,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task DropSubscriptionConnection()
+        public async Task DropSubscriptionConnection()
         {
-            var subscriptionId = GetLongQueryString("id", required: false);
-            var subscriptionName = GetStringQueryString("name", required: false);
-            var workerId = GetStringQueryString("workerId", required: false);
-            
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var subscription = Database
-                    .SubscriptionStorage
-                    .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
-                
-                if (subscription != null)
-                {
-                    bool result;
-                    if (string.IsNullOrEmpty(workerId) == false)
-                    {
-                        result = Database.SubscriptionStorage.DropSingleSubscriptionConnection(subscription.SubscriptionId, workerId,
-                            new SubscriptionClosedException($"Connection with Id {workerId} dropped by API request (request ip:{HttpContext.Connection.RemoteIpAddress}, cert:{HttpContext.Connection.ClientCertificate?.Thumbprint})", canReconnect: false));
-                    }
-                    else 
-                    {
-                       result = Database.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
-                           new SubscriptionClosedException($"Dropped by API request (request ip:{HttpContext.Connection.RemoteIpAddress}, cert:{HttpContext.Connection.ClientCertificate?.Thumbprint})", canReconnect: false));
-                    }
-
-                    if (result == false)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return Task.CompletedTask;
-                    }
-                }
-            }
-
-            return NoContent();
+            using (var processor = new SubscriptionsHandlerProcessorForDropSubscriptionConnection(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/subscriptions/update", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
