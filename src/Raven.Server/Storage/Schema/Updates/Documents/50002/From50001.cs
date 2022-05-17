@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Raven.Server.Storage.Schema.Updates.Documents
+﻿namespace Raven.Server.Storage.Schema.Updates.Documents
 {
     public unsafe class From50001 : ISchemaUpdate
     {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -18,7 +19,6 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Patch;
 using SlowTests.Client.TimeSeries.Replication;
 using Sparrow;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

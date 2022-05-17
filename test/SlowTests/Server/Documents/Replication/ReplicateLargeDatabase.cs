@@ -1,9 +1,9 @@
-﻿using System.Linq;
+﻿using Tests.Infrastructure;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Replication;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -12,7 +13,6 @@ using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

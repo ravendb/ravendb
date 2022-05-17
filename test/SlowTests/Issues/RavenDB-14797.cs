@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Tests.Infrastructure;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -25,7 +25,7 @@ namespace SlowTests.Issues
             {
                 new MapReduceWithOutputToCollection().Execute(store);
                 new JavaIndex().Execute(store);
-                new JavaWithAdditionalSourcesIndex(jsEngineType).Execute(store);
+                new JavaWithAdditionalSourcesIndex(options).Execute(store);
                 string entityId;
                 using (var session = store.OpenSession())
                 {
@@ -235,8 +235,8 @@ namespace SlowTests.Issues
 
                 OutputReduceToCollection = @"ThirdOutput";
 
-                var optChaining = jsEngineType == "Jint" ? "" : "?.";
-                var optEmptyArray = jsEngineType == "Jint" ? "" : "?? []";
+                var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?.";
+                var optEmptyArray = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?? []";
                 
                 AdditionalSources = new Dictionary<string, string>
                 {

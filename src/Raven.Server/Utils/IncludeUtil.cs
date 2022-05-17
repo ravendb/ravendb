@@ -5,7 +5,6 @@ using System.Globalization;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
-using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Utils
 {

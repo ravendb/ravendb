@@ -1,9 +1,6 @@
 using System;
 using System.Diagnostics;
 using Raven.Client.ServerWide.JavaScript;
-using Raven.Server.Config.Categories;
-using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch.Jint;
 using Raven.Server.Documents.Patch.V8;
 using Raven.Server.ServerWide.Context;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
-using Raven.Server.Documents.Patch.Jint;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using Tests.Infrastructure;
+using System.Collections.Generic;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

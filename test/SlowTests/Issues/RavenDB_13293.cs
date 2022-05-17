@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -20,8 +20,8 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.Config;
 using SlowTests.Rolling;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -193,8 +193,8 @@ namespace SlowTests.Issues
                 Database = databaseName,
             }.Initialize())
             {
-                var doc = new DatabaseRecord(databaseName);
-                Options.ModifyForJavaScriptEngine(jsEngineType).Invoke(doc);
+
+                var doc = new DatabaseRecord(databaseName) { Settings = { [RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = options.JavascriptEngineMode.ToString() } };
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 myNodesList.AddRange(databaseResult.Topology.AllNodes);
 

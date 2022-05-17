@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,8 +14,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
-using Sparrow.Server;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

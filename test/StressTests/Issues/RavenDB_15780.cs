@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Threading;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

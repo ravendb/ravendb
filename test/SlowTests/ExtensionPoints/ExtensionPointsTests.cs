@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,7 +17,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Platform;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;

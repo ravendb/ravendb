@@ -1,14 +1,11 @@
-﻿// -----------------------------------------------------------------------
+﻿using Tests.Infrastructure;
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3417.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
-using System;
 using FastTests;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

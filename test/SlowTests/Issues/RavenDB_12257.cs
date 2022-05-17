@@ -6,7 +6,6 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

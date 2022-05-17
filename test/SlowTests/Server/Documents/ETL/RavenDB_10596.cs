@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
@@ -23,7 +23,6 @@ namespace SlowTests.Server.Documents.ETL
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task AggregatesTransformationErrorsInSingleAlert(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

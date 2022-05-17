@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
-using Raven.Server.Documents;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils

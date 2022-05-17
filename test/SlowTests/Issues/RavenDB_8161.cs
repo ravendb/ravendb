@@ -1,10 +1,9 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +20,6 @@ namespace SlowTests.Issues
         public void Can_delete_all_entries_from_compressed_tree_in_map_reduce_index(Options options)
         {
             var path = NewDataPath();
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             options.Path = path;
             using (var store = GetDocumentStore(options))
             {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -25,7 +26,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

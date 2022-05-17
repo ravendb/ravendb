@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Tests.Infrastructure;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Orders;
 using Xunit;

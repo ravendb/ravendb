@@ -1,6 +1,6 @@
-﻿using System.Linq;
+﻿using Tests.Infrastructure;
+using System.Linq;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;

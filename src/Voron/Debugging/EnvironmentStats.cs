@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Voron.Debugging
 {
     public class EnvironmentStats

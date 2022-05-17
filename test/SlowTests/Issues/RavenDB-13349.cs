@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using Tests.Infrastructure;
+using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;

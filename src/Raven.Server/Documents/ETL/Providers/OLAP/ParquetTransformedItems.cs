@@ -10,7 +10,6 @@ using System.Text;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Sparrow.Json;
 using DataColumn = Parquet.Data.DataColumn;
 

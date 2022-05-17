@@ -1,13 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Tests.Infrastructure;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 using IndexingFields = Raven.Client.Constants.Documents.Indexing.Fields;
+
 
 namespace SlowTests.Issues
 {
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                JsIndex index = jsEngineType == "Jint" ? new JsIndexJint() : new JsIndexV8();
+                JsIndex index = options.JavascriptEngineMode.ToString() == "Jint" ? new JsIndexJint() : new JsIndexV8();
                 index.Execute(store);
 
                 using (var session = store.OpenSession())
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                var termsCountNull = jsEngineType is null or "Jint" ? 0 : 1;
+                var termsCountNull = options.JavascriptEngineMode.ToString() == "Jint" ? 0 : 1;
 
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "City", fromValue: null));
                 Assert.Equal(termsCountNull, terms.Length);
@@ -99,7 +100,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var companies = (jsEngineType == "Jint" ? session.Query<Company, JsIndexJint>() : session.Query<Company, JsIndexV8>())
+                    var companies = (options.JavascriptEngineMode.ToString() == "Jint" ? session.Query<Company, JsIndexJint>() : session.Query<Company, JsIndexV8>())
                         .ToList();
 
                     Assert.Equal(2, companies.Count);
@@ -189,9 +190,14 @@ namespace SlowTests.Issues
 
         private class JsIndex : AbstractJavaScriptIndexCreationTask
         {
-            public JsIndex(Options options)
+          
+        }
+
+        private class JsIndexJint : JsIndex
+        {
+            public JsIndexJint() 
             {
-                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var optChaining = "" ;
 
                 Maps = new HashSet<string>
                 {
@@ -219,17 +225,34 @@ namespace SlowTests.Issues
             }
         }
 
-        private class JsIndexJint : JsIndex
-        {
-            public JsIndexJint() : base("Jint")
-            {
-            }
-        }
-
         private class JsIndexV8 : JsIndex
         {
-            public JsIndexV8() : base("V8")
+            public JsIndexV8()
             {
+                var optChaining = "?";
+                Maps = new HashSet<string>
+                {
+                    @$"map('Companies', function (c) {{
+                        var city = c.Address{optChaining}.City;
+                        var isNull = false;
+                        if (!city) {{
+                            isNull = true;
+                        }}
+
+                        var product = load(c.ExternalId, 'Products');
+                        var isProductNull = false;
+                        if (!product) {{
+                            isProductNull = true;
+                        }}
+
+                        return {{
+                            City: c.Address{optChaining}.City,
+                            IsNull: isNull,
+                            Name: product{optChaining}.Name,
+                            IsProductNull: isProductNull
+                        }};
+                    }})",
+                };
             }
         }
     }

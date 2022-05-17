@@ -317,8 +317,8 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void CanElivateSimpleFunctions(Options options, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanElivateSimpleFunctions(Options options)
         {
             using (var store = GetDocumentStore(options))
             {

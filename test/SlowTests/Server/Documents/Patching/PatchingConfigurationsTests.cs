@@ -1,12 +1,9 @@
 ﻿using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
-using Raven.Server.Documents.Patch;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;

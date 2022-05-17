@@ -3,8 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
-using System;
 using System.Linq;
 using System.Threading;
 using FastTests;

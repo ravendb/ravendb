@@ -1,10 +1,9 @@
-﻿using System;
+﻿using Tests.Infrastructure;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

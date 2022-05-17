@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -45,21 +45,16 @@ namespace SlowTests.Server.Documents.ETL
                 Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
             }
 
+            using var dstServer = GetNewServer();
+            var o = options.Clone();
+            o.Server = dstServer;
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-
-            using (var src = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
-                ModifyDatabaseName = s => dbName,
-            }))
-            using (var dstServer = GetNewServer())
-            using (var dest = GetDocumentStore(new Options()
-            {
-                Server = dstServer,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = adminCert;
+            options.ModifyDatabaseName = s => dbName;
+            options.ModifyDatabaseRecord = record => record.Encrypted = true;
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(o))
             {
                 AddEtl(src, new RavenEtlConfiguration()
                 {
@@ -146,21 +141,13 @@ namespace SlowTests.Server.Documents.ETL
 
             Server.ServerStore.PutSecretKey(srcBase64Key, srcDbName, true);
             Server.ServerStore.PutSecretKey(dstBase64Key, dstDbName, true);
-
-            using (var src = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
-                ModifyDatabaseName = s => srcDbName,
-            }))
-            using (var dest = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
-                ModifyDatabaseName = s => dstDbName,
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = adminCert;
+            options.ModifyDatabaseName = s => srcDbName;
+            options.ModifyDatabaseRecord = record => record.Encrypted = true;
+            var op = options.Clone();op.ModifyDatabaseName = s => dstDbName;
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(op))
             {
                 AddEtl(src, new RavenEtlConfiguration()
                 {

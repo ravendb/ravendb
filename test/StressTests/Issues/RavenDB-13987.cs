@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -13,8 +14,6 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.PeriodicBackup;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

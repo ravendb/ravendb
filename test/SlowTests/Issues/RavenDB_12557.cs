@@ -1,5 +1,5 @@
-﻿using FastTests.Voron;
-using Tests.Infrastructure;
+﻿using Tests.Infrastructure;
+using FastTests.Voron;
 using Voron;
 using Voron.Exceptions;
 using Xunit;

@@ -5,7 +5,6 @@ using Jint.Runtime.Interop;
 using Jint.Runtime.References;
 using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
 using Raven.Client;
-using Raven.Server.Documents.Patch.V8;
 
 namespace Raven.Server.Documents.Patch.Jint
 {

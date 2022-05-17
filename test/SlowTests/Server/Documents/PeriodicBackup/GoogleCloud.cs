@@ -1,12 +1,11 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

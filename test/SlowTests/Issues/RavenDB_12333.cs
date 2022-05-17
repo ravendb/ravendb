@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
@@ -20,10 +20,8 @@ namespace SlowTests.Issues
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanDisableStrictMode(Options options)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.StrictMode)] = "false")
-            }))
+            options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.StrictMode)] = "false";
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

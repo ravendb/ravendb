@@ -3,7 +3,6 @@ using System.Dynamic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.Operations;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;

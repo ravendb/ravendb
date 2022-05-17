@@ -1,12 +1,9 @@
-﻿using System;
+﻿using Tests.Infrastructure;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.ServerWide.Operations;
-using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;

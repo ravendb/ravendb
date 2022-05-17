@@ -1,16 +1,16 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
-using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Config;
-using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -20,26 +20,18 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        private const string scriptShould_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting = @"
+        [Theory]
+        [RavenData("Users", null, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(null, null, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData("Users", @"
     loadToUsers(this);
-
 function loadCountersOfUsersBehavior(doc, counter)
 {
     return true;
 }
-";
-        
-        [Theory]
-        [InlineData("Users", null, "Jint")]
-        [InlineData(null, null, "Jint")]
-        [InlineData("Users", scriptShould_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting, "Jint")]
-        [InlineData("Users", null, "V8")]
-        [InlineData(null, null, "V8")]
-        [InlineData("Users", scriptShould_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting, "V8")]
-
-        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting(string collection, string script, string jsEngineType)
+", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting(Options options, string collection, string script)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -124,7 +116,6 @@ function loadCountersOfUsersBehavior(doc, counter)
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_not_send_counters_metadata_when_using_script(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -166,7 +157,6 @@ function loadCountersOfUsersBehavior(doc, counter)
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_handle_counters(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -302,7 +292,6 @@ person.addCounter(loadCounter('down'));
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_use_get_counters(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -358,7 +347,6 @@ for (var i = 0; i < counters.length; i++) {
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_remove_counter_if_add_counter_gets_null_argument(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -431,7 +419,6 @@ doc.addCounter(loadCounter('likes'));
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_use_has_counter(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -771,7 +758,6 @@ if (hasCounter('down')) {
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_handle_counters_according_to_behavior_defined_in_script(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -861,7 +847,6 @@ function loadCountersOfUsersBehavior(docId, counter)
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_not_send_counters_if_load_counters_behavior_isnt_defined(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -911,11 +896,10 @@ loadToUsers(this);");
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(Options options)
         {
-            using (var src = GetDocumentStore(new Options()
-            {
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2")
-            }))
-            using (var dest = GetDocumentStore())
+            var op = options.Clone();
+            options.ModifyDatabaseRecord += x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2";
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(op))
             {
                 using (var session = src.OpenSession())
                 {
@@ -1004,7 +988,6 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Load_counters_behavior_function_can_use_other_function_defined_in_script(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -1096,7 +1079,6 @@ function loadCountersOfUsersBehavior(docId, counter)
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_define_multiple_load_counter_behavior_functions(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

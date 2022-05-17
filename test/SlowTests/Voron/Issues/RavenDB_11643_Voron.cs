@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
 using FastTests.Voron;
-using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Voron.Data.Compression;
 using Xunit;

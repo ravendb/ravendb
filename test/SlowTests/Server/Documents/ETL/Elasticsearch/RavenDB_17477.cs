@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
-using Orders;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,8 +28,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                             .MatchOnlyText(t => t
                                 .Name("Id")))));
 
-                var optChaining = jsEngineType == "Jint" ? "" : "?";
-                var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+                var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
+                var zeroIfNull = options.JavascriptEngineMode.ToString() == "Jint" ? "" : " ?? 0";
                 var config = SetupElasticEtl(store, @$"
 var orderData = {{
     Id: id(this),

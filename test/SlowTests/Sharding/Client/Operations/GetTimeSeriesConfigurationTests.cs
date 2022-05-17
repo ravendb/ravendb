@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using Tests.Infrastructure;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Commands.TimeSeries;
 using Sparrow;
-using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;

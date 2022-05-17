@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Lextm.SharpSnmpLib;
 using Raven.Client.Util;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Monitoring.Snmp.Objects.Database;

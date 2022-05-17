@@ -1,5 +1,4 @@
-﻿using System;
-using Sparrow.Server;
+﻿using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;

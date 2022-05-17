@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,7 +11,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Newtonsoft.Json;
 using Raven.Client;
@@ -40,11 +40,11 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
-using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
+using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
@@ -2265,7 +2265,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             var userForFullBackup = new User();

@@ -2,7 +2,6 @@ using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {

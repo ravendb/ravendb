@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;

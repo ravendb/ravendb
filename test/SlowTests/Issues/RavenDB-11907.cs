@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,17 +19,15 @@ namespace SlowTests.Issues
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanProjectFromCollectionNotInJson(Options options)
         {
-            using (var store = GetDocumentStore(new Options
+            options.ModifyDocumentStore = s =>
             {
-                ModifyDocumentStore = s =>
+                s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
-                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                    {
-                        CustomizeJsonDeserializer = des => des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
-                    };
-                },
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+                    CustomizeJsonDeserializer = des => des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                };
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

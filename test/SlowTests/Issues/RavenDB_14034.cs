@@ -1,9 +1,8 @@
-﻿using System.Linq;
+﻿using Tests.Infrastructure;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;

@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -906,11 +906,9 @@ this.Value = another.Value;
         }
 
         [Theory]
-        [InlineData(true, "Jint")]
-        [InlineData(false, "Jint")]
-        [InlineData(true, "V8")]
-        [InlineData(false, "V8")]
-        public async Task PreventRecursion(bool isNative, string jsEngineType)
+        [RavenData(true, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(false, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task PreventRecursion(Options options,bool isNative)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -938,7 +936,7 @@ this.Test = this;
 ",
                 });
                 
-                if (jsEngineType == "Jint")
+                if (options.JavascriptEngineMode.ToString() == "Jint")
                 {
                     try
                     {

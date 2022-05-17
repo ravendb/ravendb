@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using NodaTime;
 using Raven.Client.Documents;
@@ -106,11 +106,8 @@ namespace SlowTests.Issues
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanUsePatchWithNodaTime(Options options)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = ModifyDocumentStore,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.ModifyDocumentStore = ModifyDocumentStore;
+            using (var store = GetDocumentStore(options))
             {
                 await CreateUserAsync(store, "mark");
                 using (IAsyncDocumentSession session = store.OpenAsyncSession())

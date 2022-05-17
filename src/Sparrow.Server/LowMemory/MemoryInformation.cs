@@ -10,7 +10,6 @@ using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Sparrow.LowMemory

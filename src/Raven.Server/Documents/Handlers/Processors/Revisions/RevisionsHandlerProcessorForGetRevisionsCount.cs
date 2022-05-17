@@ -2,7 +2,6 @@
 using JetBrains.Annotations;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {

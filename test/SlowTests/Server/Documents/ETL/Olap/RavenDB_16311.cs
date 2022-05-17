@@ -1,9 +1,7 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Client;
-using FastTests.Server.JavaScript;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Orders;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;

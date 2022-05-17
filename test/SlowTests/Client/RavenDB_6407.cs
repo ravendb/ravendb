@@ -1,5 +1,5 @@
-﻿using FastTests;
-using FastTests.Server.JavaScript;
+﻿using Tests.Infrastructure;
+using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;

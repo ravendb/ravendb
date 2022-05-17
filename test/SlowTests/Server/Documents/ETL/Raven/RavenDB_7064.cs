@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
-using FastTests.Server.JavaScript;
 using FastTests.Voron.Util;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -20,7 +20,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_handle_attachments(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -170,7 +169,6 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_use_get_attachments(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -226,7 +224,6 @@ for (var i = 0; i < attachments.length; i++) {
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_use_has_attachment(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

@@ -7,7 +7,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 

@@ -1,3 +1,4 @@
+using Tests.Infrastructure;
 using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -8,7 +9,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

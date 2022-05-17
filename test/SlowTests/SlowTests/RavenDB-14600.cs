@@ -1,11 +1,10 @@
+using Tests.Infrastructure;
 using System;
 using System.Linq;
 using FastTests;
-using MongoDB.Driver;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;

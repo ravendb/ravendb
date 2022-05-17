@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Subscriptions;

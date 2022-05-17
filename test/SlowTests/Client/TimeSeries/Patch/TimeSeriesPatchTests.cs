@@ -1,16 +1,15 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
@@ -27,32 +26,26 @@ namespace SlowTests.Client.TimeSeries.Patch
         {
             private readonly List<object[]> _data = new List<object[]>
             {
-                new object[] {"Jint", "watches/fitbit", "Heartrate", new double[] {11d}, true},
-                new object[] {"Jint", "watches/fitbit", "Heartrate", new double[] {}},
-                new object[] {"Jint", "watches/fitbit", "Heartrate", new []{"some text"}},
-                new object[] {"Jint", "watches/fitbit", "Heartrate", new object()},
-                new object[] {"Jint", 2,  "Heartrate", new [] { 1d }},
-                new object[] {"Jint", "watches/fitbit", 2, new [] { 1d }},
-                new object[] {"V8", "watches/fitbit", "Heartrate", new double[] {11d}, true},
-                new object[] {"V8", "watches/fitbit", "Heartrate", new double[] {}},
-                new object[] {"V8", "watches/fitbit", "Heartrate", new []{"some text"}},
-                new object[] {"V8", "watches/fitbit", "Heartrate", new object()},
-                new object[] {"V8", 2,  "Heartrate", new [] { 1d }},
-                new object[] {"V8", "watches/fitbit", 2, new [] { 1d }},
+                new object[] {"watches/fitbit", "Heartrate", new double[] {11d}, true},
+                new object[] {"watches/fitbit", "Heartrate", new double[] {}},
+                new object[] { "watches/fitbit", "Heartrate", new []{"some text"}},
+                new object[] {"watches/fitbit", "Heartrate", new object()},
+                new object[] { 2,  "Heartrate", new [] { 1d }},
+                new object[] {"watches/fitbit", 2, new [] { 1d }},
             };
 
             public IEnumerator<object[]> GetEnumerator() => _data.GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
-        
+        //TODO: egor
         [Theory]
         [ClassData(typeof(CannotAppendTimeSeriesWithNoValueByPatchCases))]
-        public async Task CannotAppendTimeSeriesWithWrongArguments(string jsEngineType, object tag, object timeseries, object values, bool shouldPass = false)
+        public async Task CannotAppendTimeSeriesWithWrongArguments(object tag, object timeseries, object values, bool shouldPass = false)
         {
             const string documentId = "users/ayende";
 
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(/*options*/))
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new { Name = "Oren" }, documentId);
@@ -80,15 +73,11 @@ namespace SlowTests.Client.TimeSeries.Patch
         }
 
         [Theory]
-        [InlineData( 59d, "Jint") ]
-        [InlineData(new []{ 59d }, "Jint")]
-        [InlineData(new []{ 59d, 11d, 30d }, "Jint")]
-        [InlineData(new []{ -13d, 60d, 0 }, "Jint")]
-        [InlineData( 59d, "V8") ]
-        [InlineData(new []{ 59d }, "V8")]
-        [InlineData(new []{ 59d, 11d, 30d }, "V8")]
-        [InlineData(new []{ -13d, 60d, 0 }, "V8")]
-        public async Task CanAppendTimeSeriesByPatch(object values, string jsEngineType)
+        [RavenData( 59d, JavascriptEngineMode = RavenJavascriptEngineMode.All) ]
+        [RavenData(new []{ 59d }, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(new []{ 59d, 11d, 30d }, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(new []{ -13d, 60d, 0 }, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        public async Task CanAppendTimeSeriesByPatch(Options options, object values)
         {
             const string tag = "watches/fitbit";
             const string timeseries = "Heartrate";
@@ -181,11 +170,9 @@ namespace SlowTests.Client.TimeSeries.Patch
         }
         
         [Theory]
-        [InlineData("Jint", @"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values, null);")]
-        [InlineData("Jint", @"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values);")]
-        [InlineData("V8", @"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values, null);")]
-        [InlineData("V8", @"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values);")]
-        public async Task CanAppendTimeSeriesByPatch_WithoutTag(string jsEngineType, string script)
+        [RavenData(@"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values, null);", JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(@"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values);", JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        public async Task CanAppendTimeSeriesByPatch_WithoutTag(Options options, string script)
         {
             double[] values = {59d};
             const string timeseries = "Heartrate";
@@ -371,14 +358,14 @@ for(i = 0; i < args.toAppend.length; i++){
         }
 
         [Theory]
-        [InlineData(4, 7, "Jint")]
-        [InlineData(0, 3, "Jint")]
-        [InlineData(0, 9, "Jint")]
-        [InlineData(5, 9, "Jint")]
-        [InlineData(0, 0, "Jint")]
-        [InlineData(2, 2, "Jint")]
-        [InlineData(9, 9, "Jint")]
-        public async Task Patch_DeleteTimestamp(int fromIndex, int toIndex, string jsEngineType)
+        [RavenData(4, 7, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(0, 3, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(0, 9, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(5, 9, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(0, 0, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(2, 2, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(9, 9, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        public async Task Patch_DeleteTimestamp(Options options, int fromIndex, int toIndex)
         {
             const string tag = "watches/fitbit";
             const string timeseries = "Heartrate";
@@ -442,31 +429,27 @@ for(i = 0; i < args.toAppend.length; i++){
         
         class GetRangeOfTimestampByPatchCases : IEnumerable<object[]>
         {
-            readonly string[] _jsEngineTypes = {"Jint", "V8"};
             private readonly int[][] _startEndIndexes = {new[] {4, 7}, new[] {0, 3}, new[] {0, 9}, new[] {5, 9}, new[] {0, 0}, new[] {2, 2}, new[] {9, 9},};
             readonly string[] _tags = {"Heartrate", null};
 
             public IEnumerator<object[]> GetEnumerator()
             {
-                foreach (string jsEngineType in _jsEngineTypes)
-                {
                     foreach (string tag in _tags)
                     {
                         foreach (int[] startEndIndex in _startEndIndexes)
                         {
-                            yield return new object[] {jsEngineType, tag, startEndIndex[0], startEndIndex[1]};
+                            yield return new object[] {tag, startEndIndex[0], startEndIndex[1]};
                         }
                     }
-                }
             }
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
         
-        
+        //TODO: egor 
         [Theory]
         [ClassData(typeof(GetRangeOfTimestampByPatchCases))]
-        public async Task Patch_GetRangeOfTimestamp(string jsEngineType, string tag, int fromIndex, int toIndex)
+        public async Task Patch_GetRangeOfTimestamp(string tag, int fromIndex, int toIndex)
         {
             const string timeseries = "Heartrate";
             const string documentId = "users/1";
@@ -477,7 +460,7 @@ for(i = 0; i < args.toAppend.length; i++){
             var todeleteTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
             
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(/*options*/))
             {
                 using (var session = store.OpenAsyncSession())
                 {

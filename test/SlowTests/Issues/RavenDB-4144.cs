@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Tests.Infrastructure;
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-4144.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,7 +7,6 @@
 
 using System.Collections.Generic;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;

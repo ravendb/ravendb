@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
-using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;

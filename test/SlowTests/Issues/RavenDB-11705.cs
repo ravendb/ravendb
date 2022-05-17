@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using Tests.Infrastructure;
+using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Documents.Patching;

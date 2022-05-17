@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -16,7 +16,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.Issues.RavenDB_17096;
@@ -36,8 +35,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
             var cluster = await CreateRaftCluster(3);
             var leader = cluster.Leader;
             var dbName = GetDatabaseName();
-            var storeOptions = Options.ForJavaScriptEngine(jsEngineType);
-            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl, options: storeOptions);
+            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl, options:options);
 
             var stores = db.Servers.Select(s => new DocumentStore
                 {

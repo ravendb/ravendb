@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Tests.Infrastructure;
+using System;
 using Xunit;
 using Xunit.Abstractions;
 using Raven.Tests.Core.Utils.Entities;
-using System.IO;
-using FastTests.Server.JavaScript;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -19,7 +16,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_delete_existing_document_when_filtered_by_script(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

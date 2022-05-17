@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using Voron;
 using Voron.Impl;
-using Voron.Impl.Journal;
 using Xunit;
 using Xunit.Abstractions;
 

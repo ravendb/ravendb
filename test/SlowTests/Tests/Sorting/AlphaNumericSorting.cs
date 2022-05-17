@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +10,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using SlowTests.Utils;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

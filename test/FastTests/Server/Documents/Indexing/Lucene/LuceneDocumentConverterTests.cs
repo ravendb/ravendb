@@ -500,7 +500,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         public class FakeIndex : Index
         {
             public FakeIndex()
-                : base(IndexType.Map, IndexSourceType.Documents, new AutoMapIndexDefinition("Orders", new AutoIndexField[0]))
+                : base(IndexType.Map, IndexSourceType.Documents, new AutoMapIndexDefinition("Orders", new AutoIndexField[0]), compiled: null)
             {
             }
 

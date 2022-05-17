@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
-using FastTests.Server.JavaScript;
-using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -175,7 +175,6 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_filter_out_deletions_using_generic_delete_behavior(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -335,13 +334,10 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
         }
 
         [Theory]
-        [InlineData(new string[0], true, "Jint")]
-        [InlineData(new[] { "Users", "Employees" }, false, "Jint")]
-        [InlineData(new string[0], true, "V8")]
-        [InlineData(new[] { "Users", "Employees" }, false, "V8")]
-        public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document(string[] collections, bool applyToAllDocuments, string jsEngineType)
+        [RavenData(new string[0], true, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(new[] { "Users", "Employees" }, false, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document(Options options, string[] collections, bool applyToAllDocuments)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -465,46 +461,33 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
             }
         }
 
-        
-        const string Should_choose_more_specific_delete_behavior_function_Script1 = @"
+        [Theory]
+        [RavenData(@"
     loadToUsers(this);
-
     function deleteDocumentsBehavior(docId, collection) {
         
         return false;
     }
-
     function deleteDocumentsOfEmployeesBehavior(docId) {
         return true;
     }
-";
-
-        private const string Should_choose_more_specific_delete_behavior_function_Script2 = @"
+", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(@"
     loadToUsers(this);
-
     function deleteDocumentsBehavior(docId, collection) {
         
        if (true)
        {   
           return false;
        }
-
        return true;
     }
-
     function deleteDocumentsOfEmployeesBehavior(docId) {
         return true;
     }
-";
-        
-        [Theory]
-        [InlineData(Should_choose_more_specific_delete_behavior_function_Script1, "Jint")]
-        [InlineData(Should_choose_more_specific_delete_behavior_function_Script2, "Jint")]
-        [InlineData(Should_choose_more_specific_delete_behavior_function_Script1, "V8")]
-        [InlineData(Should_choose_more_specific_delete_behavior_function_Script2, "V8")]
-        public void Should_choose_more_specific_delete_behavior_function(string script, string jsEngineType)
+", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_choose_more_specific_delete_behavior_function(Options options, string script)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

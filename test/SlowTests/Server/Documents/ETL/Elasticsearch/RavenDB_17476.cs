@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -25,7 +24,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
         private string ScriptWithNoIdMethodUsage(Options options)
         {
-            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
             return @$"
 var orderData = {{
 OrderLinesCount: this.OrderLines{optChaining}.length,
@@ -54,7 +53,7 @@ loadTo" + OrdersIndexName + @"(orderData);
             using (var store = GetDocumentStore(options))
             using (GetElasticClient(out var client))
             {
-                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage(jsEngineType), DefaultIndexes, new List<string> { "Orders" });
+                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage(options), DefaultIndexes, new List<string> { "Orders" });
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -149,7 +148,7 @@ loadTo" + OrdersIndexName + @"(orderData);
                                        },
                                        Transforms =
                                        {
-                                           new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage(jsEngineType) }
+                                           new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage(options) }
                                        }
                                    }
                                }, database, database.ServerStore, context, out var testResult))

@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;

@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;

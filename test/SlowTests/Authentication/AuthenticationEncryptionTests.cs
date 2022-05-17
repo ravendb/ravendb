@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -16,7 +16,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using SlowTests.Voron.Compaction;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -187,8 +186,8 @@ namespace SlowTests.Authentication
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public async Task CanCompactEncryptedDb(RavenTestParameters configuration)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanCompactEncryptedDb(Options options)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -215,20 +214,19 @@ namespace SlowTests.Authentication
             }
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = adminCert;
+            options.ModifyDatabaseName = s => dbName;
             var path = NewDataPath();
-            using (var store = GetDocumentStore(new Options
+            options.Path = path;
+            options.ModifyDatabaseRecord = record =>
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => {
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = configuration.SearchEngine.ToString();
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = configuration.SearchEngine.ToString();
-                    record.Encrypted = true;
-                },
-                Path = path
-            }))
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Encrypted = true;
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes: DatabaseSmugglerOptions.DefaultOperateOnTypes));
 

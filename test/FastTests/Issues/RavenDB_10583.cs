@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Linq;
-using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,11 +27,9 @@ namespace FastTests.Issues
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void TranslateEnumAsString(Options options)
         {
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = false,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = false;
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -66,11 +64,8 @@ namespace FastTests.Issues
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void TranslateEnumAsInteger(Options options)
         {
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = true,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.ModifyDocumentStore = a => a.Conventions.SaveEnumsAsIntegers = true;
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

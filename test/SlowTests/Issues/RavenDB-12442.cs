@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using Tests.Infrastructure;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -15,11 +16,9 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue, "Jint")]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue, "V8")]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString, "Jint")]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString, "V8")]
-        public void Can_convert_stored_null_value_and_empty_string(string str, string jsEngineType)
+        [RavenData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_convert_stored_null_value_and_empty_string(Options options, string str)
         {
             using (var store = GetDocumentStore(options))
             {

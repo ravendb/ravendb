@@ -1,12 +1,11 @@
+using Tests.Infrastructure;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

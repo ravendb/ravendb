@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using FastTests;
 using Raven.Client.Documents;
 using System.Linq;
-using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 

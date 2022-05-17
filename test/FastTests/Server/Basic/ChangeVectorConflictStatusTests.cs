@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
-using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 

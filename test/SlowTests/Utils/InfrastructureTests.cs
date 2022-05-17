@@ -1,7 +1,6 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using Esprima.Ast;
 using Jint;
 using Jint.Native.Function;
-using Jint.Runtime;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Patch;

@@ -7,7 +7,6 @@
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Xunit;
-using System.Threading;
 using FastTests.Utils;
 using Xunit.Abstractions;
 

@@ -1,5 +1,5 @@
-﻿using FastTests;
-using FastTests.Server.JavaScript;
+﻿using Tests.Infrastructure;
+using FastTests;
 using Xunit;
 using Xunit.Abstractions;
 

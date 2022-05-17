@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;

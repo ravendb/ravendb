@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using V8.Net;
 
 namespace Raven.Server.Documents.Patch
 {

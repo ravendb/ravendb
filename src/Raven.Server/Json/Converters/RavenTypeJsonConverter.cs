@@ -2,7 +2,6 @@
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 
 namespace Raven.Server.Json.Converters
 {

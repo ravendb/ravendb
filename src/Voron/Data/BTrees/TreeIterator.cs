@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Sparrow.Platform;
 using Sparrow.Server;
 using Voron.Data.Compression;
 using Voron.Impl;

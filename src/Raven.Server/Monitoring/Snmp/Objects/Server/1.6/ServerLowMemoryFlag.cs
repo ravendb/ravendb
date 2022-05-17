@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using Lextm.SharpSnmpLib;
 using Sparrow.LowMemory;

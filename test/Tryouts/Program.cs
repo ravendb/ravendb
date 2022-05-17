@@ -1,18 +1,13 @@
-using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using FastTests;
-using FastTests.Blittable;
-using FastTests.Client.Subscriptions;
-using FastTests.Client;
-using FastTests.Server.Documents.Revisions;
-using RachisTests;
-using SlowTests.Issues;
-using SlowTests.MailingList;
-using SlowTests.Rolling;
-using SlowTests.Server.Documents.ETL.Raven;
-using StressTests.Issues;
 using Tests.Infrastructure;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using Amazon.SQS.Model;
+using FastTests;
+using FastTests.Server.Documents.Revisions;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Tryouts
 {
@@ -75,7 +70,7 @@ namespace Tryouts
                         sw = Stopwatch.StartNew();
                         using (var store = test.GetSimpleDocumentStore(null, false))
                         {
-                            await test.InitAsync(store, dbNamePostfix: dbNamePostfix, options: RavenTestBase.Options.ForJavaScriptEngine(jsEngineType), count: recordCount);
+                       //     await test.InitAsync(store, dbNamePostfix: dbNamePostfix, options: RavenTestBase.Options.ForJavaScriptEngine(jsEngineType), count: recordCount);
                         }
                         Console.WriteLine($"{jsEngineType}: {sw.Elapsed}");
                     }

@@ -1,10 +1,10 @@
-﻿using System.Linq;
+﻿using Tests.Infrastructure;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

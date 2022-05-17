@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -7,7 +8,6 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
-using Tests.Infrastructure;
 using Voron.Recovery;
 using Xunit;
 using Xunit.Abstractions;

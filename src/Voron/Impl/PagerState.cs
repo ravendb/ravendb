@@ -7,7 +7,6 @@ using Sparrow.Binary;
 using Sparrow.Server.Platform;
 using Voron.Global;
 using Voron.Impl.Paging;
-using Voron.Platform;
 
 
 namespace Voron.Impl

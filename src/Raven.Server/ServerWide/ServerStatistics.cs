@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;

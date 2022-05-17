@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 

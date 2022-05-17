@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Server.Documents.ETL
 {
@@ -14,34 +15,25 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        private const string Should_handle_as_empty_script_but_filter_out_deletions_Script1 = @"
+        [Theory]
+        [RavenData(@"
     
     function deleteDocumentsOfUsersBehavior(docId) {
         return false;
     }
-";
-
-        private const string Should_handle_as_empty_script_but_filter_out_deletions_Script2 = @"
+", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(@"
     
     function deleteDocumentsOfUsersBehavior(docId) {
       if (true)
       {
          return false;
       }
-
       return true;
     }
-";
-        
-        
-        [Theory]
-        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script1, "Jint")]
-        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script2, "Jint")]
-        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script1, "V8")]
-        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script2, "V8")]
-        public void Should_handle_as_empty_script_but_filter_out_deletions(string script, string jsEngineType)
+", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_handle_as_empty_script_but_filter_out_deletions(Options options, string script)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

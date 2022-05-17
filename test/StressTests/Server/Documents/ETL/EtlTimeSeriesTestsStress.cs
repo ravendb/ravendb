@@ -1,10 +1,10 @@
+using Tests.Infrastructure;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Config;
@@ -15,6 +15,7 @@ using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.ETL
 {
+    //TODO: egor use JS JavascriptEngineMode
     public class EtlTimeSeriesTestsStress : EtlTestBase
     {
         private const int _waitInterval = 1000;
@@ -206,7 +207,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -276,7 +277,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
                 }
             };
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
 
             await using (OpenEtlOffArea(src, etlResult.TaskId))
             {
@@ -334,7 +335,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 .Select(i => new TimeSeriesEntry { Timestamp = startTime + TimeSpan.FromMilliseconds(i), Tag = tag, Values = new[] { 100 * random.NextDouble() } })
                 .ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
 
             var entity = new User { Name = "Joe Doe" };
             using (var session = src.OpenAsyncSession())

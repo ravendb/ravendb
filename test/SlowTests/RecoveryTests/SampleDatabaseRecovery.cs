@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Session;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

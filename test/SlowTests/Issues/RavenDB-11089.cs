@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Newtonsoft.Json.Serialization;
@@ -344,28 +344,26 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void Can_Project_Into_Class(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Project_Into_Class(Options options)
         {
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -392,28 +390,26 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void Can_Project_Into_Class_With_Let(RavenTestParameters config)
+        [RavenData(RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Can_Project_Into_Class_With_Let(Options options)
         {
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -675,28 +671,26 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void PatchOnEnumShouldWork(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void PatchOnEnumShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
+            using (var store = GetDocumentStore(options))
             {
                 string id;
                 using (var session = store.OpenSession())
@@ -754,32 +748,30 @@ from 'Users' as user select output(user)", queryAsString);
         private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void CanPatch(RavenTestParameters config)
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanPatch(Options options)
         {
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
             var stuff = new Stuff[3];
-            stuff[0] = new Stuff {Key = 6};
-            var user = new User {Numbers = new[] {66}, Stuff = stuff};
+            stuff[0] = new Stuff { Key = 6 };
+            var user = new User { Numbers = new[] { 66 }, Stuff = stuff };
 
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -818,77 +810,84 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
-        public void CanPatchAndModify(RavenTestParameters config)
+        [RavenExplicitData(SearchEngineMode= RavenSearchEngineMode.All)]
+        public void CanPatchAndModify(Options options)
         {
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
+            {
             var user = new User {Numbers = new[] {66}};
 
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
-            {
-                using (var session = store.OpenSession())
+                using (var store = GetDocumentStore(options))
                 {
-                    session.Store(user);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var loaded = session.Load<User>(_docId);
-                    loaded.Numbers[0] = 1;
-                    session.Advanced.Patch(loaded, u => u.Numbers[0], 2);
-                    Assert.Throws<InvalidOperationException>(() =>
+                    using (var session = store.OpenSession())
                     {
+                        session.Store(user);
                         session.SaveChanges();
-                    });
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var loaded = session.Load<User>(_docId);
+                        loaded.Numbers[0] = 1;
+                        session.Advanced.Patch(loaded, u => u.Numbers[0], 2);
+                        Assert.Throws<InvalidOperationException>(() =>
+                        {
+                            session.SaveChanges();
+                        });
+                    }
                 }
-            }
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void CanPatchComplex(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanPatchComplex(Options options)
         {
-            var stuff = new Stuff[3];
-            stuff[0] = new Stuff {Key = 6};
-            var user = new User {Stuff = stuff};
-
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
+                var stuff = new Stuff[3];
+            stuff[0] = new Stuff { Key = 6 };
+            var user = new User { Stuff = stuff };
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1073,32 +1072,30 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void CanAddToArray(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanAddToArray(Options options)
         {
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
             var stuff = new Stuff[1];
-            stuff[0] = new Stuff {Key = 6};
-            var user = new User {Stuff = stuff, Numbers = new[] {1, 2}};
+            stuff[0] = new Stuff { Key = 6 };
+            var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1151,33 +1148,31 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void CanRemoveFromArray(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanRemoveFromArray(Options options)
         {
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
             var stuff = new Stuff[2];
-            stuff[0] = new Stuff {Key = 6};
-            stuff[1] = new Stuff {Phone = "123456"};
-            var user = new User {Stuff = stuff, Numbers = new[] {1, 2, 3}};
+            stuff[0] = new Stuff { Key = 6 };
+            stuff[1] = new Stuff { Phone = "123456" };
+            var user = new User { Stuff = stuff, Numbers = new[] { 1, 2, 3 } };
 
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1206,32 +1201,30 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void CanIncrement(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void CanIncrement(Options options)
         {
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
             Stuff[] s = new Stuff[3];
-            s[0] = new Stuff {Key = 6};
-            var user = new User {Numbers = new[] {66}, Stuff = s};
+            s[0] = new Stuff { Key = 6 };
+            var user = new User { Numbers = new[] { 66 }, Stuff = s };
 
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -1265,34 +1258,32 @@ from 'Users' as user select output(user)", queryAsString);
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void ShouldMergePatchCalls(RavenTestParameters config)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void ShouldMergePatchCalls(Options options)
         {
+            options.ModifyDocumentStore = ss =>
+            {
+                ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
+                };
+                ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+            };
+            options.ModifyDatabaseRecord = record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = options.SearchEngineMode.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = options.SearchEngineMode.ToString();
+            };
             var stuff = new Stuff[3];
             stuff[0] = new Stuff {Key = 6};
             var user = new User {Numbers = new[] {66}, Stuff = stuff};
             var user2 = new User {Numbers = new[] {1, 2, 3}, Stuff = stuff};
             var docId2 = "users/2-A";
 
-            using (var store = GetDocumentStore(options: new Options
-                   {
-                       ModifyDocumentStore = ss =>
-                       {
-                           ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
-                           {
-                               CustomizeJsonSerializer = serializer =>
-                               {
-                                   serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                               }
-                           };
-                           ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
-                       },
-                       ModifyDatabaseRecord = record =>
-                       {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                       }
-                   }))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

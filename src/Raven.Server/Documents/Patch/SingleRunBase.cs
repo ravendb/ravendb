@@ -77,8 +77,8 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     protected DocumentsOperationContext _docsCtx;
     protected JsonOperationContext _jsonCtx;
     public PatchDebugActions DebugActions;
-    public bool DebugMode;
-    public List<string> DebugOutput;
+    public bool DebugMode { get; set; }
+    public List<string> DebugOutput { get; set; }
     public bool PutOrDeleteCalled;
     public HashSet<string> Includes { get; set; }
     public HashSet<string> IncludeRevisionsChangeVectors { get; set; }
@@ -113,7 +113,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         _runner = runner;
         _scriptsSource = scriptsSource;
 
-      //  Initialize(executeScriptsSource);
+        //  Initialize(executeScriptsSource);
     }
 
     public void Initialize(bool executeScriptsSource = true)
@@ -205,7 +205,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             }
         }
     }
-    
+
     public void ExecuteScriptsSource()
     {
         foreach (var script in _scriptsSource)
@@ -291,7 +291,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 {
                     return ScriptEngineHandle.FromObjectGen(_documentIds.Select(LoadDocumentInternal).ToList());
                 } // array
-                 
+
                 if (_documentIds.Count == 0)
                     return ScriptEngineHandle.Null;
 
@@ -984,7 +984,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                     case BlittableJsonToken.Boolean:
                         return (bool)value ? ScriptEngineHandle.True : ScriptEngineHandle.False;
                     case BlittableJsonToken.Integer:
-                       return ScriptEngineHandle.CreateValue((int)value);
+                        return ScriptEngineHandle.CreateValue((int)value);
                     case BlittableJsonToken.LazyNumber:
                     case BlittableJsonToken.String:
                     case BlittableJsonToken.CompressedString:
@@ -1297,7 +1297,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             using (var entry = ScriptEngineHandle.CreateObject())
             {
                 entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), ScriptEngineHandle.CreateValue(singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true)));
-                entry.SetProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag == null? ScriptEngineHandle.Null : ScriptEngineHandle.CreateValue(singleResult.Tag.ToString()));
+                entry.SetProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag == null ? ScriptEngineHandle.Null : ScriptEngineHandle.CreateValue(singleResult.Tag.ToString()));
                 entry.SetProperty(nameof(TimeSeriesEntry.Values), ScriptEngineHandle.CreateArray(jsSpanItems));
                 entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), ScriptEngineHandle.CreateValue(singleResult.Type == SingleResultType.RolledUp));
 
@@ -1410,77 +1410,77 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     {
         using var document = self.GetProperty("doc");
         using var name = self.GetProperty("name");
-        
-            AssertValidDatabaseContext("timeseries(doc, name).increment");
 
-            const string signature1Args = "timeseries(doc, name).increment(values)";
-            const string signature2Args = "timeseries(doc, name).increment(timestamp, values)";
+        AssertValidDatabaseContext("timeseries(doc, name).increment");
 
-            string signature;
-            DateTime timestamp;
-            T valuesArg;
+        const string signature1Args = "timeseries(doc, name).increment(values)";
+        const string signature2Args = "timeseries(doc, name).increment(timestamp, values)";
 
-            switch (args.Length)
+        string signature;
+        DateTime timestamp;
+        T valuesArg;
+
+        switch (args.Length)
+        {
+            case 1:
+                signature = signature1Args;
+                timestamp = DateTime.UtcNow.EnsureMilliseconds();
+                valuesArg = args[0];
+                break;
+            case 2:
+                signature = signature2Args;
+                timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+                valuesArg = args[1];
+                break;
+            default:
+                throw new ArgumentException(
+                    $"There is no overload with {args.Length} arguments for this method should be {signature1Args} or {signature2Args}");
+        }
+
+        var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+        string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+
+        double[] valuesBuffer = null;
+        try
+        {
+            GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
+
+            var tss = _database.DocumentsStorage.TimeSeriesStorage;
+            var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
+
+            if (newSeries)
             {
-                case 1:
-                    signature = signature1Args;
-                    timestamp = DateTime.UtcNow.EnsureMilliseconds();
-                    valuesArg = args[0];
-                    break;
-                case 2:
-                    signature = signature2Args;
-                    timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
-                    valuesArg = args[1];
-                    break;
-                default:
-                    throw new ArgumentException(
-                        $"There is no overload with {args.Length} arguments for this method should be {signature1Args} or {signature2Args}");
+                DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                DocumentTimeSeriesToUpdate.Add(id);
             }
 
-            var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+            var toIncrement = new TimeSeriesOperation.IncrementOperation { Values = valuesBuffer, ValuesLength = values.Length, Timestamp = timestamp };
 
-            string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+            tss.IncrementTimestamp(
+                _docsCtx,
+                id,
+                CollectionName.GetCollectionName(doc),
+                timeSeries,
+                new[] { toIncrement },
+                AppendOptionsForScript);
 
-            double[] valuesBuffer = null;
-            try
+            if (DebugMode)
             {
-                GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
-
-                var tss = _database.DocumentsStorage.TimeSeriesStorage;
-                var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
-
-                if (newSeries)
+                DebugActions.IncrementTimeSeries.Add(new DynamicJsonValue
                 {
-                    DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    DocumentTimeSeriesToUpdate.Add(id);
-                }
-
-                var toIncrement = new TimeSeriesOperation.IncrementOperation { Values = valuesBuffer, ValuesLength = values.Length, Timestamp = timestamp };
-
-                tss.IncrementTimestamp(
-                    _docsCtx,
-                    id,
-                    CollectionName.GetCollectionName(doc),
-                    timeSeries,
-                    new[] { toIncrement },
-                    AppendOptionsForScript);
-
-                if (DebugMode)
-                {
-                    DebugActions.IncrementTimeSeries.Add(new DynamicJsonValue
-                    {
-                        ["Name"] = timeSeries,
-                        ["Timestamp"] = timestamp,
-                        ["Values"] = values.ToArray().Cast<object>(),
-                        ["Created"] = newSeries
-                    });
-                }
+                    ["Name"] = timeSeries,
+                    ["Timestamp"] = timestamp,
+                    ["Values"] = values.ToArray().Cast<object>(),
+                    ["Created"] = newSeries
+                });
             }
-            finally
-            {
-                if (valuesBuffer != null)
-                    ArrayPool<double>.Shared.Return(valuesBuffer);
-            }
+        }
+        finally
+        {
+            if (valuesBuffer != null)
+                ArrayPool<double>.Shared.Return(valuesBuffer);
+        }
 
         return ScriptEngineHandle.Undefined;
     }
@@ -1681,7 +1681,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         return args[0].IsNull ? args[1] : args[0];
     }
 
-    public  T Raven_Max(T self, T[] args)
+    public T Raven_Max(T self, T[] args)
     {
         GenericSortTwoElementArray(args);
         return args[1];
@@ -2018,11 +2018,12 @@ public interface ISingleRun
         BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None);
 
     public object Translate(JsonOperationContext context, object o);
-
+    public bool DebugMode { get; set; }
     public HashSet<string> DocumentCountersToUpdate { get; set; }
     public HashSet<string> DocumentTimeSeriesToUpdate { get; set; }
     public HashSet<string> Includes { get; set; }
-     public HashSet<string> IncludeRevisionsChangeVectors { get; set; }
+    public HashSet<string> IncludeRevisionsChangeVectors { get; set; }
     public DateTime? IncludeRevisionByDateTimeBefore { get; set; }
     public HashSet<string> CompareExchangeValueIncludes { get; set; }
+    public List<string> DebugOutput { get; set; }
 }

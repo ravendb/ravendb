@@ -1,3 +1,4 @@
+using Tests.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +15,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Raven.Server.Config;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

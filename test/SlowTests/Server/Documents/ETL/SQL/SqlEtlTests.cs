@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Tests.Infrastructure;
+// -----------------------------------------------------------------------
 //  <copyright file="SqlEtlTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,7 +15,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using FastTests.Voron.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
@@ -351,8 +351,8 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    var optChaining = jsEngineType == "Jint" ? "" : "?";
-                    var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+                    var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
+                    var zeroIfNull = options.JavascriptEngineMode.ToString() == "Jint" ? "" : " ?? 0";
                     SetupSqlEtl(store, connectionString, @$"var orderData = {{
     Id: id(this),
     OrderLinesCount: this.OrderLines_Missing{optChaining}.length{zeroIfNull},
@@ -404,7 +404,7 @@ loadToOrders(orderData);");
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    var optChaining = jsEngineType == "Jint" ? "" : "?";
+                    var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
                     SetupSqlEtl(store, connectionString, @$"var orderData = {{
     Id: id(this),
     City: this.Address{optChaining}.City,
@@ -689,11 +689,9 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         }
 
         [Theory]
-        [InlineData(true, "Jint")]
-        [InlineData(false, "Jint")]
-        [InlineData(true, "V8")]
-        [InlineData(false, "V8")]
-        public async Task CanTestScript(bool performRolledBackTransaction, string jsEngineType)
+        [RavenData(true, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(false, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        public async Task CanTestScript(Options options, bool performRolledBackTransaction)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -1247,7 +1245,8 @@ LastName2:  nvarchar(names[1]),
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800(Options options)
         {
-            using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
+            options.ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5";
+            using (var store = GetDocumentStore(options))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {

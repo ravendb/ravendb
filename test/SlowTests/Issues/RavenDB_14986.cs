@@ -2,7 +2,6 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Raven.Client.Documents.Indexes;

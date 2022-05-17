@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.Restore;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

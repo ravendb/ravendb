@@ -3,9 +3,6 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.MailingList;
-using SlowTests.Server.Replication;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

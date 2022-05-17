@@ -1,10 +1,9 @@
-﻿using FastTests;
-using FastTests.Server.JavaScript;
+﻿using Tests.Infrastructure;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

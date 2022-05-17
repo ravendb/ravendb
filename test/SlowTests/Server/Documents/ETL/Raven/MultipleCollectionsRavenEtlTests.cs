@@ -1,8 +1,9 @@
-﻿using System;
-using FastTests.Server.JavaScript;
+﻿using Tests.Infrastructure;
+using System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -16,7 +17,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Docs_from_two_collections_loaded_to_single_one(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

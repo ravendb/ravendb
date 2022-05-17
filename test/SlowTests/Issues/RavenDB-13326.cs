@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using Tests.Infrastructure;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using System.Linq;
-using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 

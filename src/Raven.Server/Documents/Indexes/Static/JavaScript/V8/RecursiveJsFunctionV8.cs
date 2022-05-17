@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Raven.Server.Documents.Patch;
 using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8

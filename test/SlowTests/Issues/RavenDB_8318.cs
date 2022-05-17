@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;

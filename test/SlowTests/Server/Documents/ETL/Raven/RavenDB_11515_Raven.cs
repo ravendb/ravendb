@@ -1,8 +1,8 @@
-﻿using System;
-using FastTests.Server.JavaScript;
-using Raven.Tests.Core.Utils.Entities;
+﻿using Tests.Infrastructure;
+using System;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -16,7 +16,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_filter_out_deletions_of_documents(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
@@ -69,7 +68,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Can_define_multiple_delete_behavior_functions(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

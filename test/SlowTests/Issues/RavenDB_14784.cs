@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using Tests.Infrastructure;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -63,7 +63,7 @@ namespace SlowTests.Issues
         {
             public Companies_With_Attachments_JavaScript(Options options)
             {
-                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
             
                 Maps = new HashSet<string>
                 {
@@ -517,7 +517,7 @@ return attachments.map(attachment => ({
         {
             using (var store = GetDocumentStore(options))
             {
-                var index = new Companies_With_Attachments_JavaScript(jsEngineType);
+                var index = new Companies_With_Attachments_JavaScript(options);
                 index.Execute(store);
 
                 store.Maintenance.Send(new StopIndexingOperation());
@@ -549,7 +549,7 @@ return attachments.map(attachment => ({
                 Assert.Equal(1, terms.Length);
                 Assert.Equal("hr", terms[0]);
 
-                var termsCount = jsEngineType == "Jint" ? 0 : 1;
+                var termsCount = options.JavascriptEngineMode.ToString() == "Jint" ? 0 : 1;
                 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentName), fromValue: null));
                 Assert.Equal(termsCount, terms.Length);

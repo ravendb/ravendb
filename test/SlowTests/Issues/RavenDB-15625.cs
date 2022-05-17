@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,7 +11,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Rolling;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -2,7 +2,6 @@ using System;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server.Platform.Posix;
-using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Util.Settings;

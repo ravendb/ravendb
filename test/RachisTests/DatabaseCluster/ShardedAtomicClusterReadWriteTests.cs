@@ -1,9 +1,8 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using Tests.Infrastructure;
+using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

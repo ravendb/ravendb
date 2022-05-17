@@ -1,14 +1,14 @@
-﻿// -----------------------------------------------------------------------
+﻿using Tests.Infrastructure;
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3760.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System;
-using FastTests.Server.JavaScript;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -59,7 +59,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void Null_returned_from_script_means_that_document_is_filtered_out(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore(options))
             {

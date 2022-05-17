@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using Tests.Infrastructure;
+using System.Threading.Tasks;
 using SlowTests.Server.Documents.Indexing.Static;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

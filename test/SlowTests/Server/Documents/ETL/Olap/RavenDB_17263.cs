@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;

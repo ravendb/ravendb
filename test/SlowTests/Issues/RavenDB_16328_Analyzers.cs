@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using Tests.Infrastructure;
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -15,7 +16,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;

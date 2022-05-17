@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Orders;
@@ -1966,9 +1966,12 @@ namespace SlowTests.Client.Attachments
                     }
                 };
             };
-            
-            using (var store1 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, modifyDatabaseRecord1)))
-            using (var store2 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, modifyDatabaseRecord2)))
+
+            var op2 = options.Clone();
+            options.ModifyDatabaseRecord += modifyDatabaseRecord1;
+            op2.ModifyDatabaseRecord += modifyDatabaseRecord2;
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(op2))
             {
                 var cvs = new List<(string, string)>();
                 using (var session = store1.OpenAsyncSession())
@@ -2094,9 +2097,11 @@ namespace SlowTests.Client.Attachments
                     }
                 };
             };
-
-            using (var store1 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, modifyDatabaseRecord1)))
-            using (var store2 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, ModifyDatabaseRecord2)))
+            var op2 = options.Clone();
+            options.ModifyDatabaseRecord += modifyDatabaseRecord1;
+            op2.ModifyDatabaseRecord += ModifyDatabaseRecord2;
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(op2))
             {
                 var cvs = new List<(string, string)>();
                 using (var session = store1.OpenAsyncSession())
@@ -2234,10 +2239,13 @@ namespace SlowTests.Client.Attachments
                     }
                 };
             };
-                
-                
-            using (var store1 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, modifyDatabaseRecord1)))
-            using (var store2 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, modifyDatabaseRecord2)))
+
+
+            var op2 = options.Clone();
+            options.ModifyDatabaseRecord += modifyDatabaseRecord1;
+            op2.ModifyDatabaseRecord += modifyDatabaseRecord2;
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(op2))
             {
                 var cvs = new List<(string, string, string)>();
                 using (var session = store1.OpenAsyncSession())
@@ -2416,9 +2424,11 @@ namespace SlowTests.Client.Attachments
                     }
                 };
             };
-            
-            using (var store1 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, modifyDatabaseRecord1)))
-            using (var store2 = GetDocumentStore(options: Options.ForJavaScriptEngine(jsEngineType, modifyDatabaseRecord2)))
+            var op2 = options.Clone();
+            options.ModifyDatabaseRecord += modifyDatabaseRecord1;
+            op2.ModifyDatabaseRecord += modifyDatabaseRecord2;
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(op2))
             {
                 var cvs = new List<(string, string, string)>();
                 using (var session = store1.OpenAsyncSession())

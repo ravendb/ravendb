@@ -12,7 +12,6 @@ using Lucene.Net.Documents;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;

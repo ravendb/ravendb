@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Text.RegularExpressions;
-using Raven.Client.Exceptions;
 using Xunit.Sdk;
 using XunitLogger;
 

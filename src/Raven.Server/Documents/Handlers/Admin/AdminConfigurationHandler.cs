@@ -1,12 +1,6 @@
-﻿using System;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.ServerWide;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {

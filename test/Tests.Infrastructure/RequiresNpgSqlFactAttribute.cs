@@ -1,6 +1,4 @@
-﻿using System;
-using Npgsql;
-using Tests.Infrastructure.ConnectionString;
+﻿using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
 namespace Tests.Infrastructure

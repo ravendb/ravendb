@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
 using Raven.Server.Config;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -33,21 +34,29 @@ for (var i = 0; i < attachments{optChaining}.length{zeroIfNull}; i++) {
         doc.addAttachment(loadAttachment(attachments[i].Name));
 }
 ";
-        
+
         [Theory]
-        [InlineData(null, false, "photo", "photo", "Jint")]
-        [InlineData(null, true, "photo", "photo", "Jint")]
-        [InlineData(scriptShould_remove_attachment1, false, "photo", "photo", "Jint")]
-        [InlineData(scriptShould_remove_attachment2, false, "photo", "image", "Jint")]
-        [InlineData(scriptShould_remove_attachment3, false, "photo.png", "photo.png", "Jint")]
-        [InlineData(null, false, "photo", "photo", "V8")]
-        [InlineData(null, true, "photo", "photo", "V8")]
-        [InlineData(scriptShould_remove_attachment1, false, "photo", "photo", "V8")]
-        [InlineData(scriptShould_remove_attachment2, false, "photo", "image", "V8")]
-        [InlineData(scriptShould_remove_attachment3, false, "photo.png", "photo.png", "V8")]
-        public void Should_remove_attachment(string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName, string jsEngineType)
+        [RavenData(null, false, "photo", "photo", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(null, true, "photo", "photo", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(@"
+var doc = loadToUsers(this);
+doc.addAttachment(loadAttachment('photo'));
+", false, "photo", "photo", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(@"
+var doc = loadToUsers(this);
+doc.addAttachment('image', loadAttachment('photo'));
+", false, "photo", "image", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(@"
+var doc = loadToUsers(this);
+var attachments = this['@metadata']['@attachments'];
+for (var i = 0; i < attachments.length; i++) {
+    if (attachments[i].Name.endsWith('.png'))
+        doc.addAttachment(loadAttachment(attachments[i].Name));
+}
+", false, "photo.png", "photo.png", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public void Should_remove_attachment(Options options, string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName)
         {
-            var isJint = jsEngineType == "Jint";
+            var isJint = options.JavascriptEngineMode.ToString() == "Jint";
             var optChaining = isJint ? "" : "?";
             var zeroIfNull = isJint ? "" : " ?? 0";
 
@@ -55,7 +64,6 @@ for (var i = 0; i < attachments{optChaining}.length{zeroIfNull}; i++) {
                 .Replace("{optChaining}", optChaining)
                 .Replace("{zeroIfNull}", zeroIfNull);
             
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {

@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents;
 using Xunit;

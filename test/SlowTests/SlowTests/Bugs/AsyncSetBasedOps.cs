@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿using Tests.Infrastructure;
+// -----------------------------------------------------------------------
 //  <copyright file="AsyncSetBasedOps.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,7 +9,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -37,10 +37,8 @@ namespace SlowTests.SlowTests.Bugs
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task AwaitAsyncPatchByIndexShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false")
-            }))
+            options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
+            using (var store = GetDocumentStore(options))
             {
                 string lastUserId = null;
 

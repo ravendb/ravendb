@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide.JavaScript;
-using Jint.Native;
 using Raven.Server.Config.Categories;
-using JSFunction = V8.Net.JSFunction;
 using JSValueType = V8.Net.JSValueType;
 
 namespace Raven.Server.Documents.Patch;

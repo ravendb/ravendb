@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using Tests.Infrastructure;
+﻿using Tests.Infrastructure;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 

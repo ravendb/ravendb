@@ -1,5 +1,4 @@
-﻿using System;
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

@@ -11,7 +11,6 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Documents.Replication.Stats
 {

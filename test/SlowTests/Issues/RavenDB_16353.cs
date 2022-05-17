@@ -1,10 +1,11 @@
-﻿#nullable enable
+﻿using Orders;
+using Tests.Infrastructure;
+using Product = Tests.Infrastructure.Entities.Product;
+#nullable enable
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
-using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
                 "docs.Products.Select(product => new {\r\n    product = product,\r\n    supplier = this.NoTracking.LoadDocument(product.Supplier, \"Suppliers\")\r\n}).Select(this0 => new {\r\n    Name = this0.supplier.Name\r\n})",
                 map);
 
-            await Can_Use_No_Tracking_For_Referenced_Items_Internal(null, productsBySupplierNoTracking, productsBySupplier);
+            await Can_Use_No_Tracking_For_Referenced_Items_Internal(new Options(), productsBySupplierNoTracking, productsBySupplier);
         }
 
         [Theory]
@@ -39,12 +40,12 @@ namespace SlowTests.Issues
             var productsBySupplierNoTracking = new Products_BySupplier_NoTracking_JavaScript();
             var productsBySupplier = new Products_BySupplier_JavaScript();
 
-            await Can_Use_No_Tracking_For_Referenced_Items_Internal(jsEngineType, productsBySupplierNoTracking, productsBySupplier);
+            await Can_Use_No_Tracking_For_Referenced_Items_Internal(options, productsBySupplierNoTracking, productsBySupplier);
         }
 
-        private async Task Can_Use_No_Tracking_For_Referenced_Items_Internal(string? jsEngineType, AbstractIndexCreationTask productsBySupplierNoTracking, AbstractIndexCreationTask productsBySupplier)
+        private async Task Can_Use_No_Tracking_For_Referenced_Items_Internal(Options options, AbstractIndexCreationTask productsBySupplierNoTracking, AbstractIndexCreationTask productsBySupplier)
         {
-            using (var store = GetDocumentStore(jsEngineType == null ? null : Options.ForJavaScriptEngine(jsEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 await productsBySupplierNoTracking.ExecuteAsync(store);
                 await productsBySupplier.ExecuteAsync(store);

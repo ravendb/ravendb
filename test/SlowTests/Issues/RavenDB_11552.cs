@@ -1,7 +1,7 @@
-﻿using System.IO;
+﻿using Tests.Infrastructure;
+using System.IO;
 using System.Text;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;

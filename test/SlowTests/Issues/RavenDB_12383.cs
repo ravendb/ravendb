@@ -1,5 +1,5 @@
-﻿using FastTests;
-using FastTests.Server.JavaScript;
+﻿using Tests.Infrastructure;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;

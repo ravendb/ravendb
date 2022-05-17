@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;

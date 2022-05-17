@@ -1,5 +1,5 @@
-﻿using FastTests;
-using FastTests.Server.JavaScript;
+﻿using Tests.Infrastructure;
+using FastTests;
 using Raven.Client.Documents.Commands;
 using Xunit;
 using Sparrow.Json.Parsing;

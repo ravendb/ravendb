@@ -2,7 +2,6 @@
 using System.IO;
 using System.Reflection;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Sparrow.Platform;
 using Voron;
 using Voron.Exceptions;

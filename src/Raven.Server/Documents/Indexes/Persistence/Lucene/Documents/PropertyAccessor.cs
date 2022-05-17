@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using Jint;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Patch;

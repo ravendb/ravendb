@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Xunit;
 using Xunit.Abstractions;
@@ -102,7 +102,7 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var optEmptyArray = jsEngineType == "Jint" ? "" : "?? []";
+                var optEmptyArray = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?? []";
                 var subscriptionID = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
                     Query = $@"

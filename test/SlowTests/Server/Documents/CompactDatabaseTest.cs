@@ -1,17 +1,16 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
-using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Voron.Compaction;
-using Tests.Infrastructure;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,11 +27,8 @@ namespace SlowTests.Server.Documents
         public async Task CanCompactDatabase(Options options)
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(new Options
-            {
-                Path = path,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.Path = path;
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 

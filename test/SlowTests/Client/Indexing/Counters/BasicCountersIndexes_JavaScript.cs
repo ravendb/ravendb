@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
@@ -14,6 +13,7 @@ using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 using IndexingFields = Raven.Client.Constants.Documents.Indexing.Fields;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Client.Indexing.Counters
 {
@@ -45,7 +45,7 @@ return {
         {
             public MyCounterIndex_Load(Options options)
             {
-                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
                 Maps = new HashSet<string>
                 {
                     @$"counters.map('Companies', 'HeartRate', function (counter) {{
@@ -107,7 +107,7 @@ return {
 
             public AverageHeartRate_WithLoad(Options options)
             {
-                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
 
                 Maps = new HashSet<string>
                 {
@@ -428,8 +428,8 @@ return ({
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        public async Task BasicMapIndexWithLoad(Options options, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task BasicMapIndexWithLoad(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -462,7 +462,7 @@ return ({
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                var timeSeriesIndex = new MyCounterIndex_Load(jsEngineType);
+                var timeSeriesIndex = new MyCounterIndex_Load(options);
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
 
@@ -531,7 +531,7 @@ return ({
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
 
-                var termsCount = jsEngineType == "Jint" ? 0 : 1;
+                var termsCount = options.JavascriptEngineMode.ToString() == "Jint" ? 0 : 1;
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Employee", null));
                 Assert.Equal(termsCount, terms.Length);
@@ -774,7 +774,7 @@ return ({
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                var timeSeriesIndex = new AverageHeartRate_WithLoad(jsEngineType);
+                var timeSeriesIndex = new AverageHeartRate_WithLoad(options);
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
 

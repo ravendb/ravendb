@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
-using Sparrow;
 
 namespace Raven.Client.Documents.Queries
 {

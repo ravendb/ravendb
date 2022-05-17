@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Sparrow;
 using Sparrow.Json.Parsing;

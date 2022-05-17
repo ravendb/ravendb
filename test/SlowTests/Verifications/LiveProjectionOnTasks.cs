@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Linq;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
@@ -55,7 +55,7 @@ namespace SlowTests.Verifications
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var optChaining = jsEngineType == "Jint" ? "" : "?";
+                    var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
                     
                     var results = session.Advanced
                         .RawQuery<dynamic>(@$"

@@ -1,12 +1,11 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -200,7 +199,7 @@ namespace SlowTests.Client.Subscriptions
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task RevisionsSubscriptionsWithCustomScript(Options options)
         {
-            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
             
             using (var store = GetDocumentStore(options))
             {
@@ -295,7 +294,7 @@ select {{ Id: id(d.Current), Age: d.Current{optChaining}.Age }}
             using (var store = GetDocumentStore(options))
             {
 
-                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
             
                 var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {

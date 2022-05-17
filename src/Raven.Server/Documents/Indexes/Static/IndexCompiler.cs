@@ -11,7 +11,6 @@ using System.Reflection.Metadata;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;

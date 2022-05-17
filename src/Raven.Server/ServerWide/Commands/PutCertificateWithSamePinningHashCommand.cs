@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Raven.Client.ServerWide.Operations.Certificates;
+﻿using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 

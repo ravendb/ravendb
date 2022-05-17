@@ -1,7 +1,6 @@
-﻿using System.Linq;
+﻿using Tests.Infrastructure;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
@@ -103,9 +102,9 @@ update
 }");
 
                     var ex = Assert.Throws<Raven.Client.Exceptions.Documents.Patching.JavaScriptException>(() => projection.ToList());
-                    Assert.Contains(jsEngineType == "Jint" ? "<anonymous>:3:16" : "anonymousCode.js:3:24", ex.Message);
-                    Assert.Contains((jsEngineType == "Jint" ? "at " : "at Number.") + "toString", ex.Message);
-                    var argument = jsEngineType == "Jint" ? "" : "argument ";
+                    Assert.Contains(options.JavascriptEngineMode.ToString() == "Jint" ? "<anonymous>:3:16" : "anonymousCode.js:3:24", ex.Message);
+                    Assert.Contains((options.JavascriptEngineMode.ToString() == "Jint" ? "at " : "at Number.") + "toString", ex.Message);
+                    var argument = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "argument ";
                     Assert.Contains($"radix {argument}must be between 2 and 36", ex.Message);
                 }
             }

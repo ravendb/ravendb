@@ -1,5 +1,5 @@
-﻿using System.Linq;
-using Tests.Infrastructure;
+﻿using Tests.Infrastructure;
+using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
 

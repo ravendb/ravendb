@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -689,14 +687,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-
-            using (var src = GetDocumentStore(new Options
-            {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
-                ModifyDatabaseName = s => dbName,
-            }))
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = adminCert;
+            options.ModifyDatabaseName = s => dbName;
+            options.ModifyDatabaseRecord = record => record.Encrypted = true;
+            using (var src = GetDocumentStore(options))
             using (GetElasticClient(out var client))
             {
                 var config = new ElasticSearchEtlConfiguration

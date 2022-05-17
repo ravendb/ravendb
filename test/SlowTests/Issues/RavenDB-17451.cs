@@ -1,3 +1,4 @@
+using Tests.Infrastructure;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,8 +7,8 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Config;
-using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Core.AdminConsole;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,11 +21,9 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(true, "Jint")]
-        [InlineData(true, "V8")]
-        [InlineData(false, "Jint")]
-        [InlineData(false, "V8")]
-        public async Task CanDisableTcpCompressionViaConfiguration_ReplicationTest(bool disableOnSrc, string jsEngineType)
+        [RavenData(true, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(false, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task CanDisableTcpCompressionViaConfiguration_ReplicationTest(Options options, bool disableOnSrc)
         {
             var srcServer = GetNewServer(new ServerCreationOptions
             {
@@ -34,21 +33,14 @@ namespace SlowTests.Issues
             {
                 RunInMemory = false
             });
-            using (var srcStore = GetDocumentStore(new Options
-            {
-                Server = srcServer,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
-            using (var dstStore1 = GetDocumentStore(new Options
-            {
-                Server = dstServer,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
-            using (var dstStore2 = GetDocumentStore(new Options
-            {
-                Server = dstServer,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+
+            var op1 = options.Clone();
+            options.Server = srcServer;
+            op1.Server = dstServer;
+
+            using (var srcStore = GetDocumentStore(options))
+            using (var dstStore1 = GetDocumentStore(op1))
+            using (var dstStore2 = GetDocumentStore(op1))
             {
                 const string docId = "users/1";
                 using (var session = srcStore.OpenSession())

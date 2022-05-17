@@ -1,13 +1,10 @@
-﻿// -----------------------------------------------------------------------
+﻿using Tests.Infrastructure;
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3264.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
-using System;
 using FastTests;
-using FastTests.Server.JavaScript;
-using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
@@ -22,12 +19,12 @@ namespace SlowTests.Issues
         public RavenDB_3264(ITestOutputHelper output) : base(output)
         {
         }
-
+        //TODO: egor
         [Theory]
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        public void PatcherCanOutputObjectsCorrectly(Options options)
+        public void PatcherCanOutputObjectsCorrectly(RavenTestBase.Options options)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: RavenTestBase.Options.ModifyConfigurationForJavaScriptEngine(jsEngineType)))
+            using (var database = CreateDocumentDatabase(/*modifyConfiguration: options*/))
             {
                 const string script = @"output(undefined);
                                 output(true);
@@ -49,8 +46,7 @@ namespace SlowTests.Issues
                         Data = context.ReadObject(new DynamicJsonValue(), "keys/1")
                     };
 
-                    var jsOptions = context.DocumentDatabase.JsOptions;
-                    database.Scripts.GetScriptRunner(jsOptions, req, true, out var run);
+                    database.Scripts.GetScriptRunner( req, true, out ISingleRun run);
                     run.DebugMode = true;
                     run.Run(context, context, "execute", new object[] { document });
                     var array = run.DebugOutput;

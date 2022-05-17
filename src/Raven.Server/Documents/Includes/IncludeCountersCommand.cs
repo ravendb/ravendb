@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Counters;
 using Raven.Server.ServerWide.Context;
 

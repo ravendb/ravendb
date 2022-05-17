@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using Raven.Server.Config.Settings;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -231,11 +232,9 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData("from Users", "Jint")]
-        [InlineData("from Users", "V8")]
-        [InlineData("from @all_docs", "Jint")]
-        [InlineData("from @all_docs", "V8")]
-        public async Task PatchByStartsWithQuery(string baseQuery, string jsEngineType)
+        [RavenData("from Users", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData("from @all_docs", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task PatchByStartsWithQuery(Options options, string baseQuery)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -262,11 +261,9 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData("from Users", "Jint")]
-        [InlineData("from Users", "V8")]
-        [InlineData("from @all_docs", "Jint")]
-        [InlineData("from @all_docs", "V8")]
-        public async Task PatchByStartsWithQueryWithNewDocument(string baseQuery, string jsEngineType)
+        [RavenData("from Users", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData("from @all_docs", JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task PatchByStartsWithQueryWithNewDocument(Options options, string baseQuery)
         {
             using (var store = GetDocumentStore(options))
             {

@@ -1,9 +1,8 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
 using Xunit.Abstractions;

@@ -1,14 +1,12 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
-
+using Raven.Tests.Core.Utils.Entities;
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RDBS_85 : EtlTestBase
@@ -21,7 +19,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task MustNotSkipAnyDocumentsIfTaskIsCanceledDuringLoad(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dst = GetDocumentStore(options))
             {
@@ -89,7 +86,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task MustNotSkipAnyDocumentsIfLoadFailsAndThereWereSomeInternalFiltering(Options options)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dst = GetDocumentStore(options))
             {

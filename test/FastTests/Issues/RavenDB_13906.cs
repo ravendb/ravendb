@@ -1,5 +1,5 @@
-﻿using System;
-using FastTests.Server.JavaScript;
+﻿using Tests.Infrastructure;
+using System;
 using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;

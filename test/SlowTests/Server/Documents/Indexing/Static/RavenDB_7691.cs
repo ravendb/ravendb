@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -21,8 +22,8 @@ namespace SlowTests.Server.Documents.Indexing.Static
 
     private string QueryWithScalarToRawStringForAllValues(Options options)
         {
-            var prefix = jsEngineType == "Jint" ? "u=> u." : "\"";
-            var postfix = jsEngineType == "Jint" ? "" : "\"";
+            var prefix = options.JavascriptEngineMode.ToString() == "Jint" ? "u=> u." : "\"";
+            var postfix = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "\"";
             return @$"declare function MyProjection(x){{
 return {{
     IntMinVal : scalarToRawString(x, {prefix}IntMinVal{postfix}),
@@ -175,12 +176,8 @@ from EdgeCaseValues as e select MyProjection(e)";
         public async Task CanParseNumericEdgeCasesRawValuesInJSProjection(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
-
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200;
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -191,7 +188,7 @@ from EdgeCaseValues as e select MyProjection(e)";
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        QueryWithScalarToRawStringForAllValues(jsEngineType)
+                        QueryWithScalarToRawStringForAllValues(options)
                     ).FirstAsync();
 
                     AssertFieldsValuesEqual(edgeCaseValues, edgeCaseDeserialized);
@@ -201,16 +198,12 @@ from EdgeCaseValues as e select MyProjection(e)";
 
         // TODO [shlomo] RavenDB-18121: V8 version should be activated
         [Theory]
-        [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCasePercisionValues();
-
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200;
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -221,7 +214,7 @@ from EdgeCaseValues as e select MyProjection(e)";
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        QueryWithScalarToRawStringForAllValues(jsEngineType)
+                        QueryWithScalarToRawStringForAllValues(options)
                     ).FirstAsync();
 
                     AssertFieldsValuesEqual(edgeCaseValues, edgeCaseDeserialized);
@@ -231,15 +224,12 @@ from EdgeCaseValues as e select MyProjection(e)";
 
         // TODO [shlomo] RavenDB-18121: V8 version should be activated
         [Theory]
-        [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task ScalarToRawThrowsOnIllegalLambdas(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200;
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -248,8 +238,8 @@ from EdgeCaseValues as e select MyProjection(e)";
                 }
 
                 // TODO [shlomo] this should work in the commented version as well
-                var prefix = "u=> u."; //jsEngineType == "Jint" ? "u=> u." : "\"";
-                var postfix = ""; //"jsEngineType == "Jint" ? "" : "\"";
+                var prefix = "u=> u."; //options.JavascriptEngineMode.ToString() == "Jint" ? "u=> u." : "\"";
+                var postfix = ""; //"options.JavascriptEngineMode.ToString() == "Jint" ? "" : "\"";
 
                 // modify, then access raw, then access regular
                 using (var session = store.OpenAsyncSession())
@@ -306,12 +296,8 @@ from EdgeCaseValues as e select MyProjection(e)"
         public async Task CanModifyRawAndOriginalValuesTogether(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
-
-            using (var store = GetDocumentStore(new Options()
-            {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
-            }))
+            options.ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200;
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -320,8 +306,8 @@ from EdgeCaseValues as e select MyProjection(e)"
                 }
 
                 // TODO [shlomo] this should work in the commented version as well
-                var prefix = "u=> u."; //jsEngineType == "Jint" ? "u=> u." : "\"";
-                var postfix = ""; //"jsEngineType == "Jint" ? "" : "\"";
+                var prefix = "u=> u."; //options.JavascriptEngineMode.ToString() == "Jint" ? "u=> u." : "\"";
+                var postfix = ""; //"options.JavascriptEngineMode.ToString() == "Jint" ? "" : "\"";
 
                 // modify, then access raw, then access regular
                 using (var session = store.OpenAsyncSession())

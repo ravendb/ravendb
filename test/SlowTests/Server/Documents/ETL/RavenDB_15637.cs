@@ -1,7 +1,8 @@
-﻿using System;
-using Raven.Tests.Core.Utils.Entities;
+﻿using Tests.Infrastructure;
+using System;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Tests.Core.Utils.Entities;
 
 namespace SlowTests.Server.Documents.ETL
 {
@@ -81,33 +82,32 @@ function deleteDocumentsOfUsersBehavior(docId, deleted) {
 return !deleted;
 }";
 
+        
         [Theory]
-        [InlineData(_scriptShouldDelete1, "Jint")]
-        [InlineData(_scriptShouldDelete1, "V8")]
-        [InlineData(_scriptShouldDelete2, "Jint")]
-        [InlineData(_scriptShouldDelete2, "V8")]
-        public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script, string jsEngineType)
+        [RavenData(_scriptShouldDelete1, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        [RavenData(_scriptShouldDelete2, JavascriptEngineMode = RavenJavascriptEngineMode.All)]
+        public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(Options options, string script)
         {
-            var options = Options.ForJavaScriptEngine(jsEngineType);
+
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
             {
                 using (var session = dest.OpenSession())
                 {
-                    session.Store(new User() {Name = "Crew Mate", Age = 32});
+                    session.Store(new User() { Name = "Crew Mate", Age = 32 });
                     session.SaveChanges();
                 }
 
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new User() {Name = "Crew Mate", Age = 32});
-                    session.Store(new User() {Name = "Sus", Age = 31});
+                    session.Store(new User() { Name = "Crew Mate", Age = 32 });
+                    session.Store(new User() { Name = "Sus", Age = 31 });
                     session.SaveChanges();
                 }
 
                 AddEtl(src, dest, "Users", script);
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
-                etlDone.Wait(timeout:TimeSpan.FromSeconds(30));
+                etlDone.Wait(timeout: TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {

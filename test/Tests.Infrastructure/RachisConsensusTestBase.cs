@@ -30,7 +30,6 @@ using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;

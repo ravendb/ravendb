@@ -1,10 +1,10 @@
-﻿using System.Linq;
+﻿using Tests.Infrastructure;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
 using FastTests;
-using FastTests.Server.JavaScript;
 using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Rusty

@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var optChaining = options.JavascriptEngineMode.ToString() == "Jint" ? "" : "?";
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions
                 {
                     Query = @$"declare function f(d) {{ 

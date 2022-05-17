@@ -1,16 +1,15 @@
-﻿using System;
+﻿using Tests.Infrastructure;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.JavaScript;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +26,7 @@ namespace RachisTests
         public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected(Options options)
         {
             var customSettings = new Dictionary<string, string>();
-            customSettings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = jsEngineType;
+            customSettings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = options.JavascriptEngineMode.ToString();
             
             var clusterSize = 3;
             var (_, leader) = await CreateRaftCluster(clusterSize, customSettings: customSettings);
@@ -55,7 +54,7 @@ namespace RachisTests
         public async Task FollowerCanCecedeFromCluster(Options options)
         {
             var customSettings = new Dictionary<string, string>();
-            customSettings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = jsEngineType;
+            customSettings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = options.JavascriptEngineMode.ToString();
 
             var clusterSize = 3;
             await CreateRaftCluster(clusterSize, customSettings: customSettings);
