@@ -416,7 +416,7 @@ class patch extends viewModelBase {
         
         const patchMessage = matchingDocuments > -1 ?
                              `<div class="margin-bottom margin-bottom-lg text-info bg-info padding padding-xs">
-                                 <ul class="margin-top">
+                                 <ul class="margin-top-sm">
                                      <li>
                                          <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments.toLocaleString()}</strong></small>
                                      </li>

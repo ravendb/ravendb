@@ -2,7 +2,7 @@
     <form data-bind="submit: saveUnusedDatabaseIDs" novalidate autocomplete="off" class="flex-form">
         <div class="content-margin">
             <div class="row">
-                <div class="col-xs-12 col-xl-6 margin-top margin-top-lg no-padding-right">
+                <div class="col-xs-12 col-xl-6 margin-top no-padding-right">
                     <div class="panel padding margin-bottom no-padding-right">
                         <div class="panel-body no-padding-right">
                             <div class="form-group margin-top">
@@ -11,7 +11,7 @@
                                     <div class="form-control-static"><strong data-bind="text: $data"></strong></div>
                                 </div>
                             </div>
-                            <div class="form-group margin-top margin-top-lg">
+                            <div class="form-group margin-top">
                                 <label class="control-label">IDs that may be added to Unused List</label>
                                 <div class="margin-top flex-grow">
                                     <div data-bind="foreach: suggestedIDs">
@@ -35,7 +35,7 @@
                     </div>
                 </div>
                 <div class="col-xs-12 col-xl-6">
-                    <div class="margin-top margin-top-lg">
+                    <div class="margin-top">
                         <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
                             <i class="icon-save"></i><span>Save</span>
                         </button>
@@ -49,7 +49,7 @@
                                 <small>The Unused Database IDs will not be used in the Change Vector generated for a new or modified document.</small>
                             </div>
                         </div>
-                        <div class="form-group margin-top margin-top-lg">
+                        <div class="form-group margin-top">
                             <label class="control-label"><strong>Unused Database IDs</strong></label>
                             <div class="flex-grow">
                                 <div class="flex-horizontal">
@@ -73,7 +73,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="text-center text-muted margin-top margin-top-lg margin-bottom margin-bottom-lg" data-bind="visible: !unusedIDs().length">
+                        <div class="text-center text-muted margin-top margin-bottom" data-bind="visible: !unusedIDs().length">
                             <i class="icon-lg icon-empty-set"></i>
                             <h3 class="margin-top">No unused database IDs are set</h3>
                         </div>

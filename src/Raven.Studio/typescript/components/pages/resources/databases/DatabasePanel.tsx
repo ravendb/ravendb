@@ -166,7 +166,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                 data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', 
     class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"
             />
-            <div className="padding">
+            <div className="padding-sm">
                 <div className="database-header">
                     <div className="info-container flex-horizontal">
                         <div className="checkbox">
@@ -390,7 +390,7 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
             className="panel-addon"
             data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)"
         >
-            <div className="padding">
+            <div className="padding-sm">
                 <div className="addons-container flex-wrap">
                     <div className="database-properties">
                         <div className="encryption">

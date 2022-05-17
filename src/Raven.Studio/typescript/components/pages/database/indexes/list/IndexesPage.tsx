@@ -48,7 +48,7 @@ async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<
             .confirmationMessage(
                 "Reset index?",
                 `You're resetting index: <br><ul><li><strong>${genUtils.escapeHtml(index.name)}</strong></li></ul>
-             <div class="margin-top margin-top-lg text-warning bg-warning padding padding-xs flex-horizontal">
+             <div class="margin-top text-warning bg-warning padding padding-xs flex-horizontal">
                 <div class="flex-start">
                     <small><i class="icon-warning"></i></small>
                 </div>
@@ -639,8 +639,8 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     return (
-        <div className="flex-vertical absolute-fill">
-            <div className="flex-header">
+        <>
+            <div className="sticky-header">
                 {stats.indexes.length > 0 && (
                     <div className="clearfix toolbar">
                         <div className="pull-left">
@@ -674,7 +674,7 @@ export function IndexesPage(props: IndexesPageProps) {
                 )}
                 <IndexFilterDescription filter={filter} indexes={getAllIndexes(groups, replacements)} />
             </div>
-            <div className="flex-grow scroll js-scroll-container indexes-list">
+            <div className="indexes-list">
                 {groups.map(group => {
                     return (
                         <div key={"group-" + group.name}>
@@ -715,9 +715,8 @@ export function IndexesPage(props: IndexesPageProps) {
                                                     <div className="state state-swap">
                                                         <i className="icon-swap" />
                                                     </div>
-                                                    <div className="padding flex-horizontal">
-                                                        <div className="title">Side by side</div>
-                                                        <div className="flex-separator" />
+                                                    <div className="padding-xs padding-left-sm flex-horizontal">
+                                                        <div className="title margin-right">Side by side</div>
                                                         <button
                                                             className={classNames("btn btn-sm btn-warning", {
                                                                 "btn-spinner": swapNowProgress.includes(index.name),
@@ -760,6 +759,6 @@ export function IndexesPage(props: IndexesPageProps) {
                     );
                 })}
             </div>
-        </div>
+        </>
     );
 }

@@ -5,7 +5,7 @@
         <div data-bind="foreach: widgets">
             <div class="cluster-dashboard-item" data-bind="compose: { model: $data }, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>
         </div>
-        <div class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !widgets().length">
+        <div class="text-center text-muted margin-top margin-top-md" data-bind="visible: !widgets().length">
             <i class="icon-xl icon-empty-set"></i>
             <h2 class="margin-top margin-top-sm">No widgets added</h2> 
             <h2>Go ahead and click <a href="#" data-bind="click: addWidgetModal">here</a> to add</h2>

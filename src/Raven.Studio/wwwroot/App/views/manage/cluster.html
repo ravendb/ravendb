@@ -44,7 +44,7 @@
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
                 <div class="panel panel-state">
                     <div data-bind="attr: { 'data-state-text': createStateObservable($root.topology), class: 'state ' + createStateClassObservable($root.topology)() } "></div>
-                    <div class="padding flex-horizontal flex-wrap">
+                    <div class="padding-sm flex-horizontal flex-wrap">
                         <div class="info-container flex-horizontal">
                                 <div class="node flex-grow">
                                     <h5>TAG</h5>
@@ -120,7 +120,7 @@
                         </div>
                     </div>
                     <div class="panel-addon">
-                        <div class="padding">
+                        <div class="padding-sm">
                             <div class="flex-horizontal flex-wrap">
                                 <div class="address">
                                     <h5>ADDRESS</h5>

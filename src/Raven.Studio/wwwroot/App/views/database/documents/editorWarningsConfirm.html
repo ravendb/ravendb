@@ -7,11 +7,11 @@
             <h4 class="modal-title"><span data-bind="text: textForTitle"></span><span> Warnings</span></h4>
         </div>
         <div class="modal-body">
-            <div class="margin-top margin-top-lg">
+            <div class="margin-top">
                 The following detected warnings might affect the <span data-bind="text: textForTitle"></span> data:
             </div>
             <div data-bind="foreach: warningsList">
-                <table class="table table-condensed table-striped table-bordered margin-top margin-top-lg" data-bind="visible: warnings.length">
+                <table class="table table-condensed table-striped table-bordered margin-top" data-bind="visible: warnings.length">
                     <thead>
                     <tr>
                         <th>Location in <span data-bind="text: source"></span></th>

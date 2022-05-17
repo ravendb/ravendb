@@ -47,6 +47,14 @@ $screen-xs-max: ($screen-sm-min - 1) !default; $screen-sm-max: ($screen-md-min -
     }
 }
 
+@mixin padding-sm {
+    padding: $gutter-sm;
+        
+    @media (min-width: $screen-sm) {
+        padding: $gutter-sm;
+    }
+}
+
 @mixin padding-lg {
     padding: $gutter;
     @media (min-width: $screen-sm) {
@@ -93,19 +101,30 @@ $directions: (
 .padding {
     padding: math.div($gutter, $gutter-ratio);
 
+    @media (min-width: $screen-sm) {
+        padding: $gutter;
+    }
+
     @each $name, $value in $gutters {
         &.padding-#{$name} {
             padding: math.div($value, $gutter-ratio);
-        }
-    }
 
-    @media (min-width: $screen-sm) {
-        padding: $gutter;
-
-        @each $name, $value in $gutters {
-            &.padding-#{$name} {
+            @media (min-width: $screen-sm) {
+                padding: $gutter;
                 padding: $value;
             }
+        }
+    }
+}
+
+//GENERATE padding-xs padding-sm etc.
+@each $name, $value in $gutters {
+    .padding-#{$name} {
+        padding: math.div($value, $gutter-ratio);
+
+        @media (min-width: $screen-sm) {
+            padding: $gutter;
+            padding: $value;
         }
     }
 }

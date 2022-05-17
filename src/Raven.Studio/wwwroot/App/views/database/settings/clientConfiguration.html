@@ -1,7 +1,7 @@
 <div class="content-container" id="client-configuration-view">
     <form data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
-            <div class="toolbar margin-bottom margin-bottom-lg flex-horizontal">
+            <div class="toolbar margin-bottom flex-horizontal">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }, requiredAccess: 'DatabaseAdmin'">
                     <i class="icon-save"></i><span>Save</span>
                 </button>
@@ -45,7 +45,7 @@
                 </div>
                 <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
                     <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
-                        <div class="panel padding">
+                        <div class="panel padding-sm">
                             <div class="row">
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <!-- // TODO: don't show checkboxes, only lables.. can be done -->
@@ -75,7 +75,7 @@
                 </div>
                 <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
                     <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
-                        <div class="panel padding">
+                        <div class="panel padding-sm">
                             <div class="row">
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
@@ -104,7 +104,7 @@
                 </div>
                 <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
                     <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
-                        <div class="panel padding">
+                        <div class="panel padding-sm">
                             <div class="row">
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">

@@ -141,8 +141,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const [reduceOutputId] = useState(() => _.uniqueId("reduce-output-id"));
 
     return (
-        <div className={classNames({ "sidebyside-indexes": hasReplacement })}>
-            <div className={classNames("index-item", { "has-replacement": hasReplacement })} ref={ref}>
+        <>
+            <div className={classNames("index-item", { "index-sidebyside": hasReplacement }, { "index-sidebyside": isReplacement })} ref={ref}>
                 <div className="index-header" id={indexUniqueId(index)}>
                     <div className="index-select">
                         {canReadWriteDatabase(database) && (
@@ -494,7 +494,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 </div>
                 <IndexDistribution index={index} globalIndexingStatus={globalIndexingStatus} />
             </div>
-        </div>
+        </>
     );
 }
 
