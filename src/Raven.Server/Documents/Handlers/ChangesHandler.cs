@@ -9,7 +9,6 @@ using System.Globalization;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Changes;
 using Raven.Server.Routing;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -25,25 +24,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/changes/debug", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetConnectionsDebugInfo()
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Connections");
-
-                writer.WriteStartArray();
-                var first = true;
-                foreach (var connection in Database.Changes.Connections)
-                {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-                    context.Write(writer, connection.Value.GetDebugInfo());
-                }
-                writer.WriteEndArray();
-
-                writer.WriteEndObject();
-            }
+            using (var processor = new ChangesHandlerProcessorForGetConnectionsDebugInfo(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/changes", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]

@@ -18,5 +18,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedChangesHandlerProcessorForGetChanges(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/changes/debug", "GET")]
+        public async Task GetConnectionsDebugInfo()
+        {
+            using (var processor = new ShardedChangesHandlerProcessorForGetConnectionsDebugInfo(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
