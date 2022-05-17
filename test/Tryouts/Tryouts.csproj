@@ -97,9 +97,9 @@
     <PackageReference Include="CsvHelper" Version="27.2.1" />
     <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="MimeKitLite" Version="3.1.1" />
+    <PackageReference Include="MimeKitLite" Version="3.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="SharpCompress" Version="0.30.1" />
+    <PackageReference Include="SharpCompress" Version="0.31.0" />
   </ItemGroup>
   <Target Name="PlatformMessage" AfterTargets="Build">
     <Message Text="Building for platform: $(Platform)" Importance="high" />
