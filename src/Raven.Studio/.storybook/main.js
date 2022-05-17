@@ -36,6 +36,7 @@ module.exports = {
             .filter(x => (x.use && x.use.indexOf && x.use.indexOf("imports-loader") === 0)
                 || (x.use && x.use.loader === "html-loader")
                 || (x.test && x.test.toString().includes(".less"))
+                || (x.test && x.test.toString().includes(".font\\.js"))
                 || (x.test && x.test.toString().includes(".scss")));
         
         config.plugins.push(webpackConfig.plugins[0]); // MiniCssExtractPlugin

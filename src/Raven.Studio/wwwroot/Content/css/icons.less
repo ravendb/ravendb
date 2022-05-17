@@ -77,16 +77,6 @@
     }
 }
 
-.make-icon (@name, @glyph) {
-    .icon-@{name}::before {
-        content: @glyph;
-    }
-
-    .icon-addon-@{name}::after {
-        content: @glyph;
-    }
-}
-
 .make-icon-color (@name, @color-before, @color-after) {
     .icon-@{name}::before {
         color: @color-before;
