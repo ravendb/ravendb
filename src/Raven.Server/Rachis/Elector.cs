@@ -43,6 +43,8 @@ namespace Raven.Server.Rachis
                 {
                     while (_engine.IsDisposed == false)
                     {
+                        _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
+
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             var rv = _connection.Read<RequestVote>(context);
