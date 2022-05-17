@@ -25,5 +25,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedChangesHandlerProcessorForGetConnectionsDebugInfo(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/changes", "DELETE")]
+        public async Task DeleteConnections()
+        {
+            using (var processor = new ShardedChangesHandlerProcessorForDeleteConnections(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
