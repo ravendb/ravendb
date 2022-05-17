@@ -908,8 +908,6 @@ person.addCounter(loadCounter('down'));
 
                     Assert.NotNull(ongoingTask);
                     Assert.Equal(name, ongoingTask.TaskName);
-                    Assert.Equal("A", ongoingTask.ResponsibleNode.NodeTag);
-                    Assert.Equal(OngoingTaskConnectionStatus.Active, ongoingTask.TaskConnectionStatus);
                 }
             }
         }
