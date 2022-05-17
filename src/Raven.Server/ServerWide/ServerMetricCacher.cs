@@ -25,7 +25,8 @@ namespace Raven.Server.ServerWide
         {
             Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromSeconds(1), _server.CpuUsageCalculator.Calculate);
             Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
-            Register(MetricCacher.Keys.Server.MemoryInfoExtended, TimeSpan.FromSeconds(15), CalculateMemoryInfoExtended);
+            Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds, TimeSpan.FromSeconds(15), CalculateMemoryInfoExtended);
+            Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate5Seconds, TimeSpan.FromSeconds(5), CalculateMemoryInfoExtended);
             Register(MetricCacher.Keys.Server.DiskSpaceInfo, TimeSpan.FromSeconds(15), CalculateDiskSpaceInfo);
             Register(MetricCacher.Keys.Server.MemInfo, TimeSpan.FromSeconds(15), CalculateMemInfo);
             Register(MetricCacher.Keys.Server.GcAny, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.Any));

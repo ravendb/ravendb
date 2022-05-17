@@ -533,7 +533,7 @@ namespace Raven.Server.Documents.ETL
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
                         totalAllocated,
-                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out var memoryUsage) == false)
+                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Database.ServerStore.Server.MetricCacher, Logger, out var memoryUsage) == false)
                 {
                     var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {totalAllocated}.";
                     if (memoryUsage != null)
