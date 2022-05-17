@@ -46,6 +46,15 @@ namespace Sparrow.Server
             {
                 suffix = Environment.Is64BitProcess ? ".mac.x64.dylib" : ".mac.x86.dylib";
                 // in mac we are not : `toFilename += ".so";` as DllImport doesn't assume .so nor .dylib by default
+                if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
+                    RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
+                {
+                    suffix = Environment.Is64BitProcess ? ".mac.x64.dylib" : ".mac.x86.so";
+                }
+                else
+                {
+                    suffix = Environment.Is64BitProcess ? ".mac.arm64.dylib" : "mac.arm32.dylib";
+                }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
