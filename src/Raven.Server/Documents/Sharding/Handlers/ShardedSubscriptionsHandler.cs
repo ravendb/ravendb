@@ -247,24 +247,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscriptions/drop", "POST")]
         public async Task DropSubscriptionConnection()
         {
-            var subscriptionId = GetLongQueryString("id", required: false);
-
-            var subscriptionName = GetStringQueryString("name", required: false);
-            if (subscriptionId.HasValue && string.IsNullOrEmpty(subscriptionName))
-                throw new InvalidOperationException("Drop Subscription Connection by id not supported for sharded connection.");
-
-            var workerId = GetStringQueryString("workerId", required: false);
-            try
-            {
-                await ShardExecutor.ExecuteParallelForAllAsync(new ShardedDropSubscriptionConnectionOperation(HttpContext, subscriptionName, workerId));
-            }
-            finally
-            {
-                if (ShardedSubscriptionConnection.Connections.TryRemove(subscriptionName, out ShardedSubscriptionConnection connection))
-                {
-                    connection.Dispose();
-                }
-            }
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForDropSubscriptionConnection(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/subscriptions/connection-details", "GET")]
