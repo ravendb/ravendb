@@ -545,12 +545,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                         Task = tcs.Task
                     };
 
-                    var task = _database.Operations.AddOperation(
-                        null,
-                        $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'",
+                    var task = _database.Operations.AddLocalOperation(
+                        operationId,
                         OperationType.DatabaseBackup,
+                        $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'",
+                        detailedDescription: null,
                         taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, tcs, onProgress),
-                        id: operationId,
                         token: backupTask.TaskCancelToken);
 
                     task.ContinueWith(_ => backupTask.TaskCancelToken.Dispose());

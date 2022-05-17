@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -445,11 +444,12 @@ namespace Raven.Server.Documents.Handlers
                 Query = query.Query
             };
 
-            var task = Database.Operations.AddOperation(
-                Database.Name,
-                indexName,
+            var task = Database.Operations.AddLocalOperation(operationId,
                 operationType,
-                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
+                indexName,
+                details,
+                onProgress => operation(Database.QueryRunner, options, onProgress, token),
+                token);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

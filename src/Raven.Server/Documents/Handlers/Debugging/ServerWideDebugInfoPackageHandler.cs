@@ -109,38 +109,43 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var token = CreateOperationToken();
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
 
-            await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", OperationType.DebugPackage, async _ =>
-            {
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
-                using (transactionOperationContext.OpenReadTransaction())
+            await ServerStore.Operations.AddLocalOperation(
+                operationId,
+                OperationType.DebugPackage,
+                "Created debug package for all cluster nodes",
+                detailedDescription: null,
+                async _ =>
                 {
-                    await using (var ms = new MemoryStream())
+                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
+                    using (transactionOperationContext.OpenReadTransaction())
                     {
-                        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                        await using (var ms = new MemoryStream())
                         {
-                            var topology = ServerStore.GetClusterTopology(transactionOperationContext);
-
-                            foreach (var (tag, url) in topology.AllNodes)
+                            using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                             {
-                                try
+                                var topology = ServerStore.GetClusterTopology(transactionOperationContext);
+
+                                foreach (var (tag, url) in topology.AllNodes)
                                 {
-                                    await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tag, url, Server.Certificate.Certificate);
-                                }
-                                catch (Exception e)
-                                {
-                                    await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{tag}]");
+                                    try
+                                    {
+                                        await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tag, url, Server.Certificate.Certificate);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{tag}]");
+                                    }
                                 }
                             }
+
+                            ms.Position = 0;
+                            await ms.CopyToAsync(ResponseBodyStream(), token.Token);
                         }
-
-                        ms.Position = 0;
-                        await ms.CopyToAsync(ResponseBodyStream(), token.Token);
                     }
-                }
 
-                return null;
-            }, operationId, token: token);
+                    return null;
+                }, token: token);
         }
 
         private async Task WriteDebugInfoPackageForNodeAsync(
@@ -187,26 +192,31 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
 
-            await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", OperationType.DebugPackage, async _ =>
-            {
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                await using (var ms = new MemoryStream())
+            await ServerStore.Operations.AddLocalOperation(
+                operationId,
+                OperationType.DebugPackage,
+                "Created debug package for current server only",
+                detailedDescription: null,
+                async _ =>
                 {
-                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    await using (var ms = new MemoryStream())
                     {
-                        var localEndpointClient = new LocalEndpointClient(Server);
+                        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+                        {
+                            var localEndpointClient = new LocalEndpointClient(Server);
 
-                        await WriteServerInfo(archive, context, localEndpointClient, token.Token);
-                        await WriteForAllLocalDatabases(archive, context, localEndpointClient, token: token.Token);
-                        await WriteLogFile(archive, token.Token);
+                            await WriteServerInfo(archive, context, localEndpointClient, token.Token);
+                            await WriteForAllLocalDatabases(archive, context, localEndpointClient, token: token.Token);
+                            await WriteLogFile(archive, token.Token);
+                        }
+
+                        ms.Position = 0;
+                        await ms.CopyToAsync(ResponseBodyStream(), token.Token);
                     }
 
-                    ms.Position = 0;
-                    await ms.CopyToAsync(ResponseBodyStream(), token.Token);
-                }
-
-                return null;
-            }, operationId, token: token);
+                    return null;
+                }, token: token);
         }
 
         private static async Task WriteLogFile(ZipArchive archive, CancellationToken token = default)

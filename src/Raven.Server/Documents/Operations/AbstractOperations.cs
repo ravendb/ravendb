@@ -13,23 +13,36 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Changes;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Operations;
 
-public abstract class AbstractOperations<TOperation>
+public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
     where TOperation : AbstractOperation, new()
 {
     private readonly IDocumentsChanges _changes;
+    private readonly TimeSpan _maxCompletedTaskLifeTime;
 
-    protected readonly ConcurrentDictionary<long, TOperation> Active = new();
-    protected readonly ConcurrentDictionary<long, TOperation> Completed = new();
+    protected readonly ConcurrentDictionary<long, AbstractOperation> Active = new();
+    protected readonly ConcurrentDictionary<long, AbstractOperation> Completed = new();
 
-    protected AbstractOperations(IDocumentsChanges changes)
+    protected AbstractOperations(IDocumentsChanges changes, TimeSpan maxCompletedTaskLifeTime)
     {
         _changes = changes;
+        _maxCompletedTaskLifeTime = maxCompletedTaskLifeTime;
+
+        LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
     }
 
-    protected Task<IOperationResult> AddOperationInternalAsync(TOperation operation, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory)
+    public abstract Task<IOperationResult> AddLocalOperation(
+        long id,
+        OperationType operationType,
+        string description,
+        IOperationDetailedDescription detailedDescription,
+        Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
+        OperationCancelToken token = null);
+
+    protected Task<IOperationResult> AddOperationInternalAsync(AbstractOperation operation, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory)
     {
         var id = operation.Id;
         var operationDescription = operation.Description;
@@ -109,7 +122,7 @@ public abstract class AbstractOperations<TOperation>
 
             try
             {
-                if (Active.TryGetValue(id, out TOperation completed))
+                if (Active.TryGetValue(id, out AbstractOperation completed))
                 {
                     completed.SetCompleted();
                     // add to completed items before removing from active ones to ensure an operation status is accessible all the time
@@ -134,7 +147,7 @@ public abstract class AbstractOperations<TOperation>
 
     public ValueTask KillOperationAsync(long id, CancellationToken token)
     {
-        if (Active.TryGetValue(id, out TOperation operation) == false)
+        if (Active.TryGetValue(id, out AbstractOperation operation) == false)
             throw new ArgumentException($"Operation {id} was not registered");
 
         if (operation.Killable == false)
@@ -143,9 +156,9 @@ public abstract class AbstractOperations<TOperation>
         return operation.KillAsync(waitForCompletion: false, token);
     }
 
-    public TOperation GetOperation(long id)
+    public AbstractOperation GetOperation(long id)
     {
-        if (Active.TryGetValue(id, out TOperation operation))
+        if (Active.TryGetValue(id, out AbstractOperation operation))
         {
             return operation;
         }
@@ -184,9 +197,9 @@ public abstract class AbstractOperations<TOperation>
         Completed.Clear();
     }
 
-    public IEnumerable<TOperation> GetAll() => Active.Values.Union(Completed.Values);
+    public IEnumerable<AbstractOperation> GetAll() => Active.Values.Union(Completed.Values);
 
-    public ICollection<TOperation> GetActive() => Active.Values;
+    public ICollection<AbstractOperation> GetActive() => Active.Values;
 
     public bool HasActive => Active.IsEmpty == false;
 
@@ -217,8 +230,40 @@ public abstract class AbstractOperations<TOperation>
         return operation;
     }
 
-    protected virtual void RaiseNotifications(OperationStatusChange change, TOperation operation)
+    protected virtual void RaiseNotifications(OperationStatusChange change, AbstractOperation operation)
     {
         _changes?.RaiseNotifications(change);
+    }
+
+    public void LowMemory(LowMemorySeverity lowMemorySeverity)
+    {
+        // cleanup operations older than 1 minute only
+        // Client API might still be waiting for the status
+        CleanupOperationsInternal(Completed, TimeSpan.FromMinutes(1));
+    }
+
+    public void LowMemoryOver()
+    {
+        // nothing to do here
+    }
+
+    internal void CleanupOperations()
+    {
+        CleanupOperationsInternal(Completed, _maxCompletedTaskLifeTime);
+    }
+
+    private static void CleanupOperationsInternal(ConcurrentDictionary<long, AbstractOperation> operations, TimeSpan maxCompletedTaskLifeTime)
+    {
+        var oldestPossibleCompletedOperation = SystemTime.UtcNow - maxCompletedTaskLifeTime;
+
+        foreach (var taskAndState in operations)
+        {
+            var state = taskAndState.Value;
+
+            if (state.Description.EndTime.HasValue && state.Description.EndTime < oldestPossibleCompletedOperation)
+            {
+                operations.TryRemove(taskAndState.Key, out _);
+            }
+        }
     }
 }

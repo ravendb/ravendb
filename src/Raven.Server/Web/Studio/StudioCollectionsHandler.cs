@@ -55,8 +55,13 @@ namespace Raven.Server.Web.Studio
             // use default options
             var options = new CollectionOperationOptions();
 
-            var task = Database.Operations.AddOperation(Database.Name, collectionName, operationType, onProgress =>
-                     operation(collectionRunner, collectionName, options, onProgress, token), operationId, token: token);
+            var task = Database.Operations.AddLocalOperation(
+                operationId, 
+                operationType,
+                collectionName, 
+                detailedDescription:null, 
+                onProgress => operation(collectionRunner, collectionName, options, onProgress, token), 
+                token: token);
 
             _ = task.ContinueWith(_ => returnContextToPool.Dispose());
 

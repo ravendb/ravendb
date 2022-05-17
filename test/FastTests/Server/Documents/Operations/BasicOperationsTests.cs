@@ -33,7 +33,11 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation(null, "Operations Test", 0,
+                db.Operations.AddLocalOperation(
+                    operationId,
+                    0,
+                    "Operations Test",
+                    detailedDescription: null,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         var p = new DeterminateProgress
@@ -54,7 +58,8 @@ namespace FastTests.Server.Documents.Operations
                         {
                             Message = "I'm done"
                         };
-                    }), operationId, token: token);
+                    }),
+                    token: token);
 
                 OperationStatusChange change;
                 Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
@@ -101,11 +106,16 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation(null, "Operations Test", 0,
+                db.Operations.AddLocalOperation(
+                    operationId,
+                    0,
+                    "Operations Test",
+                    detailedDescription: null,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         throw new Exception("Something bad happened");
-                    }), operationId, token: OperationCancelToken.None);
+                    }),
+                    token: OperationCancelToken.None);
 
                 OperationStatusChange change;
 
@@ -135,16 +145,18 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation(null, "Cancellation Test", 0,
+                db.Operations.AddLocalOperation(operationId,
+                    0,
+                    "Cancellation Test",
+                    detailedDescription: null,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         token.Token.ThrowIfCancellationRequested();
                         return null;
-                    }, token.Token), operationId, token: token);
+                    }, token.Token), 
+                    token: token);
 
-                OperationStatusChange change;
-
-                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
+                Assert.True(notifications.TryTake(out OperationStatusChange change, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(change.OperationId);
                 Assert.Equal(OperationStatus.Canceled, change.State.Status);
                 Assert.Null(change.State.Result);

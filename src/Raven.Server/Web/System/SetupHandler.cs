@@ -582,12 +582,13 @@ namespace Raven.Server.Web.System
             {
                 var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
 
-                var operationResult = await ServerStore.Operations.AddOperation(
-                    null,
-                    "Setting up RavenDB in secured mode.",
+                var operationResult = await ServerStore.Operations.AddLocalOperation(
+                    operationId.Value,
                     OperationType.Setup,
+                    "Setting up RavenDB in secured mode.",
+                    detailedDescription: null,
                     progress => SetupManager.SetupSecuredTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, token: operationCancelToken);
+                    token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -645,11 +646,13 @@ namespace Raven.Server.Web.System
             {
                 var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
 
-                var operationResult = await ServerStore.Operations.AddOperation(
-                    null, "Setting up RavenDB with a Let's Encrypt certificate",
+                var operationResult = await ServerStore.Operations.AddLocalOperation(
+                    operationId.Value,
                     OperationType.Setup,
+                    "Setting up RavenDB with a Let's Encrypt certificate",
+                    detailedDescription: null,
                     progress => SetupManager.SetupLetsEncryptTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, token: operationCancelToken);
+                    token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -747,11 +750,13 @@ namespace Raven.Server.Web.System
             {
                 var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
 
-                await ServerStore.Operations.AddOperation(
-                    null, "Continue Cluster Setup.",
+                await ServerStore.Operations.AddLocalOperation(
+                    operationId.Value,
                     OperationType.Setup,
+                    "Continue Cluster Setup.",
+                    detailedDescription: null,
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
-                    operationId.Value, token: operationCancelToken);
+                    token: operationCancelToken);
             }
 
             NoContentStatus();

@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Properties;
 using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
@@ -23,7 +22,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler;
 using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -38,8 +36,9 @@ namespace Raven.Server.Web
             JsonOperationContext context,
             OperationCancelToken token);
 
-        internal async Task Export(JsonOperationContext context, string databaseName, ExportDelegate onExport,
-            Documents.Operations.Operations operations, long operationId, DocumentDatabase documentDatabase = null)
+        internal async Task Export<TOperation>(JsonOperationContext context, string databaseName, ExportDelegate onExport,
+            AbstractOperations<TOperation> operations, long operationId)
+            where TOperation : AbstractOperation, new()
         {
             var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
             var startRaftIndex = GetLongQueryString("startRaftIndex", false) ?? 0;
@@ -86,12 +85,13 @@ namespace Raven.Server.Web
             ApplyBackwardCompatibility(options);
             var token = CreateOperationToken();
 
-            await operations.AddOperation(
-                documentDatabase.Name,
-                "Export database: " + databaseName,
+            await operations.AddLocalOperation(
+                operationId,
                 OperationType.DatabaseExport,
-                onProgress => onExport(options, startDocumentEtag, startRaftIndex, onProgress, context, token), operationId, token: token);
-
+                "Export database: " + databaseName,
+                detailedDescription: null,
+                onProgress => onExport(options, startDocumentEtag, startRaftIndex, onProgress, context, token),
+                token: token);
         }
 
         internal void ApplyBackwardCompatibility(DatabaseSmugglerOptionsServerSide options)
@@ -160,8 +160,9 @@ namespace Raven.Server.Web
             Action<IOperationProgress> onProgress,
             OperationCancelToken token);
 
-        internal async Task Import(JsonOperationContext context, string databaseName, ImportDelegate onImport,
-            Documents.Operations.Operations operations, long operationId, DocumentDatabase documentDatabase = null)
+        internal async Task Import<TOperation>(JsonOperationContext context, string databaseName, ImportDelegate onImport,
+            AbstractOperations<TOperation> operations, long operationId)
+            where TOperation : AbstractOperation, new()
         {
             if (HttpContext.Request.HasFormContentType == false)
             {
@@ -177,9 +178,12 @@ namespace Raven.Server.Web
 
             var result = new SmugglerResult();
             BlittableJsonReaderObject blittableJson = null;
-            await operations.AddOperation(documentDatabase.Name
-                , "Import to: " + databaseName,
+
+            await operations.AddLocalOperation(
+                operationId,
                 OperationType.DatabaseImport,
+                "Import to: " + databaseName,
+                detailedDescription: null,
                 onProgress =>
                 {
                     return Task.Run(async () =>
@@ -244,7 +248,8 @@ namespace Raven.Server.Web
 
                         return (IOperationResult)result;
                     });
-                }, operationId, token: token).ConfigureAwait(false);
+                },
+                token: token).ConfigureAwait(false);
 
             await WriteImportResultAsync(context, result, ResponseBodyStream());
         }

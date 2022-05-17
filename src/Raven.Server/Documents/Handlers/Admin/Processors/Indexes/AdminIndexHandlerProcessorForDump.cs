@@ -34,10 +34,11 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
             var operationId = RequestHandler.Database.Operations.GetNextOperationId();
             var token = RequestHandler.CreateTimeLimitedQueryOperationToken();
 
-            _ = RequestHandler.Database.Operations.AddOperation(
-                RequestHandler.Database.Name,
-                "Dump index " + name + " to " + path,
+            _ = RequestHandler.Database.Operations.AddLocalOperation(
+                operationId,
                 OperationType.DumpRawIndexData,
+                "Dump index " + name + " to " + path,
+                detailedDescription: null,
                 onProgress =>
                 {
                     var totalFiles = index.Dump(path, onProgress);
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes
                     {
                         Message = $"Dumped {totalFiles} files from {name}",
                     });
-                }, operationId, token: token);
+                }, token: token);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
