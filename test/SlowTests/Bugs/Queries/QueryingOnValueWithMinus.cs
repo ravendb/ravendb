@@ -2,6 +2,7 @@
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void CanQueryOnValuesContainingMinus()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryOnValuesContainingMinus(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

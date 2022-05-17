@@ -13,7 +13,7 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryAStronglyTypedIndex(Options options)
         {

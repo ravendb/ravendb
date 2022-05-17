@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -13,10 +14,11 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void CannotCreateIndexesUsingDateTimeNow()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CannotCreateIndexesUsingDateTimeNow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var ioe = Assert.Throws<IndexCompilationException>(() =>
                     store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
@@ -32,8 +34,9 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void CannotCreateIndexWithOrderBy()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CannotCreateIndexWithOrderBy(Options options)
         {
             using (var store = GetDocumentStore())
             {

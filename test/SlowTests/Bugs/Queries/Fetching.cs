@@ -14,8 +14,8 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanFetchMultiplePropertiesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))

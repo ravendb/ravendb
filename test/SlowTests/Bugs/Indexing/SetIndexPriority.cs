@@ -34,7 +34,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task changing_index_priority_needs_to_set_it_on_index_instance_as_well(Options options)
         {
@@ -54,9 +54,8 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void set_auto_index_priority(Options options)
         {
             using (var store = GetDocumentStore(options))

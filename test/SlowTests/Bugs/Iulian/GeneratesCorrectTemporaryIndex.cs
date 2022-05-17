@@ -2,6 +2,7 @@
 using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Iulian
 {
@@ -21,10 +22,11 @@ namespace SlowTests.Bugs.Iulian
             public Inner Inner { get; set; }
         }
 
-        [Fact]
-        public void Can_Generate_Correct_Temporary_Index()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Generate_Correct_Temporary_Index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

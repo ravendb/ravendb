@@ -13,8 +13,8 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryOnlyByType(Options options)
         {
             using (var store = GetDocumentStore(options))

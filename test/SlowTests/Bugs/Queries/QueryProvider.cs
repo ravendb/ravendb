@@ -16,7 +16,7 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCreateQuery(Options options)
         {

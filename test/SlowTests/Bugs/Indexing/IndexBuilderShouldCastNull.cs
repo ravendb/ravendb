@@ -16,8 +16,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldCastNullToThePropertyType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -27,8 +26,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldWorkAlsoWithAnonymousResultTypeWhichRequiredExplicitlyCast(Options options)
         {
             using (var store = GetDocumentStore(options))

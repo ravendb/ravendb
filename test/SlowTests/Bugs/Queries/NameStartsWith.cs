@@ -13,7 +13,7 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void can_search_for_mrs_shaba(Options options)
         {

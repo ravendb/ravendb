@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -21,10 +22,11 @@ namespace SlowTests.Bugs.Indexing
 
         private const string FooIndexName = "SomeFooIndexWithSpecialCharacters";
 
-        [Fact]
-        public void CanContainSecialCharactersInDefinition()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanContainSecialCharactersInDefinition(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 new FooIndex().Execute(documentStore);
                 Assert.NotNull(documentStore.Maintenance.Send(new GetIndexOperation(FooIndexName)));

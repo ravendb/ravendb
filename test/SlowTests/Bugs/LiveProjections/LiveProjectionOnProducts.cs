@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.LiveProjections
 {
@@ -14,12 +15,13 @@ namespace SlowTests.Bugs.LiveProjections
         {
         }
 
-        [Fact]
-        public void ComplexLiveProjection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ComplexLiveProjection(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
-                new ProductDetailsReport_ByProductId().Execute((IDocumentStore)documentStore);
+                new ProductDetailsReport_ByProductId().Execute(documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {

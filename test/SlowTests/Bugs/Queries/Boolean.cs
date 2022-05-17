@@ -2,6 +2,7 @@
 using Xunit;
 using System.Linq;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void CanQueryOnNegation()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryOnNegation(Options options)
         {
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(options))
             {
                 using(var s = store.OpenSession())
                 {

@@ -9,6 +9,7 @@ using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -18,10 +19,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void QueryingOnEqNull()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryingOnEqNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -42,10 +44,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void QueryingOnEqNotNull()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryingOnEqNotNull(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

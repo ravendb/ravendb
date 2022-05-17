@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -43,7 +43,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanHaveAnIndexWithANameThatStartsWithTheWordDynamic(Options options)
         {
