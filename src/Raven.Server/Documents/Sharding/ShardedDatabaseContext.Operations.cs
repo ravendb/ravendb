@@ -40,13 +40,8 @@ public partial class ShardedDatabaseContext
         public override long GetNextOperationId()
         {
             var nextId = _context._serverStore.Operations.GetNextOperationId();
-            var nextIdBytes = EndianBitConverter.Little.GetBytes(nextId);
 
-            var tag = _context._serverStore.Engine.Tag;
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Major, "Encode NodeTag");
-
-            return nextId;
+            return OperationIdEncoder.EncodeOperationId(nextId, _context._serverStore.NodeTag);
         }
 
         protected override void RaiseNotifications(OperationStatusChange change, AbstractOperation operation)
