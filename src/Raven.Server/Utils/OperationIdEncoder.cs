@@ -21,7 +21,7 @@ public static class OperationIdEncoder
     /// JavaScript Number.MAX_SAFE_INTEGER is 9007199254740991 which is less than 8 bytes that C# is using
     /// NodeTag can be ? or A-Z which means if we will use '?' as base we have numbers between 0 and 27 they can be encoded in 5 bits
     /// Max NodeTag length is 4 so we need to use 20 bits to encode this
-    /// If we will use NodeTag 'ZZZZ' and 8_589_934_591 as operationId we will end up with 7844981104443391 which is slightly less than Number.MAX_SAFE_INTEGER
+    /// If we will use NodeTag 'ZZZZ' and 8_589_934_591 as operationId we will end up with 8135535642017791 which is slightly less than Number.MAX_SAFE_INTEGER
     /// 7844981104443391 is binary is:
     /// 0000 0000 | 0001 1011 | 1101 1110 | 1111 0111 | 1111 1111 | 1111 1111 | 1111 1111 | 1111 1111
     ///
