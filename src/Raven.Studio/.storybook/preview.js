@@ -8,6 +8,8 @@ overrideSystem();
 overrideComposition();
 overrideViews();
 
+require('../wwwroot/Content/css/fonts/icomoon.font');
+
 const ko = require("knockout");
 require("knockout.validation");
 import "knockout-postbox";
