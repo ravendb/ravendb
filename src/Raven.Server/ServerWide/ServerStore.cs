@@ -138,7 +138,7 @@ namespace Raven.Server.ServerWide
 
         public ConcurrentBackupsCounter ConcurrentBackupsCounter { get; private set; }
 
-        public Operations Operations { get; }
+        public ServerOperations Operations { get; }
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
 
@@ -171,10 +171,7 @@ namespace Raven.Server.ServerWide
 
             _operationsStorage = new OperationsStorage();
 
-            Operations = new Operations(null, _operationsStorage, NotificationCenter, null,
-                (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
-                        ? TimeSpan.FromHours(12)
-                        : TimeSpan.FromDays(2)));
+            Operations = new ServerOperations(this, _operationsStorage);
 
             LicenseManager = new LicenseManager(this);
 

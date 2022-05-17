@@ -5,10 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Operations;
@@ -69,12 +66,12 @@ namespace Raven.Server.Documents.Handlers
             var token = CreateTimeLimitedOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();
 
-            var t = Database.Operations.AddOperation(
-                Database.Name,
-                $"Revert database '{Database.Name}' to {configuration.Time} UTC.",
-                OperationType.DatabaseRevert,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token),
+            var t = Database.Operations.AddLocalOperation(
                 operationId,
+                OperationType.DatabaseRevert,
+                $"Revert database '{Database.Name}' to {configuration.Time} UTC.",
+                detailedDescription: null,
+                onProgress => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token),
                 token: token);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

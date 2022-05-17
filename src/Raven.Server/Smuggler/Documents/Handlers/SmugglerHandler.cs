@@ -63,7 +63,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 try
                 {
-                    await Export(context, Database.Name, ExportDatabaseInternalAsync, Database.Operations, operationId, Database);
+                    await Export(context, Database.Name, ExportDatabaseInternalAsync, Database.Operations, operationId);
                 }
                 catch (Exception e)
                 {
@@ -93,7 +93,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
-                    var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, 
+                    var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time,
                         jsonOperationContext, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }
@@ -405,8 +405,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = CreateOperationToken();
                 var transformScript = migrationConfiguration.TransformScript;
 
-                var t = Database.Operations.AddOperation(Database.Name, $"Migration from: {migrationConfiguration.DatabaseTypeName}",
+                _ = Database.Operations.AddLocalOperation(
+                    operationId,
                     OperationType.DatabaseMigration,
+                    $"Migration from: {migrationConfiguration.DatabaseTypeName}",
+                    detailedDescription: null,
                     onProgress =>
                     {
                         return Task.Run(async () =>
@@ -445,7 +448,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                             return (IOperationResult)result;
                         });
-                    }, operationId, token: token).ConfigureAwait(false);
+                    }, token: token).ConfigureAwait(false);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -489,7 +492,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                await Import(context, Database.Name, DoImportInternalAsync, Database.Operations, operationId, Database);
+                await Import(context, Database.Name, DoImportInternalAsync, Database.Operations, operationId);
             }
         }
 
@@ -518,7 +521,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var collection = GetStringQueryString("collection", false);
                 var operationDescription = collection != null ? "Import collection: " + collection : "Import collection from CSV";
 
-                await Database.Operations.AddOperation(Database.Name, operationDescription, OperationType.CollectionImportFromCsv,
+                await Database.Operations.AddLocalOperation(
+                    operationId,
+                    OperationType.CollectionImportFromCsv,
+                    operationDescription,
+                    detailedDescription: null,
                     onProgress =>
                     {
                         return Task.Run(async () =>
@@ -608,9 +615,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                 result.AddError($"Error occurred during csv import. Exception: {e.Message}");
                                 throw;
                             }
+
                             return (IOperationResult)result;
                         });
-                    }, operationId, token: token);
+                    }, token: token);
 
                 await WriteImportResultAsync(context, result, ResponseBodyStream());
             }
@@ -633,7 +641,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream, DatabaseSmugglerOptionsServerSide options, 
+        private async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream, DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             ContextPool.AllocateOperationContext(out DocumentsOperationContext context);

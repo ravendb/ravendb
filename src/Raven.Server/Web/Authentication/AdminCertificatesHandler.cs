@@ -59,18 +59,17 @@ namespace Raven.Server.Web.Authentication
                 }
 
                 byte[] certs = null;
-                await
-                    ServerStore.Operations.AddOperation(
-                        null,
-                        "Generate certificate: " + certificate.Name,
+                await ServerStore.Operations.AddLocalOperation(
+                        operationId.Value,
                         OperationType.CertificateGeneration,
+                        "Generate certificate: " + certificate.Name,
+                        detailedDescription: null,
                         async onProgress =>
                         {
                             certs = await GenerateCertificateInternal(certificate, ServerStore, GetRaftRequestIdFromQuery());
 
                             return ClientCertificateGenerationResult.Instance;
-                        },
-                        operationId.Value);
+                        });
 
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -187,14 +186,14 @@ namespace Raven.Server.Web.Authentication
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     var clientCertificate = GetCurrentCertificate();
-                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates","Audit");
+                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates", "Audit");
                     var permissions = certificate?.Permissions != null
                         ? Environment.NewLine + string.Join(Environment.NewLine, certificate.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))
                         : string.Empty;
                     auditLog.Info($"Add new certificate '{certificate?.Thumbprint}'. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}." +
                                   $"{Environment.NewLine}IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
                 }
-                
+
                 try
                 {
                     await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, GetRaftRequestIdFromQuery());
@@ -363,10 +362,10 @@ namespace Raven.Server.Web.Authentication
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     var clientCertificate = GetCurrentCertificate();
-                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates","Audit");
+                    var auditLog = LoggingSource.AuditLog.GetLogger("Certificates", "Audit");
                     auditLog.Info($"Delete certificate '{thumbprint}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
                 }
-                
+
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
             }
 
@@ -531,11 +530,11 @@ namespace Raven.Server.Web.Authentication
                     // NotBefore will be null if the certificate was generated prior to adding the NotBefore property to class CertificateMetadata
                     // So we are manually extracting this info - See issue RavenDB-18519
                     var tempCertificate = new X509Certificate2(Convert.FromBase64String(def.Certificate));
-                    using (tempCertificate) 
+                    using (tempCertificate)
                     {
-                          def.NotBefore = tempCertificate.NotBefore;
+                        def.NotBefore = tempCertificate.NotBefore;
                     }
-                    
+
                 }
 
                 var certificateRef = certificate;

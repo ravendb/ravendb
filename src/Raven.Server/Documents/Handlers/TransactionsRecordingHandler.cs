@@ -42,12 +42,13 @@ namespace Raven.Server.Documents.Handlers
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
 
-                using (var operationCancelToken = CreateOperationToken())
+                using (var token = CreateOperationToken())
                 {
-                    var result = await Database.Operations.AddOperation(
-                        databaseName: Database.Name,
-                        description: "Replay transaction commands",
+                    var result = await Database.Operations.AddLocalOperation(
+                        operationId,
                         operationType: OperationType.ReplayTransactionCommands,
+                        description: "Replay transaction commands",
+                        detailedDescription: null,
                         taskFactory: progress => Task.Run(async () =>
                         {
                             var reader = new MultipartReader(MultipartRequestHelper.GetBoundary(MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
@@ -67,17 +68,16 @@ namespace Raven.Server.Documents.Handlers
                                     {
                                         await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                         {
-                                            return await DoReplayAsync(progress, gzipStream, operationCancelToken.Token);
+                                            return await DoReplayAsync(progress, gzipStream, token.Token);
                                         }
                                     }
-                                    return await DoReplayAsync(progress, section.Body, operationCancelToken.Token);
+                                    return await DoReplayAsync(progress, section.Body, token.Token);
                                 }
                             }
 
                             throw new BadRequestException("Please upload source file using FormData");
                         }),
-                        id: operationId,
-                        token: operationCancelToken
+                        token: token
                     );
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var parameters = JsonDeserializationServer.StartTransactionsRecordingOperationParameters(json);
                 var outputFilePath = parameters.File;
-                
+
                 if (outputFilePath == null)
                 {
                     ThrowRequiredPropertyNameInRequest(nameof(parameters.File));
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
 
                 // here path is either a new file -or- an existing directory
                 if (Directory.Exists(outputFilePath))
-                { 
+                {
                     throw new InvalidOperationException(outputFilePath + " is a directory. Please enter a path to a file.");
                 }
 
@@ -176,21 +176,21 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(command);
 
-                var task = ServerStore.Operations.AddOperation(null,
-                    "Recording for: '" + Database.Name + ". Output file: '" + parameters.File + "'",
+                var task = ServerStore.Operations.AddLocalOperation(
+                    operationId,
                     OperationType.RecordTransactionCommands,
+                    "Recording for: '" + Database.Name + ". Output file: '" + parameters.File + "'",
+                    detailedDescription: new RecordingDetails
+                    {
+                        DatabaseName = Database.Name,
+                        FilePath = parameters.File
+                    },
                     progress =>
                     {
                         // push this notification to studio
                         progress(null);
 
                         return tcs.Task;
-                    },
-                    operationId,
-                    new RecordingDetails
-                    {
-                        DatabaseName = Database.Name,
-                        FilePath = parameters.File
                     });
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

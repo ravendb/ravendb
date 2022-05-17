@@ -684,12 +684,13 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
                 }
 
-                var t = ServerStore.Operations.AddOperation(
-                    null,
-                    $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
+                _ = ServerStore.Operations.AddLocalOperation(
+                    operationId,
                     OperationType.DatabaseRestore,
+                    $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
+                    detailedDescription: null,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
-                    id: operationId, token: cancelToken);
+                    token: cancelToken);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -1121,10 +1122,11 @@ namespace Raven.Server.Web.System
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
-                var t = ServerStore.Operations.AddOperation(
-                    null,
-                    "Compacting database: " + compactSettings.DatabaseName,
+                var t = ServerStore.Operations.AddLocalOperation(
+                    operationId,
                     OperationType.DatabaseCompact,
+                    "Compacting database: " + compactSettings.DatabaseName,
+                    detailedDescription: null,
                     taskFactory: onProgress => Task.Run(async () =>
                     {
                         try
@@ -1196,7 +1198,7 @@ namespace Raven.Server.Web.System
                             throw;
                         }
                     }, token.Token),
-                    id: operationId, token: token);
+                    token: token);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -1328,8 +1330,11 @@ namespace Raven.Server.Web.System
             await process.StandardInput.WriteLineAsync();
 
             // don't await here - this operation is async - all we return is operation id
-            var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
+            var t = ServerStore.Operations.AddLocalOperation(
+                operationId,
                 OperationType.MigrationFromLegacyData,
+                $"Migration of {dataDir} to {databaseName}",
+                detailedDescription: null,
                 onProgress =>
                 {
                     return Task.Run(async () =>
@@ -1440,7 +1445,8 @@ namespace Raven.Server.Web.System
                         }
                         return (IOperationResult)result;
                     });
-                }, operationId, token: token);
+                },
+                token: token);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

@@ -186,10 +186,11 @@ namespace Raven.Server.Web.System
                     var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
                     var threadName = $"Backup thread {backupName} for database '{Database.Name}'";
 
-                    var t = Database.Operations.AddOperation(
-                        null,
-                        $"Manual backup for database: {Database.Name}",
+                    var t = Database.Operations.AddLocalOperation(
+                        operationId,
                         OperationType.DatabaseBackup,
+                        $"Manual backup for database: {Database.Name}",
+                        detailedDescription: null,
                         onProgress =>
                         {
                             var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -226,7 +227,7 @@ namespace Raven.Server.Web.System
                             }, null, threadName);
                             return tcs.Task;
                         },
-                        id: operationId, token: cancelToken);
+                        token: cancelToken);
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {

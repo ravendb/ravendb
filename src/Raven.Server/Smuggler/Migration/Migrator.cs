@@ -250,16 +250,18 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public long StartMigratingSingleDatabase(DatabaseMigrationSettings databaseMigrationSettings, DocumentDatabase database)
+        public long StartMigratingSingleDatabase(DatabaseMigrationSettings settings, DocumentDatabase database)
         {
             var operationId = database.Operations.GetNextOperationId();
             var cancelToken = new OperationCancelToken(database.DatabaseShutdown, CancellationToken.None);
             var result = new SmugglerResult();
 
-            var databaseName = databaseMigrationSettings.DatabaseName;
-            database.Operations.AddOperation(null,
-                $"Database name: '{databaseName}' from url: {_serverUrl}",
+            var databaseName = settings.DatabaseName;
+            database.Operations.AddLocalOperation(
+                operationId,
                 OperationType.DatabaseMigrationRavenDb,
+                $"Database name: '{databaseName}' from url: {_serverUrl}",
+                detailedDescription: null,
                 taskFactory: onProgress => Task.Run(async () =>
                 {
                     onProgress?.Invoke(result.Progress);
@@ -283,13 +285,13 @@ namespace Raven.Server.Smuggler.Migration
                                 ServerUrl = _serverUrl,
                                 DatabaseName = databaseName,
                                 ApiKey = _apiKey,
-                                TransformScript = databaseMigrationSettings.TransformScript,
+                                TransformScript = settings.TransformScript,
                                 EnableBasicAuthenticationOverUnsecuredHttp = _enableBasicAuthenticationOverUnsecuredHttp,
                                 SkipServerCertificateValidation = _skipServerCertificateValidation,
-                                RemoveAnalyzers = databaseMigrationSettings.RemoveAnalyzers,
-                                ImportRavenFs = databaseMigrationSettings.ImportRavenFs,
-                                OperateOnTypes = databaseMigrationSettings.OperateOnTypes,
-                                OperateOnDatabaseRecordTypes = databaseMigrationSettings.OperateOnDatabaseRecordTypes
+                                RemoveAnalyzers = settings.RemoveAnalyzers,
+                                ImportRavenFs = settings.ImportRavenFs,
+                                OperateOnTypes = settings.OperateOnTypes,
+                                OperateOnDatabaseRecordTypes = settings.OperateOnDatabaseRecordTypes
                             };
 
                             var parameters = new MigratorParameters
@@ -333,7 +335,8 @@ namespace Raven.Server.Smuggler.Migration
                     }
 
                     return (IOperationResult)result;
-                }, cancelToken.Token), id: operationId, token: cancelToken);
+                }, cancelToken.Token),
+                token: cancelToken);
 
             return operationId;
         }

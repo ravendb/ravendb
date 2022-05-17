@@ -38,7 +38,7 @@ internal class ShardedQueriesHandlerProcessorForPatch : AbstractDatabaseHandlerP
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? RequestHandler.DatabaseContext.Operations.GetNextOperationId();
 
             _ = RequestHandler.DatabaseContext.Operations
-                .AddOperation(
+                .AddRemoteOperation(
                     operationId,
                     OperationType.UpdateByQuery,
                     "Test description",

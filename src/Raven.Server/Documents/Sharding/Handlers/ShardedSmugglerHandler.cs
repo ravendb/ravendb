@@ -34,11 +34,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
+                var operationId = GetLongQueryString("operationId", false) ?? DatabaseContext.Operations.GetNextOperationId();
 
                 try
                 {
-                    await Export(context, DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, ServerStore.Operations, operationId);
+                    await Export(context, DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, DatabaseContext.Operations, operationId);
                 }
                 catch (Exception e)
                 {
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             OperationCancelToken token)
         {
             // we use here a negative number to avoid possible collision between the server and database ids
-            var operationId = -ServerStore.Operations.GetNextOperationId();
+            var operationId = DatabaseContext.Operations.GetNextOperationId();
             options.IsShard = true;
 
             await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
@@ -88,17 +88,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var operationId = GetLongQueryString("operationId", false) ?? Server.ServerStore.Operations.GetNextOperationId();
+                var operationId = GetLongQueryString("operationId", false) ?? DatabaseContext.Operations.GetNextOperationId();
 
-                await Import(context, DatabaseContext.DatabaseName, DoImportInternalAsync, Server.ServerStore.Operations, operationId);
+                await Import(context, DatabaseContext.DatabaseName, DoImportInternalAsync, DatabaseContext.Operations, operationId);
             }
         }
 
         private async Task DoImportInternalAsync(
-            JsonOperationContext jsonOperationContext, 
+            JsonOperationContext jsonOperationContext,
             Stream stream,
             DatabaseSmugglerOptionsServerSide options,
-            SmugglerResult result, 
+            SmugglerResult result,
             Action<IOperationProgress> onProgress,
             OperationCancelToken token)
         {

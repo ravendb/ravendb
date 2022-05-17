@@ -64,28 +64,34 @@ namespace Raven.Server.Web.Studio
                     var collectionsCount = migrationRequest.Settings.Collections.Count;
                     var operationDescription = "Importing " + collectionsCount + " " + (collectionsCount == 1 ? "collection" : "collections") + " from SQL database: " + schema.CatalogName;
 
-                    _ = Database.Operations.AddOperation(Database.Name, operationDescription, OperationType.MigrationFromSql, onProgress =>
-                    {
-                        return Task.Run(async () =>
+                    _ = Database.Operations.AddLocalOperation(
+                        operationId,
+                        OperationType.MigrationFromSql,
+                        operationDescription,
+                        detailedDescription: null,
+                        onProgress =>
                         {
-                            try
+                            return Task.Run(async () =>
                             {
-                                // allocate new context as we executed this async
-                                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrationContext))
+                                try
                                 {
-                                     await dbDriver.Migrate(migrationRequest.Settings, schema, Database, migrationContext, result, onProgress, token.Token);
+                                    // allocate new context as we executed this async
+                                    using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrationContext))
+                                    {
+                                        await dbDriver.Migrate(migrationRequest.Settings, schema, Database, migrationContext, result, onProgress, token.Token);
+                                    }
                                 }
-                            }
-                            catch (Exception e)
-                            {
-                                result.AddError($"Error occurred during import. Exception: {e.Message}");
-                                onProgress.Invoke(result.Progress);
-                                throw;
-                            }
+                                catch (Exception e)
+                                {
+                                    result.AddError($"Error occurred during import. Exception: {e.Message}");
+                                    onProgress.Invoke(result.Progress);
+                                    throw;
+                                }
 
-                             return (IOperationResult)result;
-                        });
-                    }, operationId, token: token);
+                                return (IOperationResult)result;
+                            });
+                        },
+                        token: token);
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {

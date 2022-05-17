@@ -12,7 +12,9 @@ using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Sparrow.Utils;
+using Voron.Util.Conversion;
 using Operation = Raven.Client.Documents.Operations.Operation;
 
 namespace Raven.Server.Documents.Sharding;
@@ -28,7 +30,9 @@ public partial class ShardedDatabaseContext
         private readonly ConcurrentDictionary<ShardedDatabaseIdentifier, DatabaseChanges> _changes = new();
 
         public ShardedOperations([NotNull] ShardedDatabaseContext context)
-            : base(context.Changes)
+            : base(context.Changes, PlatformDetails.Is32Bits || context.Configuration.Storage.ForceUsing32BitsPager
+                ? TimeSpan.FromHours(12)
+                : TimeSpan.FromDays(2))
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
@@ -36,20 +40,36 @@ public partial class ShardedDatabaseContext
         public override long GetNextOperationId()
         {
             var nextId = _context._serverStore.Operations.GetNextOperationId();
+            var nextIdBytes = EndianBitConverter.Little.GetBytes(nextId);
+
+            var tag = _context._serverStore.Engine.Tag;
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Major, "Encode NodeTag");
 
             return nextId;
         }
 
-        protected override void RaiseNotifications(OperationStatusChange change, ShardedOperation operation)
+        protected override void RaiseNotifications(OperationStatusChange change, AbstractOperation operation)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "handle notification center");
 
             base.RaiseNotifications(change, operation);
         }
 
-        public Task AddOperation(
+        public override Task<IOperationResult> AddLocalOperation(
+            long id,
+            OperationType operationType,
+            string description,
+            IOperationDetailedDescription detailedDescription,
+            Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
+            OperationCancelToken token = null)
+        {
+            var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, token);
+
+            return AddOperationInternalAsync(operation, taskFactory);
+        }
+
+        public Task AddRemoteOperation(
             long id,
             OperationType operationType,
             string description,

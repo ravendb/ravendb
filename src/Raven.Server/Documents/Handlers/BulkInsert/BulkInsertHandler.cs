@@ -14,7 +14,11 @@ namespace Raven.Server.Documents.Handlers.BulkInsert
             var id = GetLongQueryString("id");
             var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 
-            await Database.Operations.AddOperation(Database.Name, "Bulk Insert", OperationType.BulkInsert,
+            await Database.Operations.AddLocalOperation(
+                id,
+                OperationType.BulkInsert,
+                 "Bulk Insert",
+                detailedDescription: null,
                 async progress =>
                 {
                     using (var bulkInsertProcessor = new BulkInsertHandlerProcessor(this, Database, progress, skipOverwriteIfUnchanged, operationCancelToken.Token))
@@ -24,7 +28,6 @@ namespace Raven.Server.Documents.Handlers.BulkInsert
                         return bulkInsertProcessor.OperationResult;
                     }
                 },
-                id,
                 token: operationCancelToken
             );
         }
