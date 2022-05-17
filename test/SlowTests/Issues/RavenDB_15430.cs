@@ -27,6 +27,7 @@ namespace SlowTests.Issues
         {
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval)] = 1.ToString();
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
             using (var store = GetDocumentStore(new Options { Server = cluster.Leader, ReplicationFactor = 3, RunInMemory = false }))
             {
                 var raw = new RawTimeSeriesPolicy();
@@ -136,7 +137,8 @@ namespace SlowTests.Issues
                 {
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     database.Time.UtcDateTime = () => now.AddMinutes(10);
-                    await database.TimeSeriesPolicyRunner.RunRollups();
+
+                    await TimeSeries.WaitForPolicyRunnerAsync(database);
                 }
 
                 foreach (var server in Servers)
@@ -159,10 +161,14 @@ namespace SlowTests.Issues
                     var val = session.TimeSeriesFor("users/karmel/0", name)
                         .Get(DateTime.MinValue, DateTime.MaxValue);
 
-                    Assert.True(val.Length > res[Servers[0].ServerStore.NodeTag]);
+                    var entries = session.TimeSeriesFor("users/karmel/0", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue);
+
+                    Assert.Equal(15, entries.Length);
+                    Assert.True(val.Length > res[Servers[0].ServerStore.NodeTag], FailureDebugInfo(val.Length, res, cluster.Nodes.Count));
                 }
 
-                
+
                 await WaitForValueAsync(async () =>
                 {
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -172,6 +178,19 @@ namespace SlowTests.Issues
                 firstNode2 = record.Topology.Members[0];
                 Assert.NotEqual(firstNode2, firstNode);
             }
+        }
+
+        private string FailureDebugInfo(int existingValues, Dictionary<string, int> res, int num)
+        {
+            string message = $"Existing values: {existingValues}\nNodes expected values: ";
+            for (var i = 0; i < num; i++)
+            {
+                var nodeTag = Servers[i].ServerStore.NodeTag;
+                message += $"Node {nodeTag}: {res[nodeTag]}";
+                if (i != num - 1)
+                    message += ", ";
+            }
+            return message;
         }
 
         [Fact]
