@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.Globalization;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Changes;
 using Raven.Server.Routing;
@@ -29,19 +27,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/changes", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task DeleteConnections()
+        public async Task DeleteConnections()
         {
-            var ids = GetStringValuesQueryString("id");
-
-            foreach (var idStr in ids)
-            {
-                if (long.TryParse(idStr, NumberStyles.Any, CultureInfo.InvariantCulture, out long id) == false)
-                    throw new ArgumentException($"Could not parse query string 'id' header as int64, value was: {idStr}");
-
-                Database.Changes.Disconnect(id);
-            }
-
-            return NoContent();
+            using (var processor = new ChangesHandlerProcessorForDeleteConnections(this))
+                await processor.ExecuteAsync();
         }
     }
 }

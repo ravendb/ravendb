@@ -18,8 +18,6 @@ namespace Raven.Server.Documents.Changes;
 public abstract class AbstractChangesClientConnection<TOperationContext> : IDisposable
     where TOperationContext : JsonOperationContext
 {
-    private static long _counter;
-
     private readonly WebSocket _webSocket;
     private readonly AsyncQueue<SendQueueItem> _sendQueue = new();
 
@@ -42,6 +40,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected AbstractChangesClientConnection(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken databaseShutdown, bool throttleConnection, bool fromStudio)
     {
+        Id = ChangesClientConnectionId.GetNextId();
         IsChangesConnectionOriginatedFromStudio = fromStudio;
         ContextPool = contextPool;
         _throttleConnection = throttleConnection;
@@ -51,7 +50,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         _disposeToken = _cts.Token;
     }
 
-    public long Id = Interlocked.Increment(ref _counter);
+    public readonly long Id;
 
     public TimeSpan Age => SystemTime.UtcNow - _startedAt;
 
