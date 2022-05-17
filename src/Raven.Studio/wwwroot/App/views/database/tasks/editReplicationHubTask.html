@@ -9,7 +9,7 @@
                         </div>
                         <h3 data-bind="text: $parent.isNewTask() ? `New Replication Hub` : `Edit Replication Hub`"></h3>
                         <div data-bind="css: { 'disabled-area': $root.editedReplicationAccessItem }">
-                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
+                            <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" placeholder="Enter a descriptive name for the Replication Hub task" />
@@ -159,10 +159,10 @@
                         </div>
                     </div>
                     <div data-bind="if: !$root.allReplicationAccessItems().length && !$root.editedReplicationAccessItem()">
-                        <h3 class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !$root.isNewTask()">
+                        <h3 class="text-center text-muted margin-top margin-top-md" data-bind="visible: !$root.isNewTask()">
                             No Replication Access has been yet defined.
                         </h3>
-                        <h3 class="text-center text-muted margin-top margin-top-lg" data-bind="visible: $root.isNewTask">
+                        <h3 class="text-center text-muted margin-top margin-top-md" data-bind="visible: $root.isNewTask">
                             Please save above Hub definition before adding Replication Access.
                         </h3>
                     </div>
@@ -261,7 +261,7 @@
                         </button>
                         <h3 data-bind="if: isNewAccessItem">New Replication Access</h3>
                         <h3 data-bind="if: !isNewAccessItem()">Edit Replication Access</h3>
-                        <div class="form-group margin-top margin-top-lg" data-bind="validationElement: replicationAccessName">
+                        <div class="form-group margin-top" data-bind="validationElement: replicationAccessName">
                             <label for="replicationAccessName" class="control-label">Access Name</label>
                             <div class="flex-grow">
                                 <input type="text" class="form-control" data-bind="textInput: replicationAccessName" id="replicationAccessName" placeholder="Enter a name for the Replication Access" />
@@ -343,7 +343,7 @@
                                     <span class="help-block" data-bind="validationMessage: hubToSinkPrefixes"></span>
                                 </div>
                             </div>
-                            <div class="form-group margin-top margin-top-lg">
+                            <div class="form-group margin-top">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
                                     <input id="useStuff" type="checkbox" data-bind="checked: samePrefixesForBothDirections" />

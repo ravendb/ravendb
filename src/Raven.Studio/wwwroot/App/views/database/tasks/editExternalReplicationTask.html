@@ -13,7 +13,7 @@
                 <div class="panel">
                     <div class="panel-body" data-bind="with: editedExternalReplication">
                         <h3 data-bind="text: $parent.isAddingNewReplicationTask() ? `New External Replication` : `Edit External Replication`"></h3>
-                        <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
+                        <div class="form-group margin-top" data-bind="validationElement: taskName">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
                                 <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" autocomplete="off" placeholder="Enter a descriptive name for the replication task (optional)">

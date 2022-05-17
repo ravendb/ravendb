@@ -85,7 +85,7 @@
                     <div data-bind="foreach: replicationTasks">
                         <div class="panel destination-item external-replication" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -98,7 +98,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
+                                <div class="padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <div class="list-properties">
                                             <div class="property-item">
@@ -146,7 +146,7 @@
                     <div data-bind="foreach: ravenEtlTasks">
                         <div class="panel destination-item ravendb-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -159,7 +159,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
+                                <div class="padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <div class="list-properties">
                                             <div class="property-item">
@@ -204,7 +204,7 @@
                     <div data-bind="foreach: sqlEtlTasks">
                         <div class="panel destination-item sql-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -217,7 +217,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
+                                <div class="padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <div class="list-properties">
                                             <div class="property-item">
@@ -252,7 +252,7 @@
                     <div data-bind="foreach: olapEtlTasks">
                         <div class="panel destination-item olap-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled" />
@@ -265,7 +265,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
+                                <div class="padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <div class="list-properties">
                                             <div class="property-item">
@@ -303,7 +303,7 @@
                     <div data-bind="foreach: elasticSearchEtlTasks">
                         <div class="panel destination-item elastic-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled" />
@@ -316,7 +316,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
+                                <div class="padding-sm flex-horizontal">
                                     <div class="flex-grow">
                                         <div class="list-properties">
                                             <div class="property-item">
@@ -351,7 +351,7 @@
                     <div data-bind="foreach: backupTasks">
                         <div class="panel destination-item periodic-backup" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -368,7 +368,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal flex-wrap">
+                                <div class="padding-sm flex-horizontal flex-wrap">
                                     <div>
                                         <div class="list-properties">
                                             <div class="property-item">
@@ -433,7 +433,7 @@
                     <div data-bind="foreach: subscriptionTasks">
                         <div class="panel destination-item subscription" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -446,7 +446,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal flex-wrap">
+                                <div class="padding-sm flex-horizontal flex-wrap">
                                     <div>
                                         <div class="list-properties">
                                             <div class="property-item">
@@ -526,7 +526,7 @@
                     <div data-bind="foreach: replicationHubTasks">
                         <div class="panel destination-item pull-replication-hub">
                             <div data-bind="attr: { 'data-state-text': $root.pluralize(ongoingHubs().length, 'sink', 'sinks'), class: 'state state-default' }"></div>
-                            <div class="padding destination-info flex-vertical">
+                            <div class="padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
                                     <div class="checkbox panel-checkbox hide">
                                         <input type="checkbox" class="styled">
@@ -538,7 +538,7 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal" data-bind="visible: showDelayReplication">
+                                <div class="padding-sm flex-horizontal" data-bind="visible: showDelayReplication">
                                     <div class="flex-grow">
                                         <div class="list-properties">
                                             <div class="property-item" data-bind="visible: showDelayReplication">
@@ -548,11 +548,11 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="padding padding-sm"  data-bind="visible: ongoingHubs().length">
+                                <div class="padding-sm"  data-bind="visible: ongoingHubs().length">
                                     <div data-bind="foreach: ongoingHubs">
                                         <div class="panel destination-item external-replication">
                                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                                            <div class="padding destination-info flex-vertical">
+                                            <div class="padding-sm destination-info flex-vertical">
                                                 <div class="flex-horizontal">
                                                     <div class="panel-name flex-grow">
                                                         <h3 data-bind="text: taskName"></h3>
@@ -561,7 +561,7 @@
                                                 </div>
                                             </div>
                                             <div class="panel-addon">
-                                                <div class="padding">
+                                                <div class="padding-sm">
                                                     <div class="inline-properties">
                                                         <div class="property-item">
                                                             <div class="property-name">Task Status:</div>
@@ -581,7 +581,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="panel-addon padding" data-bind="visible: !ongoingHubs().length">
+                                <div class="panel-addon padding-sm" data-bind="visible: !ongoingHubs().length">
                                     <h5 class="text-warning">
                                         <i class="icon-empty-set"></i> 
                                         <span>No sinks connected</span>

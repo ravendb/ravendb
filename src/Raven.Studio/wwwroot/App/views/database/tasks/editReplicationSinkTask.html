@@ -24,7 +24,7 @@
                 <div class="panel">
                     <div class="panel-body" data-bind="with: editedSinkTask">
                         <h3 data-bind="text: $parent.isAddingNewTask() ? `New Replication Sink` : `Edit Replication Sink`"></h3>
-                        <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
+                        <div class="form-group margin-top" data-bind="validationElement: taskName">
                             <label for="taskName" class="control-label">Sink Task Name</label>
                             <div class="flex-grow">
                                 <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName"
@@ -178,7 +178,7 @@
                     <div class="panel-body">
                         <h3 class="margin-top">Replication Access</h3>
                         <div class="margin-top margin-top-lg" data-bind="with: replicationAccess">
-                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: replicationAccessName">
+                            <div class="form-group margin-top" data-bind="validationElement: replicationAccessName">
                                 <label class="control-label">Access Name</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" data-bind="textInput: replicationAccessName"
@@ -186,7 +186,7 @@
                                 </div>
                             </div>
                             <hr>
-                            <div class="form-group margin-top margin-top-lg">
+                            <div class="form-group margin-top">
                                 <label class="control-label ">Certificate Source</label>
                                 <div class="btn-group ">
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Select certificate source">
@@ -287,7 +287,7 @@
                                         <span class="help-block" data-bind="validationMessage: hubToSinkPrefixes"></span>
                                     </div>
                                 </div>
-                                <div class="form-group margin-top margin-top-lg">
+                                <div class="form-group margin-top">
                                     <label class="control-label">&nbsp;</label>
                                     <div class="toggle">
                                         <input id="useStuff" type="checkbox" data-bind="checked: samePrefixesForBothDirections" />

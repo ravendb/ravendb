@@ -9,7 +9,7 @@ import React from "react";
 function render() {
     const db = DatabasesStubs.shardedDatabase();
     return rtlRender(
-        <div className="indexes content-margin no-transition absolute-fill">
+        <div className="indexes content-margin no-transition">
             <IndexesPage database={db} />
         </div>
     );

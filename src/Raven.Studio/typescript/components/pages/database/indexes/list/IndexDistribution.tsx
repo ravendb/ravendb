@@ -108,7 +108,7 @@ function IndexState(props: IndexStateProps) {
             <div className="state pending">
                 <div className="state-desc">disabled</div>
                 <div className="state-indicator">
-                    <i className="icon-cancel" />
+                    <i className="icon-stop" />
                 </div>
             </div>
         );
@@ -149,6 +149,7 @@ function IndexState(props: IndexStateProps) {
                         <strong>{(100 * progress).toFixed(0)}%</strong> running
                     </div>
                     <div className="state-indicator">
+                        <i className="icon-pause" />
                         <svg className="progress-ring">
                             <circle strokeDashoffset={circumference * (1.0 - progress)} />
                         </svg>

@@ -32,7 +32,7 @@
                                 </div>
                             </div>
                             <h3 data-bind="text: $parent.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`"></h3>
-                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
+                            <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label class="control-label">Task Name</label>
                                 <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)"
                                        data-bind="textInput: taskName, enable: $root.isAddingNewSubscriptionTask, 

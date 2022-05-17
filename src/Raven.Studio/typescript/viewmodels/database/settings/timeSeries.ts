@@ -145,7 +145,7 @@ class timeSeries extends shardViewModelBase {
             {
                 content: `
                          <small>
-                             <ul class="margin-top">
+                             <ul class="margin-top-sm">
                                  <li class="margin-bottom">
                                      <strong>A new time series</strong> is created by each Rollup Policy defined.<br>
                                      Its name will be <code>&lt;Raw-data-time-series-name&gt;@&lt;Rollup-policy-name&gt;</code>
@@ -176,7 +176,7 @@ class timeSeries extends shardViewModelBase {
             {
                 content: `
                         <small>
-                            <ul class="margin-top">
+                            <ul class="margin-top-sm">
                                 <li class="margin-bottom"><strong>Associate names with your time series values</strong>.
                                 </li>
                                 <li class="margin-bottom">The default name per value is the value's position (i.e. <code>Value #0</code>)<br>

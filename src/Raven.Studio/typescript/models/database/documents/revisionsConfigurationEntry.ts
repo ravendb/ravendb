@@ -103,7 +103,7 @@ class revisionsConfigurationEntry {
                                  <li>When a document is deleted all its revisions will be removed.</li>`;
 
             let description = this.purgeOnDelete() ? purgeOnText : purgeOffText;
-            return `<ul class="margin-top">${description}</ul>`; 
+            return `<ul class="margin-top-sm">${description}</ul>`; 
         });
 
         this.humaneRetentionDescription = ko.pureComputed(() => {
@@ -135,7 +135,7 @@ class revisionsConfigurationEntry {
                                 </li>`
             }
                 
-            return description ? `<ul class="margin-top">${description}</ul>` : "";
+            return description ? `<ul class="margin-top-sm">${description}</ul>` : "";
         });
 
         this.limitRevisions.subscribe(() => {

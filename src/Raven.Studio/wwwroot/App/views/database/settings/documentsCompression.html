@@ -14,7 +14,7 @@
     <div class="row">
         <div class="col-sm-12 col-lg-6">
             <div class="panel">
-                <div class="padding padding-lg">
+                <div class="padding">
                     <div class="toggle toggle-primary">
                         <input id="allCollectionsToggle" class="styled" type="checkbox"
                                data-bind="checked: compressAllCollections, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
@@ -63,7 +63,7 @@
                         </div>
                     </div>
                     <div data-bind="collapse: compressAllCollections() || collectionsToCompress().length" class="margin-top margin-top-sm">
-                        <div class="bg-info text-info padding margin-top margin-top-lg flex-horizontal">
+                        <div class="bg-info text-info padding margin-top flex-horizontal">
                             <div class="flex-start">
                                 <small><i class="icon-info"></i></small>
                             </div>
@@ -84,14 +84,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !compressAllCollections() && collectionsToCompress().length === 0">
+                    <div class="text-center text-muted margin-top margin-top-md" data-bind="visible: !compressAllCollections() && collectionsToCompress().length === 0">
                         <i class="icon-lg icon-empty-set"></i>
                         <h2 class="margin-top margin-top-sm">No collections have been selected</h2>
                     </div>
                 </div>
             </div>
             <div class="panel">
-                <div class="padding padding-lg">
+                <div class="padding">
                     <div class="toggle toggle-primary">
                         <input id="revisionsToggle" class="styled" type="checkbox" data-bind="checked: compressRevisions, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
                         <label for="revisionsToggle">Compress revisions for all collections</label>

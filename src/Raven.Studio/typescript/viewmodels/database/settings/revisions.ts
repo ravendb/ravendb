@@ -364,7 +364,7 @@ class revisions extends shardViewModelBase {
             `The following collections have a revision configuration defined:<br><ul>${collectionNameItems}</ul>` : "";
 
         const text2 =
-            `<div class="margin-top margin-top-lg margin-bottom margin-bottom-lg">
+            `<div class="margin-top margin-bottom margin-bottom-md">
                  Clicking <strong>Enforce</strong> will enforce the current revision configuration definitions<br>
                  <strong>on all existing revisions</strong> in the database per collection.<br>
                  Revisions might be removed depending on the current configuration rules.

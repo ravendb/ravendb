@@ -121,330 +121,367 @@
         }
     }
 }
+.indexes {
 
-.indexes-list {
-    .index-item {
-        background-color: colors.$gray-900;
-        margin-bottom: sizes.$gutter;
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        margin: sizes.$gutter*-1;
+        margin-bottom: 0;
+        padding: sizes.$gutter;
+        background-color: rgba(colors.$body-bg, .9);
+        z-index: 1000;
+        backdrop-filter: blur(2px);
+    }
 
-        .index-header {
-            background-color: colors.$gray-800;
-            padding: sizes.$gutter-sm;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+    h2 {
+        margin-top: sizes.$gutter-sm;
+        margin-bottom: sizes.$gutter-xs;
+    }
 
-            .index-select {
-                width: sizes.$gutter;
-                height: sizes.$gutter;
-                margin-right: sizes.$gutter-sm;
+    .indexes-list {
+        .index-item {
+            background-color: colors.$gray-900;
 
-                .checkbox {
-                    width: 100%;
-                    height: 100%;
-                    padding: 0;
-                    position: relative;
-
-                    input.styled {
-                        margin: 0 !important;
-                        top: 0;
-                        width: 100%;
-                        height: 100%;
-                    }
-
-                    label {
-                        position: absolute;
-                        padding: 0;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        width: 100%;
-                        height: 100%;
-                        top: 0;
-
-                        &::before {
-                            width: 100%;
-                            height: 100%;
-                            left: 0;
-                            top: 0;
-                            margin-left: 0;
-                        }
-
-                        &:after {
-                            display: inline;
-                            position: relative;
-                            width: auto;
-                            height: auto;
-                            left: auto;
-                            top: auto;
-                            margin-left: 0;
-                            padding-left: 0;
-                            padding-top: 0;
-                            font-size: 17px;
-                        }
-                    }
-                }
+            & + .index-item {
+                margin-top: sizes.$gutter;
             }
 
-            .index-name {
-                margin: 0;
-                flex-grow: 1;
-                margin-right: sizes.$gutter;
+            &.index-sidebyside {
+                border-left: 31px solid #d2923d;
             }
 
-            .index-properties {
-                .properties-value {
+            .index-header {
+                background-color: colors.$gray-800;
+                padding: sizes.$gutter-sm;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+
+                .index-select {
+                    width: sizes.$gutter;
+                    height: sizes.$gutter;
                     margin-right: sizes.$gutter-sm;
 
-                    .dropdown-toggle {
-                        color: colors.$color-4;
+                    .checkbox {
+                        width: 100%;
+                        height: 100%;
+                        padding: 0;
+                        position: relative;
+
+                        input.styled {
+                            margin: 0 !important;
+                            top: 0;
+                            width: 100%;
+                            height: 100%;
+                        }
+
+                        label {
+                            position: absolute;
+                            padding: 0;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            width: 100%;
+                            height: 100%;
+                            top: 0;
+
+                            &::before {
+                                width: 100%;
+                                height: 100%;
+                                left: 0;
+                                top: 0;
+                                margin-left: 0;
+                            }
+
+                            &:after {
+                                display: inline;
+                                position: relative;
+                                width: auto;
+                                height: auto;
+                                left: auto;
+                                top: auto;
+                                margin-left: 0;
+                                padding-left: 0;
+                                padding-top: 0;
+                                font-size: 17px;
+                            }
+                        }
                     }
                 }
-            }
 
-            .actions {
-            }
-        }
+                .index-name {
+                    margin: 0;
+                    flex-grow: 1;
+                    margin-right: sizes.$gutter;
+                }
 
-        .index-details {
-            padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-            padding-left: sizes.$gutter-md;
-            margin-left: - math.div(sizes.$gutter, 2);
-            display: flex;
-            border-bottom: 1px solid variables.$hr-border;
+                .index-properties {
+                    .properties-value {
+                        margin-right: sizes.$gutter-sm;
 
-            .index-detail-item {
-                padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+                        .dropdown-toggle {
+                            color: colors.$color-4;
+                        }
+                    }
+                }
 
-                i {
-                    margin-right: sizes.$gutter-xxs;
+                .actions {
                 }
             }
-        }
 
-        .index-distribution {
-            padding: sizes.$gutter-sm;
-            padding-left: sizes.$gutter-md;
-            display: grid;
-            grid-template-columns: 100px repeat(auto-fill, minmax(120px, max-content));
-            margin: sizes.$gutter-xs/-2;
+            .index-details {
+                padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+                padding-left: sizes.$gutter-md;
+                display: flex;
+                border-bottom: 1px solid variables.$hr-border;
 
-
-
-            .distribution-legend, .distribution-summary, .distribution-item {
-                font-size: 12px;
-                margin: sizes.$gutter-xs/2;
-
-                .top {
-                    font-size: 18px;
-                    font-weight: bold;
+                .index-detail-item {
+                    padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
 
                     i {
                         margin-right: sizes.$gutter-xxs;
                     }
                 }
-
-                & > div {
-                    height: 30px;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-
-                    & + div {
-                        border-top: 2px solid colors.$black;
-                    }
-
-                    &:first-of-type {
-                        height: 50px;
-                    }
-
-                    &:last-of-type {
-                        height: auto;
-                    }
-                }
             }
 
-            .distribution-legend > div {
-                justify-content: flex-start;
+            .index-distribution {
+                padding: sizes.$gutter-sm;
+                padding-left: sizes.$gutter-md;
+                display: grid;
+                grid-template-columns: 100px repeat(auto-fill, minmax(120px, max-content));
+                margin: sizes.$gutter-xs/-2;
 
-                i {
-                    width: sizes.$gutter;
-                    text-align: center;
-                }
-            }
 
-            .distribution-summary {
-                grid-column: 2;
-                font-weight: bold;
-                text-align: center;
-            }
 
-            .distribution-summary, .distribution-legend {
-                grid-row-end: span 50;
-            }
+                .distribution-legend, .distribution-summary, .distribution-item {
+                    font-size: 12px;
+                    margin: sizes.$gutter-xs/2;
 
-            .distribution-item {
-                background-color: colors.$gray-800;
-                border-radius: sizes.$gutter-xs;
-                border: 1px solid transparent;
-                transition: background-color .2s;
-
-                & > div {
-                    padding: 0 sizes.$gutter-xs;
-                    line-height: 1em;
-                    transition: opacity .2s ease-in;
-                }
-
-                .shard {
-                    --icon-color: #{colors.$sharding-color};
-                }
-
-                .node {
-                    --icon-color: #{colors.$node-color};
-                    font-weight: bold;
-                    font-size: 14px;
-                }
-
-                .top {
-                    color: colors.$white;
-
-                    i {
-                        color: var(--icon-color);
-                    }
-                }
-
-                .state {
-                    flex-direction: column;
-                    padding-bottom: sizes.$gutter-sm;
-
-                    $state-indicator-size: 30px;
-                    $state-indicator-progress-radius: 13px;
-
-                    .state-desc {
-                        font-size: 9px;
-                        color: colors.$gray-300;
-                        text-transform: uppercase;
+                    .top {
+                        font-size: 18px;
                         font-weight: bold;
-                        margin-bottom: sizes.$gutter-xxs;
-                        letter-spacing: .15em;
-                        height: 25px;
-                        display: flex;
-                        align-items: flex-end;
+
+                        i {
+                            margin-right: sizes.$gutter-xxs;
+                        }
                     }
 
-                    .state-indicator {
-                        display: block;
-                        height: $state-indicator-size;
-                        width: $state-indicator-size;
-                        border-radius: $state-indicator-size;
-                        color: colors.$black;
+                    & > div {
+                        height: 30px;
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        background-color: colors.$gray-300;
+
+                        & + div {
+                            border-top: 2px solid colors.$black;
+                        }
+
+                        &:first-of-type {
+                            height: 50px;
+                        }
+
+                        &:last-of-type {
+                            height: auto;
+                        }
+                    }
+                }
+
+                .distribution-legend > div {
+                    justify-content: flex-start;
+
+                    i {
+                        width: sizes.$gutter;
+                        text-align: center;
+                    }
+                }
+
+                .distribution-summary {
+                    grid-column: 2;
+                    font-weight: bold;
+                    text-align: center;
+                }
+
+                .distribution-summary, .distribution-legend {
+                    grid-row-end: span 50;
+                }
+
+                .distribution-item {
+                    background-color: colors.$gray-800;
+                    border-radius: sizes.$gutter-xs;
+                    border: 1px solid transparent;
+                    transition: background-color .2s;
+
+                    & > div {
+                        padding: 0 sizes.$gutter-xs;
+                        line-height: 1em;
+                        transition: opacity .2s ease-in;
+                    }
+
+                    .shard {
+                        --icon-color: #{colors.$sharding-color};
+                    }
+
+                    .node {
+                        --icon-color: #{colors.$node-color};
+                        font-weight: bold;
+                        font-size: 14px;
+                    }
+
+                    .top {
+                        color: colors.$white;
 
                         i {
-                            font-size: 22px;
-                        }
-
-                        .progress-ring {
-                            display: none;
+                            color: var(--icon-color);
                         }
                     }
 
-                    &.up-to-date {
+                    .state {
+                        flex-direction: column;
+                        padding-bottom: sizes.$gutter-sm;
+
+                        $state-indicator-size: 30px;
+                        $state-indicator-progress-radius: 13px;
+
                         .state-desc {
-                            color: colors.$gray-500;
-                        }
-
-                        .state-indicator {
-                            background-color: colors.$brand-success;
-                        }
-                    }
-
-                    &.failed {
-                        .state-desc {
-                            color: colors.$gray-500;
-                        }
-
-                        .state-indicator {
-                            background-color: colors.$brand-danger;
-                        }
-                    }
-
-                    &.running {
-                        .state-desc {
+                            font-size: 9px;
                             color: colors.$gray-300;
+                            text-transform: uppercase;
+                            font-weight: bold;
+                            margin-bottom: sizes.$gutter-xxs;
+                            letter-spacing: .15em;
+                            height: 25px;
                             display: flex;
                             align-items: flex-end;
-
-                            strong {
-                                font-size: 14px;
-                                color: colors.$gray-100;
-                                margin-right: sizes.$gutter-xxs;
-                            }
                         }
 
                         .state-indicator {
-                            background-color: colors.$black;
+                            display: block;
+                            height: $state-indicator-size;
+                            width: $state-indicator-size;
+                            border-radius: $state-indicator-size;
+                            color: colors.$black;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            background-color: colors.$gray-300;
+                            position: relative;
+
+                            i {
+                                font-size: 22px;
+                                position: absolute;
+                                z-index: 10;
+                            }
+
+                            .progress-ring {
+                                display: none;
+                            }
                         }
 
-                        .progress-ring {
-                            width: 100%;
-                            height: 100%;
-                            display: block;
+                        &.up-to-date {
+                            .state-desc {
+                                color: colors.$gray-500;
+                            }
 
-                            circle {
-                                cx: math.div($state-indicator-size, 2);
-                                cy: math.div($state-indicator-size, 2);
-                                r: $state-indicator-progress-radius;
-                                transition: stroke-dashoffset 0.35s;
-                                transform: rotate(-90deg);
-                                transform-origin: math.div($state-indicator-size, 2) math.div($state-indicator-size, 2);
-                                stroke-linecap: round;
-                                stroke-width: 4;
-                                fill: transparent;
-                                stroke: colors.$progress-color;
-                                stroke-dasharray: 81.68 81.68; // 2 * pi * r / r = 13
-                                //stroke-dashoffset: 30; // offset = circumference - percent / 100 * circumference
+                            .state-indicator {
+                                background-color: colors.$brand-success;
+                            }
+                        }
+
+                        &.failed {
+                            .state-desc {
+                                color: colors.$gray-500;
+                            }
+
+                            .state-indicator {
+                                background-color: colors.$brand-danger;
+                            }
+                        }
+
+                        &.running {
+                            .state-desc {
+                                color: colors.$gray-300;
+                                display: flex;
+                                align-items: flex-end;
+
+                                strong {
+                                    font-size: 14px;
+                                    color: colors.$gray-100;
+                                    margin-right: sizes.$gutter-xxs;
+                                }
+                            }
+
+                            .state-indicator {
+                                background-color: colors.$black;
+
+                                i {
+                                    color: colors.$progress-color;
+                                }
+                            }
+
+                            .progress-ring {
+                                width: 100%;
+                                height: 100%;
+                                display: block;
+
+                                circle {
+                                    cx: math.div($state-indicator-size, 2);
+                                    cy: math.div($state-indicator-size, 2);
+                                    r: $state-indicator-progress-radius;
+                                    transition: stroke-dashoffset 0.35s;
+                                    transform: rotate(-90deg);
+                                    transform-origin: math.div($state-indicator-size, 2) math.div($state-indicator-size, 2);
+                                    stroke-linecap: round;
+                                    stroke-width: 4;
+                                    fill: transparent;
+                                    stroke: colors.$progress-color;
+                                    stroke-dasharray: 81.68 81.68; // 2 * pi * r / r = 13
+                                    //stroke-dashoffset: 30; // offset = circumference - percent / 100 * circumference
+                                }
                             }
                         }
                     }
-                }
 
-                @keyframes loadingAnimation {
-                    0% {
-                        background-position: 150% 0
+                    @keyframes loadingAnimation {
+                        0% {
+                            background-position: 150% 0
+                        }
+
+                        100% {
+                            background-position: -150% 0
+                        }
                     }
 
-                    100% {
-                        background-position: -150% 0
+                    $loading-animation-duration: 2s;
+                    $delay-steps: 10;
+
+                    &.loading {
+                        border-color: colors.$gray-800;
+                        background: linear-gradient(45deg, colors.$gray-900 40%, colors.$gray-800 50%, colors.$gray-900 60%);
+                        background-repeat: no-repeat;
+                        background-size: 350% 100%;
+                        animation: loadingAnimation $loading-animation-duration linear infinite;
+
+                        .entries, .errors, .state {
+                            opacity: 0;
+                        }
+                    }
+
+
+
+                    @for $i from 0 through ($delay-steps - 1) {
+
+                        &:nth-of-type(#{$delay-steps - 1}n - #{$i}) {
+                            animation-delay: -$loading-animation-duration/($delay-steps - 1) * $i;
+                        }
                     }
                 }
+            }
+        }
 
-                $loading-animation-duration: 2s;
-                $delay-steps: 10;
-
-                &.loading {
-                    border-color: colors.$gray-800;
-                    background: linear-gradient(45deg, colors.$gray-900 40%, colors.$gray-800 50%, colors.$gray-900 60%);
-                    background-repeat: no-repeat;
-                    background-size: 350% 100%;
-                    animation: loadingAnimation $loading-animation-duration linear infinite;
-
-                    .entries, .errors, .state {
-                        opacity: 0;
-                    }
-                }
-
-
-
-                @for $i from 0 through ($delay-steps - 1) {
-
-                    &:nth-of-type(#{$delay-steps - 1}n - #{$i}) {
-                        animation-delay: -$loading-animation-duration/($delay-steps - 1) * $i;
-                    }
-                }
+        .sidebyside-actions {
+            .panel {
+                margin-bottom: 0;
             }
         }
     }

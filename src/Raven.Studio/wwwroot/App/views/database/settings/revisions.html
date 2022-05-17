@@ -115,13 +115,13 @@
                             </ul>
                         </div>
                     </div>
-                    <div class="toggle toggle-primary margin-top">
+                    <div class="toggle toggle-primary margin-top-sm">
                         <input id="purge" class="styled" type="checkbox" data-bind="checked: purgeOnDelete">
                         <label for="purge">
                             Purge revisions on document delete
                         </label>
                     </div>
-                    <div class="toggle toggle-primary margin-top">
+                    <div class="toggle toggle-primary margin-top-sm">
                         <input id="limitRevisions" class="styled" type="checkbox" data-bind="checked: limitRevisions">
                         <label for="limitRevisions">
                             Limit # of revisions to keep
@@ -136,7 +136,7 @@
                     </div>
                         </div>
                     </div>
-                    <div class="toggle toggle-primary margin-top">
+                    <div class="toggle toggle-primary margin-top-sm">
                         <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">
                         <label for="limitRevisionsByAge">
                             Limit # of revisions to keep by age
@@ -164,7 +164,7 @@
                             <input type="number" min="0" class="form-control" placeholder="Enter max revisions to delete (suggested: 100)" data-bind="numericInput: maxRevisionsToDeleteUponUpdate" />
                         </div>
                     </div>
-                    <div class="bg-info padding padding-xs small margin-top margin-top-lg" data-bind="visible: deleteDescription">
+                    <div class="bg-info padding-xs small margin-top" data-bind="visible: deleteDescription">
                         <div data-bind="html: deleteDescription"></div>
                     </div>
                     <div class="bg-info padding padding-xs margin-top small" data-bind="visible: humaneRetentionDescription">

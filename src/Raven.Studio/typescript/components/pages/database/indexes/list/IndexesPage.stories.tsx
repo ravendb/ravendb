@@ -9,7 +9,7 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { IndexesStubs } from "../../../../../test/stubs/IndexesStubs";
 
 function indexesHolder(storyFn: any) {
-    return <div className="indexes content-margin no-transition absolute-fill">{storyFn()}</div>;
+    return <div className="indexes content-margin no-transition" style={{ height: "100vh", overflow: "auto" }}>{storyFn()}</div>;
 }
 
 export default {
