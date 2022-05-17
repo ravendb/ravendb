@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -19,10 +20,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void LuceneQueryWithIndexIsCaseInsensitive()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LuceneQueryWithIndexIsCaseInsensitive(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var definition = new IndexDefinitionBuilder<Company>("CompanyByName")
                 {
@@ -56,10 +58,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void LinqQueryWithIndexIsCaseInsensitive()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LinqQueryWithIndexIsCaseInsensitive(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var definition = new IndexDefinitionBuilder<Company>("CompanyByName")
                 {

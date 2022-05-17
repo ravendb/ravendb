@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -12,10 +13,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void WillGiveStats()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WillGiveStats(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -40,10 +42,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void WillGiveStatsForLuceneQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void WillGiveStatsForLuceneQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

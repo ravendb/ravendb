@@ -6,6 +6,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -15,8 +16,9 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void CanCreateIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCreateIndex(Options options)
         {
             DoNotReuseServer();
             const string name = "CreateIndexesOnRemoteServer_1";

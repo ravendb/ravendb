@@ -2,6 +2,7 @@
 using Xunit;
 using System.Linq;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs
 {
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void Query_can_project_to_a_different_model()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Query_can_project_to_a_different_model(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {

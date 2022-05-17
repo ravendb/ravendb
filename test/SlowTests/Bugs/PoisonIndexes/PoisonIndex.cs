@@ -12,8 +12,8 @@ namespace SlowTests.Bugs.PoisonIndexes
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldNotCauseFailures(Options options)
         {
             using (var store = GetDocumentStore(options))

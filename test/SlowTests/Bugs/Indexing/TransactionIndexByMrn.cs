@@ -27,7 +27,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCreateIndex(Options options)
         {

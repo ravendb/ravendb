@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -12,8 +13,10 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void CanInitializeDynamicRavenQueryInspector()
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanInitializeDynamicRavenQueryInspector(Options options)
         {
             var blogOne = new Blog
             {
@@ -31,7 +34,7 @@ namespace SlowTests.Bugs.Queries
                 Category = "Rhinos"
             };
             
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

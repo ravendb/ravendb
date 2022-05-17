@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs
 {
@@ -19,16 +20,16 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact] 
-        public void QueryableCountIsAccurate()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryableCountIsAccurate(Options options)
         {
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
-                                                    Maps = { "from user in docs.Users select new { user.Name }"}
-                                                    ,
+                                                    Maps = { "from user in docs.Users select new { user.Name }"},
                                                     Name = "Users"
                                                 }}));
 

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -14,10 +15,11 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void CanQueryDocumentsIndexWithCharLiteral()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryDocumentsIndexWithCharLiteral(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -25,7 +27,7 @@ namespace SlowTests.Bugs.Indexing
                     Fields = { { "SortVersion", new IndexFieldOptions { Storage = FieldStorage.Yes } } },
                     Name = "test"
                 }}));
-
+                
                 using (var s = store.OpenSession())
                 {
                     var entity = new { Version = "1" };

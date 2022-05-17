@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -13,10 +14,11 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void CanQueryDocumentsFilteredByMap()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryDocumentsFilteredByMap(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition

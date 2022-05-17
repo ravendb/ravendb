@@ -2,6 +2,7 @@
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Iulian
 {
@@ -17,13 +18,14 @@ namespace SlowTests.Bugs.Iulian
             public string Tag { get; set; }
         }
 
-        [Fact]
-        public void Can_Load_entities_with_id_containing_url()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Load_entities_with_id_containing_url(Options options)
         {
             var id = @"mssage@msmq://local/Sample.AppService";
 
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
