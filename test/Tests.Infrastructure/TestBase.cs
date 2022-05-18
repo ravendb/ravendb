@@ -108,6 +108,11 @@ namespace FastTests
             GlobalPathsToDelete.Add(packagesPath.FullPath);
             MultiSourceNuGetFetcher.Instance.Initialize(packagesPath, "https://api.nuget.org/v3/index.json");
 
+            IOExtensions.AfterGc += (s, x) =>
+            {
+                Console.WriteLine($"Execution of GC due to IO failure on path '{x.Path}' took {x.Duration} (attempt: {x.Attempt})");
+            };
+
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
