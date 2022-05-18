@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
-using Amqp;
 using Confluent.Kafka;
+using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
 public static class QueueHelper
 {
-    public static IProducer<string, byte[]> CreateKafkaClient(QueueConnectionString connectionString, string transactionalId, X509Certificate2 certificate = null)
+    public static IProducer<string, byte[]> CreateKafkaClient(QueueConnectionString connectionString, string transactionalId,
+        X509Certificate2 certificate = null)
     {
         ProducerConfig config = new ProducerConfig()
         {
@@ -25,8 +26,8 @@ public static class QueueHelper
             config.SslKeyPem = Convert.ToBase64String(certificate.Export(X509ContentType.Pkcs7));
             config.SecurityProtocol = SecurityProtocol.Ssl;
         }
-        
-        foreach(KeyValuePair<string, string> option in connectionString.KafkaConnectionOptions)
+
+        foreach (KeyValuePair<string, string> option in connectionString.KafkaConnectionOptions)
         {
             config.Set(option.Key, option.Value);
         }
@@ -39,15 +40,12 @@ public static class QueueHelper
 
         return producer;
     }
-    
-    public static IProducer<string, byte[]> CreateRabbitMqClient(QueueConnectionString connectionString, string transactionalId, X509Certificate2 certificate = null)
+
+    public static IModel CreateRabbitMqClient(QueueConnectionString connectionString, string transactionalId,
+        X509Certificate2 certificate = null)
     {
-        /*var factory = new ConnectionFactory { AMQP = { HostName = "localhost" } };
-        var connection = factory.CreateAsync()
-        using var channel = connection.CreateModel();
-
-        return producer;*/
-
-        return null;
+        var connectionFactory = new ConnectionFactory() { HostName = "localhost", Port = 5672, UserName = "guest", Password = "guest" };
+        var connection = connectionFactory.CreateConnection();
+        return connection.CreateModel();
     }
 }

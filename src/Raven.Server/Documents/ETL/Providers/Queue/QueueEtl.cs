@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Amqp;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Amqp;
 using CloudNative.CloudEvents.Extensions;
 using CloudNative.CloudEvents.Kafka;
 using Confluent.Kafka;
+using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -41,7 +43,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
     protected override bool ShouldTrackAttachmentTombstones() => false;
     protected override bool ShouldFilterOutHiLoDocument() => true;
     private IProducer<string, byte[]> _kafkaProducer;
-    private IProducer<string, byte[]> _rabbitMqProducer;
+    private IModel _rabbitMqProducer;
 
     protected override IEnumerator<QueueItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs,
         string collection)
@@ -163,16 +165,12 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
                 }
             }
 
-
             try
             {
                 _kafkaProducer.BeginTransaction();
-                for (int i = 0; i < 3; i++)
+                foreach (var @event in events)
                 {
-                    foreach (var @event in events)
-                    {
-                        _kafkaProducer.Produce(@event.Topic, @event.Message, ReportHandler);
-                    }
+                    _kafkaProducer.Produce(@event.Topic, @event.Message, ReportHandler);
                 }
 
                 _kafkaProducer.CommitTransaction();
@@ -225,7 +223,12 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
             {
                 _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId,
                     Database.ServerStore.Server.Certificate.Certificate);
-                //_kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
+            }
+
+            foreach (var @event in events)
+            {
+                _rabbitMqProducer.QueueDeclare(@event.Topic, durable: false, exclusive: false, autoDelete: false, arguments: null);
+                _rabbitMqProducer.BasicPublish("", "test", null, @event.Message.Encode().Buffer);
             }
         }
 
