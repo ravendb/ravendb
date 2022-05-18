@@ -23,6 +23,7 @@ class nodeInfo {
     advancedSettingsCheckBox = ko.observable<boolean>(false);    
     showAdvancedSettings: KnockoutComputed<boolean>;
 
+    validationGroupForUnsecured: KnockoutValidationGroup;
     validationGroupForSecured: KnockoutValidationGroup;
     validationGroupForLetsEncrypt: KnockoutValidationGroup;
 
@@ -72,7 +73,7 @@ class nodeInfo {
                 }
             });
             
-            return hostName;                       
+            return hostName;
         });
 
         this.ipsContainHostName.subscribe(val => {
@@ -122,12 +123,28 @@ class nodeInfo {
     }
 
     private initValidation() {
+        const currentHttpPort = window.location.port || "80";
+
         this.port.extend({
-            number: true
+            number: true,
+            notEqual: {
+                params: currentHttpPort,
+                message: "Port is in use by the Setup Wizard"
+            }
         });
         
         this.tcpPort.extend({
-            number: true
+            number: true,
+            notEqual: {
+                params: currentHttpPort,
+                message: "Port is in use by the Setup Wizard"
+            },
+            validation: [
+                {
+                    validator: (val: string) => !val || val !== this.port(),
+                    message: "Please use different ports for HTTP and TCP bindings"
+                }
+            ]
         });
         
         this.externalHttpsPort.extend({
@@ -164,7 +181,7 @@ class nodeInfo {
             ]
         });
 
-        this.validationGroupForLetsEncrypt= ko.validatedObservable({
+        this.validationGroupForLetsEncrypt = ko.validatedObservable({
             nodeTag: this.nodeTag,
             port: this.port, 
             tcpPort: this.tcpPort,
@@ -183,6 +200,13 @@ class nodeInfo {
             hostname: this.hostname,
             externalTcpPort: this.externalTcpPort,
             externalHttpsPort: this.externalHttpsPort
+        });
+
+        this.validationGroupForUnsecured = ko.validatedObservable({
+            nodeTag: this.nodeTag,
+            port: this.port,
+            tcpPort: this.tcpPort,
+            ips: this.ips
         });
     }
 
@@ -209,10 +233,10 @@ class nodeInfo {
     toDto(): Raven.Server.Commercial.NodeInfo {
         return {
             Addresses: this.ips().map(x => x.ip()),
-            Port: this.port() ? parseInt(this.port(), 10) : null,
+            Port: this.port() ? parseInt(this.port(), 10) : this.mode() === 'Unsecured' ? 8080 : null,
+            TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : this.mode() === 'Unsecured' ? 38888 : null,
             PublicServerUrl: this.getServerUrl(),
-            ExternalIpAddress: (this.advancedSettingsCheckBox() && this.externalIpAddress()) ? this.externalIpAddress() : null, 
-            TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : null,
+            ExternalIpAddress: (this.advancedSettingsCheckBox() && this.externalIpAddress()) ? this.externalIpAddress() : null,
             ExternalPort: (this.advancedSettingsCheckBox() && this.externalHttpsPort()) ? parseInt(this.externalHttpsPort(), 10) : null,
             ExternalTcpPort: (this.advancedSettingsCheckBox() && this.externalTcpPort()) ? parseInt(this.externalTcpPort(), 10) : null
         } as Raven.Server.Commercial.NodeInfo;

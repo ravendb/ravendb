@@ -55,12 +55,6 @@
                 </div>
             </div>
         </div>
-        <div class="flex-horizontal bg-info padding">
-            <div class="margin-right"><strong>To build a cluster</strong>, select one of the above options and complete a full wizard flow for the first node.<br>
-                When this wizard is opened for the other nodes,<br>
-                click on 'Continue cluster setup' to join them to the cluster. </div>
-            <button class="btn btn-primary" data-bind="click: chooseContinue"><i class="icon-arrow-right"></i><span>Continue cluster setup for new node</span></button>
-        </div>
     </div>
     <div class="col-sm-4 flex-vertical">
         <div class="panel flex-vertical flex-grow margin-none">
@@ -85,6 +79,19 @@
             </div>
         </div>
     </div>
+</div>
+<div class="panel padding padding-sm margin-top">
+    <div class="toggle margin-left">
+        <input id="zipOnly" class="styled" type="checkbox" data-bind="checked: model.onlyCreateZipFile">
+        <label for="zipOnly" class="toggle-zip-only">
+            Use wizard to only configure zip file for external setup
+        </label>
+    </div>
+</div>
+<div class="flex-horizontal bg-info padding margin-top-sm">
+    <div class="margin-right"><strong>To build a cluster</strong>, first select one of the above options and complete a full wizard flow for the first node.<br>
+        When this wizard is opened for the other nodes, click on 'Continue cluster setup' to join them to the cluster. </div>
+    <button class="btn btn-primary margin-left-lg" data-bind="click: chooseContinue"><i class="icon-arrow-right"></i><span>Continue cluster setup for new node</span></button>
 </div>
 <div class="bg-info padding flex-horizontal margin-top">
     <div>

@@ -1,4 +1,4 @@
-<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node Addresses</h2>
+<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node Addresses (Secure Mode)</h2>
 <div class="setup-nodes">
     <form class="flex-form" data-bind="submit: save">
         <div class="margin-bottom">
@@ -47,8 +47,18 @@
                            <strong>https://</strong><strong data-bind="text: nodeTag() && $root.showNodeTagInUrl() ? nodeTag().toLocaleLowerCase() + '.' : ''"></strong><strong data-bind="text: $root.model.createFullNodeNameObservable($data)"></strong>
                         </h3>
                     </div>
-                    <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">     
-                        <label class="control-label"><i id="dns-name-info" class="icon-info text-info"></i>&nbsp;DNS Name<i class="required"></i></label>   
+                    <div class="form-group" data-bind="validationElement: nodeTag">
+                        <label for="nodeTag" class="control-label">Node Tag</label>
+                        <div class="flex-grow">
+                            <input type="text" autocomplete="off" class="form-control" id="nodeTag" data-bind="textInput: nodeTag" />
+                        </div>
+                    </div>
+                    <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">
+                        <label class="control-label">
+                            <i id="dns-name-info" class="icon-info text-info"></i>&nbsp;
+                            DNS Name
+                            <i class="required"></i>
+                        </label>
                         <div class="flex-grow" data-bind="attr: { 'title': 'Select the domain name' }">
                             <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
                                 <span data-bind="text: hostname() || 'Select domain name'"></span>
@@ -60,15 +70,9 @@
                             <span class="help-block" data-bind="validationMessage: hostname"></span>
                         </div>
                     </div>
-                    <div class="form-group" data-bind="validationElement: nodeTag">
-                        <label for="nodeTag" class="control-label">Node Tag</label>
-                        <div class="flex-grow">
-                            <input type="text" autocomplete="off" class="form-control" id="nodeTag" data-bind="textInput: nodeTag" />
-                        </div>
-                    </div>
                     <div class="form-group" data-bind="validationElement: port">
                         <label for="port" class="control-label">
-                            <i id="https-port-info" class="icon-info text-info"></i>
+                            <i id="https-port-info" class="icon-info text-info"></i>&nbsp;
                             HTTPS Port
                         </label>
                         <div class="flex-grow">
@@ -79,7 +83,7 @@
                     </div>
                     <div class="form-group" data-bind="validationElement: tcpPort">
                         <label for="tcpPort" class="control-label">
-                            <i id="tcp-port-info" class="icon-info text-info"></i>
+                            <i id="tcp-port-info" class="icon-info text-info"></i>&nbsp;
                             TCP Port
                         </label>
                         <div class="flex-grow">
@@ -92,11 +96,11 @@
                         <div class="form-group" data-bind="validationElement: ip">
                             <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
                                 <span data-bind="visible: $index() === 0">
-                                    <i data-bind="attr: { 'id': $parent.mode() === 'Secured' ? 'ip-address-info' : 'ip-address-info-with-warning' }" class="icon-info text-info"></i>
-                                    &nbsp;IP Address / Hostname
+                                    <i data-bind="attr: { 'id': $parent.mode() === 'Secured' ? 'ip-address-info' : 'ip-address-info-with-warning' }" class="icon-info text-info"></i>&nbsp;
+                                    IP Address / Hostname
                                     <i class="required"></i>
                                 </span>
-                            </label>                            
+                            </label>
                             <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }, css: { 'has-warning': $parent.isLoopbackOnly() }">
                                 <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address / Hostname" 
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">

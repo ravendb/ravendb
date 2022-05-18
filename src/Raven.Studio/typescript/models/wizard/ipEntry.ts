@@ -33,7 +33,7 @@ class ipEntry {
            }];
        
        
-       this.ip.extend(extenders);      
+       this.ip.extend(extenders);
        
        this.validationGroup = ko.validatedObservable({
            ip: this.ip
