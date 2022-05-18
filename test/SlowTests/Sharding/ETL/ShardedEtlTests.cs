@@ -902,12 +902,19 @@ person.addCounter(loadCounter('down'));
                     Database = "Northwind"
                 });
 
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+
+                Assert.NotNull(ongoingTask);
+                Assert.Equal(name, ongoingTask.TaskName);
+
                 for (int i = 0; i < 3; i++)
                 {
-                    var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+                    var singleShardInfo = store.Maintenance.ForShard(i).Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
 
-                    Assert.NotNull(ongoingTask);
-                    Assert.Equal(name, ongoingTask.TaskName);
+                    Assert.NotNull(singleShardInfo);
+                    Assert.Equal(name, singleShardInfo.TaskName);
+                    Assert.Equal("A", singleShardInfo.ResponsibleNode.NodeTag);
+                    Assert.Equal(OngoingTaskConnectionStatus.Active, singleShardInfo.TaskConnectionStatus);
                 }
             }
         }
