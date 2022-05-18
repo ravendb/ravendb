@@ -23,6 +23,7 @@ import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import getIndexNamesCommand from "commands/database/index/getIndexNamesCommand";
 
 type testTabName = "results" | "diagnostics";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -31,7 +32,7 @@ class customSorters extends shardViewModelBase {
 
     view = require("views/database/settings/customSorters.html");
 
-    indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
+    indexes = ko.observableArray<string>();
     languageService: rqlLanguageService;
     
     sorters = ko.observableArray<sorterListItemModel>([]);
@@ -77,7 +78,7 @@ class customSorters extends shardViewModelBase {
     activate(args: any) {
         super.activate(args);
         
-        return $.when<any>(this.loadSorters(), this.loadServerWideSorters(), this.fetchAllIndexes(this.db)
+        return $.when<any>(this.loadSorters(), this.loadServerWideSorters(), this.fetchIndexNames(this.db)
             .done(() => { 
                 const serverWideSorterNames = this.serverWideSorters().map(x => x.name);
                 
@@ -101,11 +102,11 @@ class customSorters extends shardViewModelBase {
         this.languageService.dispose();
     }
 
-    private fetchAllIndexes(db: database): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(db, db.getFirstLocation(this.localNodeTag))
+    private fetchIndexNames(db: database): JQueryPromise<any> {
+        return new getIndexNamesCommand(db)
             .execute()
-            .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
-                this.indexes(results.Indexes);
+            .done((results: string[]) => {
+                this.indexes(results);
             });
     }
     

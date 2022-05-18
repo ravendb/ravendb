@@ -6,9 +6,9 @@ import getCollectionFieldsCommand from "commands/database/documents/getCollectio
 class remoteMetadataProvider implements queryCompleterProviders {
     
     private readonly db: database;
-    private readonly indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>;
+    private readonly indexes: KnockoutObservable<string[]>;
     
-    constructor(database: database, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
+    constructor(database: database, indexes: KnockoutObservable<string[]>) {
         this.db = database;
         this.indexes = indexes;
     }
@@ -48,7 +48,7 @@ class remoteMetadataProvider implements queryCompleterProviders {
     }
 
     indexNames(callback: (indexNames: string[]) => void): void {
-        callback(this.indexes().map(x => x.Name));
+        callback(this.indexes());
     }
 }
 

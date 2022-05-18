@@ -23,6 +23,8 @@ import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
 import rqlLanguageService = require("common/rqlLanguageService");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import getIndexNamesCommand from "commands/database/index/getIndexNamesCommand";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -133,6 +135,8 @@ class patch extends viewModelBase {
     defineMaxOperationsPerSecond = ko.observable<boolean>(false);
     
     disableAutoIndexCreation = ko.observable<boolean>(false);
+
+    localNodeTag = clusterTopologyManager.default.localNodeTag();
     
     static readonly recentKeyword = 'Recent Patch';
 
@@ -153,7 +157,7 @@ class patch extends viewModelBase {
     };
 
     jsCompleter = defaultAceCompleter.completer();
-    private indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
+    private indexes = ko.observableArray<string>();
     languageService: rqlLanguageService;
     
     private fullDocumentsProvider: documentPropertyProvider;
@@ -210,7 +214,7 @@ class patch extends viewModelBase {
 
         this.disableAutoIndexCreation(activeDatabaseTracker.default.settings().disableAutoIndexCreation.getValue());
         
-        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchIndexNames(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     private loadLastQuery() {
@@ -444,11 +448,11 @@ class patch extends viewModelBase {
             });
     }
 
-    private fetchAllIndexes(db: database): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(db)
+    private fetchIndexNames(db: database): JQueryPromise<any> {
+        return new getIndexNamesCommand(db, db.getFirstLocation(this.localNodeTag))
             .execute()
-            .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
-                this.indexes(results.Indexes);
+            .done((results: string[]) => {
+                this.indexes(results);
             });
     }
 
