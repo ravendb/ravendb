@@ -1455,7 +1455,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/subscription-tasks", "DeleteSubscriptionTask", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DeleteSubscriptionTask()
         {
             // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
@@ -1573,6 +1573,12 @@ namespace Raven.Server.Web.System
                             var elasticEtl = elasticEtls?.Find(x => x.TaskId == id);
                             if (elasticEtl != null)
                                 _deletingEtl = (elasticEtl.Name, elasticEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
+                        case OngoingTaskType.QueueEtl:
+                            var queueEtls = rawRecord.QueueEtls;
+                            var queueEtl = queueEtls?.Find(x => x.TaskId == id);
+                            if (queueEtl != null)
+                                _deletingEtl = (queueEtl.Name, queueEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
                             break;
                     }
                 }
