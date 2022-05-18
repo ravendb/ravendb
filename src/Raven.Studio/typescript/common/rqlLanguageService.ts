@@ -16,7 +16,7 @@ class rqlLanguageService {
     
     constructor(
         db: database, 
-        indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>,
+        indexes: KnockoutObservable<string[]>,
         queryType: rqlQueryType) {
         this.worker = new Worker("/studio/assets/rql_worker.js");
         this.queryType = queryType;

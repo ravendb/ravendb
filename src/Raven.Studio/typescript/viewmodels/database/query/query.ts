@@ -324,7 +324,7 @@ class query extends shardViewModelBase {
     constructor(db: database) {
         super(db); 
 
-        this.languageService = new rqlLanguageService(this.db, this.indexes, "Select");
+        this.languageService = new rqlLanguageService(this.db, ko.pureComputed(() => this.indexes().map(x => x.Name)), "Select");
         
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
