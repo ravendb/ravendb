@@ -24,7 +24,12 @@ namespace Raven.Server.Utils
 
                 public const string MemoryInfo = "MemoryInfo";
 
-                public const string MemoryInfoExtended = "MemoryInfoExtended";
+                public class MemoryInfoExtended
+                {
+                    public const string RefreshRate15Seconds = "MemoryInfoExtended/RefreshRate15Seconds";
+
+                    public const string RefreshRate5Seconds = "MemoryInfoExtended/RefreshRate5Seconds";
+                }
 
                 public const string DiskSpaceInfo = "DiskSpaceInfo";
 

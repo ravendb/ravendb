@@ -32,7 +32,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
 
         protected override AbstractClusterDashboardNotification CreateNotification()
         {
-            var memoryInfo = _server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
+            var memoryInfo = _server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds);
             long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
             long totalUnmanagedAllocations = NativeMemory.TotalAllocatedMemory;
             var encryptionBuffers = EncryptionBuffersPool.Instance.GetStats();

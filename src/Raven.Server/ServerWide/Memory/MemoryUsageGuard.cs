@@ -1,4 +1,5 @@
-﻿using Sparrow;
+﻿using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
@@ -11,6 +12,7 @@ namespace Raven.Server.ServerWide.Memory
             ref Size currentMaximumAllowedMemory,
             Size currentlyInUse,
             bool isRunningOn32Bits,
+            ServerMetricCacher metricCacher,
             Logger logger,
             out ProcessMemoryUsage currentUsage)
         {
@@ -21,7 +23,7 @@ namespace Raven.Server.ServerWide.Memory
             }
 
             // we run out our memory quota, so we need to see if we can increase it or break
-            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
+            var memoryInfo = metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate5Seconds);
             currentUsage = GetProcessMemoryUsage(memoryInfo);
 
             var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableMemoryForProcessing;
