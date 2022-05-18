@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -493,10 +494,17 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/unsecured/package", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupUnsecuredPackage()
         {
+            var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
+            var operationCancelToken = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
+
             AssertOnlyInSetupMode();
 
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (var setupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "setup-unsecured"))
+            using (var setupInfoJson = await context.ReadForMemoryAsync(stream, "setup-unsecured"))
             {
                 // Making sure we don't have leftovers from previous setup
                 try
@@ -511,12 +519,6 @@ namespace Raven.Server.Web.System
                 {
                     // ignored
                 }
-                var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
-                var operationCancelToken = CreateOperationToken();
-                var operationId = GetLongQueryString("operationId", false);
-
-                if (operationId.HasValue == false)
-                    operationId = ServerStore.Operations.GetNextOperationId();
 
                 var unsecuredSetupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
                 await using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
@@ -532,7 +534,10 @@ namespace Raven.Server.Web.System
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
                 
-                var contentDisposition = "attachment; filename=Unsecured.Cluster.Settings.zip";
+                var fileName = $"Unsecure.Cluster.Settings {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}.zip ";
+                //var contentDisposition = "attachment; filename=Unsecure.Cluster.Settings.zip";
+                var contentDisposition = $"attachment; filename={fileName}";
+                
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
         
@@ -577,16 +582,18 @@ namespace Raven.Server.Web.System
                     [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured),
                     [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
                 };
-
-                if (setupInfo.Port == Constants.Network.ZeroValue)
-                    setupInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
-
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
-
-                if (setupInfo.TcpPort == Constants.Network.ZeroValue)
-                    setupInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
-
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
+                
+                // TODO - Omer - take info from the nodes list
+                
+                // if (setupInfo.Port == Constants.Network.ZeroValue)
+                //     setupInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
+                //
+                // settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
+                //
+                // if (setupInfo.TcpPort == Constants.Network.ZeroValue)
+                //     setupInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
+                //
+                // settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
                 if (setupInfo.EnableExperimentalFeatures)
                 {
@@ -646,8 +653,11 @@ namespace Raven.Server.Web.System
                     : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password, X509KeyStorageFlags.MachineKeySet);
 
                 var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
-
-                var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
+                var fileName = $"{cn}.Cluster.Settings {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}.zip ";
+                
+                //var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
+                var contentDisposition = $"attachment; filename={fileName}";
+                
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
@@ -703,7 +713,10 @@ namespace Raven.Server.Web.System
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
+                var fileName = $"{setupInfo.Domain}.Cluster.Settings {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}.zip ";
+                //var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
+                var contentDisposition = $"attachment; filename={fileName}";
+                
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 

@@ -234,8 +234,13 @@ class nodes extends setupStep {
     
     removeNode(node: nodeInfo) {
         this.model.nodes.remove(node);
+        
         if (this.editedNode() === node) {
             this.editedNode(null);
+        }
+
+        if (this.model.nodes().length === 1) {
+            this.editNode(this.model.nodes()[0]);
         }
         
         this.updatePorts();
@@ -255,7 +260,7 @@ class nodes extends setupStep {
            
            idx++;
         });
-    }    
+    }
 
     private initTooltips() {
         const ownCerts = this.model.mode() === "Secured";
@@ -263,15 +268,15 @@ class nodes extends setupStep {
         popoverUtils.longWithHover($("#dns-name-info"),
             {
                 content:
-                "Domain name that will be used to reach the server on this node.<br />" +
-                "Note: It <strong>must</strong> be associated with the chosen IP Address below.",
-                placement: "top"
+                    "<small>Domain name that will be used to reach the server on this node.<br />" +
+                    "Note: It <strong>must</strong> be associated with the chosen IP Address below.</small>",
+                html: true
             });
 
-        const ipText = ownCerts ? "IP Address or Hostname that should already be associated with DNS name in certificate." : 
+        const ipText = ownCerts ? "IP Address or Hostname that should already be associated with DNS name in certificate." :
                                   "IP Address or Hostname that will be associated with the DNS Name.";
         
-        const ipAddressInfo =  ipText + "<br/>" +
+        const ipAddressInfo = ipText + "<br/>" +
             "For example:<br/>" +
             "<ul>" +
             "  <li>10.0.0.84</li>" +
@@ -280,27 +285,27 @@ class nodes extends setupStep {
             "  <li>john-pc</li>" +
             "</ul>";
 
-        popoverUtils.longWithHover($("#ip-address-info"),
-            {
-                content: ipAddressInfo,
-                placement: "top"
-            });
+        popoverUtils.longWithHover($("#ip-address-info"), {
+            content: `<small>${ipAddressInfo}</small>`,
+            placement: "top",
+            html: true
+        });
 
-        popoverUtils.longWithHover($("#ip-address-info-with-warning"),
-            {
-                // This will be displayed only in 'Lets Encrypt' flow 
-                content: ipAddressInfo + "<strong>Note:</strong> If Hostname is used then an external ip must also be provided.",
-                placement: "top"
-            });
-        
+        popoverUtils.longWithHover($("#ip-address-info-with-warning"), {
+            // This will be displayed only in 'Lets Encrypt' flow 
+            content: `<small>${ipAddressInfo} <strong>Note:</strong> If Hostname is used then an external ip must also be provided.</small>`,
+            placement: "top",
+            html: true
+        });
+
         popoverUtils.longWithHover($("#https-port-info"), {
-            content: "HTTPs port used for clients/browser (RavenDB Studio) communication.",
-            placement: "top"
+            content: "<small>HTTPs port used for clients/browser (RavenDB Studio) communication.</small>",
+            html: true
         });
         
         popoverUtils.longWithHover($("#tcp-port-info"), {
-            content: "TCP port used by the cluster nodes to communicate with each other.",
-            placement: "top"
+            content: "<small>TCP port used by the cluster nodes to communicate with each other.</small>",
+            html: true
         })
     }
 

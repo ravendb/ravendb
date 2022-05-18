@@ -98,10 +98,10 @@ class finish extends setupStep {
                 this.saveUnsecuredConfiguration();
                 break;
             case "LetsEncrypt":
-                this.saveSecuredConfiguration(endpoints.global.setup.setupLetsencrypt, this.model.toSecuredDto());
+                this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupLetsencrypt, this.model.toSecuredDto());
                 break;
-            case "Secured":
-                this.saveSecuredConfiguration(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
+            case "Secured": // own-cert
+                this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
                 break;
         }
 
@@ -137,16 +137,20 @@ class finish extends setupStep {
     }
     
     private saveUnsecuredConfiguration() {
-        new saveUnsecuredSetupCommand(this.model.toUnsecuredDto())
-            .execute()
-            .done(() => {
-                this.configurationTask.resolve();
-            })
-            .fail(() => this.configurationTask.reject());
+        if (this.model.nodes().length === 1) {
+            new saveUnsecuredSetupCommand(this.model.toUnsecuredDto())
+                .execute()
+                .done(() => {
+                    this.configurationTask.resolve();
+                })
+                .fail(() => this.configurationTask.reject());
+        } else {
+            this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupUnsecuredPackage, this.model.toUnsecuredDto())
+        }
     }
 
-    private saveSecuredConfiguration(url: string, dto: Raven.Server.Commercial.SetupInfo) {
-        const $form = $("#secureSetupForm");
+    private saveConfigurationAndCreatePackage(url: string, dto: Raven.Server.Commercial.SetupInfoBase) {
+        const $form = $("#setupForm");
         const $downloadOptions = $("[name=Options]", $form);
 
         this.getNextOperationId()

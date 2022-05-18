@@ -465,17 +465,27 @@ public static class SettingsZipFileHelper
         }
     }
 
-    public static string CreateReadmeText(string nodeTag, string publicServerUrl, bool isCluster, bool registerClientCert)
+    // TODO:
+    // 1. Call this method w/ relevant 'zipOnly' param
+    // 2. Pass relevant 'publicServerUrl' when this is Unsecure
+    public static string CreateReadmeText(string nodeTag, string publicServerUrl, bool isCluster, bool registerClientCert, bool zipOnly = false)
     {
         var str =
             string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
-            "Your RavenDB cluster settings, certificate and configuration are contained in this zip file."
+            "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
+            "Your cluster settings configuration, and the certificate (if in Secure Mode), are contained in the downloaded zip file."
             + Environment.NewLine;
 
         str += Environment.NewLine +
                $"The new server is available at: {publicServerUrl}"
                + Environment.NewLine;
 
+        if (zipOnly)
+        {
+            str += "You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.";
+            return str;
+        }
+        
         str += $"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
                Environment.NewLine;
 

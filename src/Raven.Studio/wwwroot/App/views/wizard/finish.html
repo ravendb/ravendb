@@ -4,27 +4,35 @@
     <span data-bind="visible: !spinners.finishing() && !completedWithSuccess()" class="text-danger">Configuration failed</span>
     <span data-bind="visible: !spinners.finishing() && completedWithSuccess()" class="text-success">Configuration completed!</span>
 </h2>
-
-<div class="padding bg-info" data-bind="visible: !spinners.finishing() && completedWithSuccess()">
-    Before you can access RavenDB via your server url:
+<div class="padding bg-info" data-bind="visible: !spinners.finishing() && 
+                                                  completedWithSuccess() &&
+                                                  ((model.mode() === 'Unsecured' && model.nodes().length === 1) || !model.onlyCreateZipFile())">
+    Before you can access RavenDB via the server url:
     <a target="_blank" data-bind="text: model.getStudioUrl(), attr: { href: model.getStudioUrl() }"></a>,
-    you'll need to restart it. 
+    you'll need to restart the server.
 </div>
+<div class="padding bg-info" data-bind="visible: !spinners.finishing() &&
+                                                  model.mode() === 'Unsecured' &&
+                                                  model.onlyCreateZipFile() &&
+                                                  model.nodes().length > 1">
+    RavenDB Setup package has been downloaded successfully.<br />
+    You can use it to configure your RavenDB Cluster in the Cloud or any other environment of your choice other than this machine.<br />
+    TODO.. link to https://ravendb.net/docs/article-page/5.3/csharp/start/installation/setup-wizard#setting-up-other-nodes
+</div>
+
+<!-- note: if 'Secure mode' then above info comes from SettingsZipFileHelper.cs -->
 
 <div class="toggle margin-left-sm" data-bind="visible: showConfigurationLogToggle">
     <input id="logExpander" type="checkbox" data-bind="checked: expandSetupLog">
     <label for="logExpander">Show configuration log</label>
 </div>
-
 <div class="configuration-log" data-bind="collapse: expandSetupLog">
 <pre data-bind="visible: messages().length"><!-- ko foreach: messages --><span data-bind="text: message, attr: { class: extraClass }"></span>
 <!-- /ko --></pre>
 </div>
-
 <div class="readme" data-bind="visible: readme">
     <pre data-bind="text: readme"></pre>
 </div>
-
 <div class="navigation padding padding-lg flex-horizontal">
     <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back, disable: spinners.restart, visible: !spinners.finishing()">
         <i class="icon-arrow-left"></i><span>Back</span>
@@ -34,9 +42,10 @@
         <i class="icon-refresh"></i>
         <span>Try again</span>
     </button>
-    <button class="btn btn-primary btn-lg" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart, visible: canRestart">
+    <button class="btn btn-primary btn-lg" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart,
+            visible: canRestart() &&
+                     (!model.onlyCreateZipFile() || (model.mode() === 'Unsecured' && model.nodes().length === 1))">
         <i class="icon-refresh"></i>
         <span>Restart server</span>
     </button>
 </div>
-      
