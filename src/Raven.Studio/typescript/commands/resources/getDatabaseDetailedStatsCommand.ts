@@ -4,15 +4,18 @@ import endpoints = require("endpoints");
 
 class getDatabaseDetailedStatsCommand extends commandBase {
 
-    constructor(private db: database, private longWait: boolean = false) {
+    constructor(private db: database, private location: databaseLocationSpecifier, private longWait: boolean = false) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.DetailedDatabaseStatistics> {
         
         const url = endpoints.databases.stats.statsDetailed;
+        const args = {
+            ...this.location
+        };
         
-        return this.query<Raven.Client.Documents.Operations.DetailedDatabaseStatistics>(url, null, this.db, null, null, this.getTimeToAlert(this.longWait))
+        return this.query<Raven.Client.Documents.Operations.DetailedDatabaseStatistics>(url, args, this.db, null, null, this.getTimeToAlert(this.longWait))
             .fail((response: JQueryXHR) => this.reportError("Failed to get the database stats details", response.responseText, response.statusText));
     }
 }

@@ -8,6 +8,7 @@ import statsModel = require("models/database/stats/statistics");
 import popoverUtils = require("common/popoverUtils");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database = require("models/resources/database");
+import { shardingTodo } from "common/developmentHelper";
 
 class statistics extends shardViewModelBase {
 
@@ -21,8 +22,8 @@ class statistics extends shardViewModelBase {
 
     dataLocation = ko.observable<string>();
 
-    constructor(db: database) {
-        super(db);
+    constructor(db: database, location: databaseLocationSpecifier) {
+        super(db, location);
         
         this.bindToCurrentInstance("showStaleReasons");
 
@@ -100,21 +101,25 @@ class statistics extends shardViewModelBase {
     fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         const db = this.db;
 
-        const dbStatsTask = new getDatabaseDetailedStatsCommand(db)
+        const dbStatsTask = new getDatabaseDetailedStatsCommand(db, this.location)
             .execute();
 
-        const indexesStatsTask = new getIndexesStatsCommand(db)
+        const indexesStatsTask = new getIndexesStatsCommand(db, this.location)
             .execute();
  
+        shardingTodo("ANY", "storage report")
+        /* TODO
         const dbDataLocationTask = new getStorageReportCommand(db)
             .execute();
+            
+         */
         
-        return $.when<any>(dbStatsTask, indexesStatsTask, dbDataLocationTask)
+        return $.when<any>(dbStatsTask, indexesStatsTask /* TODO, dbDataLocationTask*/)
             .done(([dbStats]: [Raven.Client.Documents.Operations.DetailedDatabaseStatistics],
-                   [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]],
-                   [dbLocation]: [storageReportDto]) => {
+                   [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]]/* TODO,
+                   [dbLocation]: [storageReportDto]*/) => {
                 this.processStatsResults(dbStats, indexesStats);
-                this.dataLocation(dbLocation.BasePath);
+                //TODO: this.dataLocation(dbLocation.BasePath);
             });
     }
 
