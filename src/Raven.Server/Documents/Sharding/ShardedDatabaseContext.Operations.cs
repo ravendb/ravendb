@@ -104,7 +104,8 @@ public partial class ShardedDatabaseContext
             }
             catch
             {
-                await operation.KillAsync(waitForCompletion: true, t);
+                if (operation.Killable)
+                    await operation.KillAsync(waitForCompletion: true, t);
             }
 
             return await operation.Operation.WaitForCompletionAsync(t);

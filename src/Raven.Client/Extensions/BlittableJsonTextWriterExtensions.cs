@@ -55,12 +55,7 @@ namespace Raven.Client.Extensions
 
             writer.WritePropertyName(nameof(query.QueryParameters));
             if (query.QueryParameters != null)
-            {
-                BlittableJsonReaderObject queryParameters = query.QueryParameters as BlittableJsonReaderObject
-                    ?? conventions.Serialization.DefaultConverter.ToBlittable(query.QueryParameters, context);
-
-                writer.WriteObject(queryParameters);
-            }
+                writer.WriteObject(conventions.Serialization.DefaultConverter.ToBlittable(query.QueryParameters, context));
             else
                 writer.WriteNull();
 

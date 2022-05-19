@@ -145,15 +145,12 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
         }
     }
 
-    public ValueTask KillOperationAsync(long id, CancellationToken token)
+    public async ValueTask KillOperationAsync(long id, CancellationToken token)
     {
         if (Active.TryGetValue(id, out AbstractOperation operation) == false)
             throw new ArgumentException($"Operation {id} was not registered");
 
-        if (operation.Killable == false)
-            throw new ArgumentException($"Operation {id} is unkillable");
-
-        return operation.KillAsync(waitForCompletion: false, token);
+        await operation.KillAsync(waitForCompletion: false, token);
     }
 
     public AbstractOperation GetOperation(long id)
@@ -181,10 +178,16 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
             {
                 try
                 {
-                    active.KillAsync(waitForCompletion: true, CancellationToken.None)
-                        .AsTask()
-                        .GetAwaiter()
-                        .GetResult();
+                    if (active.Killable)
+                    {
+                        active.KillAsync(waitForCompletion: true, CancellationToken.None)
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+                    else
+                    {
+                        active.Task?.Wait();
+                    }
                 }
                 catch (Exception)
                 {

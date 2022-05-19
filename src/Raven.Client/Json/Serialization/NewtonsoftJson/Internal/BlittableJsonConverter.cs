@@ -49,24 +49,36 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public BlittableJsonReaderObject ToBlittable(object entity, JsonOperationContext context)
         {
+            if (entity is BlittableJsonReaderObject bjro)
+                return bjro;
+
             var jsonSerializer = Conventions.CreateSerializer();
             return ToBlittable(entity, context, jsonSerializer);
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, JsonOperationContext context, IJsonSerializer jsonSerializer)
         {
+            if (entity is BlittableJsonReaderObject bjro)
+                return bjro;
+
             using (var writer = new BlittableJsonWriter(context, documentInfo: null))
                 return ToBlittableInternal(entity, Conventions.Conventions, context, jsonSerializer, writer, removeIdentityProperty: false);
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, IMetadataDictionary metadata, JsonOperationContext context)
         {
+            if (entity is BlittableJsonReaderObject bjro)
+                return bjro;
+
             var jsonSerializer = Conventions.CreateSerializer();
             return ToBlittable(entity, metadata, context, jsonSerializer);
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, IMetadataDictionary metadata, JsonOperationContext context, IJsonSerializer jsonSerializer)
         {
+            if (entity is BlittableJsonReaderObject bjro)
+                return bjro;
+
             using (var writer = new BlittableJsonWriter(context, new DocumentInfo { MetadataInstance = metadata }))
                 return ToBlittableInternal(entity, Conventions.Conventions, context, jsonSerializer, writer);
         }

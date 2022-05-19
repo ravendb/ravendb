@@ -39,13 +39,15 @@ public abstract class AbstractOperation
         return task == null || task.IsCompleted;
     }
 
-    public virtual async ValueTask KillAsync(bool waitForCompletion, CancellationToken token)
+    public virtual async Task KillAsync(bool waitForCompletion, CancellationToken token)
     {
         if (IsCompleted())
             return;
 
-        if (Killable)
-            Token.Cancel();
+        if (Killable == false)
+            throw new InvalidOperationException($"Operation {Id} is unkillable.");
+
+        Token.Cancel();
 
         if (waitForCompletion == false)
             return;
