@@ -12,7 +12,9 @@ import app from "durandal/app";
 import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
-import { IndexDistribution } from "./IndexDistribution";
+import { IndexDistribution, IndexState } from "./IndexDistribution";
+import { IndexProgressTooltip } from "./IndexProgressTooltip";
+import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 
 interface IndexPanelProps {
     database: database;
@@ -41,6 +43,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
 
     const isReplacement = IndexUtils.isSideBySide(index);
+    const inlineDetails = index.nodesInfo.length === 1;
 
     const eventsCollector = useEventsCollector();
 
@@ -142,7 +145,14 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
     return (
         <>
-            <div className={classNames("index-item", { "index-sidebyside": hasReplacement }, { "index-sidebyside": isReplacement })} ref={ref}>
+            <div
+                className={classNames(
+                    "index-item",
+                    { "index-sidebyside": hasReplacement },
+                    { "index-sidebyside": isReplacement }
+                )}
+                ref={ref}
+            >
                 <div className="index-header" id={indexUniqueId(index)}>
                     <div className="index-select">
                         {canReadWriteDatabase(database) && (
@@ -470,30 +480,81 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             <i className={IndexUtils.indexTypeIcon(index.type)} />
                             {IndexUtils.formatType(index.type)}
                         </div>
-                        <div className="index-detail-item">
-                            {index.sourceType === "Counters" && (
-                                <>
-                                    <i className="icon-new-counter" title="Index source: Counters" />
-                                    Counters
-                                </>
-                            )}
-                            {index.sourceType === "TimeSeries" && (
-                                <>
-                                    <i className="icon-timeseries" title="Index source: Time Series" />
-                                    Time Series
-                                </>
-                            )}
-                            {index.sourceType === "Documents" && (
-                                <>
-                                    <i className="icon-documents" title="Index source: Documents" />
-                                    Documents
-                                </>
-                            )}
-                        </div>
+                        <IndexSourceTypeComponent sourceType={index.sourceType} />
+                        {inlineDetails && <InlineDetails index={index} globalIndexingStatus={globalIndexingStatus} />}
                     </div>
                 </div>
-                <IndexDistribution index={index} globalIndexingStatus={globalIndexingStatus} />
+                {index.nodesInfo.length > 1 && (
+                    <IndexDistribution index={index} globalIndexingStatus={globalIndexingStatus} />
+                )}
             </div>
+        </>
+    );
+}
+
+function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
+    const { sourceType } = props;
+
+    return (
+        <div className="index-detail-item">
+            {sourceType === "Counters" && (
+                <>
+                    <i className="icon-new-counter" title="Index source: Counters" />
+                    Counters
+                </>
+            )}
+            {sourceType === "TimeSeries" && (
+                <>
+                    <i className="icon-timeseries" title="Index source: Time Series" />
+                    Time Series
+                </>
+            )}
+            {sourceType === "Documents" && (
+                <>
+                    <i className="icon-documents" title="Index source: Documents" />
+                    Documents
+                </>
+            )}
+        </div>
+    );
+}
+
+interface InlineDetailsProps {
+    index: IndexSharedInfo;
+    globalIndexingStatus: IndexRunningStatus;
+}
+
+function InlineDetails(props: InlineDetailsProps) {
+    const { index, globalIndexingStatus } = props;
+    const nodeInfo = index.nodesInfo[0];
+
+    const [indexId] = useState(() => _.uniqueId("index-inline-details-id"));
+
+    return (
+        <>
+            <div className="index-detail-item">
+                <i className="icon-list" />
+                Entries
+                {nodeInfo.details.entriesCount.toLocaleString()}
+            </div>
+            <div
+                className={classNames("index-detail-item", {
+                    "text-danger": nodeInfo.details.errorCount > 0,
+                })}
+            >
+                <i className="icon-warning" />
+                Errors
+                {nodeInfo.details.errorCount.toLocaleString()}
+            </div>
+            <div id={indexId}>
+                <IndexState nodeInfo={nodeInfo} />
+            </div>
+            <IndexProgressTooltip
+                target={indexId}
+                nodeInfo={index.nodesInfo[0]}
+                index={index}
+                globalIndexingStatus={globalIndexingStatus}
+            />
         </>
     );
 }

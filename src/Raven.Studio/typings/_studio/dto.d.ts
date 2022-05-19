@@ -906,3 +906,8 @@ type databaseLocationSpecifier = {
     shardNumber?: number;
     nodeTag: string;
 }
+
+
+interface PopoverUtilsOptions extends PopoverOptions {
+    rounded?: boolean;
+}

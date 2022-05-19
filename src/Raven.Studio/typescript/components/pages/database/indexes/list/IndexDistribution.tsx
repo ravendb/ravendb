@@ -20,13 +20,17 @@ export function IndexDistribution(props: IndexDistributionProps) {
         .reduce((prev, current) => prev + current.details.errorCount, 0);
     const estimatedEntries = IndexUtils.estimateEntriesCount(index);
 
+    const sharded = IndexUtils.isSharded(index);
+
     return (
         <div className="index-distribution">
             <div className="distribution-legend">
                 <div className="top"></div>
-                <div className="node">
-                    <i className="icon-node" /> Node
-                </div>
+                {sharded && (
+                    <div className="node">
+                        <i className="icon-node" /> Node
+                    </div>
+                )}
                 <div>
                     <i className="icon-list" /> Entries
                 </div>
@@ -38,18 +42,18 @@ export function IndexDistribution(props: IndexDistributionProps) {
                     Status
                 </div>
             </div>
-            <div className="distribution-summary">
-                <div className="top">
-                    <i className="icon-sum" />
+            {index.nodesInfo.length > 1 && (
+                <div className="distribution-summary">
+                    <div className="top">Total</div>
+                    {sharded && <div> </div>}
+                    <div>
+                        {estimatedEntries.estimated && estimatedEntries.entries != null ? "~" : ""}
+                        {estimatedEntries.entries?.toLocaleString() ?? "-"}
+                    </div>
+                    <div>{totalErrors}</div>
+                    <div></div>
                 </div>
-                <div> </div>
-                <div>
-                    {estimatedEntries.estimated && estimatedEntries.entries != null ? "~" : ""}
-                    {estimatedEntries.entries?.toLocaleString() ?? "-"}
-                </div>
-                <div>{totalErrors}</div>
-                <div></div>
-            </div>
+            )}
 
             {index.nodesInfo.map((nodeInfo) => {
                 const shard = (
@@ -57,7 +61,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
                         {nodeInfo.location.shardNumber != null && (
                             <>
                                 <i className="icon-shard" />
-                                Shard #{nodeInfo.location.shardNumber}
+                                {nodeInfo.location.shardNumber}
                             </>
                         )}
                     </div>
@@ -72,8 +76,12 @@ export function IndexDistribution(props: IndexDistributionProps) {
                         className={classNames("distribution-item", { loading: nodeInfo.status === "loading" })}
                         key={key}
                     >
-                        {shard}
-                        <div className="node">{nodeInfo.location.nodeTag}</div>
+                        {sharded && shard}
+                        <div className={classNames("node", { top: !sharded })}>
+                            {!sharded && <i className="icon-node"></i>}
+
+                            {nodeInfo.location.nodeTag}
+                        </div>
                         <div className="entries">{nodeInfo.details?.entriesCount ?? ""}</div>
                         <div className="errors">{nodeInfo.details?.errorCount ?? ""}</div>
                         <IndexState nodeInfo={nodeInfo} />
@@ -97,32 +105,10 @@ interface IndexStateProps {
 
 const stateIndicatorProgressRadius = 13;
 
-function IndexState(props: IndexStateProps) {
+export function IndexState(props: IndexStateProps) {
     const { nodeInfo } = props;
     if (!nodeInfo.details) {
         return null;
-    }
-
-    if (nodeInfo.details.status === "Disabled") {
-        return (
-            <div className="state pending">
-                <div className="state-desc">disabled</div>
-                <div className="state-indicator">
-                    <i className="icon-stop" />
-                </div>
-            </div>
-        );
-    }
-
-    if (nodeInfo.details.status === "Paused") {
-        return (
-            <div className="state pending">
-                <div className="state-desc">paused</div>
-                <div className="state-indicator">
-                    <i className="icon-pause" />
-                </div>
-            </div>
-        );
     }
 
     if (nodeInfo.details.state === "Error") {
@@ -146,10 +132,15 @@ function IndexState(props: IndexStateProps) {
             return (
                 <div className="state running">
                     <div className="state-desc">
-                        <strong>{(100 * progress).toFixed(0)}%</strong> running
+                        <strong>{(100 * progress).toFixed(0)}%</strong>
+                        {nodeInfo.details.status === "Paused" && <>Paused</>}
+                        {nodeInfo.details.status === "Disabled" && <>Disabled</>}
+                        {nodeInfo.details.status === "Running" && <>Running</>}
+                        {nodeInfo.details.status === "Pending" && <>Pending</>}
                     </div>
                     <div className="state-indicator">
-                        <i className="icon-pause" />
+                        {nodeInfo.details.status === "Paused" && <i className="icon-pause" />}
+                        {nodeInfo.details.status === "Disabled" && <i className="icon-stop" />}
                         <svg className="progress-ring">
                             <circle strokeDashoffset={circumference * (1.0 - progress)} />
                         </svg>
@@ -176,5 +167,3 @@ function IndexState(props: IndexStateProps) {
 }
 
 const indexNodeInfoKey = (nodeInfo: IndexNodeInfo) => nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;
-
-
