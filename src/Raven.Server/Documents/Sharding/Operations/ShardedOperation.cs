@@ -10,7 +10,7 @@ public class ShardedOperation : AbstractOperation
     [JsonDeserializationIgnore]
     public MultiOperation Operation;
 
-    public override async ValueTask KillAsync(bool waitForCompletion, CancellationToken token)
+    public override async Task KillAsync(bool waitForCompletion, CancellationToken token)
     {
         if (Operation != null)
             await Operation.KillAsync(waitForCompletion, token);

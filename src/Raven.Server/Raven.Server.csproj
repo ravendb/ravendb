@@ -193,9 +193,6 @@
       <Link>debug.Dockerfile</Link>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Documents\Sharding\Handlers\Processors\Queries\" />
-  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
   </PropertyGroup>

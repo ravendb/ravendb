@@ -4,7 +4,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedOperationHandler : ShardedDatabaseRequestHandler
+    public class ShardedOperationsHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/operations/next-operation-id", "GET")]
         public async Task GetNextOperationId()
