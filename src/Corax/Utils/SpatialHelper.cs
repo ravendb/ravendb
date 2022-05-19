@@ -20,6 +20,7 @@ public class SpatialHelper
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
     };
 
+    public const int DefaultGeohashLevel = 9;
     private static readonly Dictionary<string, IRectangle> CachedFigures;
     private const int CachePrefixLength = 4;
     private const int Threshold = 2 << 10;
@@ -30,6 +31,14 @@ public class SpatialHelper
         Miles
     }
     
+    public enum SpatialRelation
+    {
+        Within,
+        Contains,
+        Disjoint,
+        Intersects
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static double GetRoundedValue(in double roundFactor, in double value)
     {
@@ -99,7 +108,7 @@ public class SpatialHelper
     
     public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesOutsideShape(IndexSearcher searcher, CompactTree tree, ByteStringContext allocator,
         SpatialContext ctx,
-        IShape shape, int currentPrecision = 0, string currentGeohash = "", int maxPrecision = SpatialOptions.DefaultGeohashLevel)
+        IShape shape, int currentPrecision = 0, string currentGeohash = "", int maxPrecision = DefaultGeohashLevel)
     {
         if (currentPrecision > maxPrecision)
         {
@@ -182,7 +191,7 @@ public class SpatialHelper
     //https://user-images.githubusercontent.com/86351904/166668035-e9f94e0a-59ed-42fa-bcfe-c33d7a87d02d.png
     public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesInsideShape(IndexSearcher searcher, CompactTree tree, ByteStringContext allocator,
         SpatialContext ctx,
-        IShape shape, int currentPrecision = 0, string currentGeohash = "", int maxPrecision = SpatialOptions.DefaultGeohashLevel)
+        IShape shape, int currentPrecision = 0, string currentGeohash = "", int maxPrecision = DefaultGeohashLevel)
     {
         if (currentPrecision > maxPrecision)
         {

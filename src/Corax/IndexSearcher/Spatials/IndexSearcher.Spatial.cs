@@ -1,14 +1,14 @@
 ﻿using System;
 using Corax.Queries;
+using Corax.Utils;
 using Spatial4n.Core.Shapes;
 using SpatialContext = Spatial4n.Core.Context.SpatialContext;
-using SpatialRelation = Corax.Utils.SpatialRelation;
 
 namespace Corax;
 
 public partial class IndexSearcher
 {
-    public IQueryMatch SpatialQuery(string fieldName, int fieldId, double error, IShape shape, SpatialContext spatialContext, SpatialRelation spatialRelation, bool isNegated = false)
+    public IQueryMatch SpatialQuery(string fieldName, int fieldId, double error, IShape shape, SpatialContext spatialContext, SpatialHelper.SpatialRelation spatialRelation, bool isNegated = false)
     {
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields?.CompactTreeFor(fieldName);

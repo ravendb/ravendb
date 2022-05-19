@@ -681,17 +681,17 @@ public static class CoraxQueryBuilder
 
         var operation = spatialMethod switch
         {
-            MethodType.Spatial_Within => SpatialRelation.WITHIN,
-            MethodType.Spatial_Disjoint => SpatialRelation.DISJOINT,
-            MethodType.Spatial_Intersects => SpatialRelation.INTERSECTS,
-            MethodType.Spatial_Contains => SpatialRelation.CONTAINS,
-            _ => (SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters)
+            MethodType.Spatial_Within => global::Corax.Utils.SpatialHelper.SpatialRelation.Within,
+            MethodType.Spatial_Disjoint => global::Corax.Utils.SpatialHelper.SpatialRelation.Disjoint,
+            MethodType.Spatial_Intersects => global::Corax.Utils.SpatialHelper.SpatialRelation.Intersects,
+            MethodType.Spatial_Contains => global::Corax.Utils.SpatialHelper.SpatialRelation.Contains,
+            _ => (global::Corax.Utils.SpatialHelper.SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters)
         };
 
 
         //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
 
-        return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, spatialField.GetContext(), global::Corax.Utils.SpatialRelation.Within);
+        return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, spatialField.GetContext(), operation);
     }
 
     public static ReadOnlySpan<OrderMetadata> GetSortMetadata(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField,

@@ -215,7 +215,7 @@ namespace Corax
             _dataIndex = dataLocation + encodedGeohash.Length;
         }
 
-        public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries, int geohashLevel = SpatialOptions.DefaultGeohashLevel)
+        public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries, int geohashLevel = SpatialHelper.DefaultGeohashLevel)
         {
             //<type:byte><extended_type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
             //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
