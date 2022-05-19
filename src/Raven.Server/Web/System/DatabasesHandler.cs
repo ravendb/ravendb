@@ -415,11 +415,11 @@ namespace Raven.Server.Web.System
                     // if state of database is found in the cache we can continue
                     if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson => { 
                             
-                            Dictionary<long, PeriodicBackup> periodicBackups = new Dictionary<long, PeriodicBackup>();
-                            int i = 0;
+                        var periodicBackups = new List<PeriodicBackup>();
+
                         foreach (var periodicBackupConfiguration in dbRecord.PeriodicBackups)
                         {
-                            periodicBackups.Add( i++, new PeriodicBackup()
+                            periodicBackups.Add(new PeriodicBackup
                             {
                                 Configuration = periodicBackupConfiguration,
                                 BackupStatus = PeriodicBackupRunner.GetBackupStatusFromCluster(ServerStore, context, databaseName, periodicBackupConfiguration.TaskId)
