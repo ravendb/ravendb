@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using Corax.Utils;
 using Sparrow.Server;
 using Spatial4n.Core.Context;
@@ -10,8 +8,6 @@ using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Voron;
 using Voron.Data.CompactTrees;
-using Voron.Debugging;
-using SpatialRelation = Corax.Utils.SpatialRelation;
 
 namespace Corax.Queries;
 
@@ -28,15 +24,15 @@ public class SpatialMatch : IQueryMatch
     private TermMatch _currentMatch;
     private readonly ByteStringContext _allocator;
     private readonly int _fieldId;
-    private readonly SpatialRelation _spatialRelation;
+    private readonly SpatialHelper.SpatialRelation _spatialRelation;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
     private Slice _startsWith;
     private HashSet<long> _alreadyReturned;
 
-    public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, Spatial4n.Core.Context.SpatialContext spatialContext, string fieldName, IShape shape,
+    public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, string fieldName, IShape shape,
         CompactTree tree,
-        double errorInPercentage, int fieldId, SpatialRelation spatialRelation)
+        double errorInPercentage, int fieldId, SpatialHelper.SpatialRelation spatialRelation)
     {
         _fieldId = fieldId;
         _indexSearcher = indexSearcher;
@@ -47,7 +43,7 @@ public class SpatialMatch : IQueryMatch
         _tree = tree;
         _allocator = allocator;
         _spatialRelation = spatialRelation;
-        _termGenerator = spatialRelation == SpatialRelation.Disjoint 
+        _termGenerator = spatialRelation == SpatialHelper.SpatialRelation.Disjoint 
             ? SpatialHelper.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
             : SpatialHelper.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
         GoNextMatch();
@@ -65,7 +61,7 @@ public class SpatialMatch : IQueryMatch
 
             return true;
         }
-
+        _currentMatch = TermMatch.CreateEmpty();
         return false;
     }
 
@@ -144,12 +140,12 @@ public class SpatialMatch : IQueryMatch
         return false;
     }
     
-    public bool IsTrue(Spatial4n.Core.Shapes.SpatialRelation answer) => answer switch
+    public bool IsTrue(SpatialRelation answer) => answer switch
     {
-        Spatial4n.Core.Shapes.SpatialRelation.WITHIN or Spatial4n.Core.Shapes.SpatialRelation.CONTAINS => _spatialRelation is SpatialRelation.Within
-            or SpatialRelation.Contains,
-        Spatial4n.Core.Shapes.SpatialRelation.DISJOINT => _spatialRelation is SpatialRelation.Disjoint,
-        Spatial4n.Core.Shapes.SpatialRelation.INTERSECTS => _spatialRelation is SpatialRelation.Intersects,
+        SpatialRelation.WITHIN or SpatialRelation.CONTAINS => _spatialRelation is SpatialHelper.SpatialRelation.Within
+            or SpatialHelper.SpatialRelation.Contains,
+        SpatialRelation.DISJOINT => _spatialRelation is SpatialHelper.SpatialRelation.Disjoint,
+        SpatialRelation.INTERSECTS => _spatialRelation is SpatialHelper.SpatialRelation.Intersects,
         _ => throw new NotSupportedException()
     };
 
