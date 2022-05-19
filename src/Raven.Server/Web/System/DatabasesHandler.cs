@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -411,45 +412,19 @@ namespace Raven.Server.Web.System
 
                 if (online == false)
                 {
-                    BackupInfo bi = null;
                     // if state of database is found in the cache we can continue
-                    if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
-                    {
-                        if (dbRecord.PeriodicBackups!=null && dbRecord.PeriodicBackups.Count > 0)
+                    if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson => { 
+                            
+                            Dictionary<long, PeriodicBackup> periodicBackups = new Dictionary<long, PeriodicBackup>();
+                            int i = 0;
+                        foreach (var periodicBackupConfiguration in dbRecord.PeriodicBackups)
                         {
-                            var intervalUntilNextBackupInSec = long.MaxValue;
-                            bool firstIter = false;
-                            PeriodicBackupStatus lastInfo = default;
-                            var lastBackup = 0L;
-                            foreach (var pb in dbRecord.PeriodicBackups)
+                            periodicBackups.Add( i++, new PeriodicBackup()
                             {
-                                var info = PeriodicBackupRunner.GetBackupStatusFromCluster(ServerStore, context, databaseName, pb.TaskId);
-                                if (firstIter == false)
-                                {
-                                    firstIter = true;
-                                    lastInfo = info;
-                                }
-                                else if (info.LastFullBackup != null && info.LastFullBackup.Value.Ticks > lastBackup)
-                                {
-                                    lastBackup = info.LastIncrementalBackup.Value.Ticks;
-                                    lastInfo = info;
-                                }
-                                else if (info.LastIncrementalBackup != null && info.LastIncrementalBackup.Value.Ticks > lastBackup)
-                                {
-                                    lastBackup = info.LastIncrementalBackup.Value.Ticks;
-                                    lastInfo = info;
-                                }
-                            }
-
-                            bi = new BackupInfo
-                            {
-                                LastBackup = lastBackup == 0L ? (DateTime?)null : new DateTime(lastBackup),
-                                IntervalUntilNextBackupInSec = intervalUntilNextBackupInSec,
-                                BackupTaskType = lastInfo?.TaskId == 0 ? BackupTaskType.OneTime : BackupTaskType.Periodic,
-                                Destinations = PeriodicBackupRunner.AddDestinations(lastInfo)
-                            };
+                                Configuration = periodicBackupConfiguration,
+                                BackupStatus = PeriodicBackupRunner.GetBackupStatusFromCluster(ServerStore, context, databaseName, periodicBackupConfiguration.TaskId)
+                            });
                         }
-                        
 
                         databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                         {
@@ -459,9 +434,8 @@ namespace Raven.Server.Web.System
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
                             [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress),
                             [nameof(DatabaseInfo.Environment)] = studioEnvironment,
-                            [nameof(DatabaseInfo.BackupInfo)] = bi
-
-                    };
+                            [nameof(DatabaseInfo.BackupInfo)] = PeriodicBackupRunner.GetBackupInfoLogic(context, ServerStore, periodicBackups, databaseName)
+                        };
 
                         context.Write(writer, databaseInfoJson);
                     }))

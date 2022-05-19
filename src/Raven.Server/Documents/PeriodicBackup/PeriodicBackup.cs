@@ -53,6 +53,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             });
         }
 
+        internal PeriodicBackup()
+        {
+        }
+
         public IDisposable UpdateBackupTask()
         {
             _updateBackupTaskSemaphore.Wait();

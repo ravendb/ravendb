@@ -2,18 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Orders;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.Monitoring.Snmp;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -73,32 +70,43 @@ namespace SlowTests.Issues
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
             // Turn Database offline in second server.
-            Console.WriteLine($"{secondServer.ServerStore.GetNodeHttpServerUrl()}/studio/index.html#databases");
             Assert.Equal(1, WaitForValue(() => secondServer.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000)); //wait for db to be idle
             var online = secondServer.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(store.Database, out Task<DocumentDatabase> dbTask) &&
                          dbTask != null &&
                          dbTask.IsCompleted;
-            Console.WriteLine($"Online: {online} {secondServer.ServerStore.IdleDatabases.Count}");
+            Assert.False(online);
 
             // Backup run
             await Backup.RunBackupAsync(firstServer, result.TaskId, store);
 
             // Test
+            var firstInfo = await GetBackupInfo(firstServer);
+            var secondInfo = await GetBackupInfo(secondServer);
+
+            Assert.NotNull(firstInfo);
+            Assert.NotNull(secondInfo);
+            Assert.Equal(firstInfo.LastBackup, secondInfo.LastBackup);
+            Assert.Equal(firstInfo.BackupTaskType, secondInfo.BackupTaskType);
+            Assert.Equal(((int)(firstInfo.IntervalUntilNextBackupInSec))/60, ((int)(secondInfo.IntervalUntilNextBackupInSec)) / 60);
+            Assert.NotNull(firstInfo.Destinations);
+            Assert.NotNull(secondInfo.Destinations);
+            Assert.Equal(firstInfo.Destinations.Count, 1);
+            Assert.Equal(secondInfo.Destinations.Count, 1);
+            Assert.Equal(firstInfo.Destinations[0], secondInfo.Destinations[0]);
+        }
+
+        private async Task<BackupInfo> GetBackupInfo(RavenServer server)
+        {
             using var client = new HttpClient();
-            var res = await client.GetAsync($"{secondServer.WebUrl}/databases");
+            var res = await client.GetAsync($"{server.WebUrl}/databases");
             string resBodyJson = await res.Content.ReadAsStringAsync();
             var resBody = JsonConvert.DeserializeObject<ResBody>(resBodyJson);
             Assert.NotNull(resBody);
             Assert.NotNull(resBody.Databases);
             Assert.Equal(resBody.Databases.Length, 1);
-            Assert.NotNull(resBody.Databases[0].BackupInfo);
+            return resBody.Databases[0].BackupInfo;
         }
 
-        private class TestObj
-        {
-            public string Id { get; set; }
-            public string Content { get; set; }
-        }
 
         private class ResBody
         {
@@ -106,7 +114,7 @@ namespace SlowTests.Issues
 
             public class Database
             {
-                public JObject BackupInfo { get; set; }
+                public BackupInfo BackupInfo { get; set; }
             }
         }
     }
