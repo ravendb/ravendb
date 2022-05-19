@@ -11,17 +11,18 @@ import classNames from "classnames";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IndexUtils from "../../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
-import { shardingTodo } from "common/developmentHelper";
+import { withPreventDefault } from "../../../../utils/common";
 
 interface IndexProgressTooltipProps {
     target: string;
     nodeInfo: IndexNodeInfo;
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
+    showStaleReason: (location: databaseLocationSpecifier) => void;
 }
 
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
-    const { target, nodeInfo, index, globalIndexingStatus } = props;
+    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason } = props;
 
     if (!nodeInfo.details) {
         return null;
@@ -44,8 +45,14 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                 </div>
                 <div className="index-details">
                     <div className="details-item state">
-                        <div className="state-pill">{badgeText(index, nodeInfo.details, globalIndexingStatus)}</div>
-                        {/* TODO: badgeClass */}
+                        <div
+                            className={classNames(
+                                "state-pill",
+                                pillClass(index, nodeInfo.details, globalIndexingStatus)
+                            )}
+                        >
+                            {pillText(index, nodeInfo.details, globalIndexingStatus)}
+                        </div>
                     </div>
                     <div className="details-item entries">
                         <i className="icon-list" /> {nodeInfo.details.entriesCount} entries
@@ -60,7 +67,9 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                     {nodeInfo.details.stale ? (
                         <div className="details-item status updating">
                             <i className="icon-waiting" />{" "}
-                            {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
+                            <a href="#" onClick={(e) => withPreventDefault(() => showStaleReason(nodeInfo.location))}>
+                                {formatTimeLeftToProcess(nodeInfo.progress?.global, nodeInfo.details)}
+                            </a>
                         </div>
                     ) : (
                         <div className="details-item status">
@@ -123,37 +132,35 @@ function formatPercentage(input: number) {
     return num.toString() + "%";
 }
 
-shardingTodo("Marcin"); //TODO :
-
-function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+function pillClass(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
     if (IndexUtils.isFaulty(index)) {
-        return "badge-danger";
+        return "state-pill-danger";
     }
 
     if (IndexUtils.isErrorState(details)) {
-        return "badge-danger";
+        return "state-pill-danger";
     }
 
     if (IndexUtils.isPausedState(details, globalIndexingStatus)) {
-        return "badge-warnwing";
+        return "state-pill-warning";
     }
 
     if (IndexUtils.isDisabledState(details, globalIndexingStatus)) {
-        return "badge-warning";
+        return "state-pill-warning";
     }
 
     if (IndexUtils.isIdleState(details, globalIndexingStatus)) {
-        return "badge-warning";
+        return "state-pill-warning";
     }
 
     if (IndexUtils.isErrorState(details)) {
-        return "badge-danger";
+        return "state-pill-danger";
     }
 
-    return "badge-success";
+    return "state-pill-success";
 }
 
-function badgeText(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+function pillText(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
     if (IndexUtils.isFaulty(index)) {
         return "Faulty";
     }

@@ -9,7 +9,11 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { IndexesStubs } from "../../../../../test/stubs/IndexesStubs";
 
 function indexesHolder(storyFn: any) {
-    return <div className="indexes content-margin no-transition" style={{ height: "100vh", overflow: "auto" }}>{storyFn()}</div>;
+    return (
+        <div className="indexes content-margin no-transition" style={{ height: "100vh", overflow: "auto" }}>
+            {storyFn()}
+        </div>
+    );
 }
 
 export default {
@@ -60,8 +64,50 @@ export const SampleDataSharded: ComponentStory<typeof IndexesPage> = () => {
     return <IndexesPage database={db} />;
 };
 
-export const DifferentIndexNodeStates: ComponentStory<typeof IndexesPage> = () => {
+export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPage> = () => {
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
+
+    accessManager.default.securityClearance("ClusterAdmin");
+    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+
+    const { indexesService } = mockServices;
+
+    const [upToDateStats, upToDateProgress] = IndexesStubs.getUpToDateIndex();
+    const [upToDateStatsWithErrors, upToDateProgressWithErrors] = IndexesStubs.getUpToDateIndexWithErrors();
+    const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
+    const [disabledStats, disabledProgress] = IndexesStubs.getDisabledIndex();
+    const [pausedStats, pausedProgress] = IndexesStubs.getPausedIndex();
+    const [faultyStats, faultyProgress] = IndexesStubs.getFaultyIndex();
+    const [erroredStats, erroredProgress] = IndexesStubs.getErroredIndex();
+
+    indexesService.withGetSampleStats(
+        [
+            upToDateStats,
+            upToDateStatsWithErrors,
+            staleStats,
+            disabledStats,
+            pausedStats,
+            faultyStats,
+            erroredStats,
+        ].filter((x) => x)
+    );
+    indexesService.withGetProgress(
+        [
+            upToDateProgress,
+            upToDateProgressWithErrors,
+            staleProgress,
+            disabledProgress,
+            pausedProgress,
+            faultyProgress,
+            erroredProgress,
+        ].filter((x) => x)
+    );
+
+    return <IndexesPage database={db} />;
+};
+
+export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage> = () => {
+    const db = DatabasesStubs.shardedDatabase();
 
     accessManager.default.securityClearance("ClusterAdmin");
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");

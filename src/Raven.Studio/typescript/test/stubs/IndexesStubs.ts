@@ -119,9 +119,11 @@ export class IndexesStubs {
 
     static getFaultyIndex(): [IndexStats, IndexProgress] {
         const stats = IndexesStubs.getGenericStats();
+        stats.SourceType = "None";
         stats.Name = "FaultyIndex";
         stats.IsStale = true;
         stats.Type = "Faulty";
+        stats.Collections = null;
         return [stats, null];
     }
 

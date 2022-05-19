@@ -1,4 +1,4 @@
-﻿import { IndexNodeInfo, IndexSharedInfo, Progress } from "../../../../models/indexes";
+﻿import { IndexNodeInfo, IndexSharedInfo } from "../../../../models/indexes";
 import React, { useState } from "react";
 import classNames from "classnames";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
@@ -8,10 +8,11 @@ import IndexUtils from "../../../../utils/IndexUtils";
 interface IndexDistributionProps {
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
+    showStaleReason: (location: databaseLocationSpecifier) => void;
 }
 
 export function IndexDistribution(props: IndexDistributionProps) {
-    const { index, globalIndexingStatus } = props;
+    const { index, globalIndexingStatus, showStaleReason } = props;
 
     const [indexId] = useState(() => _.uniqueId("index-id"));
 
@@ -73,7 +74,9 @@ export function IndexDistribution(props: IndexDistributionProps) {
                 return (
                     <div
                         id={id}
-                        className={classNames("distribution-item", { loading: nodeInfo.status === "loading" })}
+                        className={classNames("distribution-item", {
+                            loading: nodeInfo.status === "loading" || nodeInfo.status === "notLoaded",
+                        })}
                         key={key}
                     >
                         {sharded && shard}
@@ -91,6 +94,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
                             nodeInfo={nodeInfo}
                             index={index}
                             globalIndexingStatus={globalIndexingStatus}
+                            showStaleReason={showStaleReason}
                         />
                     </div>
                 );

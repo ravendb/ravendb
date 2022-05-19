@@ -80,7 +80,7 @@ interface IndexesStatsState {
 function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
     return {
         name: stats.Name,
-        collections: Object.keys(stats.Collections),
+        collections: stats.Collections ? Object.keys(stats.Collections) : [],
         nodesInfo: [],
         lockMode: stats.LockMode,
         type: stats.Type,
