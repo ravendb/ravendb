@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = query.Metadata.HasHighlightings ? new() : null;
             using (coraxScope?.Start())
             {
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query.Metadata, _index, query.QueryParameters, QueryBuilderFactories,
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(_indexSearcher, null, null, query, _index, query.QueryParameters, QueryBuilderFactories,
                     _fieldMappings, fieldsToFetch, highlightingTerms: highlightingTerms, take: take)) is null)
                     yield break;
             }
