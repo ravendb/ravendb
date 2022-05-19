@@ -6,8 +6,6 @@ import changesContext = require("common/changesContext");
 import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
 import license = require("models/auth/licenseModel");
-import shardedDatabase from "models/resources/shardedDatabase";
-import { shardingTodo } from "common/developmentHelper";
 
 class footerStats {
     countOfDocuments = ko.observable<number>();

@@ -18,7 +18,7 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
     query: string;
     deleteTypeName: string;
-    taskType: Raven.Server.Documents.Operations.Operations.OperationType;
+    taskType: Raven.Server.Documents.Operations.OperationType;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);

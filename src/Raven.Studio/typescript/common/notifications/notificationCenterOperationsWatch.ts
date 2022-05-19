@@ -4,8 +4,8 @@ class notificationCenterOperationsWatch {
 
     private db: database;
 
-    private operations = new Map<number, JQueryDeferred<Raven.Client.Documents.Operations.IOperationResult>>();
-    private watchedProgresses = new Map<number, Array<(progress: Raven.Client.Documents.Operations.IOperationProgress) => void>>();
+    private operations = new Map<number, JQueryDeferred<unknown>>();
+    private watchedProgresses = new Map<number, Array<(progress: unknown) => void>>();
 
     configureFor(db: database) {
         this.db = db;
@@ -13,9 +13,7 @@ class notificationCenterOperationsWatch {
         this.watchedProgresses.clear();
     }
 
-    monitorOperation<TProgress extends Raven.Client.Documents.Operations.IOperationProgress, TResult extends Raven.Client.Documents.Operations.IOperationResult>
-        (operationId: number, onProgress: (progress: TProgress) => void = null): JQueryPromise<TResult> {
-
+    monitorOperation(operationId: number, onProgress: (progress: unknown) => void = null): JQueryPromise<unknown> {
         if (onProgress) {
             let progresses = this.watchedProgresses.get(operationId);
             if (!progresses) {
@@ -26,14 +24,14 @@ class notificationCenterOperationsWatch {
             progresses.push(onProgress);
         }
 
-        return this.getOrCreateOperation<TResult>(operationId).promise();
+        return this.getOrCreateOperation(operationId).promise();
     }
 
-    private getOrCreateOperation<TResult extends Raven.Client.Documents.Operations.IOperationResult>(operationId: number): JQueryDeferred<TResult> {
+    private getOrCreateOperation(operationId: number): JQueryDeferred<unknown> {
         if (this.operations.has(operationId)) {
-            return this.operations.get(operationId) as JQueryDeferred<TResult>;
+            return this.operations.get(operationId) as JQueryDeferred<unknown>;
         } else {
-            const task = $.Deferred<TResult>();
+            const task = $.Deferred<unknown>();
             this.operations.set(operationId, task);
             return task;
         }

@@ -55,8 +55,6 @@ import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
-import shardedDatabase from "models/resources/shardedDatabase";
-import { shardingTodo } from "common/developmentHelper";
 
 class shell extends viewModelBase {
 
