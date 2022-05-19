@@ -285,7 +285,7 @@ select filter(a)").Count();
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanUseFilterQueryOnMapIndexes(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -471,6 +471,7 @@ select filter(a)").Count();
         // spatial
         using (var s = store.OpenSession())
         {
+            WaitForUserToContinueTheTest(store);
             var shape =
                 "POLYGON((-122.32246398925781 47.643055992166275,-122.32795715332031 47.62917538239487,-122.33207702636719 47.60904194838943,-122.32109069824219 47.595846873927044,-122.31422424316406 47.594920778814824,-122.30701446533203 47.58959541384278,-122.28538513183594 47.59029005739745,-122.27989196777344 47.620382422330565,-122.28401184082031 47.62454769305083,-122.27645874023438 47.632414521155376,-122.27577209472656 47.6421307328982,-122.29328155517578 47.64536906863988,-122.32246398925781 47.643055992166275))";
             var emp = s.Advanced.RawQuery<Employee>(@"

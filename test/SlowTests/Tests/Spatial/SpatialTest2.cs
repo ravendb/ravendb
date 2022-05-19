@@ -31,7 +31,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WeirdSpatialResults(Options options)
         {
             using (IDocumentStore store = GetDocumentStore(options))
