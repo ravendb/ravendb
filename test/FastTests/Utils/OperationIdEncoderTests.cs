@@ -1,11 +1,16 @@
 ﻿using FastTests.Voron.FixedSize;
 using Raven.Server.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Utils;
 
-public class OperationIdEncoderTests
+public class OperationIdEncoderTests : NoDisposalNeeded
 {
+    public OperationIdEncoderTests(ITestOutputHelper output) : base(output)
+    {
+    }
+
     [Theory]
     [InlineData("?", 1)]
     [InlineData("?", 8_589_934_591)]
