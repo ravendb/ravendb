@@ -66,21 +66,5 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         {
             entryWriter.WriteSpatial(field, entry);
         }
-        
-        private struct StringArrayIterator : IReadOnlySpanEnumerator
-        {
-            private readonly List<string> _values;
-
-            private static string[] Empty = new string[0];
-
-            public StringArrayIterator(List<string> values)
-            {
-                _values = values;
-            }
-
-            public int Length => _values.Count;
-
-            public ReadOnlySpan<byte> this[int i] => Encoding.UTF8.GetBytes(_values[i]);
-        }
     }
 }
