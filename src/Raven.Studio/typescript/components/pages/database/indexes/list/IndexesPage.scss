@@ -52,7 +52,7 @@
 
         .state-pill {
             padding: (sizes.$gutter-xxs + 2px) sizes.$gutter-sm sizes.$gutter-xxs;
-            background-color: colors.$brand-success;
+            background-color: colors.$gray;
             border-radius: 20px;
             line-height: 1em;
             text-transform: uppercase;
@@ -61,6 +61,16 @@
             text-transform: uppercase;
             font-size: 10px;
             font-weight: bold;
+
+            &.state-pill-success {
+                background-color: colors.$brand-success;
+            }
+            &.state-pill-danger {
+                background-color: colors.$brand-danger;
+            }
+            &.state-pill-warning {
+                background-color: colors.$brand-warning;
+            }
         }
 
         .details-item {
