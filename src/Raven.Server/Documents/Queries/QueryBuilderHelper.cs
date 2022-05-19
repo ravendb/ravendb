@@ -399,8 +399,14 @@ public static class QueryBuilderHelper
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static QueryFieldName ExtractIndexFieldNameForOrderBy(Query query, BlittableJsonReaderObject parameters, QueryExpression field, QueryMetadata metadata)
     {
-        if (field is MethodExpression me && me.Name.Value is "score")
+        if (field is MethodExpression me)
+        {
+            if (me.Name.Value is "score")
+                return new QueryFieldName("score()", false);
+
             return new QueryFieldName("score()", false);
+            
+        }
 
         return ExtractIndexFieldName(query, parameters, field, metadata);
     }
@@ -562,10 +568,12 @@ public static class QueryBuilderHelper
             _ => MatchCompareFieldType.Sequence
         };
 
-    internal static ComparerType GetComparerType(bool ascending, OrderByFieldType original, int fieldId) => (ascending, original, fieldId) switch
+    internal static ComparerType GetComparerType(bool ascending, MatchCompareFieldType original, int fieldId) => (ascending, original, fieldId) switch
     {
-        (true, OrderByFieldType.AlphaNumeric, _) => ComparerType.AscendingAlphanumeric,
-        (false, OrderByFieldType.AlphaNumeric, _) => ComparerType.DescendingAlphanumeric,
+        (true, MatchCompareFieldType.Spatial, _) => ComparerType.AscendingSpatial,
+        (false, MatchCompareFieldType.Spatial, _) => ComparerType.DescendingSpatial,
+        (true, MatchCompareFieldType.Alphanumeric, _) => ComparerType.AscendingAlphanumeric,
+        (false, MatchCompareFieldType.Alphanumeric, _) => ComparerType.DescendingAlphanumeric,
         (_, _, ScoreId) => ComparerType.Boosting,
         (true, _, _) => ComparerType.Ascending,
         (false, _, _) => ComparerType.Descending,
@@ -577,7 +585,9 @@ public static class QueryBuilderHelper
         Descending,
         Boosting,
         AscendingAlphanumeric,
-        DescendingAlphanumeric
+        DescendingAlphanumeric,
+        AscendingSpatial,
+        DescendingSpatial
     }
     
     internal static IShape HandleWkt(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,

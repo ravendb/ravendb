@@ -47,8 +47,9 @@ public class SpatialMatch : IQueryMatch
         _tree = tree;
         _allocator = allocator;
         _spatialRelation = spatialRelation;
-        _termGenerator = SpatialHelper.GetGeohashes(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
-        DebugStuff.RenderAndShow(tree);
+        _termGenerator = spatialRelation == SpatialRelation.Disjoint 
+            ? SpatialHelper.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
+            : SpatialHelper.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
         GoNextMatch();
     }
 
@@ -68,7 +69,7 @@ public class SpatialMatch : IQueryMatch
         return false;
     }
 
-    public long Count => -1;
+    public long Count => long.MaxValue;
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting { get; }
 

@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using Corax.Queries;
+using Corax.Utils;
+using Spatial4n.Core.Shapes;
 
 namespace Corax;
 
@@ -12,46 +14,51 @@ public unsafe partial class IndexSearcher
     {
         return SortingMatch.Create(new SortingMatch<TInner, BoostingComparer>(this, set, default(BoostingComparer), take));
     }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMatch OrderBy<TInner, TComparer>(in TInner set, in TComparer comparer, int take = Constants.IndexSearcher.TakeAll)
-        where TInner : IQueryMatch
-        where TComparer : struct, IMatchComparer
-    {
-        return SortingMatch.Create(new SortingMatch<TInner, TComparer>(this, set, comparer, take));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, SortingType sortingType = SortingType.Normal, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
-        int take = Constants.IndexSearcher.TakeAll)
+    public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+        int take = Constants.IndexSearcher.TakeAll, object additionalData = null)
         where TInner : IQueryMatch
     {
-        if (sortingType is SortingType.Alphanumerical)
-            return OrderBy<TInner, SortingMatch.AlphanumericAscendingMatchComparer>(in set, fieldId, entryFieldType, take);
+        if (entryFieldType is MatchCompareFieldType.Alphanumeric)
+            return OrderBy<TInner, SortingMatch.AlphanumericAscendingMatchComparer>(in set, fieldId,  MatchCompareFieldType.Sequence, take);
         
-        return OrderBy<TInner, SortingMatch.AscendingMatchComparer>(in set, fieldId, entryFieldType, take);
+        return OrderBy<TInner, SortingMatch.AscendingMatchComparer>(in set, fieldId,   entryFieldType, take);
     }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, SortingType sortingType = SortingType.Normal, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
-        int take = Constants.IndexSearcher.TakeAll)
+    public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+        int take = Constants.IndexSearcher.TakeAll, object additionalData = null)
         where TInner : IQueryMatch
     {
-        if (sortingType is SortingType.Alphanumerical)
-            return OrderBy<TInner, SortingMatch.AlphanumericDescendingMatchComparer>(in set, fieldId, entryFieldType, take);
+        if (entryFieldType is MatchCompareFieldType.Alphanumeric)
+            return OrderBy<TInner, SortingMatch.AlphanumericDescendingMatchComparer>(in set, fieldId, MatchCompareFieldType.Sequence, take);
         
         return OrderBy<TInner, SortingMatch.DescendingMatchComparer>(in set, fieldId, entryFieldType, take);
     }
 
-    private SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+    public SortingMatch OrderByDistance<TInner>(in TInner set, in OrderMetadata metadata,
+        int take = Constants.IndexSearcher.TakeAll)
+        where TInner : IQueryMatch
+    {
+        if (metadata.Ascending)
+        {
+            return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.SpatialAscendingMatchComparer>(this, set,
+                    new SortingMatch.SpatialAscendingMatchComparer(this, in metadata), take));
+        }
+        
+        return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.SpatialDescendingMatchComparer>(this, set,
+                    new SortingMatch.SpatialDescendingMatchComparer(this, in metadata), take));
+    }
+
+    private SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId,  MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
         where TComparer : IMatchComparer
     {
         if (typeof(TComparer) == typeof(SortingMatch.AscendingMatchComparer))
         {
-            return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.AscendingMatchComparer>(this, set, new SortingMatch.AscendingMatchComparer(this, fieldId, entryFieldType),
-                take));
+            return SortingMatch.Create(new SortingMatch<TInner, SortingMatch.AscendingMatchComparer>(this, set, new SortingMatch.AscendingMatchComparer(this, fieldId, entryFieldType), take));
         }
 
         if (typeof(TComparer) == typeof(SortingMatch.DescendingMatchComparer))
@@ -105,7 +112,7 @@ public unsafe partial class IndexSearcher
                 compareDoubleFunc,
                 compareSequenceFunc,
                 entryFieldType
-            ),
+            ), 
             take));
     }
 }

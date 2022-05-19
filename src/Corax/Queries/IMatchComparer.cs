@@ -1,21 +1,18 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Corax.Utils;
+using Spatial4n.Core.Shapes;
 
 namespace Corax.Queries
 {
-    public enum SortingType
-    {
-        Normal,
-        Alphanumerical
-    }
-    
     public enum MatchCompareFieldType
     {
         Sequence,
         Integer,
         Floating,
         Score,
-        Alphanumeric
+        Alphanumeric,
+        Spatial
     }
 
     public interface IMatchComparer
@@ -30,6 +27,15 @@ namespace Corax.Queries
         int CompareNumerical<T>(T sx, T sy) where T : unmanaged;
     }
 
+    public interface ISpatialComparer : IMatchComparer
+    {
+        double Round { get; }
+        
+        SpatialHelper.SpatialUnits Units { get; }
+        
+        IPoint Point { get; }
+    }
+    
     internal static class BasicComparers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
