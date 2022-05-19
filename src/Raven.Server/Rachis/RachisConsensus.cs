@@ -35,6 +35,7 @@ using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow.Collections;
+using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
 {
@@ -694,6 +695,64 @@ namespace Raven.Server.Rachis
 
         internal class TestingStuff
         {
+            public class LeaderLockDebug
+            {
+                private readonly TestingStuff _parent;
+                private MultipleUseFlag _lockerFlag;
+                private int _lockerState;
+                private bool IsLocked => _lockerState == 1;
+                private ManualResetEvent _releaser = new ManualResetEvent(false);
+                private ManualResetEvent _sleeper = new ManualResetEvent(false);
+
+                public LeaderLockDebug(TestingStuff parent, MultipleUseFlag lockerFlag)
+                {
+                    _lockerFlag = lockerFlag;
+                    _parent = parent;
+                }
+
+                public void LockLeaderThread()
+                {
+                    var raised = _lockerFlag.Raise();
+                    Interlocked.CompareExchange(ref _lockerState, raised ? 1 : 0, 0);
+                    if (raised)
+                    {
+                        _sleeper.WaitOne(TimeSpan.FromSeconds(3));
+                    }
+                }
+
+                public void Awake()
+                {
+                    if (IsLocked)
+                    {
+                        _sleeper.Set();
+                    }
+                }
+
+                public void HangThreadIfLocked()
+                {
+                    if (IsLocked)
+                    {
+                        if (_releaser.WaitOne(TimeSpan.FromSeconds(3)) == false) 
+                            Complete();
+                    }
+                }
+
+                public void Complete()
+                {
+                    _parent.LeaderLock = null;
+
+                    if (IsLocked)
+                    {
+                        _lockerState = 0;
+                        _releaser.Set();
+                    }
+                }
+            }
+
+            internal void CreateLeaderLock(MultipleUseFlag lockerFlag) => LeaderLock = new LeaderLockDebug(this, lockerFlag);
+
+            internal LeaderLockDebug LeaderLock;
+
             internal ManualResetEventSlim Mre = new ManualResetEventSlim(false);
 
             public void OnLeaderElect()

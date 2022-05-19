@@ -1093,6 +1093,8 @@ namespace Raven.Server.Rachis
                 {
                     try
                     {
+                        _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
+
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);

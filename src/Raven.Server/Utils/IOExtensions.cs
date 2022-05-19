@@ -1,9 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
-using System.Text;
 using System.Threading;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 
@@ -12,6 +11,8 @@ namespace Raven.Server.Utils
     public static class IOExtensions
     {
         private const int Retries = 50;
+
+        public static EventHandler<(string Path, TimeSpan Duration, int Attempt)> AfterGc;
 
         public static void DeleteFile(string file)
         {
@@ -97,10 +98,7 @@ namespace Raven.Server.Utils
                     if (i == Retries - 1)
                         throw;
 
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-
-                    Thread.Sleep(100);
+                    RunGc(src, i);
                 }
             }
         }
@@ -161,10 +159,7 @@ namespace Raven.Server.Utils
                     if (i == Retries - 1)
                         throw;
 
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-
-                    Thread.Sleep(100);
+                    RunGc(directory, i);
                 }
             }
         }
@@ -189,10 +184,7 @@ namespace Raven.Server.Utils
                 throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
             }
 
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-
-            Thread.Sleep(100);
+            RunGc(directory, i);
         }
 
         private static void SetDirectoryAttributes(string path, FileAttributes attributes)
@@ -210,6 +202,22 @@ namespace Raven.Server.Utils
             catch (UnauthorizedAccessException)
             {
             }
+        }
+
+        private static void RunGc(string path, int attempt)
+        {
+            Stopwatch sw = null;
+
+            if (AfterGc != null)
+                sw = Stopwatch.StartNew();
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            if (AfterGc != null)
+                AfterGc(null, (path, sw.Elapsed, attempt));
+
+            Thread.Sleep(100);
         }
     }
 }
