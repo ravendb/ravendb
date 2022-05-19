@@ -11,6 +11,7 @@ import classNames from "classnames";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IndexUtils from "../../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
+import { shardingTodo } from "common/developmentHelper";
 
 interface IndexProgressTooltipProps {
     target: string;
@@ -27,7 +28,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     }
 
     return (
-        <PopoverWithHover target={target} placement="right" delay={100}>
+        <PopoverWithHover rounded target={target} placement="right" delay={100}>
             <div className="index-tooltip">
                 <div className="index-location">
                     {nodeInfo.location.shardNumber != null && (
@@ -121,6 +122,8 @@ function formatPercentage(input: number) {
     const num = Math.floor(input * 10) / 10;
     return num.toString() + "%";
 }
+
+shardingTodo("Marcin"); //TODO :
 
 function badgeClass(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
     if (IndexUtils.isFaulty(index)) {

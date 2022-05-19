@@ -1,8 +1,8 @@
-﻿import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import popoverUtils from "common/popoverUtils";
 
-interface PopoverWithHoverProps extends PopoverOptions {
+interface PopoverWithHoverProps extends PopoverUtilsOptions {
     target: string;
     children: JSX.Element;
 }

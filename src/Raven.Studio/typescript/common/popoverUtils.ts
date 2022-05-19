@@ -2,8 +2,9 @@
 
 class popoverUtils {
     static longPopoverTemplate = `<div class="popover popover-lg" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>`;
+    static longPopoverRoundedTemplate = `<div class="popover popover-lg rounded" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>`;
 
-    static longWithHover(selector: JQuery, extraOptions: PopoverOptions): JQuery {
+    static longWithHover(selector: JQuery, extraOptions: PopoverUtilsOptions): JQuery {
         const options = {
             html: true,
             trigger: "manual",
@@ -18,6 +19,11 @@ class popoverUtils {
         let lastHideTime: number = null;
 
         _.assign(options, extraOptions);
+
+        if (extraOptions.rounded) {
+            options.template = popoverUtils.longPopoverRoundedTemplate;
+        }
+        
         const popover = selector.popover(options);
         
         const scheduleHide = (self: HTMLElement, tip: JQuery) => hideHandler = setTimeout(() => {
