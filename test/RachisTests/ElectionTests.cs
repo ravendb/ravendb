@@ -9,6 +9,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -76,6 +77,43 @@ namespace RachisTests
             if (await Task.WhenAll(t1, t2).WaitWithoutExceptionAsync(5000) == false)
             {
                 throw new TimeoutException();
+            }
+        }
+
+         [Fact]
+        public async Task CanElectOnDivergence2()
+        {
+            var firstLeader = await CreateNetworkAndGetLeader(3);
+            var flag = new MultipleUseFlag();
+            foreach (var follower in RachisConsensuses)
+            {
+                follower.ForTestingPurposesOnly().CreateLeaderLock(flag);
+                follower.ForTestingPurposes.Mre = null;
+            }
+
+            firstLeader.CurrentLeader.StepDown(forceElection: false);
+            await Task.Delay(1000);
+                
+            WaitForAnyToBecomeLeader(RachisConsensuses);
+            var lastIndex = await IssueCommandsAndWaitForCommit(30, "test", 1);
+                
+            foreach (var node in RachisConsensuses)
+            {
+                node.ForTestingPurposes?.LeaderLock?.Awake();
+            }
+
+            foreach (var r in RachisConsensuses)
+            {
+                var condition = await
+                    r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex)
+                        .WaitWithoutExceptionAsync(10000);
+
+                using (r.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var commitIndex = r.GetLastCommitIndex(context);
+                    Assert.True(condition, $"Last commit is {commitIndex} wanted {lastIndex}");
+                }
             }
         }
 

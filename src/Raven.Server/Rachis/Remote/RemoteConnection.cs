@@ -384,6 +384,17 @@ namespace Raven.Server.Rachis.Remote
 
         private void DisposeInternal()
         {
+            try
+            {
+                //  we dispose here the stream explicitly to avoid waiting indefinitely on the stream.Read method
+                // which will prevent us continue the dispose, since the Read is wrapped with _disposerLock.EnsureNotDisposed()
+                _stream?.Dispose();
+            }
+            catch
+            {
+                // don't care
+            }
+
             using (_disposerLock.StartDisposing())
             {
                 RemoteConnectionsList.TryRemove(_info);
