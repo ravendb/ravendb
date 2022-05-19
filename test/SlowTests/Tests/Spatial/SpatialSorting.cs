@@ -115,7 +115,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanFilterByLocationAndSortByDistanceFromDifferentPointWDocQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -135,7 +135,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSortByDistanceWOFilteringWDocQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -154,7 +154,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSortByDistanceWOFilteringWDocQueryBySpecifiedField(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -174,7 +174,7 @@ namespace SlowTests.Tests.Spatial
 
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSortByDistanceWOFiltering(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -193,7 +193,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSortByDistanceWOFilteringBySpecifiedField(Options options)
         {
             using (var store = GetDocumentStore(options))

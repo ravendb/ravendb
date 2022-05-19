@@ -24,7 +24,7 @@ public class CoraxSlowQueryTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void SortingTest(Options options)
     {
         var expected = new List<Person>();

@@ -167,7 +167,7 @@ namespace FastTests.Corax
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
                 var contentMatch2 = searcher.TermQuery("Content1", "2");
                 var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
-                var sortedMatch = searcher.OrderBy(orMatch2, default(BoostingComparer));
+                var sortedMatch = searcher.OrderByScore(orMatch2);
 
                 Span<long> ids = stackalloc long[2048];
                 int read = sortedMatch.Fill(ids);
@@ -203,7 +203,7 @@ namespace FastTests.Corax
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
                 var contentMatch2 = searcher.TermQuery("Content1", "2");
                 var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
-                var sortedMatch = searcher.OrderBy(orMatch2, default(BoostingComparer), take: 4);
+                var sortedMatch = searcher.OrderByScore(orMatch2, 4);
 
                 // TODO: Check what happens in OrderBy statements when the buffer is too small. 
                 Span<long> ids = stackalloc long[1024];

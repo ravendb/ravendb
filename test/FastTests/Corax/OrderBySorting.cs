@@ -29,8 +29,10 @@ namespace FastTests.Corax
             longList.Sort(CompareDescending);
             using var searcher = new IndexSearcher(Env);
             {
+                var allEntries = searcher.AllEntries();
                 var match1 = searcher.StartWithQuery("Id", "l");
-                var match = searcher.OrderByDescending(match1, ContentId, SortingType.Normal, MatchCompareFieldType.Integer);
+                var concat = searcher.And(allEntries, match1);
+                var match = searcher.OrderByDescending(concat, ContentId, MatchCompareFieldType.Integer);
 
                 List<string> sortedByCorax = new();
                 Span<long> ids = stackalloc long[2048];
@@ -83,10 +85,6 @@ namespace FastTests.Corax
                 using var indexWriter = new IndexWriter(Env);
                 foreach (var entry in longList)
                 {
-                    if (entry.Id == "list/589")
-                    {
-                        var x = 1;
-                    }
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
                     var data = CreateIndexEntry(ref entryWriter, entry);
                     indexWriter.Index(entry.Id, data, knownFields);

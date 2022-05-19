@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanOrderByDistanceOnDynamicSpatialField(Options options)
         {
             using (var store = GetDocumentStore(options))
