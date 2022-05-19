@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Utils;
+using NetTopologySuite.Utilities;
 using Sparrow;
+using Spatial4n.Core.Shapes;
+using Spatial4n.Distance;
 using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
@@ -75,7 +81,7 @@ namespace Corax.Queries
             Unsafe.SkipInit(out _comparer7);
             Unsafe.SkipInit(out _comparer8);
             Unsafe.SkipInit(out _comparer9);
-
+            
             _compareFuncs = new delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, float, float, int>[9];
 
             TotalResults = 0;
@@ -132,7 +138,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static delegate*<ref SortingMultiMatch<TInner, 
+        public static delegate*<ref SortingMultiMatch<TInner,
             TComparer1, TComparer2, TComparer3, 
             TComparer4, TComparer5, TComparer6, 
             TComparer7, TComparer8, TComparer9>, 
@@ -144,13 +150,14 @@ namespace Corax.Queries
                 MatchCompareFieldType.Integer => &CompareNumerical<TComparer, long>,
                 MatchCompareFieldType.Floating => &CompareNumerical<TComparer, double>,
                 MatchCompareFieldType.Score => &CompareNumerical<TComparer, float>,
+                MatchCompareFieldType.Spatial => &CompareSpatialRelaxation<TComparer>,
                 _ => throw new NotImplementedException(),
             };
         }
 
         public int AndWith(Span<long> buffer, int matches)
         {
-            throw new NotSupportedException($"SortingMultiMatch does not support the operation {nameof(AndWith)}.");
+            throw new NotSupportedException($"{nameof(SortingMultiMatch)} does not support the operation {nameof(AndWith)}.");
         }
 
 
@@ -163,46 +170,84 @@ namespace Corax.Queries
                 MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
                 MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
                 MatchCompareFieldType.Score => Fill<NumericalItem<float>>(matches),
+                MatchCompareFieldType.Spatial => Fill<NumericalItem<double>>(matches),
                 _ => throw new ArgumentOutOfRangeException(_comparer1.FieldType.ToString())
             };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool Get<W>(in IndexEntryReader reader, int fieldId, long x, out W key) where W : struct
+        private static bool Get<TOut, TIn>(in IndexEntryReader reader, int fieldId, long x, out TOut storedValue, in TIn comparer)
+            where TOut : struct
+            where TIn : IMatchComparer
         {
-            if (typeof(W) == typeof(SequenceItem))
+            if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
+            {
+                if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
+                    goto Failed;
+
+                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialAscendingMatchComparer.Point.Center.Y, spatialAscendingMatchComparer.Point.Center.X, coordinates.lat,
+                    coordinates.lon);
+                if (spatialAscendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
+                    distance *= DistanceUtils.MilesToKilometers;
+
+                if (spatialAscendingMatchComparer.Round != 0)
+                    distance = SpatialHelper.GetRoundedValue(spatialAscendingMatchComparer.Round, distance);
+
+                storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                return readX;
+            }
+            else if (typeof(TIn) == typeof(SpatialDescendingMatchComparer))
+            {
+                if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
+                    goto Failed;
+                
+                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialDescendingMatchComparer.Point.Center.Y, spatialDescendingMatchComparer.Point.Center.X, coordinates.lat,
+                    coordinates.lon);
+                if (spatialDescendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
+                    distance *= DistanceUtils.MilesToKilometers;
+
+                if (spatialDescendingMatchComparer.Round != 0)
+                    distance = SpatialHelper.GetRoundedValue(spatialDescendingMatchComparer.Round, distance);
+
+                storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                return readX; 
+            }
+            else if (typeof(TOut) == typeof(SequenceItem))
             {
                 var readX = reader.Read(fieldId, out var sv);
-                key = (W)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
+                storedValue = (TOut)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
                 return readX;
             }
-            else if (typeof(W) == typeof(NumericalItem<long>))
+            else if (typeof(TOut) == typeof(NumericalItem<long>))
             {
                 var readX = reader.Read<long>(fieldId, out var value);
-                key = (W)(object)new NumericalItem<long>(value);
+                storedValue = (TOut)(object)new NumericalItem<long>(value);
                 return readX;
             }
-            else if (typeof(W) == typeof(NumericalItem<double>))
+            else if (typeof(TOut) == typeof(NumericalItem<double>))
             {
                 var readX = reader.Read<double>(fieldId, out var value);
-                key = (W)(object)new NumericalItem<double>(value);
+                storedValue = (TOut)(object)new NumericalItem<double>(value);
                 return readX;
             }
 
-            Unsafe.SkipInit(out key);
+            Failed:
+            Unsafe.SkipInit(out storedValue);
             return false;
         }
 
-        internal struct MultiMatchComparer<T, W> : IComparer<MultiMatchComparer<T, W>.Item>
-            where T : IMatchComparer
-            where W : struct
+        internal struct MultiMatchComparer<TComparer, TValue> : IComparer<MultiMatchComparer<TComparer, TValue>.Item>
+            where TComparer : IMatchComparer
+            where TValue : struct
         {
             private SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> _multiMatch;
 
             public struct Item
             {
                 public long Key;
-                public W Value;
+                public TValue Value;
                 public UnmanagedSpan Entry;
                 public float Score;
             }
@@ -215,7 +260,7 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(Item ix, Item iy)
             {
-                if (typeof(T) == typeof(BoostingComparer))
+                if (typeof(TComparer) == typeof(BoostingComparer))
                 {
                     float score = iy.Score - ix.Score;
                     return Math.Abs(score) < Constants.Boosting.ScoreEpsilon ? 0 : Math.Sign(score);
@@ -224,7 +269,7 @@ namespace Corax.Queries
                 {
                     if (ix.Key > 0 && iy.Key > 0)
                     {
-                        int result = Compare<TComparer1, W>(_multiMatch._comparer1, ix, iy);
+                        int result = Compare<TComparer1, TValue>(_multiMatch._comparer1, ix, iy);
                         if (result == 0)
                         {
                             // We will only call this when there is no other choice. 
@@ -243,26 +288,26 @@ namespace Corax.Queries
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int Compare<TComparer, TW> (TComparer comparer, Item ix, Item iy)
+            public static int Compare<TComparer, TIn> (TComparer comparer, Item ix, Item iy)
                 where TComparer : IMatchComparer
-                where TW : struct
+                where TIn : struct
             {
                 if (typeof(TComparer) == typeof(BoostingComparer))
                 {
                     float score = iy.Score - ix.Score;
                     return Math.Abs(score) < Constants.Boosting.ScoreEpsilon ? 0 : Math.Sign(score);
                 }
-                else if (typeof(TW) == typeof(SequenceItem))
+                else if (typeof(TIn) == typeof(SequenceItem))
                 {
                     return comparer.CompareSequence(
                         new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
                         new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
                 }
-                else if (typeof(TW) == typeof(NumericalItem<long>))
+                else if (typeof(TIn) == typeof(NumericalItem<long>))
                 {
                     return comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
                 }
-                else if (typeof(TW) == typeof(NumericalItem<double>))
+                else if (typeof(TIn) == typeof(NumericalItem<double>))
                 {
                     return comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
                 }
@@ -272,7 +317,8 @@ namespace Corax.Queries
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int Fill<W>(Span<long> matches) where W : struct
+        private int Fill<TOut>(Span<long> matches) 
+            where TOut : struct
         {
             // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
             //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
@@ -289,10 +335,10 @@ namespace Corax.Queries
 
             int floatArraySize = 2 * sizeof(float) * matches.Length;
             int matchesArraySize = sizeof(long) * matches.Length;
-            int itemArraySize = 2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, W>.Item>() * matches.Length;
+            int itemArraySize = 2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, TOut>.Item>() * matches.Length;
             var bufferHolder = QueryContext.MatchesRawPool.Rent(itemArraySize + matchesArraySize + floatArraySize);
 
-            var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, W>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
+            var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, TOut>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
             Debug.Assert(matchesKeysSpan.Length == 2 * matches.Length);
 
             // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
@@ -312,12 +358,12 @@ namespace Corax.Queries
 
             var searcher = _searcher;
             var fieldId = typeof(TComparer1) != typeof(BoostingComparer) ? _comparer1.FieldId : 0;
-            var comparer = new MultiMatchComparer<TComparer1, W>(this);            
+            var comparer = new MultiMatchComparer<TComparer1, TOut>(this);            
             for (int i = 0; i < totalMatches; i++)
             {
                 UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
                 var read = typeof(TComparer1) != typeof(BoostingComparer) ? 
-                                Get(new IndexEntryReader(matchIndexEntry), fieldId, matches[i], out matchesKeys[i].Value) : 
+                                Get(new IndexEntryReader(matchIndexEntry), fieldId, matches[i], out matchesKeys[i].Value, in _comparer1) : 
                                 true;
                 matchesKeys[i].Key = read ? matches[i] : -matches[i];
                 matchesKeys[i].Entry = matchIndexEntry;
@@ -325,9 +371,9 @@ namespace Corax.Queries
                 if (HasBoostingComparer)
                     matchesKeys[i].Score = matchesScores[i];
             }
-
+            
             // We sort the first batch. That will also mean that we will sort the indexes too. 
-            var sorter = new Sorter<MultiMatchComparer<TComparer1, W>.Item, long, MultiMatchComparer<TComparer1, W>>(comparer);
+            var sorter = new Sorter<MultiMatchComparer<TComparer1, TOut>.Item, long, MultiMatchComparer<TComparer1, TOut>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches], matches);
 
             Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(floatArraySize + itemArraySize, matchesArraySize));
@@ -357,7 +403,7 @@ namespace Corax.Queries
                 for (int i = 0; i < bTotalMatches; i++)
                 {
                     UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
-                    var read = Get(new IndexEntryReader(matchIndexEntry), fieldId, bValues[i], out bKeys[i].Value);
+                    var read = Get(new IndexEntryReader(matchIndexEntry), fieldId, bValues[i], out bKeys[i].Value, in _comparer1);
                     bKeys[i].Key = read ? bValues[i] : -bValues[i];
                     bKeys[i].Entry = matchIndexEntry;
                     
@@ -479,6 +525,59 @@ namespace Corax.Queries
             }
 
             throw new NotSupportedException("MultiMatchComparer only support up to 9 different comparisons.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private static int CompareSpatialRelaxation<TComparer>(
+            ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current,
+            int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2, float scoreItem1, float scoreItem2)
+            where TComparer : IMatchComparer
+        {
+            if (typeof(TComparer) == typeof(SpatialAscendingMatchComparer))
+                return CompareSpatial<SpatialAscendingMatchComparer>(ref current, comparerIdx, item1, item2, scoreItem1, scoreItem2);
+            return CompareSpatial<SpatialDescendingMatchComparer>(ref current, comparerIdx, item1, item2, scoreItem1, scoreItem2);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private static int CompareSpatial<TComparer>(
+            ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current,
+            int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2, float scoreItem1, float scoreItem2)
+        where TComparer : ISpatialComparer, IMatchComparer
+        {
+            var comparer = (TComparer)GetComparer(ref current, comparerIdx);
+            var readerX = new IndexEntryReader(item1);
+            var readX = readerX.Read(comparer.FieldId, out (double lat, double lon) resultX);
+
+            var readerY = new IndexEntryReader(item2);
+            var readY = readerY.Read(comparer.FieldId, out (double lat, double lon) resultY);
+
+            if (readX && readY)
+            {
+                var readerXDistance = SpatialHelper.HaverstineDistanceInMiles(resultX.lat, resultX.lon, comparer.Point.Center.Y, comparer.Point.Center.X);
+                var readerYDistance = SpatialHelper.HaverstineDistanceInMiles(resultY.lat, resultY.lon, comparer.Point.Center.Y, comparer.Point.Center.X);
+                if (comparer.Units is SpatialHelper.SpatialUnits.Kilometers)
+                {
+                    readerXDistance *= DistanceUtils.MilesToKilometers;
+                    readerYDistance *= DistanceUtils.MilesToKilometers;
+                }
+
+                if (comparer.Round != 0)
+                {
+                    readerXDistance = SpatialHelper.GetRoundedValue(comparer.Round, in readerXDistance);
+                    readerYDistance = SpatialHelper.GetRoundedValue(comparer.Round, in readerYDistance);
+                }
+                
+                var result = comparer.CompareNumerical(readerXDistance, readerYDistance);
+                int nextComparer = comparerIdx + 1;
+                if (result == 0 && nextComparer < current._totalComparers)
+                {
+                    return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2, scoreItem1, scoreItem2);
+                }
+            }
+            else if (readX)
+                return -1;
+
+            return 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]

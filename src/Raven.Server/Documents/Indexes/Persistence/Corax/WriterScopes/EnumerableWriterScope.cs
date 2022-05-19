@@ -106,16 +106,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                     entryWriter.WriteSpatial(field, _spatialValues[0]);
                 else
                     entryWriter.WriteSpatial(field, CollectionsMarshal.AsSpan(_spatialValues));
+
             }
-            
-            if (_count.Raws > 0 && (_count.Longs | _count.Doubles | _count.Strings) != 0)
+            else if (_count.Raws > 0 && (_count.Longs | _count.Doubles | _count.Strings) != 0)
             {
                 // This basically should not happen but I want to make sure on whole SlowTests.
                 throw new InvalidDataException($"{nameof(EnumerableWriterScope)}: Some raws were mixed with normal literal.");
             }
 
             // Even in the case of stored null values, the number of strings and doubles would match. 
-            if (_count.Strings == _count.Doubles && _count.Raws == 0)
+            else if (_count.Strings == _count.Doubles && _count.Raws == 0)
             {                
                 entryWriter.Write(field, new StringArrayIterator(_stringValues), CollectionsMarshal.AsSpan(_longValues), CollectionsMarshal.AsSpan(_doubleValues));
             }

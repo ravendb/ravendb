@@ -3,11 +3,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Utils;
 using Sparrow;
+using Spatial4n.Core.Distance;
+using Spatial4n.Core.Shapes;
 using static Corax.Queries.SortingMatch;
+using Constants = Corax.Constants.IndexSearcher;
+using DistanceUtils = Spatial4n.Distance.DistanceUtils;
 
 namespace Corax.Queries
 {
+    internal readonly struct NullStruct
+    {
+        internal static readonly NullStruct Instance = new NullStruct();
+    }
+
+    
+    
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct SortingMatch<TInner, TComparer> : IQueryMatch
         where TInner : IQueryMatch
@@ -18,7 +30,6 @@ namespace Corax.Queries
         private readonly TComparer _comparer;
         private readonly int _take;
         private readonly bool _isScoreComparer;
-
         public long TotalResults;
 
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
@@ -28,7 +39,6 @@ namespace Corax.Queries
             _take = take;
             _comparer = comparer;
             _isScoreComparer = typeof(TComparer) == typeof(BoostingComparer);
-
             TotalResults = 0;
         }
 
@@ -55,6 +65,7 @@ namespace Corax.Queries
                     MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
                     MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
                     MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
+                    MatchCompareFieldType.Spatial => Fill<NumericalItem<double>>(matches),
                     MatchCompareFieldType.Score => FillScore(matches),
                     _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
                 };
@@ -62,29 +73,67 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool Get<W>(IndexSearcher searcher, int fieldId, long x, out W key) where W : struct
+        private static bool Get<TOut, TIn>(IndexSearcher searcher, int fieldId, long x, out TOut storedValue, in TIn comparer) 
+            where TOut : struct
+            where TIn : IMatchComparer
         {
             var reader = searcher.GetReaderFor(x);
-            if (typeof(W) == typeof(SequenceItem))
+    
+            if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
+            {
+                if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
+                    goto Failed;
+
+                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialAscendingMatchComparer.Point.Center.Y, spatialAscendingMatchComparer.Point.Center.X, coordinates.lat,
+                    coordinates.lon);
+                if (spatialAscendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
+                    distance *= DistanceUtils.MilesToKilometers;
+
+                if (spatialAscendingMatchComparer.Round != 0)
+                    distance = SpatialHelper.GetRoundedValue(spatialAscendingMatchComparer.Round, distance);
+                
+                storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                return readX;
+            }
+            else if (typeof(TIn) == typeof(SpatialDescendingMatchComparer))
+            {
+                if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
+                    goto Failed;
+                
+                var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
+                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialDescendingMatchComparer.Point.Center.Y, spatialDescendingMatchComparer.Point.Center.X, coordinates.lat,
+                    coordinates.lon);
+                if (spatialDescendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
+                    distance *= DistanceUtils.MilesToKilometers;
+
+                if (spatialDescendingMatchComparer.Round != 0)
+                    distance = SpatialHelper.GetRoundedValue(spatialDescendingMatchComparer.Round, distance);
+                
+                storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                return readX; 
+            }
+            else if (typeof(TOut) == typeof(SequenceItem))
             {
                 var readX = reader.Read(fieldId, out var sv);
-                key = (W)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
+                storedValue = (TOut)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
                 return readX;
             }
-            else if (typeof(W) == typeof(NumericalItem<long>))
+            else if (typeof(TOut) == typeof(NumericalItem<long>))
             {
                 var readX = reader.Read<long>(fieldId, out var value);
-                key = (W)(object)new NumericalItem<long>(value);
+                storedValue = (TOut)(object)new NumericalItem<long>(value);
                 return readX;
             }
-            else if (typeof(W) == typeof(NumericalItem<double>))
+            else if (typeof(TOut) == typeof(NumericalItem<double>))
             {
                 var readX = reader.Read<double>(fieldId, out var value);
-                key = (W)(object)new NumericalItem<double>(value);
+                storedValue = (TOut)(object)new NumericalItem<double>(value);
                 return readX;
             }
-
-            Unsafe.SkipInit(out key);
+            
+            Failed:
+            Unsafe.SkipInit(out storedValue);
             return false;
         }
 
@@ -231,7 +280,8 @@ namespace Corax.Queries
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int Fill<W>(Span<long> matches) where W : struct
+        private int Fill<TOut>(Span<long> matches) 
+            where TOut : struct
         {
             // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
             //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
@@ -244,10 +294,10 @@ namespace Corax.Queries
                 return 0;
             
             int matchesArraySize = sizeof(long) * matches.Length;
-            int itemArraySize = 2 * Unsafe.SizeOf<MatchComparer<TComparer, W>.Item>() * matches.Length;
+            int itemArraySize = 2 * Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * matches.Length;
             var bufferHolder = QueryContext.MatchesRawPool.Rent(itemArraySize + matchesArraySize);
 
-            var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, W>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
+            var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
             Debug.Assert(itemKeys.Length == 2 * matches.Length);
 
             // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
@@ -262,15 +312,15 @@ namespace Corax.Queries
 
             var searcher = _searcher;
             var fieldId = _comparer.FieldId;
-            var comparer = new MatchComparer<TComparer, W>(_comparer);
+            var comparer = new MatchComparer<TComparer, TOut>(_comparer);
             for (int i = 0; i < totalMatches; i++)
             {
-                var read = Get(searcher, fieldId, matches[i], out matchesKeys[i].Value);
+                var read = Get(searcher, fieldId, matches[i], out matchesKeys[i].Value, _comparer);
                 matchesKeys[i].Key = read ? matches[i] : -matches[i];
             }
 
             // We sort the first batch
-            var sorter = new Sorter<MatchComparer<TComparer, W>.Item, long, MatchComparer<TComparer, W>>(comparer);
+            var sorter = new Sorter<MatchComparer<TComparer, TOut>.Item, long, MatchComparer<TComparer, TOut>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches], matches);
 
             Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(itemArraySize, matchesArraySize));
@@ -291,7 +341,7 @@ namespace Corax.Queries
                 // We get the keys to sort.
                 for (int i = 0; i < bTotalMatches; i++)
                 {
-                    var read = Get(searcher, fieldId, bValues[i], out bKeys[i].Value);
+                    var read = Get(searcher, fieldId, bValues[i], out bKeys[i].Value, _comparer);
                     bKeys[i].Key = read ? bValues[i] : -bValues[i];
                 }
 

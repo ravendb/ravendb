@@ -62,6 +62,7 @@ unsafe partial struct SortingMatch
                 MatchCompareFieldType.Sequence => &CompareWithLoadSequence,
                 MatchCompareFieldType.Integer => &CompareWithLoadNumerical<long>,
                 MatchCompareFieldType.Floating => &CompareWithLoadNumerical<double>,
+                MatchCompareFieldType.Spatial => &CompareWithLoadNumerical<double>,
                 var type => throw new NotSupportedException($"Currently, we do not support sorting by {type}.")
             };
         }

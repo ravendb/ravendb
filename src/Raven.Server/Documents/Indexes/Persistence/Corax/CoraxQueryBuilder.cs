@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
 using Nest;
 using Lucene.Net.Spatial.Queries;
+using Corax.Utils;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
@@ -14,12 +14,13 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Spatial4n.Core.Context;
 using Spatial4n.Core.Shapes;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.IndexSearcher;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using CoraxConstants = Corax.Constants;
+using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
+using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -29,14 +30,14 @@ public static class CoraxQueryBuilder
     private const int TakeAll = -1;
 
     public static IQueryMatch BuildQuery(IndexSearcher indexSearcher, TransactionOperationContext serverContext, DocumentsOperationContext context,
-        QueryMetadata metadata,
+        IndexQueryServerSide query,
         Index index, BlittableJsonReaderObject parameters, QueryBuilderFactories factories, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms = null,
         List<string> buildSteps = null, int take = TakeAll)
     {
         using (CultureHelper.EnsureInvariantCulture())
         {
             IQueryMatch coraxQuery;
-
+            var metadata = query.Metadata;
             if (metadata.Query.Where is not null)
             {
                 coraxQuery = ToCoraxQuery<NullScoreFunction>(indexSearcher, serverContext, context, metadata.Query, metadata.Query.Where, metadata, index, parameters,
@@ -53,7 +54,8 @@ public static class CoraxQueryBuilder
 
             if (metadata.Query.OrderBy is not null)
             {
-                coraxQuery = OrderBy(indexSearcher, coraxQuery, metadata.Query.OrderBy, metadata.Query, parameters, index, metadata, indexMapping, queryMapping, take);
+                var sortMetadata = GetSortMetadata(query, index, factories.GetSpatialFieldFactory, indexMapping, queryMapping);
+                coraxQuery = OrderBy(indexSearcher, coraxQuery, sortMetadata, take);
             }
 
             // The parser already throws parse exception if there is a syntax error.
@@ -186,10 +188,10 @@ public static class CoraxQueryBuilder
                         ValueTokenType.Double => indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, (double)value, operation, take),
                         ValueTokenType.Long => indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, (long)value, operation, take),
                         ValueTokenType.True or
-                        ValueTokenType.False or
-                        ValueTokenType.Null or
-                        ValueTokenType.String or
-                        ValueTokenType.Parameter => HandleStringUnaryMatch(),
+                            ValueTokenType.False or
+                            ValueTokenType.Null or
+                            ValueTokenType.String or
+                            ValueTokenType.Parameter => HandleStringUnaryMatch(),
                         _ => null
                     };
 
@@ -630,905 +632,2111 @@ public static class CoraxQueryBuilder
         return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated);
     }
 
-    private static IQueryMatch HandleSpatial(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
-            MethodType spatialMethod, Func<string, SpatialField> getSpatialField, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null)
+    private static IQueryMatch HandleSpatial(IndexSearcher indexSearcher, Query query, MethodExpression expression, QueryMetadata metadata,
+        BlittableJsonReaderObject parameters,
+        MethodType spatialMethod, Func<string, SpatialField> getSpatialField, Index index, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null)
+    {
+        string fieldName;
+        if (metadata.IsDynamic == false)
+            fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
+        else
         {
-            string fieldName;
-            if (metadata.IsDynamic == false)
-                fieldName = QueryBuilderHelper.ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
-            else
-            {
-                var spatialExpression = (MethodExpression)expression.Arguments[0];
-                fieldName = metadata.GetSpatialFieldName(spatialExpression, parameters);
-            }
-
-            var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
-
-            var shapeExpression = (MethodExpression)expression.Arguments[1];
-
-            var distanceErrorPct = RavenConstants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
-            if (expression.Arguments.Count == 3)
-            {
-                var distanceErrorPctValue = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
-                QueryBuilderHelper.AssertValueIsNumber(fieldName, distanceErrorPctValue.Type);
-
-                distanceErrorPct = Convert.ToDouble(distanceErrorPctValue.Value);
-            }
-
-            var spatialField = getSpatialField(fieldName);
-
-            var methodName = shapeExpression.Name;
-            var methodType = QueryMethod.GetMethodType(methodName.Value);
-
-            IShape shape = null;
-            switch (methodType)
-            {
-                case MethodType.Spatial_Circle:
-                    shape = QueryBuilderHelper.HandleCircle(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
-                    break;
-                case MethodType.Spatial_Wkt:
-                    shape = QueryBuilderHelper.HandleWkt(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
-                    break;
-                default:
-                    QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
-                    break;
-            }
-
-            Debug.Assert(shape != null);
-
-            var operation = spatialMethod switch
-            {
-                MethodType.Spatial_Within => SpatialRelation.WITHIN,
-                MethodType.Spatial_Disjoint => SpatialRelation.DISJOINT,
-                MethodType.Intersect => SpatialRelation.INTERSECTS,
-                MethodType.Spatial_Contains => SpatialRelation.CONTAINS,
-                _ => (SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters)
-            };
-            
-            
-            //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
-
-            return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, SpatialContext.GEO, global::Corax.Utils.SpatialRelation.Within);
+            var spatialExpression = (MethodExpression)expression.Arguments[0];
+            fieldName = metadata.GetSpatialFieldName(spatialExpression, parameters);
         }
-    
-    private static IQueryMatch OrderBy(IndexSearcher indexSearcher, IQueryMatch match,
-        List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orders, Query query, BlittableJsonReaderObject parameters, Index index,
-        QueryMetadata metadata, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, int take)
+
+        var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping);
+
+        var shapeExpression = (MethodExpression)expression.Arguments[1];
+
+        var distanceErrorPct = RavenConstants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
+        if (expression.Arguments.Count == 3)
+        {
+            var distanceErrorPctValue = QueryBuilderHelper.GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
+            QueryBuilderHelper.AssertValueIsNumber(fieldName, distanceErrorPctValue.Type);
+
+            distanceErrorPct = Convert.ToDouble(distanceErrorPctValue.Value);
+        }
+
+        var spatialField = getSpatialField(fieldName);
+
+        var methodName = shapeExpression.Name;
+        var methodType = QueryMethod.GetMethodType(methodName.Value);
+
+        IShape shape = null;
+        switch (methodType)
+        {
+            case MethodType.Spatial_Circle:
+                shape = QueryBuilderHelper.HandleCircle(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
+                break;
+            case MethodType.Spatial_Wkt:
+                shape = QueryBuilderHelper.HandleWkt(query, shapeExpression, metadata, parameters, fieldName, spatialField, out _);
+                break;
+            default:
+                QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
+                break;
+        }
+
+        Debug.Assert(shape != null);
+
+        var operation = spatialMethod switch
+        {
+            MethodType.Spatial_Within => SpatialRelation.WITHIN,
+            MethodType.Spatial_Disjoint => SpatialRelation.DISJOINT,
+            MethodType.Spatial_Intersects => SpatialRelation.INTERSECTS,
+            MethodType.Spatial_Contains => SpatialRelation.CONTAINS,
+            _ => (SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters)
+        };
+
+
+        //var args = new SpatialArgs(operation, shape) {DistErrPct = distanceErrorPct};
+
+        return indexSearcher.SpatialQuery(fieldName, fieldId, Double.Epsilon, shape, spatialField.GetContext(), global::Corax.Utils.SpatialRelation.Within);
+    }
+
+    public static ReadOnlySpan<OrderMetadata> GetSortMetadata(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField,
+        IndexFieldsMapping indexMapping, FieldsToFetch queryMapping)
+    {
+        var sort = ReadOnlySpan<OrderMetadata>.Empty;
+        if (query.PageSize == 0) // no need to sort when counting only
+            return null;
+
+        var orderByFields = query.Metadata.OrderBy;
+
+        if (orderByFields == null)
+        {
+            if (query.Metadata.HasBoost == false && index.HasBoostedFields == false)
+                return null;
+            return new[] {new OrderMetadata(true, MatchCompareFieldType.Score)};
+        }
+
+        int sortIndex = 0;
+        Span<OrderMetadata> sortArray = new OrderMetadata[8];
+
+        foreach (var field in orderByFields)
+        {
+            if (field.OrderingType == OrderByFieldType.Random)
+            {
+                throw new NotSupportedException($"{nameof(Corax)} doesn't support OrderByRandom.");
+            }
+
+            if (field.OrderingType == OrderByFieldType.Score)
+            {
+                if (field.Ascending)
+                    sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score, true);
+                else
+                    sortArray[sortIndex++] = sortArray[sortIndex++] = new OrderMetadata(true, MatchCompareFieldType.Score);
+
+                continue;
+            }
+
+            if (field.OrderingType == OrderByFieldType.Distance)
+            {
+                var spatialField = getSpatialField(field.Name);
+                var distanceFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(field.Name, index, indexMapping, queryMapping, false);
+
+                int lastArgument;
+                IPoint point;
+                switch (field.Method)
+                {
+                    case MethodType.Spatial_Circle:
+                        var cLatitude = field.Arguments[1].GetDouble(query.QueryParameters);
+                        var cLongitude = field.Arguments[2].GetDouble(query.QueryParameters);
+                        lastArgument = 2;
+                        point = spatialField.ReadPoint(cLatitude, cLongitude).Center;
+                        break;
+                    case MethodType.Spatial_Wkt:
+                        var wkt = field.Arguments[0].GetString(query.QueryParameters);
+                        SpatialUnits? spatialUnits = null;
+                        lastArgument = 1;
+                        if (field.Arguments.Length > 1)
+                        {
+                            spatialUnits = Enum.Parse<SpatialUnits>(field.Arguments[1].GetString(query.QueryParameters), ignoreCase: true);
+                            lastArgument = 2;
+                        }
+
+                        point = spatialField.ReadShape(wkt, spatialUnits).Center;
+                        break;
+                    case MethodType.Spatial_Point:
+                        var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
+                        var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
+                        lastArgument = 2;
+                        point = spatialField.ReadPoint(pLatitude, pLongitude).Center;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                var roundTo = field.Arguments.Length > lastArgument
+                    ? field.Arguments[lastArgument].GetDouble(query.QueryParameters)
+                    : 0D;
+
+                sortArray[sortIndex++] = new OrderMetadata(field.Name, distanceFieldId, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
+                    spatialField.Units is SpatialUnits.Kilometers ? SpatialHelper.SpatialUnits.Kilometers : SpatialHelper.SpatialUnits.Miles);
+                continue;
+            }
+
+            var fieldName = field.Name.Value;
+            var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(fieldName, index, indexMapping, queryMapping, false);
+            OrderMetadata? temporaryOrder = null;
+            switch (field.OrderingType)
+            {
+                case OrderByFieldType.Custom:
+                    throw new NotSupportedException($"{nameof(Corax)} doesn't support Custom OrderBy.");
+                case OrderByFieldType.AlphaNumeric:
+                    sortArray[sortIndex++] = new OrderMetadata(fieldName, fieldId, field.Ascending, MatchCompareFieldType.Alphanumeric);
+                    continue;
+                case OrderByFieldType.Long:
+                    temporaryOrder = new OrderMetadata(fieldName, fieldId, field.Ascending, MatchCompareFieldType.Integer);
+                    break;
+                case OrderByFieldType.Double:
+                    temporaryOrder = new OrderMetadata(fieldName, fieldId, field.Ascending, MatchCompareFieldType.Floating);
+                    break;
+            }
+
+            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(fieldName, fieldId, field.Ascending, MatchCompareFieldType.Sequence);
+        }
+
+        return sortArray.Slice(0, sortIndex);
+    }
+
+    private static IQueryMatch OrderBy(IndexSearcher indexSearcher, IQueryMatch match, ReadOnlySpan<OrderMetadata> orderMetadata, int take)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
-        switch (orders.Count)
+        switch (orderMetadata.Length)
         {
             //Note: we want to use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
             case 1:
             {
-                var fieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
-                var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(fieldName, index, indexMapping, queryMapping, false);
-                var orderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
-                var sortingType = orders[0].FieldType == OrderByFieldType.AlphaNumeric ? SortingType.Alphanumerical : SortingType.Normal;
-                match = (fieldId) switch
+                var order = orderMetadata[0];
+                if (order.HasBoost)
+                    return indexSearcher.OrderByScore(match, take);
+
+                return (order.FieldType, order.Ascending) switch
                 {
-                    (QueryBuilderHelper.ScoreId) => indexSearcher.OrderByScore(match, take),
-                    (>= 0) => orders[0].Ascending
-                        ? indexSearcher.OrderByAscending(match, fieldId, sortingType, orderTypeField, take)
-                        : indexSearcher.OrderByDescending(match, fieldId, sortingType, orderTypeField, take),
-
-                    _ => throw new InvalidQueryException("Unknown field in ORDER BY clause.")
+                    (MatchCompareFieldType.Spatial, _) => indexSearcher.OrderByDistance(in match, in order),
+                    (_, true) => indexSearcher.OrderByAscending(match, order.FieldId, order.FieldType, take),
+                    (_, false) => indexSearcher.OrderByDescending(match, order.FieldId, order.FieldType, take)
                 };
-
-                return match;
             }
 
             case 2:
             {
-                var firstFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
-                var firstFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(firstFieldName, index, indexMapping, queryMapping, false);
-                var firstOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
+                var firstComparerType = QueryBuilderHelper.GetComparerType(orderMetadata[0].Ascending, orderMetadata[0].FieldType, orderMetadata[0].FieldId);
+                var secondComparerType = QueryBuilderHelper.GetComparerType(orderMetadata[1].Ascending, orderMetadata[1].FieldType, orderMetadata[1].FieldId);
+                return (firstComparerType, secondComparerType) switch
+                {
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
 
-                var secondFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[1].Expression, metadata);
-                var secondFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(secondFieldName, index, indexMapping, queryMapping, false);
-                var secondOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[1].FieldType);
-
-
-                return (QueryBuilderHelper.GetComparerType(orders[0].Ascending, orders[0].FieldType, firstFieldId),
-                        QueryBuilderHelper.GetComparerType(orders[1].Ascending, orders[1].FieldType, secondFieldId)) switch
-                    {
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField)),
-                        var (type1, type2) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2})")
-                    };
+                    var (type1, type2) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2})")
+                };
             }
             case 3:
             {
-                var firstFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
-                var firstFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(firstFieldName, index, indexMapping, queryMapping, false);
-                var firstOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
-
-                var secondFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[1].Expression, metadata);
-                var secondFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(secondFieldName, index, indexMapping, queryMapping, false);
-                var secondOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[1].FieldType);
-
-                var thirdFieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[2].Expression, metadata);
-                var thirdFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(secondFieldName, index, indexMapping, queryMapping, false);
-                var thirdOrderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[2].FieldType);
-
-
-                return (QueryBuilderHelper.GetComparerType(orders[0].Ascending, orders[0].FieldType, firstFieldId),
-                        QueryBuilderHelper.GetComparerType(orders[1].Ascending, orders[1].FieldType, secondFieldId),
-                        QueryBuilderHelper.GetComparerType(orders[2].Ascending, orders[2].FieldType, thirdFieldId)
+                return (QueryBuilderHelper.GetComparerType(orderMetadata[0].Ascending, orderMetadata[0].FieldType, orderMetadata[0].FieldId),
+                        QueryBuilderHelper.GetComparerType(orderMetadata[1].Ascending, orderMetadata[1].FieldType, orderMetadata[1].FieldId),
+                        QueryBuilderHelper.GetComparerType(orderMetadata[2].Ascending, orderMetadata[2].FieldType, orderMetadata[2].FieldId)
                     ) switch
                     {
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
                                 default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
                             .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
                                 default(BoostingComparer)),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric)
                             => SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
                                 default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
                                 default(BoostingComparer)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending)
                             => SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
                                 default(BoostingComparer)),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial
+                            ) => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            default(BoostingComparer),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting
+                            ) => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                                default(BoostingComparer),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            default(BoostingComparer),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            default(BoostingComparer),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial
+                            ) => SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
                                 default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
                                 default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
                         (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
                                 default(BoostingComparer),
                                 default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) =>
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
                                 default(BoostingComparer),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) =>
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
                                 default(BoostingComparer),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) =>
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric
+                            ) => SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
                             .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
                             default(BoostingComparer),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) =>
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
                                 default(BoostingComparer),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                default(BoostingComparer),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                default(BoostingComparer),
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
                                 default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
                             .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
                             default(BoostingComparer),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
                             .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
                             default(BoostingComparer),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Descending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Ascending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Descending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
                                 default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending)
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial)
                             => SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                                default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
-                            SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
                                 default(BoostingComparer),
-                                new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
-                                new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                                default(BoostingComparer),
-                                default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
                             .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Ascending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Descending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting
+                            ) => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
                             .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
                             default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Ascending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Descending) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .Boosting) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric
+                            ) => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
                             default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
-                            .DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, firstFieldId, firstOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, secondFieldId, secondOrderTypeField),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, thirdFieldId, thirdOrderTypeField)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            default(BoostingComparer),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                default(BoostingComparer),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) =>
+                            SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[2].FieldId, orderMetadata[2].FieldType)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting)
+                            => SortingMultiMatch.Create(indexSearcher, match,
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                                new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                                default(BoostingComparer)),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[2])),
+                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType
+                            .DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1]),
+                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[2])),
 
                         var (type1, type2, type3) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2}, {type3})")
                     };
             }
         }
 
-        var comparers = new IMatchComparer[orders.Count];
-        for (int i = 0; i < orders.Count; ++i)
+        var comparers = new IMatchComparer[orderMetadata.Length];
+        for (int i = 0; i < orderMetadata.Length; ++i)
         {
-            var fieldName = QueryBuilderHelper.ExtractIndexFieldNameForOrderBy(query, parameters, orders[0].Expression, metadata);
-            var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(fieldName, index, indexMapping, queryMapping, false);
-            var orderTypeField = QueryBuilderHelper.TranslateOrderByForCorax(orders[0].FieldType);
-            var sortingType = orders[0].FieldType == OrderByFieldType.AlphaNumeric ? SortingType.Alphanumerical : SortingType.Normal;
-
-
-            comparers[i] = (orders[i].Ascending, sortingType) switch
+            var order = orderMetadata[i];
+            comparers[i] = (order.Ascending, order.FieldType) switch
             {
-                (true, SortingType.Normal) => new SortingMatch.AscendingMatchComparer(indexSearcher, fieldId, orderTypeField),
-                (false, SortingType.Normal) => new SortingMatch.DescendingMatchComparer(indexSearcher, fieldId, orderTypeField),
-                (true, SortingType.Alphanumerical) => new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, fieldId, orderTypeField),
-                (false, SortingType.Alphanumerical) => new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, fieldId, orderTypeField),
-                _ => throw new InvalidDataException($"Unknown {typeof(SortingMatch)}: {sortingType} at {nameof(CoraxQueryBuilder)}")
+                (true, MatchCompareFieldType.Alphanumeric) => new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, order.FieldId, order.FieldType),
+                (false, MatchCompareFieldType.Alphanumeric) => new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, order.FieldId, order.FieldType),
+                (true, MatchCompareFieldType.Spatial) => new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[i]),
+                (false, MatchCompareFieldType.Spatial) => new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[i]),
+                (_, MatchCompareFieldType.Score) => default(BoostingComparer),
+                (true, _) => new SortingMatch.AscendingMatchComparer(indexSearcher, order.FieldId, order.FieldType),
+                (false, _) => new SortingMatch.DescendingMatchComparer(indexSearcher, order.FieldId, order.FieldType),
             };
         }
 
-        return orders.Count switch
+        return orderMetadata.Length switch
         {
             2 => SortingMultiMatch.Create(indexSearcher, match, comparers[0], comparers[1]),
             3 => SortingMultiMatch.Create(indexSearcher, match, comparers[0], comparers[1], comparers[2]),
