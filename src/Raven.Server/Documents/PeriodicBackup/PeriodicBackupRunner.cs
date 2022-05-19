@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             // we don't have changes since the last backup and the next backup is incremental
             var lastFullBackup = backupStatus.LastFullBackupInternal ?? nowUtc;
-            var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, lastFullBackup, configuration, skipErrorLog: false);
+            var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, lastFullBackup, configuration, skipErrorLog: false, _database, _logger);
             if (nextFullBackup < nowUtc)
             {
                 if (_logger.IsOperationsEnabled)
@@ -174,28 +174,44 @@ namespace Raven.Server.Documents.PeriodicBackup
             string responsibleNodeTag,
             bool skipErrorLog = false)
         {
+            return GetNextBackupDetailsLogic(configuration, backupStatus, responsibleNodeTag, skipErrorLog, _databaseWakeUpTimeUtc, _database, _serverStore.NodeTag, _logger);
+        }
+
+        private static NextBackup GetNextBackupDetailsLogic(
+            PeriodicBackupConfiguration configuration,
+            PeriodicBackupStatus backupStatus,
+            string responsibleNodeTag,
+            bool skipErrorLog,
+            DateTime? databaseWakeUpTimeUtc,
+            DocumentDatabase database,
+            string nodeTag,
+            Logger logger)
+        {
             var nowUtc = SystemTime.UtcNow;
-            var lastFullBackupUtc = backupStatus.LastFullBackupInternal ?? _databaseWakeUpTimeUtc ?? nowUtc;
-            var lastIncrementalBackupUtc = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? _databaseWakeUpTimeUtc ?? nowUtc;
+            var lastFullBackupUtc = backupStatus.LastFullBackupInternal ?? databaseWakeUpTimeUtc ?? nowUtc;
+            var lastIncrementalBackupUtc = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? databaseWakeUpTimeUtc ?? nowUtc;
             var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency,
-                lastFullBackupUtc, configuration, skipErrorLog: skipErrorLog);
+                lastFullBackupUtc, configuration, skipErrorLog: skipErrorLog, database, logger);
             var nextIncrementalBackup = GetNextBackupOccurrenceLocal(configuration.IncrementalBackupFrequency,
-                lastIncrementalBackupUtc, configuration, skipErrorLog: skipErrorLog);
+                lastIncrementalBackupUtc, configuration, skipErrorLog: skipErrorLog, database, logger);
 
             if (nextFullBackup == null && nextIncrementalBackup == null)
             {
-                var message = "Couldn't schedule next backup " +
-                              $"full backup frequency: {configuration.FullBackupFrequency}, " +
-                              $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
-                if (string.IsNullOrWhiteSpace(configuration.Name) == false)
-                    message += $", backup name: {configuration.Name}";
+                if (database != null)
+                {
+                    var message = "Couldn't schedule next backup " +
+                                  $"full backup frequency: {configuration.FullBackupFrequency}, " +
+                                  $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
+                    if (string.IsNullOrWhiteSpace(configuration.Name) == false)
+                        message += $", backup name: {configuration.Name}";
 
-                _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name,
-                    "Couldn't schedule next backup, this shouldn't happen",
-                    message,
-                    AlertType.PeriodicBackup,
-                    NotificationSeverity.Warning));
+                    database.NotificationCenter.Add(AlertRaised.Create(
+                        database.Name,
+                        "Couldn't schedule next backup, this shouldn't happen",
+                        message,
+                        AlertType.PeriodicBackup,
+                        NotificationSeverity.Warning));
+                }
 
                 return null;
             }
@@ -211,7 +227,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (timeSpan.Ticks <= 0)
             {
                 // overdue backup of current node or first backup
-                if (backupStatus.NodeTag == _serverStore.NodeTag || backupStatus.NodeTag == null)
+                if (backupStatus.NodeTag == nodeTag || backupStatus.NodeTag == null)
                 {
                     // the backup will run now
                     nextBackupTimeSpan = TimeSpan.Zero;
@@ -238,7 +254,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        private bool IsFullBackup(PeriodicBackupStatus backupStatus,
+        private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
             PeriodicBackupConfiguration configuration,
             DateTime? nextFullBackup, DateTime? nextIncrementalBackup, string responsibleNodeTag)
         {
@@ -285,8 +301,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             return nextBackup;
         }
 
-        private DateTime? GetNextBackupOccurrenceLocal(string backupFrequency,
-            DateTime lastBackupUtc, PeriodicBackupConfiguration configuration, bool skipErrorLog)
+        private static DateTime? GetNextBackupOccurrenceLocal(string backupFrequency,
+            DateTime lastBackupUtc, PeriodicBackupConfiguration configuration, bool skipErrorLog,
+            DocumentDatabase database, Logger logger)
         {
             if (string.IsNullOrWhiteSpace(backupFrequency))
                 return null;
@@ -298,7 +315,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                if (skipErrorLog == false)
+                if (skipErrorLog == false && (logger != null || database != null))
                 {
                     var message = "Couldn't parse periodic backup " +
                                   $"frequency {backupFrequency}, task id: {configuration.TaskId}";
@@ -307,11 +324,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     message += $", error: {e.Message}";
 
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(message);
+                    if (logger!=null && logger.IsOperationsEnabled)
+                        logger.Operations(message);
 
-                    _database.NotificationCenter.Add(AlertRaised.Create(
-                        _database.Name,
+                    database?.NotificationCenter.Add(AlertRaised.Create(
+                        database.Name,
                         "Backup frequency parsing error",
                         message,
                         AlertType.PeriodicBackup,
@@ -1134,9 +1151,29 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private BackupInfo GetBackupInfoInternal(TransactionOperationContext context)
         {
-            var oneTimeBackupStatus = GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId: 0L);
+            return GetBackupInfoLogic(context, 
+                _serverStore,
+                _periodicBackups, 
+                databaseName: null,
+                _database, 
+                _logger,
+                _databaseWakeUpTimeUtc);
+        }
 
-            if (_periodicBackups.Count == 0 && oneTimeBackupStatus == null)
+        internal static BackupInfo GetBackupInfoLogic(TransactionOperationContext context, 
+            ServerStore serverStore,
+            IDictionary<long, PeriodicBackup> periodicBackups,
+            string databaseName,
+            DocumentDatabase database = null,
+            Logger logger = null,
+            DateTime? databaseWakeUpTimeUtc = null)
+        {
+            if (database != null)
+                databaseName = database.Name;
+
+            var oneTimeBackupStatus = GetBackupStatusFromCluster(serverStore, context, databaseName, taskId: 0L);
+
+            if (periodicBackups.Count == 0 && oneTimeBackupStatus == null)
                 return null;
 
             var lastBackup = 0L;
@@ -1148,10 +1185,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 lastBackupStatus = oneTimeBackupStatus;
             }
 
-            foreach (var periodicBackup in _periodicBackups)
+            foreach (var periodicBackup in periodicBackups)
             {
                 var status = ComparePeriodicBackupStatus(periodicBackup.Value.Configuration.TaskId,
-                    backupStatus: GetBackupStatusFromCluster(_serverStore, context, _database.Name, periodicBackup.Value.Configuration.TaskId),
+                    backupStatus: GetBackupStatusFromCluster(serverStore, context, databaseName, periodicBackup.Value.Configuration.TaskId),
                     inMemoryBackupStatus: periodicBackup.Value.BackupStatus);
 
                 if (status.LastFullBackup != null && status.LastFullBackup.Value.Ticks > lastBackup)
@@ -1166,7 +1203,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     lastBackupStatus = status;
                 }
 
-                var nextBackup = GetNextBackupDetails(periodicBackup.Value.Configuration, status, _serverStore.NodeTag, skipErrorLog: true);
+                var nextBackup = GetNextBackupDetailsLogic(periodicBackup.Value.Configuration, status, serverStore.NodeTag, skipErrorLog: true, null, null, serverStore.NodeTag, null);
                 if (nextBackup == null)
                     continue;
 
