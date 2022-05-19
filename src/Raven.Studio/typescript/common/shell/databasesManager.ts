@@ -13,8 +13,6 @@ import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import generalUtils = require("common/generalUtils");
 import shardedDatabase from "models/resources/shardedDatabase";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
-import shard from "models/resources/shard";
-import { shardingTodo } from "common/developmentHelper";
 import DatabaseUtils from "../../components/utils/DatabaseUtils";
 
 class databasesManager {

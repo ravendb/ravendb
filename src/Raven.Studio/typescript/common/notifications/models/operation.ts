@@ -9,11 +9,11 @@ import moment = require("moment");
 class operation extends abstractNotification {
 
     operationId = ko.observable<number>();
-    progress = ko.observable<Raven.Client.Documents.Operations.IOperationProgress>();
-    result = ko.observable<Raven.Client.Documents.Operations.IOperationResult>();
+    progress = ko.observable<unknown>();
+    result = ko.observable<unknown>();
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
-    taskType = ko.observable<Raven.Server.Documents.Operations.Operations.OperationType>();
+    taskType = ko.observable<Raven.Server.Documents.Operations.OperationType>();
     detailedDescription = ko.observable<Raven.Client.Documents.Operations.IOperationDetailedDescription>();
     
     startTime = ko.observable<moment.Moment>();

@@ -114,7 +114,7 @@ namespace TypingsGenerator
 {
     public class Program
     {
-        public static readonly string[] TargetDirectory = { "../../src/Raven.Studio/", "../../../src/Raven.Studio/", "../../../../src/Raven.Studio/" };
+        public static readonly string[] TargetDirectory = { "../../src/Raven.Studio/", "../../../src/Raven.Studio/", "../../../../src/Raven.Studio/", "../../../../../src/Raven.Studio/" };
         public const string TypingsDirectory = "typings/server";
 
         public static void Main(string[] args)
@@ -184,7 +184,9 @@ namespace TypingsGenerator
                 typeof(IConvertible),
                 typeof(IDisposable),
                 typeof(IFormattable),
-                typeof(Exception)
+                typeof(Exception),
+                typeof(IOperationProgress),
+                typeof(IOperationResult)
             };
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
