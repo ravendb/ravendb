@@ -6,10 +6,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedStatsHandler : ShardedDatabaseRequestHandler
     {
-        [RavenShardedAction("/databases/*/stats/basic", "GET")]
-        public async Task BasicStats()
+        [RavenShardedAction("/databases/*/stats/essential", "GET")]
+        public async Task EssentialStats()
         {
-            using (var processor = new ShardedStatsHandlerProcessorForBasicStats(this))
+            using (var processor = new ShardedStatsHandlerProcessorForEssentialStats(this))
                 await processor.ExecuteAsync();
         }
 

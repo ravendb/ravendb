@@ -8,10 +8,10 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/stats/basic", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task BasicStats()
+        [RavenAction("/databases/*/stats/essential", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task EssentialStats()
         {
-            using (var processor = new StatsHandlerProcessorForBasicStats(this))
+            using (var processor = new StatsHandlerProcessorForEssentialStats(this))
                 await processor.ExecuteAsync();
         }
 

@@ -7,17 +7,17 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats;
 
-internal class StatsHandlerProcessorForBasicStats : AbstractStatsHandlerProcessorForBasicStats<DatabaseRequestHandler, DocumentsOperationContext>
+internal class StatsHandlerProcessorForEssentialStats : AbstractStatsHandlerProcessorForEssentialStats<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public StatsHandlerProcessorForBasicStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    public StatsHandlerProcessorForEssentialStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected override ValueTask<BasicDatabaseStatistics> GetBasicDatabaseStatisticsAsync(DocumentsOperationContext context)
+    protected override ValueTask<EssentialDatabaseStatistics> GetEssentialDatabaseStatisticsAsync(DocumentsOperationContext context)
     {
         using (context.OpenReadTransaction())
         {
-            var stats = new BasicDatabaseStatistics();
+            var stats = new EssentialDatabaseStatistics();
 
             FillBasicDatabaseStatistics(stats, context, RequestHandler.Database);
 
@@ -25,7 +25,7 @@ internal class StatsHandlerProcessorForBasicStats : AbstractStatsHandlerProcesso
         }
     }
 
-    internal static void FillBasicDatabaseStatistics(BasicDatabaseStatistics stats, DocumentsOperationContext context, DocumentDatabase database)
+    internal static void FillBasicDatabaseStatistics(EssentialDatabaseStatistics stats, DocumentsOperationContext context, DocumentDatabase database)
     {
         var indexes = database.IndexStore.GetIndexes().ToList();
 

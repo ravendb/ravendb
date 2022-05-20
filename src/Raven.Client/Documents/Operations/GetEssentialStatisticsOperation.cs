@@ -6,34 +6,34 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations;
 
-public class GetBasicStatisticsOperation : IMaintenanceOperation<BasicDatabaseStatistics>
+public class GetEssentialStatisticsOperation : IMaintenanceOperation<EssentialDatabaseStatistics>
 {
     private readonly string _debugTag;
 
-    public GetBasicStatisticsOperation()
+    public GetEssentialStatisticsOperation()
     {
     }
 
-    internal GetBasicStatisticsOperation(string debugTag)
+    internal GetEssentialStatisticsOperation(string debugTag)
     {
         _debugTag = debugTag;
     }
 
-    public RavenCommand<BasicDatabaseStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    public RavenCommand<EssentialDatabaseStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new GetBasicStatisticsCommand(_debugTag);
+        return new GetEssentialStatisticsCommand(_debugTag);
     }
 
-    internal class GetBasicStatisticsCommand : RavenCommand<BasicDatabaseStatistics>
+    internal class GetEssentialStatisticsCommand : RavenCommand<EssentialDatabaseStatistics>
     {
         private readonly string _debugTag;
 
-        public GetBasicStatisticsCommand(string debugTag)
+        public GetEssentialStatisticsCommand(string debugTag)
             : this(debugTag, nodeTag: null)
         {
         }
 
-        internal GetBasicStatisticsCommand(string debugTag, string nodeTag)
+        internal GetEssentialStatisticsCommand(string debugTag, string nodeTag)
         {
             _debugTag = debugTag;
             SelectedNodeTag = nodeTag;
@@ -41,7 +41,7 @@ public class GetBasicStatisticsOperation : IMaintenanceOperation<BasicDatabaseSt
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/stats/basic";
+            url = $"{node.Url}/databases/{node.Database}/stats/essential";
             if (_debugTag != null)
                 url += "?" + _debugTag;
 
@@ -53,7 +53,7 @@ public class GetBasicStatisticsOperation : IMaintenanceOperation<BasicDatabaseSt
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
-            Result = JsonDeserializationClient.GetBasicDatabaseStatistics(response);
+            Result = JsonDeserializationClient.GetEssentialDatabaseStatistics(response);
         }
 
         public override bool IsReadRequest => true;

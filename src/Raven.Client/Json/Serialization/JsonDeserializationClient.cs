@@ -109,7 +109,7 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatistics> GetStatisticsResult = GenerateJsonDeserializationRoutine<DatabaseStatistics>();
 
-        public static readonly Func<BlittableJsonReaderObject, BasicDatabaseStatistics> GetBasicDatabaseStatistics = GenerateJsonDeserializationRoutine<BasicDatabaseStatistics>();
+        public static readonly Func<BlittableJsonReaderObject, EssentialDatabaseStatistics> GetEssentialDatabaseStatistics = GenerateJsonDeserializationRoutine<EssentialDatabaseStatistics>();
 
         public static readonly Func<BlittableJsonReaderObject, DetailedDatabaseStatistics> GetDetailedStatisticsResult = GenerateJsonDeserializationRoutine<DetailedDatabaseStatistics>();
 

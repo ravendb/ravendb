@@ -18,11 +18,11 @@ public class RavenDB_18648 : RavenTestBase
 
     [Theory]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-    public void Can_Get_Basic_Database_Statistics(Options options)
+    public void Can_Get_Essential_Database_Statistics(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
-            var stats = store.Maintenance.Send(new GetBasicStatisticsOperation());
+            var stats = store.Maintenance.Send(new GetEssentialStatisticsOperation());
 
             Assert.Equal(0, stats.CountOfAttachments);
             Assert.Equal(0, stats.CountOfConflicts);
@@ -52,7 +52,7 @@ public class RavenDB_18648 : RavenTestBase
             var index = new Companies_SortByName();
             index.Execute(store);
 
-            stats = store.Maintenance.Send(new GetBasicStatisticsOperation());
+            stats = store.Maintenance.Send(new GetEssentialStatisticsOperation());
 
             Assert.Equal(20, stats.CountOfAttachments);
             Assert.Equal(0, stats.CountOfConflicts);
