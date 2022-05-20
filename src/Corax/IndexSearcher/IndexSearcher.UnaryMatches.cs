@@ -18,6 +18,11 @@ public partial class IndexSearcher
             var slice = EncodeAndApplyAnalyzer((string)(object)term, fieldId);
             return BuildUnaryMatch(in set, fieldId, slice, @operation, take);
         }
+        else if (typeof(TValueType) == typeof(Slice))
+        {
+            Slice.From(Allocator, ApplyAnalyzer((Slice)(object)term, fieldId), out var slice);
+            return BuildUnaryMatch(in set, fieldId, slice, @operation, take);
+        }
 
         return BuildUnaryMatch(in set, fieldId, term, @operation, take);
     }
@@ -35,6 +40,13 @@ public partial class IndexSearcher
 
             return BuildBetween(in set, fieldId, leftValueSlice, rightValueSlice, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual, isNegated, take);
         }
+        else if (typeof(TValueType) == typeof(Slice))
+        {
+            Slice.From(Allocator, ApplyAnalyzer((Slice)(object)leftValue, fieldId), out var leftValueSlice);
+            Slice.From(Allocator, ApplyAnalyzer((Slice)(object)rightValue, fieldId), out var rightValueSlice);
+
+            return BuildBetween(in set, fieldId, leftValueSlice, rightValueSlice, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual, isNegated, take);
+        }
 
         return BuildBetween(in set, fieldId, leftValue, rightValue, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual, isNegated, take);
     }
@@ -48,6 +60,13 @@ public partial class IndexSearcher
         {
             var leftValueSlice = EncodeAndApplyAnalyzer((string)(object)leftValue, fieldId);
             var rightValueSlice = EncodeAndApplyAnalyzer((string)(object)rightValue, fieldId);
+
+            return BuildBetween(in set, fieldId, leftValueSlice, rightValueSlice, leftSide, rightSide, isNegated, take);
+        }
+        else if (typeof(TValueType) == typeof(Slice))
+        {
+            Slice.From(Allocator, ApplyAnalyzer((Slice)(object)leftValue, fieldId), out var leftValueSlice);
+            Slice.From(Allocator, ApplyAnalyzer((Slice)(object)rightValue, fieldId), out var rightValueSlice);
 
             return BuildBetween(in set, fieldId, leftValueSlice, rightValueSlice, leftSide, rightSide, isNegated, take);
         }
