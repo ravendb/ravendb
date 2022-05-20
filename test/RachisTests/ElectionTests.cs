@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -297,9 +298,10 @@ namespace RachisTests
             await IssueCommandsAndWaitForCommit(10, "test", 1);
             var currentTerm = firstLeader.CurrentTerm;
 
-            var t = Task.Run(() => IssueCommandsWithoutWaitingForCommits(firstLeader, 100, "test"));
+            var t = IssueCommandsWithoutWaitingForCommits(firstLeader, 100, "test");
             Disconnect(follower.Url, firstLeader.Url);
-            await t;
+
+            await Assert.ThrowsAsync<NotLeadingException>(() => Task.WhenAll(t));
 
             Assert.True(await firstLeader.WaitForState(RachisState.Candidate, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait),$"{firstLeader.CurrentState}");
             follower.FoundAboutHigherTerm(currentTerm + 1," why not, should work!");
