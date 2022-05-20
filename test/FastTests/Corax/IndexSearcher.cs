@@ -60,7 +60,7 @@ namespace FastTests.Corax
                 return _values[i] == null;
             }
 
-            public ReadOnlySpan<byte> this[int i] => Encoding.UTF8.GetBytes(_values[i]);
+            public ReadOnlySpan<byte> this[int i] => _values[i] != null ? Encoding.UTF8.GetBytes(_values[i]) : null;
         }
 
         private static Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexEntry value)
@@ -2039,10 +2039,10 @@ namespace FastTests.Corax
                     Content = (i % 7) switch
                     {
                         0 => new string[] { "1" },
-                        1 => new string[] { "7" },
+                        1 => new string[] { null, "7" },
                         2 => new string[] { "2", "1" },
-                        3 => new string[] { "1", "2", "3" },
-                        4 => new string[] { "1", "2", "3", "5" },
+                        3 => new string[] { null, "1", "2", "3" },
+                        4 => new string[] { "1", "2", "3", "5", null },
                         5 => new string[] { "2", "5" },
                         6 => new string[] { "2", "5", "7" },
                         _ => throw new ArgumentOutOfRangeException()
@@ -2060,8 +2060,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env);
             {
-                var notOne = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);
-                //  var notTwo = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
+                var notOne = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);               
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("1") == false);
                 var result = notOne.Fill(ids);

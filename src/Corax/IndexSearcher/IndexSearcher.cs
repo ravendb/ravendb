@@ -103,6 +103,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term is null)
             return default;
 
+        if (term == Constants.NullValue)
+            return Constants.NullValueSlice;
+
         var encoded = Encoding.UTF8.GetBytes(term);
         Slice termSlice;
         if (fieldId == Constants.IndexSearcher.NonAnalyzer)
