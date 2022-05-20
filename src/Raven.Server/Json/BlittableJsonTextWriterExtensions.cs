@@ -936,11 +936,11 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteBasicDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, BasicDatabaseStatistics statistics)
+        public static void WriteEssentialDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, EssentialDatabaseStatistics statistics)
         {
             writer.WriteStartObject();
 
-            WriteBasicDatabaseStatisticsInternal(writer, statistics);
+            WriteEssentialDatabaseStatisticsInternal(writer, statistics);
 
             writer.WriteEndObject();
         }
@@ -956,7 +956,7 @@ namespace Raven.Server.Json
 
         private static void WriteDatabaseStatisticsInternal(AbstractBlittableJsonTextWriter writer, DatabaseStatistics statistics)
         {
-            WriteBasicDatabaseStatisticsInternal(writer, statistics);
+            WriteEssentialDatabaseStatisticsInternal(writer, statistics);
 
             writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
@@ -1034,7 +1034,7 @@ namespace Raven.Server.Json
             writer.WriteComma();
         }
 
-        private static void WriteBasicDatabaseStatisticsInternal<TIndexInformation>(AbstractBlittableJsonTextWriter writer, AbstractDatabaseStatistics<TIndexInformation> statistics)
+        private static void WriteEssentialDatabaseStatisticsInternal<TIndexInformation>(AbstractBlittableJsonTextWriter writer, AbstractDatabaseStatistics<TIndexInformation> statistics)
             where TIndexInformation : BasicIndexInformation
         {
             writer.WritePropertyName(nameof(statistics.CountOfIndexes));

@@ -13,17 +13,17 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats;
 
-internal class ShardedStatsHandlerProcessorForBasicStats : AbstractStatsHandlerProcessorForBasicStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedStatsHandlerProcessorForEssentialStats : AbstractStatsHandlerProcessorForEssentialStats<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedStatsHandlerProcessorForBasicStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    public ShardedStatsHandlerProcessorForEssentialStats([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected override async ValueTask<BasicDatabaseStatistics> GetBasicDatabaseStatisticsAsync(TransactionOperationContext context)
+    protected override async ValueTask<EssentialDatabaseStatistics> GetEssentialDatabaseStatisticsAsync(TransactionOperationContext context)
     {
         using (var token = RequestHandler.CreateOperationToken())
         {
-            var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new GetShardedBasicStatisticsOperation(RequestHandler.HttpContext.Request), token.Token);
+            var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new GetShardedEssentialStatisticsOperation(RequestHandler.HttpContext.Request), token.Token);
 
             var indexes = RequestHandler.DatabaseContext.Indexes.GetIndexes().ToList();
 
@@ -40,18 +40,18 @@ internal class ShardedStatsHandlerProcessorForBasicStats : AbstractStatsHandlerP
         }
     }
 
-    private struct GetShardedBasicStatisticsOperation : IShardedOperation<BasicDatabaseStatistics>
+    private struct GetShardedEssentialStatisticsOperation : IShardedOperation<EssentialDatabaseStatistics>
     {
-        public GetShardedBasicStatisticsOperation(HttpRequest request)
+        public GetShardedEssentialStatisticsOperation(HttpRequest request)
         {
             HttpRequest = request;
         }
 
         public HttpRequest HttpRequest { get; }
 
-        public BasicDatabaseStatistics Combine(Memory<BasicDatabaseStatistics> results)
+        public EssentialDatabaseStatistics Combine(Memory<EssentialDatabaseStatistics> results)
         {
-            BasicDatabaseStatistics result = null;
+            EssentialDatabaseStatistics result = null;
 
             foreach (var stats in results.Span)
             {
@@ -69,9 +69,9 @@ internal class ShardedStatsHandlerProcessorForBasicStats : AbstractStatsHandlerP
             return result;
         }
 
-        public RavenCommand<BasicDatabaseStatistics> CreateCommandForShard(int shardNumber) => new GetBasicStatisticsOperation.GetBasicStatisticsCommand(debugTag: null);
+        public RavenCommand<EssentialDatabaseStatistics> CreateCommandForShard(int shardNumber) => new GetEssentialStatisticsOperation.GetEssentialStatisticsCommand(debugTag: null);
 
-        private static void MergeBasicDatabaseStatistics(BasicDatabaseStatistics result, BasicDatabaseStatistics stats)
+        private static void MergeBasicDatabaseStatistics(EssentialDatabaseStatistics result, EssentialDatabaseStatistics stats)
         {
             result.CountOfConflicts += stats.CountOfConflicts;
             result.CountOfCounterEntries += stats.CountOfCounterEntries;

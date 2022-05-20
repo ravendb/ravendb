@@ -6,24 +6,24 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats;
 
-internal abstract class AbstractStatsHandlerProcessorForBasicStats<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractStatsHandlerProcessorForEssentialStats<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractStatsHandlerProcessorForBasicStats([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    protected AbstractStatsHandlerProcessorForEssentialStats([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected abstract ValueTask<BasicDatabaseStatistics> GetBasicDatabaseStatisticsAsync(TOperationContext context);
+    protected abstract ValueTask<EssentialDatabaseStatistics> GetEssentialDatabaseStatisticsAsync(TOperationContext context);
 
     public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {
-            var stats = await GetBasicDatabaseStatisticsAsync(context);
+            var stats = await GetEssentialDatabaseStatisticsAsync(context);
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                writer.WriteBasicDatabaseStatistics(context, stats);
+                writer.WriteEssentialDatabaseStatistics(context, stats);
         }
     }
 }
