@@ -57,7 +57,7 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
         return getDocumentsResult;
     }
 
-    public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shard)
+    public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber)
     {
         return new SubscriptionTryoutCommand(_tryout, _pageSize, _timeLimitInSec);
     }

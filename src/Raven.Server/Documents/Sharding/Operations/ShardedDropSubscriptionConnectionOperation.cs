@@ -25,7 +25,7 @@ public readonly struct ShardedDropSubscriptionConnectionOperation : IShardedOper
         return null;
     }
 
-    public RavenCommand<object> CreateCommandForShard(int shard)
+    public RavenCommand<object> CreateCommandForShard(int shardNumber)
     {
         if (string.IsNullOrEmpty(_workerId))
         {

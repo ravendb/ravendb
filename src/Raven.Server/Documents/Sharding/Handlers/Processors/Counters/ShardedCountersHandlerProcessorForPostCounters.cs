@@ -89,6 +89,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
             return combined;
         }
 
-        public RavenCommand<CountersDetail> CreateCommandForShard(int shard) => _commandsPerShard[shard];
+        public RavenCommand<CountersDetail> CreateCommandForShard(int shardNumber) => _commandsPerShard[shardNumber];
     }
 }

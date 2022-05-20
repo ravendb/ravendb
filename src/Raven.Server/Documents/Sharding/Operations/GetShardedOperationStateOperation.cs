@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             _id = id;
             _nodeTag = nodeTag;
         }
-        public RavenCommand<OperationState> CreateCommandForShard(int shard) => new GetOperationStateOperation.GetOperationStateCommand(_id, _nodeTag);
+        public RavenCommand<OperationState> CreateCommandForShard(int shardNumber) => new GetOperationStateOperation.GetOperationStateCommand(_id, _nodeTag);
 
         public HttpRequest HttpRequest => _httpContext.Request;
 

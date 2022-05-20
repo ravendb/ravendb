@@ -35,6 +35,6 @@ namespace Raven.Server.Documents.Sharding.Operations
             return new DynamicJsonArray(reply);
         }
 
-        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shard) => _commands[shard];
+        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => _commands[shardNumber];
     }
 }

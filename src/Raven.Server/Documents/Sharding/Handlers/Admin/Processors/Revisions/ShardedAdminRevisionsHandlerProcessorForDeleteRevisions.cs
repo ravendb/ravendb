@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
             
             public HttpRequest HttpRequest => _httpContext.Request;
 
-            public RavenCommand<object> CreateCommandForShard(int shard) => _cmds[shard];
+            public RavenCommand<object> CreateCommandForShard(int shardNumber) => _cmds[shardNumber];
 
         }
     }

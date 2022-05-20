@@ -938,7 +938,11 @@ namespace Raven.Server.Json
 
         public static void WriteBasicDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, BasicDatabaseStatistics statistics)
         {
+            writer.WriteStartObject();
 
+            WriteBasicDatabaseStatisticsInternal(writer, statistics);
+
+            writer.WriteEndObject();
         }
 
         public static void WriteDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)

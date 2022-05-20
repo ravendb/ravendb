@@ -133,8 +133,8 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-        public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>
-            new ShardedCollectionPreviewCommand(_handler, _token.Pages[shard].Start, _token.PageSize);
+        public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber) =>
+            new ShardedCollectionPreviewCommand(_handler, _token.Pages[shardNumber].Start, _token.PageSize);
 
         private class ShardedCommandAsStream : ShardedBaseCommand<StreamResult>
         {

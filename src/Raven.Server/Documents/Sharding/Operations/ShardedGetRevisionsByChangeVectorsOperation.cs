@@ -61,6 +61,6 @@ namespace Raven.Server.Documents.Sharding.Operations
             return combined;
         }
 
-        public RavenCommand<BlittableArrayResult> CreateCommandForShard(int shard) => new GetRevisionsCommand(_changeVectors, _metadataOnly);
+        public RavenCommand<BlittableArrayResult> CreateCommandForShard(int shardNumber) => new GetRevisionsCommand(_changeVectors, _metadataOnly);
     }
 }

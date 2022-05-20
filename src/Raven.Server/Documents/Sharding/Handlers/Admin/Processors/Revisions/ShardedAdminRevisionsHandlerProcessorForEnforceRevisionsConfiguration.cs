@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
                 return new OperationIdResult();
             }
 
-            public RavenCommand<OperationIdResult> CreateCommandForShard(int shard) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(_operationId);
+            public RavenCommand<OperationIdResult> CreateCommandForShard(int shardNumber) => new EnforceRevisionsConfigurationOperation.EnforceRevisionsConfigurationCommand(_operationId);
         }
     }
 }
