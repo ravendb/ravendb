@@ -545,7 +545,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotEquals,
                     searcher, fieldId, value,
-                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<EqualsMatchComparer> : &FillFuncSequenceAll<EqualsMatchComparer>, &AndWith,
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<NotEqualsMatchComparer> : &FillFuncSequenceAll<NotEqualsMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, true, take: take);
             }
             else
@@ -553,7 +553,7 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotEquals,
                     searcher, fieldId, value,
-                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<EqualsMatchComparer> : &FillFuncNumerical<EqualsMatchComparer>, &AndWith,
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<NotEqualsMatchComparer> : &FillFuncNumerical<NotEqualsMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, true, take: take);
             }
         }
