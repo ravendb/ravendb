@@ -19,6 +19,12 @@ namespace Corax.Queries
         NotBetween
     }
 
+    public enum UnaryMatchOperationMode
+    {
+        Any,
+        All
+    }
+
     [DebuggerDisplay("{DebugView,nq}")]
     public unsafe partial struct UnaryMatch<TInner, TValueType> : IQueryMatch
         where TInner : IQueryMatch
@@ -33,6 +39,7 @@ namespace Corax.Queries
         private readonly TValueType _value;
         private readonly TValueType _valueAux;
         private readonly int _take;
+        private readonly UnaryMatchOperationMode _operationMode;
         private readonly bool _distinct;
         
         private long _totalResults;
@@ -53,7 +60,8 @@ namespace Corax.Queries
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> andWithFunc,
             long totalResults,
-            QueryCountConfidence confidence, 
+            QueryCountConfidence confidence,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             bool distinct = false,
             int take = -1)
         {
@@ -70,6 +78,7 @@ namespace Corax.Queries
             _value = value;
             _valueAux = default;
             _confidence = confidence;
+            _operationMode = mode;
             _distinct = distinct;
             _take = take <= 0 ? int.MaxValue : take;
         }
@@ -83,7 +92,8 @@ namespace Corax.Queries
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> andWith,
             long totalResults,
-            QueryCountConfidence confidence, 
+            QueryCountConfidence confidence,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             bool distinct = false,
             int take = -1)
         {
@@ -100,6 +110,7 @@ namespace Corax.Queries
             _value = value1;
             _valueAux = value2;
             _confidence = confidence;
+            _operationMode = mode;
             _distinct = distinct;
             _take = take <= 0 ? int.MaxValue : take;
         }

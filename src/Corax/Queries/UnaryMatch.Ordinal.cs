@@ -7,6 +7,7 @@ using Voron;
 
 namespace Corax.Queries
 {
+
     unsafe partial struct UnaryMatch<TInner, TValueType>
     {
         public interface IUnaryMatchComparer
@@ -32,10 +33,17 @@ namespace Corax.Queries
             return result;
         }
 
+
+
         [SkipLocalsInit]
-        private static int FillFuncSequence<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        private static int FillFuncSequenceAny<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
             where TComparer : struct, IUnaryMatchComparer
         {
+            // If we query unary, we want to find items where at least one element is valid for our conditions, so we look for the first match.
+            // For example: Terms [1,2,3] Q: 'where Term < 3'. We check '1 < 3' and thats it.
+            // Because the whole process is about comparing values, there is really no reason why we would call this when the condition is a null
+            // value, so if we want to compare against a null (which is pretty common) a more optimized version of FillFuncSequenceAny would be needed.
+
             var searcher = match._searcher;
             var currentType = ((Slice)(object)match._value).AsReadOnlySpan();
 
@@ -57,18 +65,19 @@ namespace Corax.Queries
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(freeMemory[i]);
-                    var type = reader.GetFieldType(match._fieldId, out var intOffset);
-                    var isMatch = false;
+                    var type = reader.GetFieldType(match._fieldId, out var _);
 
-                    if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
+                    var answer = match._distinct == false;
+                    var isMatch = match._distinct;
+
+                    // If we get a null, we just skip it. It will not match.
+                    if (type == IndexEntryFieldType.Null)
+                    {
+                        isMatch = answer;
+                    }                        
+                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
                         var iterator = reader.ReadMany(match._fieldId);
-
-                        //If we query unary, we want to find items where at least one element is valid for our conditions, so we look for the first match.
-                        //For example: Terms [1,2,3] Q: 'where Term < 3'. We check '1 < 3' and thats it.
-                        //The only difference is with NotMatch. We have to look through the whole collection and check if there are elements that accept our condition.
-                        var answer = match._distinct == false;
-                        isMatch = match._distinct;
 
                         while (iterator.ReadNext())
                         {
@@ -76,7 +85,7 @@ namespace Corax.Queries
                                 continue;
 
                             var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
-                            if (comparer.Compare(currentType, analyzedTerm) == answer)
+                            if (comparer.Compare(currentType, analyzedTerm))
                             {
                                 isMatch = answer;
                                 break;
@@ -85,15 +94,248 @@ namespace Corax.Queries
                     }
                     else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
                     {
-                        var read = reader.Read(match._fieldId, out var resultX);
-                        var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
-                        if (read && comparer.Compare(currentType, analyzedTerm))
+                        var read = reader.Read(match._fieldId, out var readType, out var resultX);
+                        if (read && readType != IndexEntryFieldType.Null)
                         {
-                            // We found a match.
-                            isMatch = true;
+                            var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
+                            if (read && comparer.Compare(currentType, analyzedTerm))
+                            {
+                                // We found a match.
+                                isMatch = answer;
+                            }
                         }
                     }
-                    
+
+                    if (isMatch)
+                    {
+                        currentMatches[storeIdx] = freeMemory[i];
+                        storeIdx++;
+                        totalResults++;
+                    }
+                }
+            } while (results >= totalResults + maxUnusedMatchesSlots);
+
+            return storeIdx;
+        }
+
+        [SkipLocalsInit]
+        private static int FillFuncSequenceAll<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+            where TComparer : struct, IUnaryMatchComparer
+        {
+            // If we query unary, we want to find items where at all elements has valid conditions, so we look for all the matches.            
+            // The typical use of all is on distinct, we want to know if there are any element that matches the negative. 
+            // For example: Terms [1,2,3] Q: 'where Term != 3'. We check every item to ensure there is no match with 3 there.
+            // Because the whole process is about comparing values, there is really no reason why we would call this when the condition is a null
+            // value, so if we want to compare against a null (which is pretty common) a more optimized version of FillFuncSequenceAny would be needed.
+
+            var searcher = match._searcher;
+            var currentType = ((Slice)(object)match._value).AsReadOnlySpan();
+
+            var comparer = default(TComparer);
+            var currentMatches = matches;
+            int totalResults = 0;
+            int storeIdx = 0;
+            int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+
+            int results;
+            do
+            {
+                var freeMemory = currentMatches.Slice(storeIdx);
+                results = match._inner.Fill(freeMemory);
+
+                if (results == 0)
+                    return totalResults;
+
+                var answer = match._distinct == false;
+                for (int i = 0; i < results; i++)
+                {
+                    var reader = searcher.GetReaderFor(freeMemory[i]);
+                    var type = reader.GetFieldType(match._fieldId, out var _);
+
+                    var isMatch = match._distinct;
+
+                    // If we get a null, we just skip it. It will not match.
+                    if (type != IndexEntryFieldType.Null)
+                    {
+                        if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
+                        {
+                            var iterator = reader.ReadMany(match._fieldId);
+
+                            while (iterator.ReadNext())
+                            {
+                                // Null here is complicated. When we are in the positive case, we know that the value is not null,
+                                // therefore finding a null in the case of the positive case would ensure that this is not a match.
+                                // However, when we are in the negative case (distict), we know for certain it is different to the
+                                // value and therefore we can continue to the next. 
+                                if (iterator.IsNull && !match._distinct)
+                                {
+                                    isMatch = answer;
+                                    break;
+                                }
+
+                                var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
+                                if (comparer.Compare(currentType, analyzedTerm))
+                                {
+                                    isMatch = answer;
+                                    break;
+                                }
+                            }
+                        }
+                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
+                        {
+                            var read = reader.Read(match._fieldId, out var readType, out var resultX);
+                            if (read && readType != IndexEntryFieldType.Null)
+                            {
+                                var analyzedTerm = match._searcher.ApplyAnalyzer(resultX, match._fieldId);
+                                if (read && comparer.Compare(currentType, analyzedTerm))
+                                {
+                                    // We found a match for the inverse.
+                                    isMatch = answer;
+                                }
+                            }
+                        }
+                    }                        
+
+                    if (isMatch)
+                    {
+                        currentMatches[storeIdx] = freeMemory[i];
+                        storeIdx++;
+                        totalResults++;
+                    }
+                }
+            } while (results >= totalResults + maxUnusedMatchesSlots);
+
+            return storeIdx;
+        }
+
+
+        [SkipLocalsInit]
+        private static int FillFuncAllNull(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        {
+            // If we query unary, we want to find if all items are null (most likely wont have much positives on lists), but
+            // it can certainly be more common in tuples.
+            // Since null is an special case, many of the more general comparisons 
+
+            var searcher = match._searcher;
+            var currentMatches = matches;
+            int totalResults = 0;
+            int storeIdx = 0;
+            int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+
+            int results;
+            do
+            {
+                var freeMemory = currentMatches.Slice(storeIdx);
+                results = match._inner.Fill(freeMemory);
+
+                if (results == 0)
+                    return totalResults;
+
+                var answer = match._distinct == false;
+                for (int i = 0; i < results; i++)
+                {
+                    var reader = searcher.GetReaderFor(freeMemory[i]);
+                    var type = reader.GetFieldType(match._fieldId, out var _);
+
+                    var isMatch = match._distinct;
+
+                    if (type != IndexEntryFieldType.Null)
+                    {
+                        if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
+                        {
+                            if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.EmptyList))
+                            {
+                                var iterator = reader.ReadMany(match._fieldId);
+                                while (iterator.ReadNext())
+                                {
+                                    if (iterator.IsNull)
+                                    {
+                                        isMatch = answer;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                isMatch = answer;
+                            }
+                        }
+                        else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
+                        {
+                            var readType = reader.GetFieldType(match._fieldId, out var _);
+                            if (readType != IndexEntryFieldType.Null)
+                                isMatch = answer;
+                        }
+                    }
+
+                    if (isMatch)
+                    {
+                        currentMatches[storeIdx] = freeMemory[i];
+                        storeIdx++;
+                        totalResults++;
+                    }
+                }
+            } while (results >= totalResults + maxUnusedMatchesSlots);
+
+            return storeIdx;
+        }
+
+        [SkipLocalsInit]
+        private static int FillFuncAnyNull(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        {
+            // If we query unary, we want to find if all items are null (most likely wont have much positives on lists), but
+            // it can certainly be more common in tuples.
+            // Since null is an special case, many of the more general comparisons 
+
+            var searcher = match._searcher;
+            var currentMatches = matches;
+            int totalResults = 0;
+            int storeIdx = 0;
+            int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+
+            int results;
+            do
+            {
+                var freeMemory = currentMatches.Slice(storeIdx);
+                results = match._inner.Fill(freeMemory);
+
+                if (results == 0)
+                    return totalResults;
+
+                var answer = match._distinct == false;
+                for (int i = 0; i < results; i++)
+                {
+                    var reader = searcher.GetReaderFor(freeMemory[i]);
+                    var type = reader.GetFieldType(match._fieldId, out var _);
+
+                    var isMatch = match._distinct;
+
+                    if (type == IndexEntryFieldType.Null)
+                    {
+                        isMatch = answer;
+                    }
+                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
+                    {
+                        if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.EmptyList))
+                        {
+                            var iterator = reader.ReadMany(match._fieldId);
+                            while (iterator.ReadNext())
+                            {
+                                if (iterator.IsNull)
+                                {
+                                    isMatch = answer;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
+                    {
+                        var readType = reader.GetFieldType(match._fieldId, out var _);
+                        if (readType == IndexEntryFieldType.Null)
+                            isMatch = answer;
+                    }
+
                     if (isMatch)
                     {
                         currentMatches[storeIdx] = freeMemory[i];
@@ -127,12 +369,14 @@ namespace Corax.Queries
                 if (results == 0)
                     return totalResults;
 
+                var answer = match._distinct == false;
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(freeMemory[i]);
                     var type = reader.GetFieldType(match._fieldId, out _);
-
-                    bool isMatch = false;
+                    
+                    var isMatch = match._distinct;
+                    
                     if (typeof(TValueType) == typeof(long))
                     {
                         if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
@@ -144,8 +388,6 @@ namespace Corax.Queries
                         else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
                             var iterator = reader.ReadMany(match._fieldId);
-                            var answer = match._distinct == false;
-                            isMatch = match._distinct;
                             while (iterator.ReadNext())
                             {
                                 if (comparer.Compare((long)(object)currentType, iterator.Long) == answer)
@@ -167,8 +409,7 @@ namespace Corax.Queries
                         else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
                             var iterator = reader.ReadMany(match._fieldId);
-                            var answer = match._distinct == false;
-                            isMatch = match._distinct;
+
                             while (iterator.ReadNext())
                             {
                                 if (comparer.Compare((double)(object)currentType, iterator.Double) == answer)
@@ -194,49 +435,67 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = false,
+        public static UnaryMatch<TInner, TValueType> YieldIsNull(in TInner inner, IndexSearcher searcher, int fieldId, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
+        {
+            return new UnaryMatch<TInner, TValueType>(
+                in inner, UnaryMatchOperation.Equals,
+                searcher, fieldId, default(TValueType),
+                mode == UnaryMatchOperationMode.Any ? &FillFuncAnyNull : &FillFuncAllNull, &AndWith,
+                inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, false, take: take);
+        }
+
+        public static UnaryMatch<TInner, TValueType> YieldIsNotNull(in TInner inner, IndexSearcher searcher, int fieldId, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
+        {
+            return new UnaryMatch<TInner, TValueType>(
+                in inner, UnaryMatchOperation.NotEquals,
+                searcher, fieldId, default(TValueType),
+                mode == UnaryMatchOperationMode.Any ? &FillFuncAnyNull : &FillFuncAllNull, &AndWith,
+                inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, true, take: take);
+        }
+
+        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
-            {
+            {                
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThan,
                     searcher, fieldId, value,
-                    &FillFuncSequence<GreaterThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<GreaterThanMatchComparer> : &FillFuncSequenceAll<GreaterThanMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThan,
                     searcher, fieldId, value,
-                    &FillFuncNumerical<GreaterThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<GreaterThanMatchComparer> : &FillFuncNumerical<GreaterThanMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
 
         public static UnaryMatch<TInner, TValueType> YieldGreaterThanOrEqualMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
-            bool distinct = false, int take = -1)
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThanOrEqual,
                     searcher, fieldId, value,
-                    &FillFuncSequence<GreaterThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<GreaterThanOrEqualMatchComparer> : &FillFuncSequenceAll<GreaterThanOrEqualMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThanOrEqual,
                     searcher, fieldId, value,
-                    &FillFuncNumerical<GreaterThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<GreaterThanOrEqualMatchComparer> : &FillFuncNumerical<GreaterThanOrEqualMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = false,
+        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
@@ -244,79 +503,79 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.LessThan,
                     searcher, fieldId, value,
-                    &FillFuncSequence<LessThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<LessThanMatchComparer> : &FillFuncSequenceAll<LessThanMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.LessThan,
                     searcher, fieldId, value,
-                    &FillFuncNumerical<LessThanMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<LessThanMatchComparer> : &FillFuncNumerical<LessThanMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
 
         public static UnaryMatch<TInner, TValueType> YieldLessThanOrEqualMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
-            bool distinct = false, int take = -1)
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.LessThanOrEqual,
                     searcher, fieldId, value,
-                    &FillFuncSequence<LessThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<LessThanOrEqualMatchComparer> : &FillFuncSequenceAll<LessThanOrEqualMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.LessThanOrEqual,
                     searcher, fieldId, value,
-                    &FillFuncNumerical<LessThanOrEqualMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<LessThanOrEqualMatchComparer> : &FillFuncNumerical<LessThanOrEqualMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldNotEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = true,
-            int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldNotEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotEquals,
                     searcher, fieldId, value,
-                    &FillFuncSequence<NotEqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<EqualsMatchComparer> : &FillFuncSequenceAll<EqualsMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, true, take: take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotEquals,
                     searcher, fieldId, value,
-                    &FillFuncNumerical<NotEqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<EqualsMatchComparer> : &FillFuncNumerical<EqualsMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, true, take: take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, bool distinct = false,
-            int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.Equals,
                     searcher, fieldId, value,
-                    &FillFuncSequence<EqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<EqualsMatchComparer> : &FillFuncSequenceAll<EqualsMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.Equals,
                     searcher, fieldId, value,
-                    &FillFuncNumerical<EqualsMatchComparer>, &AndWith,
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), distinct, take);
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumerical<EqualsMatchComparer> : &FillFuncNumerical<EqualsMatchComparer>, &AndWith,
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
 

@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Xml.Xsl;
 using Corax.Queries;
 using Voron;
 
@@ -144,7 +143,7 @@ public partial class IndexSearcher
             UnaryMatchOperation.LessThan => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldLessThan(set, this, fieldId, term, take: take)),
             UnaryMatchOperation.LessThanOrEqual => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldLessThanOrEqualMatch(set, this, fieldId, term, take: take)),
             UnaryMatchOperation.Equals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldEqualsMatch(set, this, fieldId, term, take: take)),
-            UnaryMatchOperation.NotEquals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotEqualsMatch(set, this, fieldId, term, true, take)),
+            UnaryMatchOperation.NotEquals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotEqualsMatch(set, this, fieldId, term, UnaryMatchOperationMode.All, take: take)),
             _ => throw new ArgumentOutOfRangeException(nameof(operation), @operation, $"Wrong {nameof(UnaryQuery)} was called. Check other overloads.")
         };
     }
