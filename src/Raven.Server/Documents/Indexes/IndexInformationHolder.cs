@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
@@ -137,4 +138,13 @@ public class IndexInformationHolder
 public static class IndexInformationHolderExtensions
 {
     public static IndexInformationHolder ToIndexInformationHolder(this Index index) => IndexInformationHolder.CreateFor(index);
+
+    public static BasicIndexInformation ToBasicIndexInformation(this IndexInformationHolder holder) => new BasicIndexInformation
+    {
+        Name = holder.Name,
+        Type = holder.Type,
+        SourceType = holder.SourceType,
+        Priority = holder.Definition.Priority,
+        LockMode = holder.Definition.LockMode,
+    };
 }
