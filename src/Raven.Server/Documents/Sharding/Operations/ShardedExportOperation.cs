@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             _writer = writer;
             _operationId = operationId;
         }
-        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shard) => new ShardedExportCommand(_handler, _operationId, _options, _writer);
+        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedExportCommand(_handler, _operationId, _options, _writer);
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
         public BlittableJsonReaderObject Combine(Memory<BlittableJsonReaderObject> results) => null;

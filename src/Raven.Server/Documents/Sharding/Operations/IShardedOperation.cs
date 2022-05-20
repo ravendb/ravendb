@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Operations
             return Combine(results);
         }
 
-        RavenCommand<TResult> CreateCommandForShard(int shard);
+        RavenCommand<TResult> CreateCommandForShard(int shardNumber);
 
         // if the return result is of type blittalbe
         JsonOperationContext CreateOperationContext() => throw new NotImplementedException($"Must be implemented for {typeof(TCombinedResult)}");

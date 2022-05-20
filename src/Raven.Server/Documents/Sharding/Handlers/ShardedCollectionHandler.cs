@@ -125,8 +125,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             public HttpRequest HttpRequest => _httpContext.Request;
 
-            public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>
-                StreamOperation.CreateStreamCommand(_startsWith, _matches, _token.Pages[shard].Start, _token.PageSize, _exclude, _startAfter);
+            public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber) =>
+                StreamOperation.CreateStreamCommand(_startsWith, _matches, _token.Pages[shardNumber].Start, _token.PageSize, _exclude, _startAfter);
 
             public string ExpectedEtag { get; }
 
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 return stats;
             }
 
-            public RavenCommand<CollectionStatistics> CreateCommandForShard(int shard) => new GetCollectionStatisticsOperation.GetCollectionStatisticsCommand();
+            public RavenCommand<CollectionStatistics> CreateCommandForShard(int shardNumber) => new GetCollectionStatisticsOperation.GetCollectionStatisticsCommand();
         }
 
         private readonly struct ShardedDetailedCollectionStatisticsOperation : IShardedOperation<DetailedCollectionStatistics>
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 return stats;
             }
 
-            public RavenCommand<DetailedCollectionStatistics> CreateCommandForShard(int shard) =>
+            public RavenCommand<DetailedCollectionStatistics> CreateCommandForShard(int shardNumber) =>
                 new GetDetailedCollectionStatisticsOperation.GetDetailedCollectionStatisticsCommand();
         }
     }

@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                 return final;
             }
 
-            public RavenCommand<GetConflictsPreviewResult> CreateCommandForShard(int shard) => new GetConflictsOperation.GetConflictsCommand(_token.Pages[shard].Start, _token.PageSize);
+            public RavenCommand<GetConflictsPreviewResult> CreateCommandForShard(int shardNumber) => new GetConflictsOperation.GetConflictsCommand(_token.Pages[shardNumber].Start, _token.PageSize);
         }
 
         public class ConflictsLastModifiedComparer : Comparer<ShardStreamItem<GetConflictsPreviewResult.ConflictPreview>>

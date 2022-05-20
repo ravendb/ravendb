@@ -44,7 +44,8 @@ public class IndexInformationHolder
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
         Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         Name = Definition.Name;
-        Type = DetectIndexType(definition);
+
+        DetectIndexType(definition, ref Type, ref SourceType);
     }
 
     protected IndexInformationHolder([NotNull] Index index)
@@ -56,6 +57,7 @@ public class IndexInformationHolder
         Definition = index.Definition;
         Configuration = index.Configuration;
         Type = index.Type;
+        SourceType = index.SourceType;
     }
 
     public readonly string Name;
@@ -65,6 +67,8 @@ public class IndexInformationHolder
     public readonly IndexingConfiguration Configuration;
 
     public readonly IndexType Type;
+
+    public readonly IndexSourceType SourceType;
 
     public static IndexInformationHolder CreateFor(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration, AbstractStaticIndexBase staticIndex = null)
     {
@@ -82,22 +86,49 @@ public class IndexInformationHolder
             : new IndexInformationHolder(index);
     }
 
-    private static IndexType DetectIndexType(IndexDefinitionBaseServerSide definition)
+    private static void DetectIndexType(IndexDefinitionBaseServerSide definition, ref IndexType type, ref IndexSourceType sourceType)
     {
         if (definition is AutoMapIndexDefinition)
-            return IndexType.AutoMap;
+        {
+            type = IndexType.AutoMap;
+            sourceType = IndexSourceType.Documents;
+            return;
+        }
 
         if (definition is AutoMapReduceIndexDefinition)
-            return IndexType.AutoMapReduce;
+        {
+            type = IndexType.AutoMapReduce;
+            sourceType = IndexSourceType.Documents;
+            return;
+        }
 
-        if (definition is FaultyIndexDefinition or FaultyAutoIndexDefinition)
-            return IndexType.Faulty;
+        if (definition is FaultyAutoIndexDefinition)
+        {
+            type = IndexType.Faulty;
+            sourceType = IndexSourceType.Documents;
+            return;
+        }
+
+        if (definition is FaultyIndexDefinition f)
+        {
+            type = IndexType.Faulty;
+            sourceType = f.GetOrCreateIndexDefinitionInternal().SourceType;
+            return;
+        }
 
         if (definition is MapReduceIndexDefinition mapReduce)
-            return mapReduce.IndexDefinition.Type;
+        {
+            type = mapReduce.IndexDefinition.Type;
+            sourceType = mapReduce.IndexDefinition.SourceType;
+            return;
+        }
 
         if (definition is MapIndexDefinition map)
-            return map.IndexDefinition.Type;
+        {
+            type = map.IndexDefinition.Type;
+            sourceType = map.IndexDefinition.SourceType;
+            return;
+        }
 
         throw new ArgumentOutOfRangeException(nameof(definition));
     }

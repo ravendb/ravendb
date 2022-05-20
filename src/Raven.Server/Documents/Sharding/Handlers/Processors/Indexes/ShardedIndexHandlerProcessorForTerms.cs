@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
                 return new TermsQueryResultServerSide { IndexName = results.Span[0].IndexName, Terms = terms.ToList() };
             }
 
-            public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shard) => new GetIndexTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
+            public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shardNumber) => new GetIndexTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
 
             public string CombineCommandsEtag(Memory<RavenCommand<TermsQueryResultServerSide>> commands)
             {

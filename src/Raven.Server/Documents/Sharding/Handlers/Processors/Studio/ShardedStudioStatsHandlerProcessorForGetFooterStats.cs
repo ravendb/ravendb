@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
                 return combined;
             }
 
-            public RavenCommand<FooterStatistics> CreateCommandForShard(int shard) => new GetStudioFooterStatisticsOperation.GetStudioFooterStatisticsCommand();
+            public RavenCommand<FooterStatistics> CreateCommandForShard(int shardNumber) => new GetStudioFooterStatisticsOperation.GetStudioFooterStatisticsCommand();
         }
     }
 }

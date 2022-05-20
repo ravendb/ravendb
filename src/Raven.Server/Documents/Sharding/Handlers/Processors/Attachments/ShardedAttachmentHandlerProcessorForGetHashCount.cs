@@ -47,6 +47,6 @@ internal class ShardedAttachmentHandlerProcessorForGetHashCount : AbstractAttach
             return response;
         }
 
-        public RavenCommand<GetAttachmentHashCountCommand.Response> CreateCommandForShard(int shard) => new GetAttachmentHashCountCommand(_hash);
+        public RavenCommand<GetAttachmentHashCountCommand.Response> CreateCommandForShard(int shardNumber) => new GetAttachmentHashCountCommand(_hash);
     }
 }

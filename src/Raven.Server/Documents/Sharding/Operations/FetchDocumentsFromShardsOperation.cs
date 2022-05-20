@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shard) => new GetDocumentsCommand(_idsByShards[shard].Ids.ToArray(), _includePaths, _metadataOnly);
+        public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shardNumber) => new GetDocumentsCommand(_idsByShards[shardNumber].Ids.ToArray(), _includePaths, _metadataOnly);
     }
 
     public class GetShardedDocumentsResult

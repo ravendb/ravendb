@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Sharding.Commands
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
         public BlittableJsonReaderObject Combine(Memory<BlittableJsonReaderObject> results) => null;
 
-        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shard) => new ShardedImportCommand(_handler, _holders[shard].OutStream, _options);
+        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedImportCommand(_handler, _holders[shardNumber].OutStream, _options);
     }
 
     internal class ShardedImportCommand : ShardedCommand

@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
                 return list.ToArray();
             }
 
-            public RavenCommand<BlittableArrayResult> CreateCommandForShard(int shard) => new GetRevisionsBinEntryCommand(_token.Pages[shard].Start, _token.PageSize);
+            public RavenCommand<BlittableArrayResult> CreateCommandForShard(int shardNumber) => new GetRevisionsBinEntryCommand(_token.Pages[shardNumber].Start, _token.PageSize);
         }
     }
 }

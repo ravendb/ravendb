@@ -28,6 +28,6 @@ namespace Raven.Server.Documents.Sharding.Operations
         public HttpRequest HttpRequest => null;
         public object Combine(Memory<object> results) => throw new NotImplementedException();
 
-        public RavenCommand<object> CreateCommandForShard(int shard) => new WaitForIndexNotificationCommand(_indexes);
+        public RavenCommand<object> CreateCommandForShard(int shardNumber) => new WaitForIndexNotificationCommand(_indexes);
     }
 }
