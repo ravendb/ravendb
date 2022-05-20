@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Xml.Xsl;
 using Corax.Queries;
 using Voron;
 
@@ -25,6 +24,12 @@ public partial class IndexSearcher
         }
 
         return BuildUnaryMatch(in set, fieldId, term, @operation, take);
+    }
+
+    public UnaryMatch EqualsNull<TInner>(in TInner set, int fieldId, UnaryMatchOperation @operation, int take = Constants.IndexSearcher.TakeAll)
+        where TInner : IQueryMatch
+    {
+        return BuildUnaryMatch<TInner, Slice>(in set, fieldId, @operation, take);
     }
 
 
@@ -133,6 +138,18 @@ public partial class IndexSearcher
         };
     }
 
+    private UnaryMatch BuildUnaryMatch<TInner, TValueType>(in TInner set, int fieldId, UnaryMatchOperation @operation,
+    int take = Constants.IndexSearcher.TakeAll)
+    where TInner : IQueryMatch
+    {
+        return @operation switch
+        {
+            UnaryMatchOperation.Equals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldIsNull(set, this, fieldId, take: take)),
+            UnaryMatchOperation.NotEquals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldIsNotNull(set, this, fieldId, UnaryMatchOperationMode.All, take: take)),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), @operation, $"Wrong {nameof(UnaryQuery)} was called. Check other overloads.")
+        };
+    }
+    
     private UnaryMatch BuildUnaryMatch<TInner, TValueType>(in TInner set, int fieldId, TValueType term, UnaryMatchOperation @operation,
         int take = Constants.IndexSearcher.TakeAll)
         where TInner : IQueryMatch
@@ -144,7 +161,7 @@ public partial class IndexSearcher
             UnaryMatchOperation.LessThan => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldLessThan(set, this, fieldId, term, take: take)),
             UnaryMatchOperation.LessThanOrEqual => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldLessThanOrEqualMatch(set, this, fieldId, term, take: take)),
             UnaryMatchOperation.Equals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldEqualsMatch(set, this, fieldId, term, take: take)),
-            UnaryMatchOperation.NotEquals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotEqualsMatch(set, this, fieldId, term, true, take)),
+            UnaryMatchOperation.NotEquals => UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldNotEqualsMatch(set, this, fieldId, term, UnaryMatchOperationMode.All, take: take)),
             _ => throw new ArgumentOutOfRangeException(nameof(operation), @operation, $"Wrong {nameof(UnaryQuery)} was called. Check other overloads.")
         };
     }

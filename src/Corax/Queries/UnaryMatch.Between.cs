@@ -134,7 +134,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.Between, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncBetweenSequence<TLeftSideComparer, TRightSideComparer>, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take: take);
             }
             else if (typeof(TValueType) == typeof(long))
             {
@@ -151,7 +151,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.Between, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take: take);
             }
             else
             {
@@ -167,7 +167,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), false, take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take: take);
             }
         }
 
@@ -297,7 +297,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncNotBetweenSequence<TLeftSideComparer, TRightSideComparer>, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), UnaryMatchOperationMode.All, take: take);
             }
             else if (typeof(TValueType) == typeof(long))
             {
@@ -314,7 +314,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncNotBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), UnaryMatchOperationMode.All, take: take);
             }
             else
             {
@@ -330,7 +330,7 @@ namespace Corax.Queries
                     in inner, UnaryMatchOperation.NotBetween, 
                     searcher, fieldId, value1, value2, 
                     &FillFuncNotBetweenNumerical<TLeftSideComparer, TRightSideComparer>, &AndWith, 
-                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), true, take);
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), UnaryMatchOperationMode.All, take: take);
             }
         }
     }

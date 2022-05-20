@@ -171,11 +171,11 @@ public static class CoraxQueryBuilder
                         // This is TermMatch case
                         if (scoreFunction is not NullScoreFunction)
                             return indexSearcher.Boost(rawMatch, scoreFunction);
-                        
-                        
+
+
                         return rawMatch;
                     }
-                  
+
 
                     var match = valueType switch
                     {
@@ -192,8 +192,8 @@ public static class CoraxQueryBuilder
                     if (highlightingTerm != null && valueType is ValueTokenType.Double or ValueTokenType.Long)
                     {
                         highlightingTerm.Values = value.ToString();
-                    }                       
-                    
+                    }
+
                     if (match is null)
                         QueryBuilderHelper.ThrowUnhandledValueTokenType(valueType);
 
@@ -201,17 +201,24 @@ public static class CoraxQueryBuilder
 
                     IQueryMatch HandleStringUnaryMatch()
                     {
-                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-                        if (highlightingTerm != null)
-                            highlightingTerm.Values = valueAsString;
-                                                
                         if (exact && metadata.IsDynamic)
                         {
                             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
                             fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
                         }
 
-                        return indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, valueAsString, operation, take);
+                        if (value == null)
+                        {
+                            return indexSearcher.EqualsNull(indexSearcher.AllEntries(), fieldId, operation, take);
+                        }
+                        else
+                        {
+                            var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+                            if (highlightingTerm != null)
+                                highlightingTerm.Values = valueAsString;
+                            
+                            return indexSearcher.UnaryQuery(indexSearcher.AllEntries(), fieldId, valueAsString, operation, take);
+                        }
                     }
                 }
             }
