@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Stats;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 
@@ -32,15 +33,7 @@ internal class ShardedStatsHandlerProcessorForBasicStats : AbstractStatsHandlerP
             for (var i = 0; i < indexes.Count; i++)
             {
                 var index = indexes[i];
-
-                stats.Indexes[i] = new BasicIndexInformation
-                {
-                    LockMode = index.Definition.LockMode,
-                    Priority = index.Definition.Priority,
-                    Name = index.Name,
-                    Type = index.Type,
-                    SourceType = index.SourceType
-                };
+                stats.Indexes[i] = index.ToBasicIndexInformation();
             }
 
             return stats;

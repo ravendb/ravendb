@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats;
@@ -45,16 +46,8 @@ internal class StatsHandlerProcessorForBasicStats : AbstractStatsHandlerProcesso
         stats.Indexes = new BasicIndexInformation[indexes.Count];
         for (var i = 0; i < indexes.Count; i++)
         {
-            var index = indexes[i];
-
-            stats.Indexes[i] = new BasicIndexInformation
-            {
-                Name = index.Name,
-                LockMode = index.Definition.LockMode,
-                Priority = index.Definition.Priority,
-                Type = index.Type,
-                SourceType = index.SourceType
-            };
+            var index = indexes[i].ToIndexInformationHolder();
+            stats.Indexes[i] = index.ToBasicIndexInformation();
         }
     }
 }
