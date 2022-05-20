@@ -18,7 +18,6 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -31,7 +30,6 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -938,6 +936,11 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteBasicDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, BasicDatabaseStatistics statistics)
+        {
+
+        }
+
         public static void WriteDatabaseStatistics(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, DatabaseStatistics statistics)
         {
             writer.WriteStartObject();
@@ -949,44 +952,7 @@ namespace Raven.Server.Json
 
         private static void WriteDatabaseStatisticsInternal(AbstractBlittableJsonTextWriter writer, DatabaseStatistics statistics)
         {
-            writer.WritePropertyName(nameof(statistics.CountOfIndexes));
-            writer.WriteInteger(statistics.CountOfIndexes);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfDocuments));
-            writer.WriteInteger(statistics.CountOfDocuments);
-            writer.WriteComma();
-
-            if (statistics.CountOfRevisionDocuments > 0)
-            {
-                writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
-                writer.WriteInteger(statistics.CountOfRevisionDocuments);
-                writer.WriteComma();
-            }
-
-            writer.WritePropertyName(nameof(statistics.CountOfTombstones));
-            writer.WriteInteger(statistics.CountOfTombstones);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfDocumentsConflicts));
-            writer.WriteInteger(statistics.CountOfDocumentsConflicts);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfConflicts));
-            writer.WriteInteger(statistics.CountOfConflicts);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfAttachments));
-            writer.WriteInteger(statistics.CountOfAttachments);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfCounterEntries));
-            writer.WriteInteger(statistics.CountOfCounterEntries);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfTimeSeriesSegments));
-            writer.WriteInteger(statistics.CountOfTimeSeriesSegments);
-            writer.WriteComma();
+            WriteBasicDatabaseStatisticsInternal(writer, statistics);
 
             writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
@@ -1062,6 +1028,49 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
             writer.WriteComma();
+        }
+
+        private static void WriteBasicDatabaseStatisticsInternal<TIndexInformation>(AbstractBlittableJsonTextWriter writer, AbstractDatabaseStatistics<TIndexInformation> statistics)
+            where TIndexInformation : BasicIndexInformation
+        {
+            writer.WritePropertyName(nameof(statistics.CountOfIndexes));
+            writer.WriteInteger(statistics.CountOfIndexes);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfDocuments));
+            writer.WriteInteger(statistics.CountOfDocuments);
+            writer.WriteComma();
+
+            if (statistics.CountOfRevisionDocuments > 0)
+            {
+                writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
+                writer.WriteInteger(statistics.CountOfRevisionDocuments);
+                writer.WriteComma();
+            }
+
+            writer.WritePropertyName(nameof(statistics.CountOfTombstones));
+            writer.WriteInteger(statistics.CountOfTombstones);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfDocumentsConflicts));
+            writer.WriteInteger(statistics.CountOfDocumentsConflicts);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfConflicts));
+            writer.WriteInteger(statistics.CountOfConflicts);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfAttachments));
+            writer.WriteInteger(statistics.CountOfAttachments);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfCounterEntries));
+            writer.WriteInteger(statistics.CountOfCounterEntries);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfTimeSeriesSegments));
+            writer.WriteInteger(statistics.CountOfTimeSeriesSegments);
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.Indexes));
             writer.WriteStartArray();
@@ -1073,46 +1082,95 @@ namespace Raven.Server.Json
 
                 isFirstInternal = false;
 
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(index.IsStale));
-                writer.WriteBool(index.IsStale);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(index.Name));
-                writer.WriteString(index.Name);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(index.LockMode));
-                writer.WriteString(index.LockMode.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(index.Priority));
-                writer.WriteString(index.Priority.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(index.State));
-                writer.WriteString(index.State.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(index.Type));
-                writer.WriteString(index.Type.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(index.SourceType));
-                writer.WriteString(index.SourceType.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(index.LastIndexingTime));
-                if (index.LastIndexingTime.HasValue)
-                    writer.WriteDateTime(index.LastIndexingTime.Value, isUtc: true);
-                else
-                    writer.WriteNull();
-
-                writer.WriteEndObject();
+                switch (index)
+                {
+                    case IndexInformation indexInformation:
+                        WriteIndexInformation(writer, indexInformation);
+                        break;
+                    case BasicIndexInformation basicIndexInformation:
+                        WriteBasicIndexInformation(writer, basicIndexInformation);
+                        break;
+                    default:
+                        throw new NotSupportedException("Unknown index information.");
+                }
             }
 
             writer.WriteEndArray();
+
+            void WriteIndexInformation(AbstractBlittableJsonTextWriter w, IndexInformation index)
+            {
+                w.WriteStartObject();
+
+                w.WritePropertyName(nameof(index.IsStale));
+                w.WriteBool(index.IsStale);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.State));
+                w.WriteString(index.State.ToString());
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.LastIndexingTime));
+                if (index.LastIndexingTime.HasValue)
+                    w.WriteDateTime(index.LastIndexingTime.Value, isUtc: true);
+                else
+                    w.WriteNull();
+
+                WriteBasicIndexInformationInternal(w, index as TIndexInformation);
+
+                w.WriteEndObject();
+            }
+
+            void WriteBasicIndexInformation(AbstractBlittableJsonTextWriter w, BasicIndexInformation index)
+            {
+                w.WriteStartObject();
+
+                w.WritePropertyName(nameof(index.Name));
+                w.WriteString(index.Name);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.LockMode));
+                w.WriteString(index.LockMode.ToString());
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.Priority));
+                w.WriteString(index.Priority.ToString());
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.Type));
+                w.WriteString(index.Type.ToString());
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.SourceType));
+                w.WriteString(index.SourceType.ToString());
+                w.WriteComma();
+
+                WriteBasicIndexInformationInternal(w, index as TIndexInformation);
+
+                w.WriteEndObject();
+            }
+
+            static void WriteBasicIndexInformationInternal(AbstractBlittableJsonTextWriter w, TIndexInformation index)
+            {
+                w.WritePropertyName(nameof(index.Name));
+                w.WriteString(index.Name);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.LockMode));
+                w.WriteString(index.LockMode.ToString());
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.Priority));
+                w.WriteString(index.Priority.ToString());
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.Type));
+                w.WriteString(index.Type.ToString());
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(index.SourceType));
+                w.WriteString(index.SourceType.ToString());
+                w.WriteComma();
+            }
         }
 
         public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
@@ -1935,7 +1993,7 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
         }
-        
+
         public static async ValueTask<int> WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries, CancellationToken token)
         {
             int size = 0;

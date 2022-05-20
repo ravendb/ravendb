@@ -1,14 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Operations;
-using Raven.Server.Documents.Handlers.Processors;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Stats;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -16,6 +8,13 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/stats/basic", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task BasicStats()
+        {
+            using (var processor = new StatsHandlerProcessorForBasicStats(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenAction("/databases/*/stats/detailed", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task DetailedStats()
         {
@@ -35,71 +34,6 @@ namespace Raven.Server.Documents.Handlers
         {
             NoContentStatus();
             return Task.CompletedTask;
-        }
-
-        private void FillDatabaseStatistics(DatabaseStatistics stats, QueryOperationContext context)
-        {
-            var indexes = Database.IndexStore.GetIndexes().ToList();
-            var size = Database.GetSizeOnDisk();
-
-            stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Documents.Transaction.InnerTransaction);
-            stats.LastDatabaseEtag = DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction);
-            stats.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents);
-
-            stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context.Documents);
-            stats.CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context.Documents);
-            stats.CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context.Documents);
-            stats.CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context.Documents);
-            stats.CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount;
-            stats.SizeOnDisk = size.Data;
-            stats.NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations;
-            stats.TempBuffersSizeOnDisk = size.TempBuffers;
-            stats.CountOfCounterEntries = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context.Documents);
-
-            stats.CountOfTimeSeriesSegments = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(context.Documents);
-
-            var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context.Documents);
-            stats.CountOfAttachments = attachments.AttachmentCount;
-            stats.CountOfUniqueAttachments = attachments.StreamsCount;
-            stats.CountOfIndexes = indexes.Count;
-
-            stats.DatabaseId = Database.DocumentsStorage.Environment.Base64Id;
-            stats.Is64Bit = !Database.DocumentsStorage.Environment.Options.ForceUsing32BitsPager && IntPtr.Size == sizeof(long);
-            stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();
-
-            stats.Indexes = new IndexInformation[indexes.Count];
-            for (var i = 0; i < indexes.Count; i++)
-            {
-                var index = indexes[i];
-                bool isStale;
-                try
-                {
-                    isStale = index.IsStale(context);
-                }
-                catch (OperationCanceledException)
-                {
-                    // if the index has just been removed, let us consider it stale
-                    // until it can be safely removed from the list of indexes in the
-                    // database
-                    isStale = true;
-                }
-                stats.Indexes[i] = new IndexInformation
-                {
-                    State = index.State,
-                    IsStale = isStale,
-                    Name = index.Name,
-                    LockMode = index.Definition.LockMode,
-                    Priority = index.Definition.Priority,
-                    Type = index.Type,
-                    LastIndexingTime = index.LastIndexingTime,
-                    SourceType = index.SourceType
-                };
-
-                if (stats.LastIndexingTime.HasValue)
-                    stats.LastIndexingTime = stats.LastIndexingTime >= index.LastIndexingTime ? stats.LastIndexingTime : index.LastIndexingTime;
-                else
-                    stats.LastIndexingTime = index.LastIndexingTime;
-            }
         }
 
         [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
