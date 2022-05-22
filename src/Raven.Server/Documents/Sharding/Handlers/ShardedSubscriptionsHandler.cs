@@ -189,34 +189,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscriptions/connection-details", "GET")]
         public async Task GetSubscriptionConnectionDetails()
         {
-            var subscriptionName = GetStringQueryString("name", false);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                if (string.IsNullOrEmpty(subscriptionName))
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return;
-                }
-
-                if (ShardedSubscriptionConnection.Connections.TryGetValue(subscriptionName, out var connection) == false)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                var subscriptionConnectionDetails = new SubscriptionConnectionDetails
-                {
-                    ClientUri = connection?.ClientUri,
-                    Strategy = connection?.Strategy
-                };
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, subscriptionConnectionDetails.ToJson());
-                }
-            }
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForGetConnectionDetails(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/subscriptions/try", "POST")]
