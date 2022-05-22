@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Sparrow.Logging;
-using Sparrow.Server.Platform;
+using Sparrow.Server.Platform.Posix;
 
 namespace Sparrow.Server.Utils
 {
@@ -47,14 +50,17 @@ namespace Sparrow.Server.Utils
                 }
 
                 var prev = await prevTask.ConfigureAwait(false);
-                if (prev == null)
-                    return null;
+                if (prev == PrevInfo.Empty)
+                {
+                    _previousInfo.TryRemove(new KeyValuePair<string, Task<PrevInfo>>(drive, prevTask));
+                    continue;
+                }
                 
                 var diff = DateTime.UtcNow - prev.Raw.Time;
                 if (start < prev.Raw.Time || diff < _minInterval)
                     return prev.Calculated;
 
-                state ??= new State {Drive = drive};
+                state ??= new State { Drive = drive };
                 state.Prev = prev;
 
                 var calculateTask = new Task<PrevInfo>(CalculateStats, state);
@@ -70,7 +76,10 @@ namespace Sparrow.Server.Utils
         {
             var state = (State)o;
             var currentInfo = GetDiskInfo(state.Drive);
-            return currentInfo != null ? new PrevInfo {Raw = currentInfo} : null;
+            if (currentInfo == null)
+                return PrevInfo.Empty;
+            
+            return new PrevInfo { Raw = currentInfo };
         }
 
         private PrevInfo CalculateStats(object o)
@@ -78,14 +87,14 @@ namespace Sparrow.Server.Utils
             var state = (State)o;
             var currentInfo = GetDiskInfo(state.Drive);
             if (currentInfo == null)
-                return null;
+                return PrevInfo.Empty;
 
             var diff = (currentInfo.Time - state.Prev.Raw.Time).TotalSeconds;
             var read = (currentInfo.IoReadOperations - state.Prev.Raw.IoReadOperations) / diff;
             var write = (currentInfo.IoWriteOperations - state.Prev.Raw.IoWriteOperations) / diff;
-            var diskSpaceResult = new DiskStatsResult {IoReadOperations = read, IoWriteOperations = write};
+            var diskSpaceResult = new DiskStatsResult { IoReadOperations = read, IoWriteOperations = write };
 
-            return new PrevInfo {Raw = currentInfo, Calculated = diskSpaceResult};
+            return new PrevInfo { Raw = currentInfo, Calculated = diskSpaceResult };
         }
 
         class State
@@ -96,7 +105,68 @@ namespace Sparrow.Server.Utils
 
         private DiskStatsRawResult GetDiskInfo(string path)
         {
+            // https://github.com/whotwagner/statx-fun/blob/master/statx.h
+            if (Syscall.statx(0, path, 0, 0x00000fffU, out var buf) != 0)
+            {
+                if(Logger.IsInfoEnabled)
+                    Logger.Info($"Could not get statx of {path} - {Marshal.GetLastWin32Error()}");
+                return null;
+            }
 
+            var statPath = $"/sys/dev/block/{buf.stx_dev_major}:{buf.stx_dev_minor}/stat";
+            using var reader = File.OpenRead(statPath);
+            
+            return ReadParse(reader);
+        }
+
+        private static DiskStatsRawResult ReadParse(FileStream buffer)
+        {
+            const int maxLongLength = 19;
+            const int maxValuesLength = 17;
+
+            Span<char> serializedValue = stackalloc char[maxLongLength];
+            Span<long> values = stackalloc long[maxValuesLength];
+
+            var time = DateTime.UtcNow;
+            
+            int valuesIndex = 0;
+            while (buffer.Position < buffer.Length && valuesIndex < maxValuesLength)
+            {
+                var ch = (char)buffer.ReadByte();
+                if (char.IsWhiteSpace(ch))
+                    continue;
+
+                var index = 0;
+                while (buffer.Position < buffer.Length)
+                {
+                    serializedValue[index++] = ch;
+                    ch = (char)buffer.ReadByte();
+
+                    if (char.IsWhiteSpace(ch))
+                        break;
+                }
+
+                if (long.TryParse(serializedValue[..index], out var value) == false)
+                    throw new InvalidOperationException($"Failed to parse {new string(serializedValue[..index])} to number");
+
+                values[valuesIndex++] = value;
+            }
+
+            /*
+             *https://www.kernel.org/doc/Documentation/block/stat.txt
+             *https://github.com/sysstat/sysstat/blob/master/iostat.c#L429
+             */
+            if (valuesIndex >= 11) {
+                /* Device or partition */
+                return new DiskStatsRawResult { IoReadOperations = values[0], IoWriteOperations = values[4], Time = time};
+            }
+            if (valuesIndex == 4) {
+                /* Partition without extended statistics */
+                return new DiskStatsRawResult { IoReadOperations = values[0], IoWriteOperations = values[2], Time = time};
+            }
+
+            if(Logger.IsInfoEnabled)
+                Logger.Info($"The stats file {buffer.Name} should contain at least 4 values");
             return null;
         }
         
@@ -111,6 +181,7 @@ namespace Sparrow.Server.Utils
 
         class PrevInfo
         {
+            public static PrevInfo Empty = new PrevInfo();
             public DiskStatsResult Calculated { get; set; }
             public DiskStatsRawResult Raw { get; set; }
         }

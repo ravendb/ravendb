@@ -212,6 +212,9 @@ namespace Sparrow.Server.Platform.Posix
         public static extern int prctl(int option, UIntPtr arg2, UIntPtr arg3, UIntPtr arg4, UIntPtr arg5);
         public const int PR_SET_PTRACER = 0x59616d61;
 
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int statx(int fd, string filename, Int32 flags, UInt32 mask, out Statx buf);
+
         public static void PwriteOrThrow(int fd, byte* buffer, ulong count, long offset, string file, string debug)
         {
             Errno err = Errno.NONE;
