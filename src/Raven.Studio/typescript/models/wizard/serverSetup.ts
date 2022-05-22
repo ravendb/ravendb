@@ -39,6 +39,7 @@ class serverSetup {
     
     localIps = ko.observableArray<string>([]);
     
+    disableLetsEncrypt = ko.observable<boolean>(false);
     useOwnCertificates = ko.pureComputed(() => this.mode() && this.mode() === "Secured");
     hostnameIsNotRequired = ko.pureComputed(() => {
         if (this.mode() !== "Secured") {

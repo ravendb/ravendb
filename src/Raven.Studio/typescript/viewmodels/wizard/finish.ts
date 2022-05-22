@@ -63,13 +63,13 @@ class finish extends setupStep {
 
         switch (this.model.mode()) {
             case "Unsecured":
-                this.currentStep = 3;
+                this.currentStep = 4;
                 break;
             case "LetsEncrypt":
-                this.currentStep = 5;
+                this.currentStep = 6;
                 break;
             case "Secured":
-                this.currentStep = 4;
+                this.currentStep = 5;
                 break;
             case "Continue":
                 this.currentStep = 3;

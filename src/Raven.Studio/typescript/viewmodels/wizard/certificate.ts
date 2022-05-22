@@ -84,7 +84,7 @@ class certificate extends setupStep {
     }
 
     back() {
-        router.navigate("#welcome");
+        router.navigate("#security");
     }
   
     fileSelected(fileInput: HTMLInputElement) {

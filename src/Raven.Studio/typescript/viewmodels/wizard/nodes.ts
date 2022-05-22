@@ -118,10 +118,10 @@ class nodes extends setupStep {
         
         switch (this.model.mode()) {
             case "LetsEncrypt":
-                this.currentStep = 4;
+                this.currentStep = 5;
                 break;
             case "Secured":
-                this.currentStep = 3;
+                this.currentStep = 4;
                 break;
         }
     }
@@ -203,7 +203,7 @@ class nodes extends setupStep {
                 router.navigate("#certificate");
                 break;
             default:
-                router.navigate("#welcome");
+                router.navigate("#security");
         }
     }
   
