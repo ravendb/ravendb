@@ -175,73 +175,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscriptions", "GET")]
         public async Task GetAll()
         {
-            var start = GetStart();
-            var pageSize = GetPageSize();
-            var history = GetBoolValueQueryString("history", required: false) ?? false;
-            if (history)
-                throw new ArgumentException(nameof(history) + " not supported");
-
-            var running = GetBoolValueQueryString("running", required: false) ?? false;
-            var id = GetLongQueryString("id", required: false);
-            var name = GetStringQueryString("name", required: false);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var subscriptions = new List<SubscriptionState>();
-                if (string.IsNullOrEmpty(name) && id == null)
-                {
-                    var allSubs = SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, DatabaseContext.DatabaseName, start, pageSize);
-                    if (allSubs == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    if (running)
-                    {
-                        foreach (var sub in allSubs)
-                        {
-                            if (ShardedSubscriptionConnection.Connections.ContainsKey(sub.SubscriptionName))
-                            {
-                                subscriptions.Add(sub);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        subscriptions = allSubs.ToList();
-                    }
-                }
-                else
-                {
-                    var subscription = id == null 
-                        ? ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseContext.DatabaseName, name)
-                        : ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, DatabaseContext.DatabaseName, id.Value);
-
-                    if (subscription == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    if (running)
-                    {
-                        if (ShardedSubscriptionConnection.Connections.ContainsKey(subscription.SubscriptionName) == false)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return;
-                        }
-                    }
-
-                    subscriptions = new List<SubscriptionState> { subscription };
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    SubscriptionsHandler.WriteGetAllResult(writer, subscriptions, context);
-                }
-            }
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForGetSubscription(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/subscriptions/drop", "POST")]
