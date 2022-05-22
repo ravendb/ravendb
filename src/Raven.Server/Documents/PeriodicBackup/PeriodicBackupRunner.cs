@@ -193,11 +193,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             });
         }
 
-        private void OnMissingNextBackupInfo()
-        {
-
-        }
-
         private static bool IsFullBackupOrSnapshot(string filePath)
         {
             var extension = Path.GetExtension(filePath);
@@ -981,21 +976,18 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void OnMissingNextBackupInfo(PeriodicBackupConfiguration configuration)
         {
-            if (_database != null)
-            {
-                var message = "Couldn't schedule next backup " +
-                              $"full backup frequency: {configuration.FullBackupFrequency}, " +
-                              $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
-                if (string.IsNullOrWhiteSpace(configuration.Name) == false)
+            var message = "Couldn't schedule next backup " +
+                          $"full backup frequency: {configuration.FullBackupFrequency}, " +
+                          $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
+            if (string.IsNullOrWhiteSpace(configuration.Name) == false)
                     message += $", backup name: {configuration.Name}";
             
-                _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name,
-                    "Couldn't schedule next backup, this shouldn't happen",
-                    message,
-                    AlertType.PeriodicBackup,
-                    NotificationSeverity.Warning));
-            }
+            _database.NotificationCenter.Add(AlertRaised.Create(
+                _database.Name,
+                "Couldn't schedule next backup, this shouldn't happen",
+                message,
+                AlertType.PeriodicBackup,
+                NotificationSeverity.Warning));
         }
 
         private void OnParsingError(BackupUtils.OnParsingErrorParameters parameters)
