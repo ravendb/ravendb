@@ -14,6 +14,7 @@ using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions;
+using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
@@ -264,99 +265,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetAll()
         {
-            var start = GetStart();
-            var pageSize = GetPageSize();
-            var history = GetBoolValueQueryString("history", required: false) ?? false;
-            var running = GetBoolValueQueryString("running", required: false) ?? false;
-            var id = GetLongQueryString("id", required: false);
-            var name = GetStringQueryString("name", required: false);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                IEnumerable<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
-                if (string.IsNullOrEmpty(name) && id == null)
-                {
-                    subscriptions = running
-                        ? Database.SubscriptionStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
-                        : Database.SubscriptionStorage.GetAllSubscriptions(context, history, start, pageSize);
-                }
-                else
-                {
-                    var subscription = running
-                        ? Database
-                            .SubscriptionStorage
-                            .GetRunningSubscription(context, id, name, history)
-                        : Database
-                            .SubscriptionStorage
-                            .GetSubscription(context, id, name, history);
-
-                    if (subscription == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    subscriptions = new[] { subscription };
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    WriteGetAllResult(writer, subscriptions, context);
-                }
-            }
+            using (var processor = new SubscriptionsHandlerProcessorForGetSubscription(this))
+                await processor.ExecuteAsync();
         }
-
-        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionState> subscriptions, TransactionOperationContext context)
-        {
-            writer.WriteStartObject();
-            writer.WriteArray(context, "Results", subscriptions.Select(SubscriptionStateAsJson), (w, c, subscription) => c.Write(w, subscription));
-            writer.WriteEndObject();
-        }
-
-        private static DynamicJsonValue SubscriptionStateAsJson(SubscriptionState state)
-        {
-            var json = new DynamicJsonValue
-            {
-                [nameof(SubscriptionState.SubscriptionId)] = state.SubscriptionId,
-                [nameof(SubscriptionState.SubscriptionName)] = state.SubscriptionName,
-                [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = state.ChangeVectorForNextBatchStartingPoint,
-                [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard)] = state.ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
-                [nameof(SubscriptionState.Query)] = state.Query,
-                [nameof(SubscriptionState.Disabled)] = state.Disabled,
-                [nameof(SubscriptionState.LastClientConnectionTime)] = state.LastClientConnectionTime,
-                [nameof(SubscriptionState.LastBatchAckTime)] = state.LastBatchAckTime
-            };
-
-            if (state is SubscriptionStorage.SubscriptionGeneralDataAndStats stateAndStats)
-            {
-                json["Connection"] = GetSubscriptionConnectionJson(stateAndStats.Connection);
-                json["Connections"] = GetSubscriptionConnectionsJson(stateAndStats.Connections);
-                json["RecentConnections"] = stateAndStats.RecentConnections?.Select(r => new DynamicJsonValue()
-                {
-                    ["State"] = new DynamicJsonValue()
-                    {
-                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
-                        ["Query"] = r.SubscriptionState.Query
-                    },
-                    ["Connection"] = GetSubscriptionConnectionJson(r)
-                });
-                json["FailedConnections"] = stateAndStats.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
-                {
-                    ["State"] = new DynamicJsonValue()
-                    {
-                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
-                        ["Query"] = r.SubscriptionState.Query
-                    },
-                    ["Connection"] = GetSubscriptionConnectionJson(r)
-                });
-            }
-
-            return json;
-        }
-
+        
         [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
@@ -383,42 +295,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static DynamicJsonArray GetSubscriptionConnectionsJson(List<SubscriptionConnection> subscriptionList)
-        {
-            if (subscriptionList == null)
-                return new DynamicJsonArray();
-
-            return new DynamicJsonArray(subscriptionList.Select(s => GetSubscriptionConnectionJson(s)));
-        }
-
-        private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
-        {
-            if (x == null)
-                return new DynamicJsonValue();
-
-            return new DynamicJsonValue()
-            {
-                [nameof(SubscriptionConnection.ClientUri)] = x.ClientUri,
-                [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
-                [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsJson(x.Stats),
-                [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message,
-                ["TcpConnectionStats"] = x.TcpConnection.GetConnectionStats(),
-                [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray() ?? Array.Empty<string>())
-            };
-        }
-
-        private static DynamicJsonValue GetConnectionStatsJson(SubscriptionConnectionStats x)
-        {
-            return new DynamicJsonValue()
-            {
-                [nameof(SubscriptionConnectionStats.AckRate)] = x.AckRate?.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.BytesRate)] = x.BytesRate?.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.ConnectedAt)] = x.ConnectedAt,
-                [nameof(SubscriptionConnectionStats.DocsRate)] = x.DocsRate?.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.LastAckReceivedAt)] = x.LastAckReceivedAt,
-                [nameof(SubscriptionConnectionStats.LastMessageSentAt)] = x.LastMessageSentAt,
-            };
-        }
 
         [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DropSubscriptionConnection()
