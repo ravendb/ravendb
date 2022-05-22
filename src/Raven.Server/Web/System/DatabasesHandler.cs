@@ -435,13 +435,12 @@ namespace Raven.Server.Web.System
                             [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress),
                             [nameof(DatabaseInfo.Environment)] = studioEnvironment,
                             [nameof(DatabaseInfo.BackupInfo)] = BackupUtils.GetBackupInfo(
-                                new BackupUtils.GetBackupInfoParameters()
+                                new BackupUtils.BackupInfoParameters()
                                 {
                                     ServerStore = ServerStore,
                                     PeriodicBackups = periodicBackups,
                                     DatabaseName = databaseName,
                                     Context = context
-                                    //context, ServerStore, periodicBackups, databaseName
                                 })
                         };
 

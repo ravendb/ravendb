@@ -18,7 +18,7 @@ namespace Raven.Server.Utils;
 
 internal static class BackupUtils
 {
-    internal static BackupInfo GetBackupInfo(GetBackupInfoParameters parameters)
+    internal static BackupInfo GetBackupInfo(BackupInfoParameters parameters)
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, taskId: 0L);
 
@@ -52,10 +52,9 @@ internal static class BackupUtils
                 lastBackupStatus = status;
             }
 
-            var nextBackup = BackupUtils.GetNextBackupDetails(new BackupUtils.NextBackupDetailsParameters
+            var nextBackup = GetNextBackupDetails(new NextBackupDetailsParameters
             {
-                OnParsingError = null, // For skipping error messages notification and log
-                OnMissingNextBackupInfo = null, // For skipping error messages notification and log
+                // OnParsingError and OnMissingNextBackupInfo are null's - for skipping error messages notification and log
                 Configuration = periodicBackup.Configuration,
                 BackupStatus = status,
                 ResponsibleNodeTag = parameters.ServerStore.NodeTag,
@@ -63,7 +62,7 @@ internal static class BackupUtils
             });
             if (nextBackup == null)
                 continue;
-
+            
             if (nextBackup.TimeSpan.Ticks < intervalUntilNextBackupInSec)
                 intervalUntilNextBackupInSec = nextBackup.TimeSpan.Ticks;
         }
@@ -133,14 +132,14 @@ internal static class BackupUtils
         var nowUtc = SystemTime.UtcNow;
         var lastFullBackupUtc = parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
         var lastIncrementalBackupUtc = parameters.BackupStatus.LastIncrementalBackupInternal ?? parameters.BackupStatus.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
-        var nextFullBackup = GetNextBackupOccurrence(new GetNextBackupOccurrenceParameters
+        var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
         {
             BackupFrequency = parameters.Configuration.FullBackupFrequency,
             Configuration = parameters.Configuration,
             LastBackupUtc = lastFullBackupUtc,
             OnParsingError = parameters.OnParsingError,
         });
-        var nextIncrementalBackup = GetNextBackupOccurrence(new GetNextBackupOccurrenceParameters
+        var nextIncrementalBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
         {
             BackupFrequency = parameters.Configuration.IncrementalBackupFrequency,
             Configuration = parameters.Configuration,
@@ -192,7 +191,7 @@ internal static class BackupUtils
         };
     }
 
-    internal static DateTime? GetNextBackupOccurrence(GetNextBackupOccurrenceParameters parameters)
+    internal static DateTime? GetNextBackupOccurrence(NextBackupOccurrenceParameters parameters)
     {
         if (string.IsNullOrWhiteSpace(parameters.BackupFrequency))
             return null;
@@ -280,7 +279,7 @@ internal static class BackupUtils
         }
     }
 
-    public class GetNextBackupOccurrenceParameters
+    public class NextBackupOccurrenceParameters
     {
         public string BackupFrequency { get; set; }
 
@@ -317,7 +316,7 @@ internal static class BackupUtils
         public Action<PeriodicBackupConfiguration> OnMissingNextBackupInfo { get; set; }
     }
 
-    public class GetBackupInfoParameters
+    public class BackupInfoParameters
     {
         public TransactionOperationContext Context { get; set; }
         public ServerStore ServerStore { get; set; }
