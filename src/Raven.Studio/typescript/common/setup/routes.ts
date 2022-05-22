@@ -10,6 +10,11 @@ class routes {
                 moduleId: "viewmodels/wizard/welcome",
                 nav: false
             },{
+                route: ["security"],
+                title: "RavenDB setup wizard",
+                moduleId: "viewmodels/wizard/security",
+                nav: false
+            },{
                 route: "unsecured",
                 title: "RavenDB setup wizard",
                 moduleId: "viewmodels/wizard/unsecured",

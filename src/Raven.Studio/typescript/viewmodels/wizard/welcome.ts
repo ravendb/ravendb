@@ -7,10 +7,11 @@ import detectBrowser = require("viewmodels/common/detectBrowser");
 import popoverUtils = require("common/popoverUtils");
 
 class welcome extends setupStep {
-   
-    disableLetEncrypt = ko.observable<boolean>(false);
     
     browserAlert = new detectBrowser(false);
+
+    newFlowSelected = ko.observable<boolean>(true);
+    continueFlowSelected = ko.observable<boolean>(false);
     
     activate(args: any) {
         super.activate(args, { shell: true });
@@ -18,12 +19,12 @@ class welcome extends setupStep {
             .done((localIpsResult, setupParamsResult: [Raven.Server.Commercial.SetupParameters]) => {
                 this.model.init(setupParamsResult[0]);
 
-                const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip,  '.').length === 4);
-                const ipV6 = _.difference(localIpsResult[0],  ipV4);
+                const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip, '.').length === 4);
+                const ipV6 = _.difference(localIpsResult[0], ipV4);
                
                 this.model.localIps(_.uniq(_.concat(["0.0.0.0"], ipV4, ipV6)));
                 
-                this.disableLetEncrypt(setupParamsResult[0].RunningOnMacOsx);
+                this.model.disableLetsEncrypt(setupParamsResult[0].RunningOnMacOsx);
                 
                 // Remove localhost IPs if running on Docker
                 if (setupParamsResult[0].IsDocker) {
@@ -38,8 +39,8 @@ class welcome extends setupStep {
         this.setupDisableReasons();
 
         popoverUtils.longWithHover($(".toggle-zip-only"), {
-            content: "<small>Toggle ON: Wizard will only create a zip file for external setup. Current server will Not be modified.<br />" +
-                     "Toggle OFF: Wizared will create a zip file AND set-up the current server.</small>",
+            content: "<small><strong>Toggle ON</strong>: Wizard will only create a setup zip package for external setup. Current server will NOT be modified.<br />" +
+                     "<strong>Toggle OFF</strong>: Wizared will create a setup zip package AND set up the current server.</small>",
             html: true
         })
     }
@@ -54,37 +55,22 @@ class welcome extends setupStep {
             .execute();
     }
     
-    chooseUnsecured() {
-        this.model.mode("Unsecured");
-        this.forwardToNextStep();
+    clickNewFlow() {
+        this.newFlowSelected(true);
+        this.continueFlowSelected(false);
     }
 
-    chooseSecured() {
-        this.model.mode("Secured");
-        this.forwardToNextStep();
+    clickContinueFlow() {
+        this.newFlowSelected(false);
+        this.continueFlowSelected(true);
     }
 
-    chooseGenerate() {
-        this.model.mode("LetsEncrypt");
-        this.forwardToNextStep();
-    }
-    
-    chooseContinue() {
-        this.model.mode("Continue");
-        router.navigate("#continue");
-    }
-    
-    forwardToNextStep() {
-        switch (this.model.mode()) {
-            case "Unsecured":
-                router.navigate("#unsecured");
-                break;
-            case "Secured":
-                router.navigate("#certificate");
-                break;
-            case "LetsEncrypt":
-                router.navigate("#license");
-                break;
+    goToNextView() {
+        if (this.newFlowSelected()) {
+            router.navigate("#security");
+        } else {
+            this.model.mode("Continue");
+            router.navigate("#continue");
         }
     }
 }
