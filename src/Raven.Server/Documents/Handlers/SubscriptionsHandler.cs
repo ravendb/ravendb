@@ -229,37 +229,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, CorsMode = CorsMode.Cluster)]
         public async Task GetSubscriptionConnectionDetails()
         {
-            var subscriptionName = GetStringQueryString("name", false);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                if (string.IsNullOrEmpty(subscriptionName))
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return;
-                }
-
-                var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
-
-                SubscriptionConnectionsDetails details;
-
-                if (subscriptionConnections == null)
-                {
-                    details = new SubscriptionConnectionsDetails()
-                    {
-                        Results = new List<SubscriptionConnectionDetails>(),
-                        SubscriptionMode = "None"
-                    };
-                }
-                else
-                {
-                    details = subscriptionConnections.GetSubscriptionConnectionsDetails();
-                }
-
-                context.Write(writer, details.ToJson());
-            }
+            using (var processor = new SubscriptionsHandlerProcessorForGetConnectionDetails(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
