@@ -196,83 +196,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscriptions/try", "POST")]
         public async Task Try()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                using var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                var tryout = JsonDeserializationServer.SubscriptionTryout(json);
-
-                var sub = SubscriptionConnection.ParseSubscriptionQuery(tryout.Query);
-                if (sub.Collection == null)
-                    throw new ArgumentException("Collection must be specified");
-
-                const int maxPageSize = 1024;
-                var pageSize = GetIntValueQueryString("pageSize") ?? 1;
-                if (pageSize > maxPageSize)
-                    throw new ArgumentException($"Cannot gather more than {maxPageSize} results during tryouts, but requested number was {pageSize}.");
-
-                var timeLimit = GetIntValueQueryString("timeLimit", false);
-                var result = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedSubscriptionTryoutOperation(HttpContext, context, tryout, pageSize, timeLimit));
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-                    var numberOfDocs = 0;
-                    var f = true;
-
-                    foreach (var res in result.Results)
-                    {
-                        if (numberOfDocs == pageSize)
-                            break;
-
-                        if (res is not BlittableJsonReaderObject bjro)
-                            continue;
-
-                        using (bjro)
-                        {
-                            if (f == false)
-                                writer.WriteComma();
-
-                            f = false;
-                            WriteBlittable(bjro, writer);
-                            numberOfDocs++;
-                        }
-                    }
-
-                    writer.WriteEndArray();
-                    writer.WriteComma();
-                    writer.WritePropertyName("Includes");
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
-                    writer.WriteStartObject();
-                    writer.WriteEndObject();
-                    writer.WriteEndObject();
-
-                }
-            }
-        }
-
-        private static unsafe void WriteBlittable(BlittableJsonReaderObject bjro, AsyncBlittableJsonTextWriter writer)
-        {
-            var first = true;
-
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            writer.WriteStartObject();
-            using (var buffers = bjro.GetPropertiesByInsertionOrder())
-            {
-                for (var i = 0; i < buffers.Size; i++)
-                {
-                    bjro.GetPropertyByIndex(buffers.Properties[i], ref prop);
-                    if (first == false)
-                    {
-                        writer.WriteComma();
-                    }
-
-                    first = false;
-                    writer.WritePropertyName(prop.Name);
-                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                }
-            }
-            writer.WriteEndObject();
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForTrySubscription(this))
+                await processor.ExecuteAsync();
         }
     }
 }
