@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             // we don't have changes since the last backup and the next backup is incremental
             var lastFullBackup = backupStatus.LastFullBackupInternal ?? nowUtc;
-            var nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.GetNextBackupOccurrenceParameters
+            var nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.NextBackupOccurrenceParameters
             {
                 BackupFrequency = configuration.FullBackupFrequency,
                 LastBackupUtc = lastFullBackup,
@@ -954,19 +954,22 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return GetBackupInfoInternal(context);
+                return BackupUtils.GetBackupInfo(
+                    new BackupUtils.BackupInfoParameters
+                    {
+                        Context = context,
+                        ServerStore = _serverStore,
+                        PeriodicBackups = _periodicBackups.Values.ToList(),
+                        DatabaseName = _database.Name
+                    }
+                );
             }
         }
 
         public BackupInfo GetBackupInfo(TransactionOperationContext context)
         {
-            return GetBackupInfoInternal(context);
-        }
-
-        private BackupInfo GetBackupInfoInternal(TransactionOperationContext context)
-        {
             return BackupUtils.GetBackupInfo(
-                new BackupUtils.GetBackupInfoParameters
+                new BackupUtils.BackupInfoParameters
                 {
                     Context = context,
                     ServerStore = _serverStore,
