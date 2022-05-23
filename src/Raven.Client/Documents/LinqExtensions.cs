@@ -189,7 +189,7 @@ namespace Raven.Client.Documents
             var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
             var ravenQueryInspector = (RavenQueryInspector<TResult>)results;
 
-            var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
+            var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public).ToList();
             ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));
             return (IRavenQueryable<TResult>)results;
         }
