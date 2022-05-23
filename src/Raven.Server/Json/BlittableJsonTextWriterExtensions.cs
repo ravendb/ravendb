@@ -1035,7 +1035,7 @@ namespace Raven.Server.Json
         }
 
         private static void WriteEssentialDatabaseStatisticsInternal<TIndexInformation>(AbstractBlittableJsonTextWriter writer, AbstractDatabaseStatistics<TIndexInformation> statistics)
-            where TIndexInformation : BasicIndexInformation
+            where TIndexInformation : EssentialIndexInformation
         {
             writer.WritePropertyName(nameof(statistics.CountOfIndexes));
             writer.WriteInteger(statistics.CountOfIndexes);
@@ -1091,7 +1091,7 @@ namespace Raven.Server.Json
                     case IndexInformation indexInformation:
                         WriteIndexInformation(writer, indexInformation);
                         break;
-                    case BasicIndexInformation basicIndexInformation:
+                    case EssentialIndexInformation basicIndexInformation:
                         WriteBasicIndexInformation(writer, basicIndexInformation);
                         break;
                     default:
@@ -1124,7 +1124,7 @@ namespace Raven.Server.Json
                 w.WriteEndObject();
             }
 
-            void WriteBasicIndexInformation(AbstractBlittableJsonTextWriter w, BasicIndexInformation index)
+            void WriteBasicIndexInformation(AbstractBlittableJsonTextWriter w, EssentialIndexInformation index)
             {
                 w.WriteStartObject();
 

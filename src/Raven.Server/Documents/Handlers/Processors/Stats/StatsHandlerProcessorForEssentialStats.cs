@@ -43,11 +43,11 @@ internal class StatsHandlerProcessorForEssentialStats : AbstractStatsHandlerProc
         stats.CountOfAttachments = attachments.AttachmentCount;
         stats.CountOfIndexes = indexes.Count;
 
-        stats.Indexes = new BasicIndexInformation[indexes.Count];
+        stats.Indexes = new EssentialIndexInformation[indexes.Count];
         for (var i = 0; i < indexes.Count; i++)
         {
             var index = indexes[i].ToIndexInformationHolder();
-            stats.Indexes[i] = index.ToBasicIndexInformation();
+            stats.Indexes[i] = index.ToEssentialIndexInformation();
         }
     }
 }

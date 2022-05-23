@@ -3,7 +3,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Client.Documents.Operations;
 
-public class IndexInformation : BasicIndexInformation
+public class IndexInformation : EssentialIndexInformation
 {
     public bool IsStale { get; set; }
 

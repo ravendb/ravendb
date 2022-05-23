@@ -2,7 +2,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Client.Documents.Operations;
 
-public class BasicIndexInformation
+public class EssentialIndexInformation
 {
     public string Name { get; set; }
 
