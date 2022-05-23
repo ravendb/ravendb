@@ -309,15 +309,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ToggleSubscriptionTaskState()
         {
-            // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
-            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
-                throw new ArgumentException($"Unknown task type: {type}", nameof(type));
-
-            if (type != OngoingTaskType.Subscription)
-                throw new ArgumentException("Only Subscription type can call this method");
-
-            await ToggleTaskState();
+            using (var processor = new OngoingTasksHandlerProcessorForToggleTaskState(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
