@@ -203,6 +203,9 @@ namespace Raven.Server.Web.System
                 {
                     result.IoReadOperations = diskStatsResult.IoReadOperations;
                     result.IoWriteOperations = diskStatsResult.IoWriteOperations;
+                    result.ReadThroughputInKilobytes = diskStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes);
+                    result.WriteThroughputInKilobytes = diskStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes);
+                    result.QueueLength = diskStatsResult.QueueLength;
                 }
             }
 
@@ -450,6 +453,9 @@ namespace Raven.Server.Web.System
                 {
                     result.IoReadOperations = diskStatsResult.IoReadOperations;
                     result.IoWriteOperations = diskStatsResult.IoWriteOperations;
+                    result.ReadThroughputInKilobytes = diskStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes);
+                    result.WriteThroughputInKilobytes = diskStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes);
+                    result.QueueLength = diskStatsResult.QueueLength;
                 }
             }
 

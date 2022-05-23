@@ -168,6 +168,12 @@ namespace Raven.Client.ServerWide.Operations
         public double IoReadOperations { get; set; }
 
         public double IoWriteOperations { get; set; }
+        
+        public long ReadThroughputInKilobytes { get; set; }
+        
+        public long WriteThroughputInKilobytes { get; set; }
+        
+        public long? QueueLength { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -175,6 +181,9 @@ namespace Raven.Client.ServerWide.Operations
             {
                 [nameof(IoReadOperations)] = IoReadOperations,
                 [nameof(IoWriteOperations)] = IoWriteOperations,
+                [nameof(ReadThroughputInKilobytes)] = ReadThroughputInKilobytes,
+                [nameof(WriteThroughputInKilobytes)] = WriteThroughputInKilobytes,
+                [nameof(QueueLength)] = QueueLength,
             };
         }
     }
