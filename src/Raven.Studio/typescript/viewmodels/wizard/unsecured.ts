@@ -107,12 +107,6 @@ class unsecured extends setupStep {
             html: true
         })
 
-        popoverUtils.longWithHover($("#toggle-passive"), {
-            content: "<small>Toggle ON to start this node in a Passive state. <br />Toggle OFF to setup this node in a cluster</small>",
-            placement: "top",
-            html: true
-        })
-
         popoverUtils.longWithHover($("#http-port-info"), {
             content: "<small>HTTP port used for clients/browser (RavenDB Studio) communication.</small>",
             html: true
