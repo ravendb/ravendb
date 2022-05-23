@@ -64,6 +64,6 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public string ResponsibleNode { get; set; }
 
-        public int OperationId { get; set; }
+        public long OperationId { get; set; }
     }
 }

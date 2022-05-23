@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/backup", "POST")]
         public async Task BackupDatabaseOnce()
         {
-            var operationId = ServerStore.Operations.GetNextOperationId();
+            var operationId = DatabaseContext.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -145,21 +145,20 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
 
-                await ServerStore.Operations.AddOperation(
-                    database: null,
+                var token = CreateOperationToken();
+
+                await DatabaseContext.Operations.AddLocalOperation(operationId,
+                    Documents.Operations.OperationType.DatabaseBackup,
                     "One Time backup of database : " + DatabaseName,
-                    Documents.Operations.Operations.OperationType.DatabaseBackup,
-                    onProgress => BackupOnceOnAllShards(context), 
-                    operationId);
+                    detailedDescription: null,
+                    _ => BackupOnceOnAllShards(context),
+                    token);
             }
         }
 
         private async Task<IOperationResult> BackupOnceOnAllShards(JsonOperationContext context)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
-                "need to use a cluster-wide operationId to avoid collisions");
-
-            var operationId = -ServerStore.Operations.GetNextOperationId();
+            var operationId = -DatabaseContext.Operations.GetNextOperationId();
             var backupConfig = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
 
             var backupOnceOperation = new ShardedBackupOnceOperation(this, operationId, backupConfig);
