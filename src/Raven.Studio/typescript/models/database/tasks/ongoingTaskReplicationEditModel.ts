@@ -35,7 +35,6 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
 
         this.connectionStringName(dto.ConnectionStringName); 
         this.manualChooseMentor(!!dto.MentorNode);
-        this.pinMentorNode(dto.PinToMentorNode);
 
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
         this.showDelayReplication(dto.DelayReplicationFor != null && delayTime !== 0);
@@ -46,11 +45,11 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
         return {
             Name: this.taskName(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
-            PinToMentorNode: this.pinMentorNode(),
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Url: undefined,
+            PinToMentorNode: false,
             Disabled: this.taskState() === "Disabled",
             Database: undefined
         };
