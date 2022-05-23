@@ -109,7 +109,7 @@ namespace Raven.Server.Web.System
 
             if (nodeTag == ServerStore.NodeTag)
             {
-                var operationId = Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true);
+                var operationId = Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true, operationId: GetLongQueryString("operationId", required: false));
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

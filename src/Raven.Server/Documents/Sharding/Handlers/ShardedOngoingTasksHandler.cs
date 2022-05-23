@@ -156,6 +156,42 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
+        [RavenShardedAction("/databases/*/admin/backup/database", "POST")]
+        public async Task BackupDatabase()
+        {
+            var operationId = DatabaseContext.Operations.GetNextOperationId();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                }
+            }
+
+            var token = CreateOperationToken();
+
+            await DatabaseContext.Operations.AddLocalOperation(operationId,
+                Documents.Operations.OperationType.DatabaseBackup,
+                "One Time backup of database : " + DatabaseName,
+                detailedDescription: null,
+                _ => BackupNowOnAllShards(),
+                token);
+        }
+
+        private async Task<IOperationResult> BackupNowOnAllShards()
+        {
+            var operationId = -DatabaseContext.Operations.GetNextOperationId();
+            var backupNowOperation = new ShardedBackupNowOperation(this, operationId);
+            await ShardExecutor.ExecuteParallelForAllAsync(backupNowOperation);
+
+            await backupNowOperation.WaitForBackupToCompleteOnAllShards();
+
+            var getStateOperation = new GetShardedOperationStateOperation(HttpContext, operationId);
+            return (await ShardExecutor.ExecuteParallelForAllAsync(getStateOperation)).Result;
+        }
+
+
         private async Task<IOperationResult> BackupOnceOnAllShards(JsonOperationContext context)
         {
             var operationId = -DatabaseContext.Operations.GetNextOperationId();

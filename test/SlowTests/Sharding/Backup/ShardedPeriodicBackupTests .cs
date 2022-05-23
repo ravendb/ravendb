@@ -12,11 +12,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
-using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -374,6 +371,47 @@ namespace SlowTests.Sharding.Backup
                     Assert.NotNull(databaseInfo.BackupInfo.LastBackup);
                     Assert.Equal(0, databaseInfo.BackupInfo.IntervalUntilNextBackupInSec);
                 }*/
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BackupNowSharded(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "_BackupFolder");
+            const string idPrefix = "users";
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1");
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var backupTaskId = result.TaskId;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        await session.StoreAsync(new User(), $"{idPrefix}/{i}");
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                var backupResult = (BackupResult) await op.WaitForCompletionAsync();
+                Assert.Equal(100, backupResult.Documents.ReadCount);
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+                using (var store2 = GetDocumentStore(options))
+                {
+                    foreach (var dir in dirs)
+                    {
+                        await store2.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+
+                    await AssertDocs(store2, idPrefix, options.DatabaseMode);
+                }
             }
         }
 
