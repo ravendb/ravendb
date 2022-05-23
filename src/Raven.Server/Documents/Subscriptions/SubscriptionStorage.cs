@@ -337,14 +337,16 @@ namespace Raven.Server.Documents.Subscriptions
             using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, database, id, out var prefix))
             using (Slice.External(context.Allocator, prefix, out var prefixSlice))
             {
-                var resendItem = new ResendItem();
-             
+                ResendItem resendItem;
                 foreach (var item in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
-                    resendItem.Type = (SubscriptionType)item.Key[prefixSlice.Size];
-                    resendItem.Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2);
-                    resendItem.ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-                    resendItem.Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
+                    resendItem = new ResendItem
+                        {
+                            Type = (SubscriptionType)item.Key[prefixSlice.Size],
+                            Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2),
+                            ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
+                            Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId))
+                        };
 
                     yield return resendItem;
                 }
