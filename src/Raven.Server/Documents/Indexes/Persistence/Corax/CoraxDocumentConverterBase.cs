@@ -72,7 +72,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             ? RavenConstants.Documents.Indexing.Fields.ReduceKeyValueFieldName
             : RavenConstants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
 
-        knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Exact);
+        knownFields = knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Normal);
         foreach (var field in index.Definition.IndexFields.Values)
         {
             Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
