@@ -14,10 +14,10 @@ public class SubscriptionsClusterStorage
     {
         _cluster = cluster;
     }
-
-    public SubscriptionState ReadSubscriptionStateByName(TransactionOperationContext context, string databaseName, string name)
+    
+    public SubscriptionState ReadSubscriptionStateByName<T>(TransactionOperationContext<T> context, string databaseName, string name) where T : RavenTransaction
     {
-        var subscriptionBlittable = _cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, name));
+        var subscriptionBlittable = ReadSubscriptionStateRaw(context, databaseName, name);
 
         if (subscriptionBlittable == null)
             throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
@@ -25,7 +25,7 @@ public class SubscriptionsClusterStorage
         var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
         return subscriptionState;
     }
-
+    
     public SubscriptionState ReadSubscriptionStateById(TransactionOperationContext context, string databaseName, long id)
     {
         var name = GetSubscriptionNameById(context, databaseName, id);

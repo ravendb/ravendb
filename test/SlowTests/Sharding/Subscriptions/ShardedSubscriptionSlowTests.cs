@@ -14,6 +14,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -619,6 +620,62 @@ namespace SlowTests.Sharding.Subscriptions
                     });
 
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6), 6000);
+                    await AssertNoLeftovers(store, id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetSubscriptionsResendItems()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                    MaxDocsPerBatch = 1
+                }))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "user/1");
+                        session.Store(new User(), "user/2");
+                        session.Store(new User(), "user/3");
+                        session.Store(new User(), "user/4");
+                        session.Store(new User(), "user/5");
+                        session.Store(new User(), "user/6");
+                        session.SaveChanges();
+                    }
+
+                    var con1Docs = new List<string>();
+                    var amre = new AsyncManualResetEvent();
+                    var amre2 = new AsyncManualResetEvent();
+                    var t = subscription.Run(async x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            if (item.Id == "user/6")
+                            {
+                                amre2.Set();
+                                await amre.WaitAsync();
+                            }
+                            
+                            con1Docs.Add(item.Id);
+                        }
+                    });
+
+                    await amre2.WaitAsync();
+                    await AssertWaitForTrueAsync(async () =>
+                    {
+                        var batches = await store.Maintenance.SendAsync(new GetSubscriptionBatchesStateOperation(subscription.SubscriptionName));
+                        return batches.Results.ToList().Exists(b => b.Id == "user/6");
+                    });
+                    
+                    amre.Set();
+
+                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count == 6), 6000);
                     await AssertNoLeftovers(store, id);
                 }
             }

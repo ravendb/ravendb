@@ -199,5 +199,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedSubscriptionsHandlerProcessorForTrySubscription(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/debug/subscriptions/resend", "GET")]
+        public async Task GetSubscriptionResend()
+        {
+            using (var processor = new ShardedSubscriptionsHandlerProcessorForGetResend(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
