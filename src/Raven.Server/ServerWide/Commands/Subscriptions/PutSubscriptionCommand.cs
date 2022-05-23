@@ -25,7 +25,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string SubscriptionName;
         public bool Disabled;
         public string MentorNode;
-        public bool PinToMentorNode;
 
         // for serialization
         private PutSubscriptionCommand() { }
@@ -103,7 +102,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         LastBatchAckTime = null,
                         Disabled = Disabled,
                         MentorNode = MentorNode,
-                        PinToMentorNode = PinToMentorNode,
                         LastClientConnectionTime = null
                     }.ToJson(), SubscriptionName))
                     {
@@ -167,7 +165,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(Disabled)] = Disabled;
             json[nameof(MentorNode)] = MentorNode;
-            json[nameof(PinToMentorNode)] = PinToMentorNode;
         }
     }
 }

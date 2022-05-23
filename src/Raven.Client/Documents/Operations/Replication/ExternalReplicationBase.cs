@@ -28,7 +28,6 @@ namespace Raven.Client.Documents.Operations.Replication
         public string Name { get; set; }
         public string ConnectionStringName { get; set; }
         public string MentorNode { get; set; }
-        public bool PinToMentorNode { get; set; }
 
         [JsonDeserializationIgnore]
         internal RavenConnectionString ConnectionString; // this is in memory only
@@ -74,7 +73,6 @@ namespace Raven.Client.Documents.Operations.Replication
             json[nameof(TaskId)] = TaskId;
             json[nameof(Name)] = Name;
             json[nameof(MentorNode)] = MentorNode;
-            json[nameof(PinToMentorNode)] = PinToMentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             return json;
         }
@@ -141,11 +139,6 @@ namespace Raven.Client.Documents.Operations.Replication
         public bool IsResourceIntensive()
         {
             return false;
-        }
-
-        public bool IsPinnedToMentorNode()
-        {
-            return PinToMentorNode;
         }
     }
 }

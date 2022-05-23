@@ -120,7 +120,6 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             Transforms: this.transformationScripts().map(x => x.toDto()),
             CustomPartitionValue: this.customPartitionEnabled() ? this.customPartition() : null,
             RunFrequency: this.runFrequency(),
-            PinToMentorNode: false,
             OlapTables: this.olapTables().map(x => x.toDto()),
             Format: undefined
         };
