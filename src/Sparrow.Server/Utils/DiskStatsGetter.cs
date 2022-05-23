@@ -90,9 +90,14 @@ namespace Sparrow.Server.Utils
                 return PrevInfo.Empty;
 
             var diff = (currentInfo.Time - state.Prev.Raw.Time).TotalSeconds;
-            var read = (currentInfo.IoReadOperations - state.Prev.Raw.IoReadOperations) / diff;
-            var write = (currentInfo.IoWriteOperations - state.Prev.Raw.IoWriteOperations) / diff;
-            var diskSpaceResult = new DiskStatsResult { IoReadOperations = read, IoWriteOperations = write };
+            var diskSpaceResult = new DiskStatsResult
+            {
+                IoReadOperations = (currentInfo.IoReadOperations - state.Prev.Raw.IoReadOperations) / diff, 
+                IoWriteOperations = (currentInfo.IoWriteOperations - state.Prev.Raw.IoWriteOperations) / diff, 
+                ReadThroughput = new Size((long)((currentInfo.ReadSectors - state.Prev.Raw.ReadSectors) * 512 / diff), SizeUnit.Bytes), 
+                WriteThroughput = new Size((long)((currentInfo.WriteSectors - state.Prev.Raw.WriteSectors) * 512 / diff), SizeUnit.Bytes), 
+                QueueLength = currentInfo.QueueLength
+            };
 
             return new PrevInfo { Raw = currentInfo, Calculated = diskSpaceResult };
         }
@@ -156,26 +161,49 @@ namespace Sparrow.Server.Utils
              *https://www.kernel.org/doc/Documentation/block/stat.txt
              *https://github.com/sysstat/sysstat/blob/master/iostat.c#L429
              */
+            int ioWriteOperationsIndex;
+            int readSectorsIndex;
+            int writeSectorsIndex;
+            long? queueLength = null;
             if (valuesIndex >= 11) {
                 /* Device or partition */
-                return new DiskStatsRawResult { IoReadOperations = values[0], IoWriteOperations = values[4], Time = time};
+                ioWriteOperationsIndex = 4;
+                readSectorsIndex = 2;
+                writeSectorsIndex = 6;
+                queueLength = values[8];
             }
-            if (valuesIndex == 4) {
+            else if (valuesIndex == 4) {
                 /* Partition without extended statistics */
-                return new DiskStatsRawResult { IoReadOperations = values[0], IoWriteOperations = values[2], Time = time};
+                ioWriteOperationsIndex = 2;
+                readSectorsIndex = 1;
+                writeSectorsIndex = 3;
+            }
+            else
+            {
+                if(Logger.IsInfoEnabled)
+                    Logger.Info($"The stats file {buffer.Name} should contain at least 4 values");
+                return null;
             }
 
-            if(Logger.IsInfoEnabled)
-                Logger.Info($"The stats file {buffer.Name} should contain at least 4 values");
-            return null;
+            return new DiskStatsRawResult
+            {
+                IoReadOperations = values[0], 
+                IoWriteOperations = values[ioWriteOperationsIndex],
+                ReadSectors = values[readSectorsIndex],
+                WriteSectors = values[writeSectorsIndex],
+                QueueLength = queueLength,
+                
+                Time = time
+            };
         }
         
         private record DiskStatsRawResult
         {
             public long IoReadOperations { get; init; }
-    
             public long IoWriteOperations { get; init; }
-    
+            public long ReadSectors { get; set; }
+            public long WriteSectors { get; set; }
+            public long? QueueLength { get; set; }
             public DateTime Time { get; init;}
         }
 
@@ -190,8 +218,10 @@ namespace Sparrow.Server.Utils
     public record DiskStatsResult
     {
         public double IoReadOperations { get; init; }
-    
         public double IoWriteOperations { get; init;}
+        public Size ReadThroughput { get; set; }
+        public Size WriteThroughput { get; set; }
+        public long? QueueLength { get; set; }
     }
 
     internal class NotImplementedDiskStatsGetter : IDiskStatsGetter
