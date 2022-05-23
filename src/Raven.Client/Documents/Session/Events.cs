@@ -243,12 +243,9 @@ namespace Raven.Client.Documents.Session
     {
         public BulkInsertProgress Progress { get; }
         
-        public bool IsCompleted { get; }
-        
-        internal BulkInsertOnProgressEventArgs(BulkInsertProgress progress, bool isCompleted = false)
+        internal BulkInsertOnProgressEventArgs(BulkInsertProgress progress)
         {
             Progress = progress;
-            IsCompleted = isCompleted;
         }
     }
 }
