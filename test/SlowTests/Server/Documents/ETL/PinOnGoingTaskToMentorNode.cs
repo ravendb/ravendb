@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -14,14 +13,14 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL;
 
-public class PinOnGoingTaskToMentorNode : ReplicationTestBase
+public class PinOnGoingTaskToMentorNode : ClusterTestBase
 {
     public PinOnGoingTaskToMentorNode(ITestOutputHelper output) : base(output)
     {
@@ -316,96 +315,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             Assert.True(res.PinToMentorNode);
         }
     }
-
-    [Fact]
-    public async Task Can_Set_Pin_To_Node_Pull_Replication_As_Hub()
-    {
-        const int clusterSize = 3;
-
-        var (hubNodes, hubLeader, hubCertificatesHolder) = await CreateRaftClusterWithSsl(clusterSize, watcherCluster: true, shouldRunInMemory: true);
-        var adminHubClusterCert = hubCertificatesHolder.ServerCertificate.Value;
-        
-        var mentorNodes = hubNodes.Where(s => s.ServerStore.NodeTag != hubLeader.ServerStore.NodeTag).ToList();
-       
-        var hubMentorNode = mentorNodes[0];
-        var sinkMentorNode = mentorNodes[1];
-
-
-
-        using (var hubStore = GetDocumentStore(new Options
-               {
-                   Server = hubLeader, ReplicationFactor = 3, AdminCertificate = adminHubClusterCert, ClientCertificate = adminHubClusterCert,
-               }))
-        {
-            
-            using (var sinkStore = GetDocumentStore(new Options
-                   {
-                       Server = sinkMentorNode, ReplicationFactor = 3, AdminCertificate = adminHubClusterCert, ClientCertificate = adminHubClusterCert,
-                   }))
-            {
-                    await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
-            {
-                MentorNode = hubMentorNode.ServerStore.NodeTag,
-                PinToMentorNode = true,
-                Name = "HUB",
-            }));
-
-            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-            {
-                Database = hubStore.Database,
-                Name = hubStore.Database + "ConStr",
-                TopologyDiscoveryUrls = hubNodes.Select(u => u.WebUrl).ToArray()
-            }));
-
-            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
-            {
-                ConnectionStringName = hubStore.Database + "ConStr",
-                HubName = "HUB",
-            }));
-            
-            using (var hubSession = hubStore.OpenSession())
-            {
-                hubSession.Store(new User
-                {
-                    Name = "Arava",
-                }, "users/1");
-                hubSession.SaveChanges();
-            }
-
-            Assert.True(WaitForDocument<User>(sinkStore, "users/1", u => u.Name == "Arava",30_000));
-            var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(hubMentorNode);
-            using (var hubSession = hubStore.OpenSession())
-            {
-                hubSession.Store(new User
-                {
-                    Name = "Arava2",
-                }, "users/2");
-                hubSession.SaveChanges();
-            }
-            Assert.False(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2",30_000));
-            var revivedServer = GetNewServer(new ServerCreationOptions
-            {
-                CustomSettings = new Dictionary<string, string>
-                {
-                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), disposedServer.Url},
-                    {RavenConfiguration.GetKey(x => x.Security.CertificatePath), hubCertificatesHolder.ServerCertificatePath}
-                },
-                RunInMemory = true,
-                DataDirectory = disposedServer.DataDirectory
-            });
-            Assert.True(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2",30_000)); 
-            // Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
-            // Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
-         
-            Console.WriteLine("IGal");
-            // sinkStore.Dispose();
-            // hubStore.Dispose();
-
-            }
-        }
-
-    }
-         
+    
     private static AddEtlOperationResult AddEtl<T>(IDocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
     {
         var putResult = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));

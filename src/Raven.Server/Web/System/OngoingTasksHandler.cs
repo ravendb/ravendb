@@ -157,7 +157,6 @@ namespace Raven.Server.Web.System
                 DestinationUrl = res.Url,
                 TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
                 MentorNode = sinkReplication.MentorNode,
-                PinToMentorNode = sinkReplication.PinToMentorNode,
                 TaskConnectionStatus = res.Status,
                 AccessName = sinkReplication.AccessName,
                 AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
@@ -205,7 +204,6 @@ namespace Raven.Server.Web.System
                 DestinationDatabase = ex.Database,
                 DestinationUrl = connectionResult.Url,
                 MentorNode = ex.MentorNode,
-                PinToMentorNode = ex.PinToMentorNode,
                 TaskConnectionStatus = connectionResult.Status,
                 DelayReplicationFor = ex.DelayReplicationFor
             };
@@ -1041,7 +1039,6 @@ namespace Raven.Server.Web.System
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
                                 MentorNode = sqlEtl.MentorNode,
-                                PinToMentorNode = sqlEtl.PinToMentorNode,
                                 Configuration = sqlEtl,
                                 TaskState = GetEtlTaskState(sqlEtl),
                                 TaskConnectionStatus = GetEtlTaskConnectionStatus(record, sqlEtl, out var sqlNode, out var sqlEtlError),
@@ -1071,7 +1068,6 @@ namespace Raven.Server.Web.System
                                 TaskId = olapEtl.TaskId,
                                 TaskName = olapEtl.Name,
                                 MentorNode = olapEtl.MentorNode,
-                                PinToMentorNode = olapEtl.PinToMentorNode,
                                 Configuration = olapEtl,
                                 TaskState = GetEtlTaskState(olapEtl),
                                 TaskConnectionStatus = GetEtlTaskConnectionStatus(record, olapEtl, out var olapNode, out var olapEtlError),
@@ -1105,7 +1101,6 @@ namespace Raven.Server.Web.System
                                 Configuration = ravenEtl,
                                 TaskState = GetEtlTaskState(ravenEtl),
                                 MentorNode = ravenEtl.MentorNode,
-                                PinToMentorNode = ravenEtl.PinToMentorNode,
                                 DestinationUrl = process?.Url,
                                 TaskConnectionStatus = GetEtlTaskConnectionStatus(record, ravenEtl, out var node, out var ravenEtlError),
                                 ResponsibleNode = new NodeId
@@ -1147,7 +1142,6 @@ namespace Raven.Server.Web.System
                                 Disabled = subscriptionState.Disabled,
                                 LastClientConnectionTime = subscriptionState.LastClientConnectionTime,
                                 MentorNode = subscriptionState.MentorNode,
-                                PinToMentorNode = subscriptionState.PinToMentorNode,
                                 ResponsibleNode = new NodeId
                                 {
                                     NodeTag = tag,
