@@ -50,6 +50,8 @@ class certificateModel {
 
     securityClearanceLabel: KnockoutComputed<string>;
     canEditClearance: KnockoutComputed<boolean>;
+
+    deleteExpired = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         name: this.name,
@@ -194,6 +196,10 @@ class certificateModel {
     
     static generate() {
         return new certificateModel("generate");
+    }
+
+    static reGenerate() {
+        return new certificateModel("reGenerate");
     }
     
     static upload() {
