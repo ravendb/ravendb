@@ -47,7 +47,7 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"The pull replication '{remoteTask}' is disabled.");
 
                 var topology = ServerStore.Cluster.ReadDatabaseTopology(context, database);
-                nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication.MentorNode, pullReplication.PinToMentorNode);
+                nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication.MentorNode);
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -153,7 +153,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, string mentorNode, bool pinToMentorNode)
+        private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, string mentorNode)
         {
             var list = new List<string>();
             // we distribute connections to have load balancing when many sinks are connected.
@@ -162,7 +162,6 @@ namespace Raven.Server.Web.System
             var mentorNodeTask = new PullNodeTask
             {
                 Mentor = mentorNode,
-                PinToMentorNode = pinToMentorNode,
                 DatabaseGroupId = databaseGroupId
             };
 
@@ -180,7 +179,6 @@ namespace Raven.Server.Web.System
         {
             public string Mentor;
             public string DatabaseGroupId;
-            public bool PinToMentorNode;
 
             public ulong GetTaskKey()
             {
@@ -209,7 +207,7 @@ namespace Raven.Server.Web.System
 
             public bool IsPinnedToMentorNode()
             {
-                return PinToMentorNode;
+                return false;
             }
         }
     }

@@ -16,8 +16,6 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public string MentorNode;
 
-        public bool PinToMentorNode;
-        
         public PullReplicationMode Mode = PullReplicationMode.HubToSink;
 
         public string Name;
@@ -48,7 +46,6 @@ namespace Raven.Client.Documents.Operations.Replication
                 [nameof(TaskId)] = TaskId,
                 [nameof(Disabled)] = Disabled,
                 [nameof(MentorNode)] = MentorNode,
-                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(DelayReplicationFor)] = DelayReplicationFor,
                 [nameof(Mode)] = Mode,
                 [nameof(WithFiltering)] = WithFiltering,
@@ -81,7 +78,6 @@ namespace Raven.Client.Documents.Operations.Replication
                 Name = request.PullReplicationSinkTaskName,
                 DelayReplicationFor = DelayReplicationFor,
                 MentorNode = MentorNode,
-                PinToMentorNode = PinToMentorNode,
                 TaskId = taskId
             };
         }
