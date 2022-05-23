@@ -1403,6 +1403,23 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public long AppendToLog(CommandBase cmd, long term)
+        {
+            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            {
+                var djv = cmd.ToJson(context);
+                var cmdJson = context.ReadObject(djv, "raft/command");
+
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var index = InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                    tx.Commit();
+             
+                    return index;
+                }
+            }
+        }
+
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
         {

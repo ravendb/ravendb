@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions.Cluster;
+using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -297,22 +295,21 @@ namespace RachisTests
             var timeToWait = TimeSpan.FromMilliseconds(1000 * numberOfNodes);
             await IssueCommandsAndWaitForCommit(10, "test", 1);
             var currentTerm = firstLeader.CurrentTerm;
-
-            var t = IssueCommandsWithoutWaitingForCommits(firstLeader, 100, "test");
+            
             Disconnect(follower.Url, firstLeader.Url);
 
-            await Assert.ThrowsAsync<NotLeadingException>(() => Task.WhenAll(t));
+            // append to previous leader
+            firstLeader.AppendToLog(new TestCommand { Name = "foo", Value = 123 }, currentTerm);
 
             Assert.True(await firstLeader.WaitForState(RachisState.Candidate, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait),$"{firstLeader.CurrentState}");
             follower.FoundAboutHigherTerm(currentTerm + 1," why not, should work!");
             Reconnect(follower.Url, firstLeader.Url);
 
-
-            Assert.True(await firstLeader.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait),
+            RavenTestHelper.AssertTrue(await firstLeader.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait), () =>
                 $"leader: {firstLeader.CurrentState} in term {firstLeader.CurrentTerm} with last index {GetLastCommittedIndex(firstLeader)}{Environment.NewLine}, " +
                 $"follower: state {follower.CurrentState} in term {follower.CurrentTerm} with last index {GetLastCommittedIndex(follower)}");
-            Assert.True(currentTerm + 2 <= firstLeader.CurrentTerm,$"{currentTerm} + 2 <= {firstLeader.CurrentTerm}");
 
+            Assert.True(currentTerm + 2 <= firstLeader.CurrentTerm,$"{currentTerm} + 2 <= {firstLeader.CurrentTerm}");
 
             var count = 100;
             while (true)
@@ -339,8 +336,11 @@ namespace RachisTests
                 var leaderValue = firstLeader.StateMachine.Read(leaderContext, "test");
                 var followerValue = follower.StateMachine.Read(followerContext, "test");
                 Assert.Equal(leaderValue, followerValue);
+                Assert.Equal(new string('1', 10), followerValue);
             }
         }
+
+
 
         private long GetLastCommittedIndex(RachisConsensus<CountingStateMachine> rachis)
         {
