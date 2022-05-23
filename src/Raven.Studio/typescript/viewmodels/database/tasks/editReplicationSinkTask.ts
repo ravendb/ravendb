@@ -19,6 +19,7 @@ import popoverUtils = require("common/popoverUtils");
 import prefixPathModel = require("models/database/tasks/prefixPathModel");
 import endpoints = require("endpoints");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import accessManager = require("common/shell/accessManager");
 
 class editReplicationSinkTask extends viewModelBase {
@@ -155,7 +156,6 @@ class editReplicationSinkTask extends viewModelBase {
                 model.taskName,
                 model.taskState,
                 model.manualChooseMentor,
-                model.pinMentorNode,
                 model.mentorNode,
                 model.connectionStringName,
                 this.createNewConnectionString,
