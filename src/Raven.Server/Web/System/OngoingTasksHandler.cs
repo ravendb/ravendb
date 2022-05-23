@@ -824,7 +824,6 @@ namespace Raven.Server.Web.System
                         TaskName = ravenEtl.Name,
                         TaskState = taskState,
                         MentorNode = ravenEtl.MentorNode,
-                        PinToMentorNode = ravenEtl.PinToMentorNode,
                         ResponsibleNode = new NodeId
                         {
                             NodeTag = tag,
