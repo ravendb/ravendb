@@ -97,7 +97,6 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
             this.pinMentorNode(dto.Configuration.PinToMentorNode);
-            this.mentorNode(dto.Configuration.MentorNode);
             this.loadRequestTimeout(dto.Configuration.LoadRequestTimeoutInSec);
         }
     }
