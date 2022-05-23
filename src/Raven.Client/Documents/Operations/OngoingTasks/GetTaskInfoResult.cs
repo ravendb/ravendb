@@ -60,8 +60,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 [nameof(TaskState)] = TaskState,
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
                 [nameof(TaskName)] = TaskName,
-                [nameof(MentorNode)] = MentorNode,
-                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(Error)] = Error
             };
         }
@@ -89,7 +87,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(MentorNode)] = MentorNode;
-            json[nameof(PinToMentorNode)] = PinToMentorNode;
             json[nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint;
             json[nameof(LastBatchAckTime)] = LastBatchAckTime;
             json[nameof(Disabled)] = Disabled;
@@ -184,8 +181,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(AccessName)] = AccessName;
             json[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             json[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
-            json[nameof(MentorNode)] = MentorNode;
-            json[nameof(PinToMentorNode)] = PinToMentorNode;
             return json;
         }
     }

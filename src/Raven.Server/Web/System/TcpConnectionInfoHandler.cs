@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -157,6 +156,7 @@ namespace Raven.Server.Web.System
 
         private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, string mentorNode, bool pinToMentorNode)
         {
+            var list = new List<string>();
             // we distribute connections to have load balancing when many sinks are connected.
             // this is the hub cluster, so we make the decision which node will do the pull replication only once and only here,
             // for that we create a dummy IDatabaseTask.
@@ -167,19 +167,19 @@ namespace Raven.Server.Web.System
                 DatabaseGroupId = databaseGroupId
             };
 
-            if (pinToMentorNode)
-            {
-                if (topology.AllNodes.Contains(mentorNode))
-                    return new List<string> {mentorNode};
-            }
-
-            var list = new List<string>();
             while (topology.Members.Count > 0)
             {
                 var next = topology.WhoseTaskIsIt(ServerStore.CurrentRachisState, mentorNodeTask, null);
+                if (next.Equals(mentorNode) && pinToMentorNode)
+                {
+                    // if it's pinned to the mentor node than the list will always contain one node (only if the node exists in the topology)
+                    list.Add(next);
+                    return list;
+                }
                 list.Add(next);
                 topology.Members.Remove(next);
             }
+
             return list;
         }
 
