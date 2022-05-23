@@ -157,7 +157,6 @@ class periodicBackupConfiguration extends backupConfiguration {
             S3Settings: this.s3Settings().toDto(),
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
-            PinToMentorNode: false,
             GoogleCloudSettings: this.googleCloudSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto()
         };

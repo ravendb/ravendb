@@ -119,7 +119,6 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             ParameterizeDeletes: this.parameterizedDeletes(),
             CommandTimeout: this.commandTimeout() || null,
             QuoteTables: this.tableQuotation(),
-            PinToMentorNode: false,
             Transforms: this.transformationScripts().map(x => x.toDto()),
             SqlTables: this.sqlTables().map(x => x.toDto())
         

@@ -294,7 +294,6 @@ namespace Raven.Server.Web.System
                 DestinationUrl = res.Url,
                 TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
                 MentorNode = watcher.MentorNode,
-                PinToMentorNode = watcher.PinToMentorNode,
                 TaskConnectionStatus = res.Status,
                 DelayReplicationFor = watcher.DelayReplicationFor
             };
@@ -574,7 +573,6 @@ namespace Raven.Server.Web.System
                 TaskName = backupConfiguration.Name,
                 TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 MentorNode = backupConfiguration.MentorNode,
-                PinToMentorNode = backupConfiguration.PinToMentorNode,
                 LastExecutingNodeTag = backupStatus.NodeTag,
                 LastFullBackup = backupStatus.LastFullBackup,
                 LastIncrementalBackup = backupStatus.LastIncrementalBackup,

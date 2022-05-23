@@ -47,8 +47,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
         public string TaskName { get; set; }
         public string Error { get; set; }
+
         public string MentorNode { get; set; }
-        public bool PinToMentorNode { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -61,7 +61,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
                 [nameof(TaskName)] = TaskName,
                 [nameof(MentorNode)] = MentorNode,
-                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(Error)] = Error
             };
         }
