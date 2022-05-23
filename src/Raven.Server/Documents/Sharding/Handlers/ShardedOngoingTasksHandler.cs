@@ -57,6 +57,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/subscription-tasks", "DELETE")]
+        public async Task DeleteSubscriptionTask()
+        {
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForDeleteSubscriptionTasks(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/admin/tasks", "DELETE")]
         public async Task DeleteOngoingTask()
         {
