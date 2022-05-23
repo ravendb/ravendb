@@ -90,7 +90,6 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             this.connectionStringName(configuration.ConnectionStringName);
             this.manualChooseMentor(!!configuration.MentorNode);
             this.pinMentorNode(configuration.PinToMentorNode);
-            this.mentorNode(configuration.MentorNode);
             
             this.customPartition(configuration.CustomPartitionValue);
             this.customPartitionEnabled(!!configuration.CustomPartitionValue);
