@@ -13,7 +13,7 @@ public class RavenDB_18377 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CanQueryOnNestedEnumerable(Options options)
     {
         using var store = GetDocumentStore(options);

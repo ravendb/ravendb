@@ -80,7 +80,7 @@ public class RavenDB_18377 : RavenTestBase
         public NestedArray()
         {
             Map = docs => from doc in docs
-                select new Item {Name = doc.Name, Data = doc.Data.Select(i => i * 10).ToArray()};
+                select new Item {Name = doc.Name, Data = doc.Data.Select(i => i).ToArray()};
         }
     }
 }
