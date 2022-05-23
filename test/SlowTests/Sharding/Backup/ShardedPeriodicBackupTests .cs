@@ -12,8 +12,11 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -305,19 +308,104 @@ namespace SlowTests.Sharding.Backup
 
                     await store4.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), store2Backup[0]);
 
-                    switch (options.DatabaseMode)
+                    await AssertDocs(store3, idPrefix: usersPrefix, dbMode: options.DatabaseMode);
+                    await AssertDocs(store4, idPrefix: ordersPrefix, dbMode: options.DatabaseMode);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task OneTimeBackupSharded(Options options)
+        {
+            var backupPath = NewDataPath(suffix: "_BackupFolder");
+            const string idPrefix = "users";
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 100; i++)
                     {
-                        case RavenDatabaseMode.Single:
-                            await AssertDocs(store3, idPrefix: usersPrefix);
-                            await AssertDocs(store4, idPrefix: ordersPrefix);
-                            break;
-                        case RavenDatabaseMode.Sharded:
-                            await AssertDocsInShardedDb(store3, idPrefix: usersPrefix);
-                            await AssertDocsInShardedDb(store4, idPrefix: ordersPrefix);
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException(options.DatabaseMode.ToString());
+                        await session.StoreAsync(new User(), $"{idPrefix}/{i}");
                     }
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new BackupConfiguration
+                {
+                    BackupType = BackupType.Backup, 
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                };
+
+                var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
+
+                var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(95));
+                var backupResult = (BackupResult)result;
+                Assert.NotNull(backupResult);
+                Assert.Equal(100, backupResult.Documents.ReadCount);
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+                using (var store2 = GetDocumentStore(options))
+                {
+                    foreach (var dir in dirs)
+                    {
+                        await store2.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), dir);
+                    }
+
+                    await AssertDocs(store2, idPrefix, options.DatabaseMode);
+                }
+
+                /*var client = store.GetRequestExecutor().HttpClient;
+                var response = await client.GetAsync(store.Urls.First() + $"/databases?name={store.Database}");
+                string result2 = response.Content.ReadAsStringAsync().Result;
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    using var bjro = ctx.Sync.ReadForMemory(result2, "test");
+                    var databaseInfo = JsonDeserializationServer.DatabaseInfo(bjro);
+                    Assert.NotNull(databaseInfo);
+                    Assert.Equal(BackupTaskType.OneTime, databaseInfo.BackupInfo.BackupTaskType);
+                    Assert.Equal(1, databaseInfo.BackupInfo.Destinations.Count);
+                    Assert.Equal(nameof(BackupConfiguration.BackupDestination.Local), databaseInfo.BackupInfo.Destinations.First());
+                    Assert.NotNull(databaseInfo.BackupInfo.LastBackup);
+                    Assert.Equal(0, databaseInfo.BackupInfo.IntervalUntilNextBackupInSec);
+                }*/
+            }
+        }
+
+        private Task AssertDocs(IDocumentStore store, string idPrefix, RavenDatabaseMode dbMode, int count = 100)
+        {
+            return dbMode switch
+            {
+                RavenDatabaseMode.Single => AssertDocs(store, idPrefix, count),
+                RavenDatabaseMode.Sharded => AssertDocsInShardedDb(store, idPrefix, count),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+
+        private async Task AssertDocs(IDocumentStore store, string idPrefix, int count = 100)
+        {
+            var ids = Enumerable.Range(0, count).Select(x => $"{idPrefix}/{x}").ToList();
+            var db = await GetDocumentDatabaseInstanceFor(store);
+            AssertDocs(db, ids);
+        }
+
+        private static void AssertDocs(DocumentDatabase database, IReadOnlyCollection<string> ids)
+        {
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var docs = database.DocumentsStorage.GetDocumentsFrom(context, 0).ToList();
+                Assert.NotEmpty(docs);
+                Assert.Equal(ids.Count, docs.Count);
+
+                foreach (var doc in docs)
+                {
+                    Assert.Contains(doc.Id, ids);
                 }
             }
         }
@@ -360,29 +448,5 @@ namespace SlowTests.Sharding.Backup
                 AssertDocs(shard, ids);
             }
         }
-
-        private async Task AssertDocs(IDocumentStore store, string idPrefix, int count = 100)
-        {
-            var ids = Enumerable.Range(0, count).Select(x => $"{idPrefix}/{x}").ToList();
-            var db = await GetDocumentDatabaseInstanceFor(store);
-            AssertDocs(db, ids);
-        }
-
-        private static void AssertDocs(DocumentDatabase database, IReadOnlyCollection<string> ids)
-        {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var docs = database.DocumentsStorage.GetDocumentsFrom(context, 0).ToList();
-                Assert.NotEmpty(docs);
-                Assert.Equal(ids.Count, docs.Count);
-
-                foreach (var doc in docs)
-                {
-                    Assert.Contains(doc.Id, ids);
-                }
-            }
-        }
-
     }
 }

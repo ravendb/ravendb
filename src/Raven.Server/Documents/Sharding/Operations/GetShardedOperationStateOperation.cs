@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Sparrow.Utils;
@@ -29,6 +31,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
             OperationMultipleExceptionsResult operationExceptionsResult = null;
             SmugglerResult smugglerResult = null;
+            BackupResult backupResult = null;
             BulkOperationResult bulkResult = null;
 
             var span = results.Span;
@@ -51,11 +54,18 @@ namespace Raven.Server.Documents.Sharding.Operations
                         operationExceptionsResult.Exceptions.Add(operationException);
 
                         break;
+                    case BackupResult backup:
+                        if (backupResult == null)
+                        {
+                            combined.Result = backupResult = new BackupResult();
+                        }
+
+                        GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, backup);
+                        break;
                     case SmugglerResult smuggler:
                         if (smugglerResult == null)
                         {
-                            smugglerResult = new SmugglerResult();
-                            combined.Result = smugglerResult;
+                            combined.Result = smugglerResult = new SmugglerResult();
                         }
 
                         GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, smuggler);

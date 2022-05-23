@@ -158,6 +158,7 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
                 var backupConfiguration = JsonDeserializationServer.BackupConfiguration(json);
                 var backupName = $"One Time Backup #{Interlocked.Increment(ref _oneTimeBackupCounter)}";
+                var operationId = GetLongQueryString("operationId", required: false) ?? ServerStore.Operations.GetNextOperationId();
 
                 BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
@@ -168,7 +169,6 @@ namespace Raven.Server.Web.System
                 ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
                 try
                 {
-                    var operationId = ServerStore.Operations.GetNextOperationId();
                     var cancelToken = CreateOperationToken();
                     var backupParameters = new BackupParameters
                     {
@@ -233,6 +233,7 @@ namespace Raven.Server.Web.System
                     {
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
+
                 }
                 catch (Exception e)
                 {

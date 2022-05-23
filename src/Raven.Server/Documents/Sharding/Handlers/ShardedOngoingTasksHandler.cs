@@ -5,11 +5,16 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Replication;
+using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -126,6 +131,44 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             using (var processor = new ShardedOngoingTasksHandlerProcessorForGetPullReplicationHubTasksInfo(this))
                 await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/backup", "POST")]
+        public async Task BackupDatabaseOnce()
+        {
+            var operationId = ServerStore.Operations.GetNextOperationId();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                }
+
+                await ServerStore.Operations.AddOperation(
+                    database: null,
+                    "One Time backup of database : " + DatabaseName,
+                    Documents.Operations.Operations.OperationType.DatabaseBackup,
+                    onProgress => BackupOnceOnAllShards(context), 
+                    operationId);
+            }
+        }
+
+        private async Task<IOperationResult> BackupOnceOnAllShards(JsonOperationContext context)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
+                "need to use a cluster-wide operationId to avoid collisions");
+
+            var operationId = -ServerStore.Operations.GetNextOperationId();
+            var backupConfig = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
+
+            var backupOnceOperation = new ShardedBackupOnceOperation(this, operationId, backupConfig);
+            await ShardExecutor.ExecuteParallelForAllAsync(backupOnceOperation);
+
+            await backupOnceOperation.WaitForBackupToCompleteOnAllShards();
+
+            var getStateOperation = new GetShardedOperationStateOperation(HttpContext, operationId);
+            return (await ShardExecutor.ExecuteParallelForAllAsync(getStateOperation)).Result;
         }
     }
 }

@@ -57,6 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
+
         public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _database = database;

@@ -5,12 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.Processors.HiLo;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {

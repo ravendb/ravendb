@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -64,6 +65,9 @@ namespace Raven.Client.Documents.Operations
             {
                 switch (result)
                 {
+                    case BackupResult backupResult:
+                        CombineBackupResults((BackupResult)finalResult, backupResult);
+                        break;
                     case SmugglerResult smugglerResult:
                         CombineSmugglerResults((SmugglerResult)finalResult, smugglerResult);
                         break;
@@ -111,6 +115,38 @@ namespace Raven.Client.Documents.Operations
 
                 foreach (var message in smugglerResult.Messages)
                     finalResult.AddMessage(message);
+            }
+
+            internal static void CombineBackupResults(BackupResult finalResult, BackupResult backupResult)
+            {
+
+                CombineSmugglerResults(finalResult, backupResult);
+
+/*
+                public Counts SnapshotBackup { get; set; }
+
+                public UploadToS3 S3Backup { get; set; }
+
+                public UploadToAzure AzureBackup { get; set; }
+
+                public UploadToGoogleCloud GoogleCloudBackup { get; set; }
+
+                public UploadToGlacier GlacierBackup { get; set; }
+
+                public UploadToFtp FtpBackup { get; set; }
+
+                public LocalBackup LocalBackup { get; set; }
+*/
+
+
+
+                finalResult.SnapshotBackup.ReadCount += backupResult.SnapshotBackup.ReadCount;
+                finalResult.SnapshotBackup.ErroredCount += backupResult.SnapshotBackup.ErroredCount;
+
+                finalResult.S3Backup.UploadProgress.UploadedInBytes += backupResult.S3Backup.UploadProgress.UploadedInBytes;
+                //finalResult.SnapshotBackup.ErroredCount += backupResult.SnapshotBackup.ErroredCount;
+
+
             }
         }
     }
