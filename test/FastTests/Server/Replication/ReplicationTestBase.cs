@@ -225,7 +225,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
+        protected internal static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
             IDocumentStore store,
             T watcher,
             string[] urls = null) where T : ExternalReplicationBase
@@ -391,7 +391,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static async Task<OngoingTasksHandler> InstantiateOutgoingTaskHandler(string name, RavenServer server)
+        protected internal static async Task<OngoingTasksHandler> InstantiateOutgoingTaskHandler(string name, RavenServer server)
         {
             Assert.True(server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var db));
             var database = await db;
