@@ -5,12 +5,12 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseStorageDiskIosWrite : DatabaseScalarObjectBase<Gauge32>
+    public class DatabaseStorageDiskIosWriteOperations : DatabaseScalarObjectBase<Gauge32>
     {
         private static readonly Gauge32 Empty = new Gauge32(-1);
 
-        public DatabaseStorageDiskIosWrite(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, SnmpOids.Databases.StorageDiskIoWrite, index)
+        public DatabaseStorageDiskIosWriteOperations(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.StorageDiskIoWriteOperations, index)
         {
         }
 
