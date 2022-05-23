@@ -33,6 +33,7 @@ namespace Raven.Client.Documents.BulkInsert
     public class BulkInsertOperation : IDisposable, IAsyncDisposable
     {
         private readonly BulkInsertOptions _options;
+        private readonly string _database;
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
@@ -165,7 +166,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _isInitialWrite = true;
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
         
-        private BulkInsertObservableOperation _operation;
+        private IDisposable _unsubscribeChanges;
         private event EventHandler<BulkInsertOnProgressEventArgs> _onProgress;
         private bool _onProgressInitialized = false;
 
@@ -173,15 +174,8 @@ namespace Raven.Client.Documents.BulkInsert
         {
             add
             {
-                if (_onProgressInitialized == false)
-                {
-                    _onProgress += value;
-                    _onProgressInitialized = true;
-                }
-                else
-                {
-                    throw new InvalidOperationException($"{nameof(OnProgress)} already initialized. It can be set only once per operation.");
-                }
+                _onProgress += value;
+                _onProgressInitialized = true;
             }
             remove
             {
@@ -221,8 +215,7 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _streamExposerContent.Done();
-                    _operation?.Dispose();
-
+                    
                     if (_operationId == -1)
                     {
                         // closing without calling a single store.
@@ -240,6 +233,7 @@ namespace Raven.Client.Documents.BulkInsert
                             await ThrowBulkInsertAborted(e, flushEx).ConfigureAwait(false);
                         }
                     }
+                    _unsubscribeChanges?.Dispose();
                 }
                 finally
                 {
@@ -250,6 +244,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
             _options = options ?? new BulkInsertOptions();
+            _database = database;
             _token = token;
             _conventions = store.Conventions;
             _store = store;
@@ -316,13 +311,18 @@ namespace Raven.Client.Documents.BulkInsert
             await ExecuteAsync(bulkInsertGetIdRequest, token: _token).ConfigureAwait(false);
             _operationId = bulkInsertGetIdRequest.Result;
             _nodeTag = bulkInsertGetIdRequest.NodeTag;
-            
-            if (_onProgressInitialized && _operation is not null)
+            if (_onProgressInitialized && _unsubscribeChanges is null)
             {
-                _operation = new BulkInsertObservableOperation(_requestExecutor, () => _store.Changes(_store.Database, _nodeTag), _requestExecutor.Conventions, _operationId, _nodeTag);
-                _operation.OnProgressChanged += x => _onProgress!(this, x as BulkInsertOnProgressEventArgs);
-                await _operation.Initialize().ConfigureAwait(false);
+                _unsubscribeChanges =  _store
+                    .Changes(_database, _nodeTag)
+                    .ForOperationId(_operationId)
+                    .Subscribe(new BulkInsertObserver(this)); 
             }
+        }
+        
+        internal void InvokeOnProgress(BulkInsertProgress progress)
+        {
+            _onProgress?.Invoke(this, new BulkInsertOnProgressEventArgs(progress));
         }
 
         public void Store(object entity, string id, IMetadataDictionary metadata = null)
@@ -352,7 +352,7 @@ namespace Raven.Client.Documents.BulkInsert
                 VerifyValidId(id);
 
                 await ExecuteBeforeStore().ConfigureAwait(false);
-
+                
                 if (metadata == null)
                     metadata = new MetadataAsDictionary();
 
@@ -405,7 +405,7 @@ namespace Raven.Client.Documents.BulkInsert
                 }
             }
         }
-
+        
         private async Task HandleErrors(string documentId, Exception e)
         {
             BulkInsertAbortedException errorFromServer = null;

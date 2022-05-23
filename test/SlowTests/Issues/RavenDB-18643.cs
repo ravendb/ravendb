@@ -28,13 +28,14 @@ public class RavenDB_18643 : RavenTestBase
             bulkInsert.OnProgress += (sender, args) =>
             {
                 lastInsertedDocId.Add(args.Progress.LastProcessedId);
+                Assert.NotEmpty(args.Progress.LastProcessedId);
             };
 
             var i = 0;
 
             while (cts.IsCancellationRequested || lastInsertedDocId.Count == 0)
             {
-                bulkInsert.Store(new ExampleItem($"ExampleItem/{i++}"));
+                await bulkInsert.StoreAsync(new ExampleItem($"ExampleItem/{i++}"));
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
             }
         }
