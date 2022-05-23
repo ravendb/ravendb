@@ -17,8 +17,6 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
         public string Name { get; set; }
 
         public string MentorNode { get; set; }
-        
-        public bool PinToMentorNode { get; set; }
 
         public TimeSpan DelayReplicationFor { get; set; }
 
@@ -39,7 +37,6 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
                 [nameof(TaskId)] = TaskId,
                 [nameof(Name)] = Name,
                 [nameof(MentorNode)] = MentorNode,
-                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(DelayReplicationFor)] = DelayReplicationFor,
                 [nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls,
                 [nameof(ExcludedDatabases)] = ExcludedDatabases
