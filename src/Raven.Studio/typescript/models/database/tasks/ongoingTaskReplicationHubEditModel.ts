@@ -13,7 +13,6 @@ class ongoingTaskReplicationHubEditModel {
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
     
     manualChooseMentor = ko.observable<boolean>();
-    pinMentorNode = ko.observable<boolean>(false);
     mentorNode = ko.observable<string>();
     nodeTag: string = null;
     
@@ -69,7 +68,6 @@ class ongoingTaskReplicationHubEditModel {
         this.disabled(dto.Disabled);
 
         this.manualChooseMentor(!!dto.MentorNode);
-        this.pinMentorNode(dto.PinToMentorNode);
         this.mentorNode(dto.MentorNode);
 
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
@@ -87,7 +85,6 @@ class ongoingTaskReplicationHubEditModel {
         return {
             Name: this.taskName(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
-            PinToMentorNode: this.pinMentorNode(),
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Mode: this.replicationMode(),
@@ -153,10 +150,6 @@ class ongoingTaskReplicationHubEditModel {
             WithFiltering: false,
             Mode: "HubToSink"
         } as Raven.Client.Documents.Operations.Replication.PullReplicationDefinition);
-    }
-
-    togglePinMentorNode() {
-        this.pinMentorNode.toggle();
     }
 }
 
