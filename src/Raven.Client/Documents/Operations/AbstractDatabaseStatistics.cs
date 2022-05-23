@@ -1,7 +1,7 @@
 namespace Raven.Client.Documents.Operations;
 
 public abstract class AbstractDatabaseStatistics<TIndexInformation>
-    where TIndexInformation : BasicIndexInformation
+    where TIndexInformation : EssentialIndexInformation
 {
     /// <summary>
     /// Total number of indexes in database.

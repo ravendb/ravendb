@@ -139,7 +139,7 @@ public static class IndexInformationHolderExtensions
 {
     public static IndexInformationHolder ToIndexInformationHolder(this Index index) => IndexInformationHolder.CreateFor(index);
 
-    public static BasicIndexInformation ToBasicIndexInformation(this IndexInformationHolder holder) => new BasicIndexInformation
+    public static EssentialIndexInformation ToEssentialIndexInformation(this IndexInformationHolder holder) => new EssentialIndexInformation
     {
         Name = holder.Name,
         Type = holder.Type,

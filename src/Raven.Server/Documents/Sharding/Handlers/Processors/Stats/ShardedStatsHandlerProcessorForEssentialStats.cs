@@ -28,12 +28,12 @@ internal class ShardedStatsHandlerProcessorForEssentialStats : AbstractStatsHand
             var indexes = RequestHandler.DatabaseContext.Indexes.GetIndexes().ToList();
 
             stats.CountOfIndexes = indexes.Count;
-            stats.Indexes = new BasicIndexInformation[indexes.Count];
+            stats.Indexes = new EssentialIndexInformation[indexes.Count];
 
             for (var i = 0; i < indexes.Count; i++)
             {
                 var index = indexes[i];
-                stats.Indexes[i] = index.ToBasicIndexInformation();
+                stats.Indexes[i] = index.ToEssentialIndexInformation();
             }
 
             return stats;
