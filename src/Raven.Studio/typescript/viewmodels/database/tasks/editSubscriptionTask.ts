@@ -20,6 +20,8 @@ import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRq
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -123,6 +125,11 @@ class editSubscriptionTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-subscription-task [data-toggle="tooltip"]').tooltip();
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
+            });
         
         document.getElementById('taskName').focus(); 
     }

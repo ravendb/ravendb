@@ -234,6 +234,11 @@ class editReplicationSinkTask extends viewModelBase {
                     "<li><small>Only public keys are downloaded.</small></li>" +
                     "</ul>"
             });
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
+            });
     }
 
     saveTask() {

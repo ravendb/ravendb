@@ -15,7 +15,6 @@ class periodicBackupConfiguration extends backupConfiguration {
     stateText: KnockoutComputed<string>;
 
     manualChooseMentor = ko.observable<boolean>(false);
-    pinMentorNode = ko.observable<boolean>(false);
 
     fullBackupEnabled = ko.observable<boolean>(false);
     fullBackupFrequency = ko.observable<string>();
@@ -43,7 +42,6 @@ class periodicBackupConfiguration extends backupConfiguration {
         this.incrementalBackupFrequency(dto.IncrementalBackupFrequency || periodicBackupConfiguration.defaultIncrementalBackupFrequency);
         
         this.manualChooseMentor(!!dto.MentorNode);
-        this.pinMentorNode(dto.PinToMentorNode);
         
         this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
        
@@ -78,7 +76,6 @@ class periodicBackupConfiguration extends backupConfiguration {
             this.incrementalBackupEnabled,
             this.manualChooseMentor,
             this.mentorNode,
-            this.pinMentorNode,
             this.snapshot().compressionLevel,
             this.retentionPolicy().dirtyFlag().isDirty,
             this.encryptionSettings().dirtyFlag().isDirty,
@@ -150,7 +147,6 @@ class periodicBackupConfiguration extends backupConfiguration {
             Name: this.name(),
             Disabled: this.disabled(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
-            PinToMentorNode: this.pinMentorNode(),
             FullBackupFrequency: this.fullBackupEnabled() ? this.fullBackupFrequency() : null,
             IncrementalBackupFrequency: this.incrementalBackupEnabled() ? this.incrementalBackupFrequency() : null,
             RetentionPolicy: this.retentionPolicy().toDto(),
@@ -161,6 +157,7 @@ class periodicBackupConfiguration extends backupConfiguration {
             S3Settings: this.s3Settings().toDto(),
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
+            PinToMentorNode: false,
             GoogleCloudSettings: this.googleCloudSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto()
         };
@@ -180,10 +177,6 @@ class periodicBackupConfiguration extends backupConfiguration {
 
     setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
         this.disabled(state === "Disabled");
-    }
-
-    togglePinMentorNode() {
-        this.pinMentorNode.toggle();
     }
 }
 

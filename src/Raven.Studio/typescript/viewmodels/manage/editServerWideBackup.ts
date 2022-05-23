@@ -159,6 +159,11 @@ class editServerWideBackup extends viewModelBase {
             {
                 content: tasksCommonContent.serverwideSnapshotEncryptionInfo
             });
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
+            });
     }
 
     saveBackupSettings() {

@@ -3,9 +3,7 @@
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 
 abstract class ongoingTaskEditModel extends ongoingTaskModel {
-    
     manualChooseMentor = ko.observable<boolean>(false);
-    pinMentorNode = ko.observable<boolean>(false);
     
     nodeTag: string = null;
 
@@ -21,10 +19,6 @@ abstract class ongoingTaskEditModel extends ongoingTaskModel {
                 onlyIf: () => this.manualChooseMentor()
             }
         });
-    }
-
-    togglePinMentorNode() {
-        this.pinMentorNode.toggle();
     }
 }
 

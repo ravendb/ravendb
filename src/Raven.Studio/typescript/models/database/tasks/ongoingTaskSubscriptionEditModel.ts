@@ -33,7 +33,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             this.taskState,
             this.mentorNode,
             this.manualChooseMentor,
-            this.pinMentorNode,
             this.query,
             this.startingPointType,
             this.startingChangeVector,
@@ -68,7 +67,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             TaskId: dtoEditModel.SubscriptionId,
             TaskName: dtoEditModel.SubscriptionName,
             MentorNode: dtoEditModel.MentorNode,
-            PinToMentorNode: dtoEditModel.PinToMentorNode,
             TaskState: state,
             TaskType: 'Subscription',
             Error: null
@@ -77,7 +75,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         super.update(dtoListModel);
         
         this.manualChooseMentor(!!dto.MentorNode);
-        this.pinMentorNode(dto.PinToMentorNode);
 
         this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
@@ -115,7 +112,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             Name: this.taskName(),
             Query: this.query() || null,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
-            PinToMentorNode: this.pinMentorNode(),
             ChangeVector: this.serializeChangeVector(),
             Disabled: this.taskState() === "Disabled"
         }
@@ -162,7 +158,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 LastClientConnectionTime: null,
                 LastBatchAckTime: null,
                 MentorNode: null,
-                PinToMentorNode: false,
                 NodeTag: null
             });
     }

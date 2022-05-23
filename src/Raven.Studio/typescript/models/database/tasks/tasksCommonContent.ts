@@ -1,4 +1,10 @@
 ﻿class tasksCommonContent {
+    
+    static readonly responsibleNodeInfo =
+        `<ul class="margin-top margin-top-xs no-padding-left margin-left">
+            <li><small>The <strong>preferred node</strong> that will handle this task.</small></li>
+            <li><small>When this node is down, the cluster selects another node from the Database Group to handle the task.</small></li>
+         </ul>`;
         
     static readonly generalBackupInfo =
         "Differences between Backup and Snapshot:" +
