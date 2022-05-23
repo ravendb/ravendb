@@ -40,7 +40,6 @@ namespace Corax.Queries
         private readonly TValueType _valueAux;
         private readonly int _take;
         private readonly UnaryMatchOperationMode _operationMode;
-        private readonly bool _distinct;
         
         private long _totalResults;
         private long _current;
@@ -62,7 +61,6 @@ namespace Corax.Queries
             long totalResults,
             QueryCountConfidence confidence,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
-            bool distinct = false,
             int take = -1)
         {
             _totalResults = totalResults;
@@ -79,7 +77,6 @@ namespace Corax.Queries
             _valueAux = default;
             _confidence = confidence;
             _operationMode = mode;
-            _distinct = distinct;
             _take = take <= 0 ? int.MaxValue : take;
         }
 
@@ -94,7 +91,6 @@ namespace Corax.Queries
             long totalResults,
             QueryCountConfidence confidence,
             UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
-            bool distinct = false,
             int take = -1)
         {
             _totalResults = totalResults;
@@ -111,7 +107,6 @@ namespace Corax.Queries
             _valueAux = value2;
             _confidence = confidence;
             _operationMode = mode;
-            _distinct = distinct;
             _take = take <= 0 ? int.MaxValue : take;
         }
 
@@ -141,6 +136,7 @@ namespace Corax.Queries
                 {
                     { nameof(IsBoosting), IsBoosting.ToString() },
                     { nameof(Count), $"{Count} [{Confidence}]" },
+                    { "Operation", _operation.ToString() },
                     { "FieldId", $"{_fieldId}" },
                     { "Value", GetValue()},
                     { "AuxValue", GetAuxValue()}
