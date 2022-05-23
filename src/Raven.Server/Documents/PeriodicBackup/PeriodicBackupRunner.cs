@@ -942,8 +942,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (taskState == TaskStatus.ActiveByCurrentNode)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"New backup task '{taskId}' state is '{taskState}', will arrange a new backup timer.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"New backup task '{taskId}' state is '{taskState}', will arrange a new backup timer.");
 
                     var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
                     periodicBackup.UpdateTimer(GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag), lockTaken: false);
@@ -981,8 +981,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // a backup is already running, the next one will be re-scheduled by the backup task if needed
                     if (existingBackupState.RunningTask != null)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
 
                         return;
                     }
@@ -990,8 +990,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // backup frequency hasn't changed, and we have a scheduled backup
                     if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false && existingBackupState.HasScheduledBackup())
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', the task doesn't have frequency changes and has scheduled backup, will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Backup task '{taskId}' state is '{taskState}', the task doesn't have frequency changes and has scheduled backup, will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
 
                         return;
                     }
