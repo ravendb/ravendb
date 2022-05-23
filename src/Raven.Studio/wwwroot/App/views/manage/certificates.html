@@ -209,7 +209,7 @@
                                     <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data), visible: $root.canEdit($data)() && !isExpired" title="Edit certificate">
                                         <i class="icon-edit"></i>
                                     </button>
-                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance, $data)" title="Remove certificate">
+                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificateConfirm, $data), visible: $root.canDelete(SecurityClearance, $data)" title="Remove certificate">
                                         <i class="icon-trash"></i>
                                     </button>
                                 </div>
@@ -270,6 +270,7 @@
                         <div class="flex-horizontal margin-bottom">
                             <div class="flex-grow">
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
+                                <h3 data-bind="visible: mode() === 'reGenerate'">Regenerate expired client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
                                 <h3 data-bind="visible: mode() === 'replace'">Replace server certificates (cluster-wide)</h3>
@@ -390,7 +391,7 @@
                                 </div>
                             </div>
                             <div data-bind="visible: mode() !== 'replace'">
-                                <hr />
+                                <hr class="margin-top-lg" />
                                 <h4>Database Permissions</h4>
                                 <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
                                     <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
@@ -450,6 +451,13 @@
                                     </div>
                                 </div>
                             </div>
+                            <hr class="margin-top-lg" />
+                            <div class="toggle margin-left-sm" data-bind="visible: mode() === 'reGenerate'">
+                                <input id="deleteExpired" type="checkbox" class="styled" data-bind="checked: deleteExpired" />
+                                <label for="deleteExpired" data-placement="bottom" data-toggle="tooltip" data-animation="true" title="The expired certificate will be deleted upon clicking 'Generate'">
+                                    <span>Delete expired certificate</span>&nbsp;<small>(<code data-bind="text: thumbprint()"></code>)</small>
+                                </label>
+                            </div>
                             <div class="flex-horizontal margin-top">
                                 <div class="flex-separator"></div>
                                 <div>
@@ -458,9 +466,9 @@
                                         <span>Cancel</span>
                                     </button>
                                     <button class="btn btn-success" type="submit" data-placement="bottom" data-toggle="tooltip" title="The generated certificate will be downloaded in your browser" data-animation="true"
-                                            data-bind="visible: mode() === 'generate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
+                                            data-bind="visible: mode() === 'generate' || mode() === 'reGenerate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-magic-wand"></i>
-                                        <span>Generate</span>
+                                        <span data-bind="text: deleteExpired() ? 'Generate & Delete expired' : 'Generate'">Generate</span>
                                     </button>
                                     <button class="btn btn-success" type="submit"
                                             data-bind="visible: mode() === 'editExisting', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
