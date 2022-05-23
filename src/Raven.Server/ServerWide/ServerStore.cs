@@ -3291,19 +3291,13 @@ namespace Raven.Server.ServerWide
                 Name = environment.Name,
                 Type = environment.Type.ToString(),
                 UsedSpace = sizeOnDisk.DataFileInBytes,
-                DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
-                {
-                    DriveName = diskSpaceResult.DriveName,
-                    VolumeLabel = diskSpaceResult.VolumeLabel,
-                    TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                    TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                },
+                DiskSpaceResult = FillDiskSpaceResult(diskSpaceResult),
                 UsedSpaceByTempBuffers = 0
             };
             
             var ioStatsResult = Server.DiskStatsGetter.Get(driveInfo?.BasePath.DriveName);
             if (ioStatsResult != null)
-                usage.IoStatsResult = new IoStatsResult {IoReadOperations = ioStatsResult.IoReadOperations, IoWriteOperations = ioStatsResult.IoWriteOperations}; 
+                usage.IoStatsResult = FillIoStatsResult(ioStatsResult); 
 
             if (diskSpaceResult.DriveName == driveInfo?.JournalPath.DriveName)
             {
@@ -3319,18 +3313,12 @@ namespace Raven.Server.ServerWide
                     {
                         Name = environment.Name,
                         Type = environment.Type.ToString(),
-                        DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
-                        {
-                            DriveName = journalDiskSpaceResult.DriveName,
-                            VolumeLabel = journalDiskSpaceResult.VolumeLabel,
-                            TotalFreeSpaceInBytes = journalDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                            TotalSizeInBytes = journalDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                        },
+                        DiskSpaceResult = FillDiskSpaceResult(journalDiskSpaceResult),
                         UsedSpaceByTempBuffers = includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0
                     };
                     var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
                     if (journalIoStatsResult != null)
-                        usage.IoStatsResult = new IoStatsResult {IoReadOperations = journalIoStatsResult.IoReadOperations, IoWriteOperations = journalIoStatsResult.IoWriteOperations}; 
+                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
                     
                     yield return journalUsage;
                 }
@@ -3352,17 +3340,11 @@ namespace Raven.Server.ServerWide
                             Name = environment.Name,
                             Type = environment.Type.ToString(),
                             UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
-                            DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
-                            {
-                                DriveName = tempBuffersDiskSpaceResult.DriveName,
-                                VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
-                                TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                            }
+                            DiskSpaceResult = FillDiskSpaceResult(tempBuffersDiskSpaceResult)
                         };
                         var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
                         if(tempBufferIoStatsResult != null)
-                            tempBuffersUsage.IoStatsResult = new IoStatsResult {IoReadOperations = tempBufferIoStatsResult.IoReadOperations, IoWriteOperations = tempBufferIoStatsResult.IoWriteOperations}; 
+                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
 
                         yield return tempBuffersUsage;
                     }
@@ -3370,6 +3352,29 @@ namespace Raven.Server.ServerWide
             }
 
             yield return usage;
+        }
+
+        private static Client.ServerWide.Operations.DiskSpaceResult FillDiskSpaceResult(Sparrow.Server.Utils.DiskSpaceResult journalDiskSpaceResult)
+        {
+            return new Client.ServerWide.Operations.DiskSpaceResult
+            {
+                DriveName = journalDiskSpaceResult.DriveName,
+                VolumeLabel = journalDiskSpaceResult.VolumeLabel,
+                TotalFreeSpaceInBytes = journalDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                TotalSizeInBytes = journalDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+            };
+        }
+
+        private static IoStatsResult FillIoStatsResult(DiskStatsResult ioStatsResult)
+        {
+            return new IoStatsResult
+            {
+                IoReadOperations = ioStatsResult.IoReadOperations, 
+                IoWriteOperations = ioStatsResult.IoWriteOperations,
+                ReadThroughputInKilobytes = ioStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
+                WriteThroughputInKilobytes = ioStatsResult.WriteThroughput.GetValue(SizeUnit.Bytes),
+                QueueLength = ioStatsResult.QueueLength,
+            };
         }
 
         internal TestingStuff ForTestingPurposes;

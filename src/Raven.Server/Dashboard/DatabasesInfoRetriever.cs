@@ -518,7 +518,10 @@ namespace Raven.Server.Dashboard
                     mountPointUsage.IoStatsResult = new IoStatsResult
                     {
                         IoReadOperations = diskStatsResult.IoReadOperations,
-                        IoWriteOperations = diskStatsResult.IoWriteOperations
+                        IoWriteOperations = diskStatsResult.IoWriteOperations,
+                        ReadThroughputInKilobytes = diskStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
+                        WriteThroughputInKilobytes = diskStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
+                        QueueLength = diskStatsResult.QueueLength,
                     };
                 }
                 

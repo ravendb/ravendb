@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Sparrow.Json.Parsing;
@@ -147,6 +146,9 @@ namespace Raven.Server.Utils.Monitoring
         public int RemainingStorageSpacePercentage { get; set; }
         public double IoReadOperations { get; set; }
         public double IoWriteOperations { get; set; }
+        public long ReadThroughputInKilobytes { get; set; }
+        public long WriteThroughputInKilobytes { get; set; }
+        public long? QueueLength { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -157,7 +159,10 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(TotalFreeSpaceInMb)] = TotalFreeSpaceInMb,
                 [nameof(RemainingStorageSpacePercentage)] = RemainingStorageSpacePercentage,
                 [nameof(IoReadOperations)] = IoReadOperations,
-                [nameof(IoWriteOperations)] = IoWriteOperations
+                [nameof(IoWriteOperations)] = IoWriteOperations,
+                [nameof(ReadThroughputInKilobytes)] = ReadThroughputInKilobytes,
+                [nameof(WriteThroughputInKilobytes)] = WriteThroughputInKilobytes,
+                [nameof(QueueLength)] = QueueLength
             };
         }
     }

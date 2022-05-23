@@ -39,7 +39,7 @@ namespace SlowTests.Monitoring
                         var stop = Stopwatch.StartNew();
                         _ = await diskStatsGetter.GetAsync(currentDirectory);
                         var stopElapsed = stop.Elapsed;
-                        if(2 * baseTime < stopElapsed)
+                        if(10 * baseTime < stopElapsed)
                             Interlocked.Increment(ref errorCount);
                         count++;
                     }
