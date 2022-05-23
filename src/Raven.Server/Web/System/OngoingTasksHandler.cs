@@ -330,15 +330,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DeleteSubscriptionTask()
         {
-            // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
-            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
-                throw new ArgumentException($"Unknown task type: {type}", nameof(type));
-
-            if (type != OngoingTaskType.Subscription)
-                throw new ArgumentException("Only Subscription type can call this method");
-
-            await DeleteOngoingTask();
+            using (var processor = new OngoingTasksHandlerProcessorForDeleteSubscriptionTasks(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
