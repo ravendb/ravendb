@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -162,9 +163,32 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly int _timeSeriesBatchSize;
         private long _concurrentCheck;
         private bool _isInitialWrite = true;
-
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
+        
+        private BulkInsertObservableOperation _operation;
+        private event EventHandler<BulkInsertOnProgressEventArgs> _onProgress;
+        private bool _onProgressInitialized = false;
 
+        public event EventHandler<BulkInsertOnProgressEventArgs> OnProgress
+        {
+            add
+            {
+                if (_onProgressInitialized == false)
+                {
+                    _onProgress += value;
+                    _onProgressInitialized = true;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"{nameof(OnProgress)} already initialized. It can be set only once per operation.");
+                }
+            }
+            remove
+            {
+                _onProgress -= value;
+            }
+        }
+        
         public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
@@ -197,6 +221,7 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _streamExposerContent.Done();
+                    _operation?.Dispose();
 
                     if (_operationId == -1)
                     {
@@ -227,6 +252,7 @@ namespace Raven.Client.Documents.BulkInsert
             _options = options ?? new BulkInsertOptions();
             _token = token;
             _conventions = store.Conventions;
+            _store = store;
             if (string.IsNullOrWhiteSpace(database))
                 ThrowNoDatabase();
             _requestExecutor = store.GetRequestExecutor(database);
@@ -279,8 +305,8 @@ namespace Raven.Client.Documents.BulkInsert
             throw new InvalidOperationException(
                 $"Cannot start bulk insert operation without specifying a name of a database to operate on. " +
                 $"Database name can be passed as an argument when bulk insert is being created or default database can be defined using '{nameof(DocumentStore)}.{nameof(IDocumentStore.Database)}' property.");
-        }
-
+        } 
+        
         private async Task WaitForId()
         {
             if (_operationId != -1)
@@ -290,6 +316,13 @@ namespace Raven.Client.Documents.BulkInsert
             await ExecuteAsync(bulkInsertGetIdRequest, token: _token).ConfigureAwait(false);
             _operationId = bulkInsertGetIdRequest.Result;
             _nodeTag = bulkInsertGetIdRequest.NodeTag;
+            
+            if (_onProgressInitialized && _operation is not null)
+            {
+                _operation = new BulkInsertObservableOperation(_requestExecutor, () => _store.Changes(_store.Database, _nodeTag), _requestExecutor.Conventions, _operationId, _nodeTag);
+                _operation.OnProgressChanged += x => _onProgress!(this, x as BulkInsertOnProgressEventArgs);
+                await _operation.Initialize().ConfigureAwait(false);
+            }
         }
 
         public void Store(object entity, string id, IMetadataDictionary metadata = null)
@@ -364,6 +397,7 @@ namespace Raven.Client.Documents.BulkInsert
                     _currentWriter.Write('}');
 
                     await FlushIfNeeded().ConfigureAwait(false);
+
                 }
                 catch (Exception e)
                 {
@@ -600,6 +634,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly DisposeOnceAsync<SingleAttempt> _disposeOnce;
 
         private readonly DocumentConventions _conventions;
+        private readonly IDocumentStore _store;
 
         public async ValueTask DisposeAsync()
         {

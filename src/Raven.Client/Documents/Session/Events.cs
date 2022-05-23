@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -235,6 +236,19 @@ namespace Raven.Client.Documents.Session
         internal SessionDisposingEventArgs(InMemoryDocumentSessionOperations session)
         {
             Session = session;
+        }
+    }
+
+    public class BulkInsertOnProgressEventArgs : EventArgs
+    {
+        public BulkInsertProgress Progress { get; }
+        
+        public bool IsCompleted { get; }
+        
+        internal BulkInsertOnProgressEventArgs(BulkInsertProgress progress, bool isCompleted = false)
+        {
+            Progress = progress;
+            IsCompleted = isCompleted;
         }
     }
 }

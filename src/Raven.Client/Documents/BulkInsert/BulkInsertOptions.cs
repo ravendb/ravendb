@@ -1,4 +1,6 @@
+using System;
 using System.IO.Compression;
+using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.BulkInsert
 {
