@@ -37,15 +37,31 @@ class finish extends setupStep {
     readme = ko.observable<string>();
     configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     
+    isRestartServerNeeded: KnockoutComputed<boolean>;
+    showSetupPackageInfo: KnockoutComputed<boolean>;
+    
     constructor() {
         super();
         
+        this.initObservables();
+    }
+    
+    private initObservables() {
         this.showConfigurationLogToggle = ko.pureComputed(() => {
             const isAnySecureOption = this.model.mode() !== "Unsecured";
             const completed = this.completedWithSuccess();
             
             return isAnySecureOption && completed;
         });
+
+        this.isRestartServerNeeded = ko.pureComputed(() => !this.spinners.finishing() &&
+                                                            this.completedWithSuccess() &&
+                                                           ((this.model.mode() === 'Unsecured' && this.model.nodes().length === 1) || !this.model.onlyCreateZipFile()));
+        
+        this.showSetupPackageInfo = ko.pureComputed(() => !this.spinners.finishing() &&
+                                                           this.model.mode() === 'Unsecured' &&
+                                                           this.model.onlyCreateZipFile() &&
+                                                           this.model.nodes().length > 1);
     }
     
     canActivate(): JQueryPromise<canActivateResultDto> {

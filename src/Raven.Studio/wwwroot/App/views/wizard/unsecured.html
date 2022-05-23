@@ -40,8 +40,8 @@
             <div class="col-md-6" data-bind="with: editedNode">
                 <div class="panel padding padding-lg">
                     <div class="margin-left-sm margin-bottom-lg" data-bind="visible: $parent.model.nodes().length === 1">
-                        <div class="toggle" id="toggle-passive">
-                            <input id="startAsPassive" class="styled" type="checkbox" data-bind="checked: $parent.model.startNodeAsPassive">
+                        <div class="toggle">
+                            <input id="startAsPassive" class="styled" type="checkbox" data-bind="checked: $parent.model.startNodeAsPassive" />
                             <label for="startAsPassive">
                                 Start node as Passive, not part of a cluster
                             </label>
@@ -65,7 +65,7 @@
                             <input type="text" autocomplete="off" class="form-control" id="port"
                                    placeholder="Default: 8080"
                                    data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(),
-                                              attr: { title: $root.model.fixPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)() ? 'Fixed by startup parameter' : '' }">
+                                              attr: { title: $root.model.fixPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)() ? 'Fixed by startup parameter' : '' }" />
                         </div>
                     </div>
                     <div class="form-group" data-bind="validationElement: tcpPort">
@@ -77,7 +77,7 @@
                             <input type="text" autocomplete="off" class="form-control" id="tcpPort"
                                    placeholder="Default: 38888"
                                    data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(),
-                                              attr: { title: $root.model.fixTcpPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)() ? 'Fixed by startup parameter' : '' }">
+                                              attr: { title: $root.model.fixTcpPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)() ? 'Fixed by startup parameter' : '' }" />
                         </div>
                     </div>
                     <div data-bind="foreach: ips">
@@ -87,7 +87,7 @@
                             </label>
                             <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }, css: { 'has-warning': $parent.isLoopbackOnly() }">
                                 <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address / Hostname"
-                                       data-bind="textInput: ip" id="ipInput">
+                                       data-bind="textInput: ip" id="ipInput" />
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu" role="menu" style="display: none;"
                                     data-bind="autoComplete: '#ipInput', foreach: $root.model.createIsLocalNodeObservable($parent)() ? $root.model.localIps : $root.remoteNodeIpOptions">
@@ -136,7 +136,7 @@
         </div>
         <div class="padding bg-warning margin-bottom" data-bind="visible: shouldDisplayUnsafeModeWarning">
             <div class="checkbox flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
-                <input id="unsafeNetworkWarning" type="checkbox" data-bind="checked: unsafeNetworkConfirm">
+                <input id="unsafeNetworkWarning" type="checkbox" data-bind="checked: unsafeNetworkConfirm" />
                 <label for="unsafeNetworkWarning">
                     <i class="icon-warning"></i>
                     <small><span data-bind="text: model.nodes().length > 1 ? 'Some nodes IPs are' : 'Node IP is'"></span> Not configured for local network.<br>

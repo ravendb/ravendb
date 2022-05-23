@@ -4,17 +4,12 @@
     <span data-bind="visible: !spinners.finishing() && !completedWithSuccess()" class="text-danger">Configuration failed</span>
     <span data-bind="visible: !spinners.finishing() && completedWithSuccess()" class="text-success">Configuration completed!</span>
 </h2>
-<div class="padding bg-info" data-bind="visible: !spinners.finishing() && 
-                                                  completedWithSuccess() &&
-                                                  ((model.mode() === 'Unsecured' && model.nodes().length === 1) || !model.onlyCreateZipFile())">
+<div class="padding bg-info" data-bind="visible: isRestartServerNeeded">
     Before you can access RavenDB via the server url:
     <a target="_blank" data-bind="text: model.getStudioUrl(), attr: { href: model.getStudioUrl() }"></a>,
     you'll need to restart the server.
 </div>
-<div class="padding bg-info" data-bind="visible: !spinners.finishing() &&
-                                                  model.mode() === 'Unsecured' &&
-                                                  model.onlyCreateZipFile() &&
-                                                  model.nodes().length > 1">
+<div class="padding bg-info" data-bind="visible: showSetupPackageInfo">
     RavenDB Setup package has been downloaded successfully.<br />
     You can use it to configure your RavenDB Cluster in the Cloud or any other environment of your choice other than this machine.<br />
     TODO.. link to https://ravendb.net/docs/article-page/5.3/csharp/start/installation/setup-wizard#setting-up-other-nodes
