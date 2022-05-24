@@ -19,6 +19,8 @@ namespace Raven.Client.Documents.Operations.ETL
         public string Name { get; set; }
 
         public string MentorNode { get; set; }
+        
+        public bool PinToMentorNode { get; set; }
 
         public abstract string GetDestination();
 
@@ -101,6 +103,11 @@ namespace Raven.Client.Documents.Operations.ETL
             return false;
         }
 
+        public bool IsPinnedToMentorNode()
+        {
+            return PinToMentorNode;
+        }
+
         public override string ToString()
         {
             return Name;
@@ -114,6 +121,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(TaskId)] = TaskId,
                 [nameof(ConnectionStringName)] = ConnectionStringName,
                 [nameof(MentorNode)] = MentorNode,
+                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(AllowEtlOnNonEncryptedChannel)] = AllowEtlOnNonEncryptedChannel,
                 [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => x.ToJson()))
             };
