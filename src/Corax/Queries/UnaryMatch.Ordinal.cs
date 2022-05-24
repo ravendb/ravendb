@@ -263,7 +263,7 @@ namespace Corax.Queries
 
                     if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
-                        if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.EmptyList))
+                        if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                         {
                             var iterator = reader.ReadMany(match._fieldId);
 
@@ -336,7 +336,7 @@ namespace Corax.Queries
                     
                     if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
-                        if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.EmptyList))
+                        if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                         {
                             var iterator = reader.ReadMany(match._fieldId);
 
@@ -408,7 +408,7 @@ namespace Corax.Queries
                     {
                         if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
-                            if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.EmptyList))
+                            if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                             {
                                 var iterator = reader.ReadMany(match._fieldId);
                                 var isNotMatch = false;
@@ -483,7 +483,7 @@ namespace Corax.Queries
                     {
                         if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                         {
-                            if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.EmptyList))
+                            if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
                             {
                                 var iterator = reader.ReadMany(match._fieldId);
 

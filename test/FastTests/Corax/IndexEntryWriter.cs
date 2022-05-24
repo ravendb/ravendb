@@ -322,9 +322,20 @@ namespace FastTests.Corax
             var length = writer.Finish(out var element);
 
             var reader = new IndexEntryReader(element);
+            Assert.True(reader.Read(1, out var type, out var longValue, out var doubleValue, out var sequenceValue));
+            Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
+            Assert.True(type.HasFlag(IndexEntryFieldType.List));
+            Assert.Equal(0, sequenceValue.Length);
+
+            Assert.True(reader.Read(1, out type, out sequenceValue));
+            Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
+            Assert.True(type.HasFlag(IndexEntryFieldType.List));
+            Assert.Equal(0, sequenceValue.Length);
+
+            reader = new IndexEntryReader(element);
             Assert.True(reader.TryReadMany(1, out var iterator));
-            var type = reader.GetFieldType(1, out var offset);
-            Assert.True(type.HasFlag(IndexEntryFieldType.EmptyList));
+            type = reader.GetFieldType(1, out var offset);
+            Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
             Assert.True(type.HasFlag(IndexEntryFieldType.List));
             Assert.False(iterator.ReadNext());
             Assert.Equal(0, iterator.Count);

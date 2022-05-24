@@ -224,9 +224,14 @@ namespace Corax
 
             int tokenField = binding.FieldId;
             var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
-            if (fieldType == IndexEntryFieldType.Null)
+            if (fieldType == IndexEntryFieldType.Null || fieldType.HasFlag(IndexEntryFieldType.Empty))
             {
-                ProcessTerm(Constants.NullValueSlice);
+                var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyValueSlice;
+                if (field.TryGetValue(fieldName, out var term) == false)
+                    field[fieldName] = term = new List<long>();
+
+                AddMaybeAvoidDuplicate(term, entryId);
+                return;
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.Raw))
             {
@@ -235,7 +240,6 @@ namespace Corax
             {
                 // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
                 //       that will ensure faster turnaround and more efficient execution. 
-
                 if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
                 {
                     var iterator = entryReader.ReadManySpatialPoint(binding.FieldId);
@@ -249,10 +253,15 @@ namespace Corax
                 {
                     var iterator = entryReader.ReadMany(tokenField);
                     while (iterator.ReadNext())
-                    {
-                        if (iterator.IsNull)
+                    {                        
+                        // If null, we just add it and be done with it. 
+                        if (iterator.IsNull || iterator.IsEmpty)
                         {
-                            ProcessTerm(Constants.NullValueSlice);
+                            var fieldName = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyValueSlice;
+                            if (field.TryGetValue(fieldName, out var term) == false)
+                                field[fieldName] = term = new List<long>();
+
+                            AddMaybeAvoidDuplicate(term, entryId);
                             continue;
                         }
 
@@ -261,7 +270,7 @@ namespace Corax
                 }
             }
             else
-            {
+            {                
                 entryReader.Read(binding.FieldId, out Span<byte> valueInEntry);
                 if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
                 {
@@ -304,11 +313,10 @@ namespace Corax
             IndexFieldBinding binding)
         {
             int fieldId = binding.FieldId;
-            var fieldType = entryReader.GetFieldType(fieldId, out var intOffset);
-
-            if (fieldType == IndexEntryFieldType.Null)
+            var fieldType = entryReader.GetFieldType(fieldId, out var _);
+            if (fieldType == IndexEntryFieldType.Null || fieldType.HasFlag(IndexEntryFieldType.Empty))
             {
-                ProcessTerm(Constants.NullValueSlice);
+                InsertNullOrEmpty(field, entryId, fieldType);
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.Raw))
             {
@@ -332,9 +340,9 @@ namespace Corax
                     var iterator = entryReader.ReadMany(fieldId);
                     while (iterator.ReadNext())
                     {
-                        if (iterator.IsNull)
+                        if (iterator.IsNull || iterator.IsEmpty)
                         {
-                            ProcessTerm(Constants.NullValueSlice);
+                            InsertNullOrEmpty(field, entryId, fieldType);
                             continue;
                         }
 
@@ -352,6 +360,7 @@ namespace Corax
                 }
                 else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
                 {
+                    Debug.Assert(!fieldType.HasFlag(IndexEntryFieldType.Empty));
                     ProcessTerm(valueInEntry);
                 }
             }
@@ -370,6 +379,15 @@ namespace Corax
 
                 if (binding.HasSuggestions)
                     AddSuggestions(binding, slice);
+            }
+
+            void InsertNullOrEmpty(Dictionary<Slice, List<long>> field, long entryId, IndexEntryFieldType fieldType)
+            {
+                var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyValueSlice;
+                if (field.TryGetValue(fieldName, out var term) == false)
+                    field[fieldName] = term = new List<long>();
+
+                AddMaybeAvoidDuplicate(term, entryId);
             }
         }
 
