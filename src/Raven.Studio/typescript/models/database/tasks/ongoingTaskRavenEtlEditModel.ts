@@ -109,6 +109,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             TaskId: this.taskId,
+            PinToMentorNode: false,
             LoadRequestTimeoutInSec: this.loadRequestTimeout() || null,
         };
     }

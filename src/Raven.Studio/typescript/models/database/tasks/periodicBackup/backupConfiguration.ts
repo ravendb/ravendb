@@ -201,6 +201,7 @@ abstract class backupConfiguration {
             MentorNode: null,
             BackupEncryptionSettings: null,
             SnapshotSettings: null,
+            PinToMentorNode: false,
             RetentionPolicy: null,
         }
     }
