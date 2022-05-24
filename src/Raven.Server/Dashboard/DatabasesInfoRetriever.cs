@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
@@ -295,6 +296,10 @@ namespace Raven.Server.Dashboard
             var sqlEtlCount = database.EtlLoader.SqlDestinations.Count;
             long sqlEtlCountOnNode = GetTaskCountOnNode<SqlEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.SqlDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
+            
+            var elasticSearchEtlCount = database.EtlLoader.ElasticSearchDestinations.Count;
+            long elasticSearchEtlCountOnNode = GetTaskCountOnNode<ElasticSearchEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.ElasticSearchDestinations,
+                task => EtlLoader.GetProcessState(task.Transforms, database,task.Name));
 
             var olapEtlCount = database.EtlLoader.OlapDestinations.Count;
             long olapEtlCountOnNode = GetTaskCountOnNode<OlapEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.OlapDestinations,
@@ -310,7 +315,7 @@ namespace Raven.Server.Dashboard
             long subscriptionCountOnNode = GetSubscriptionCountOnNode(database, dbRecord, serverStore, context);
 
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
-                                ravenEtlCount + sqlEtlCount + olapEtlCount + periodicBackupCount + subscriptionCount;
+                                ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + periodicBackupCount + subscriptionCount;
             
             return new DatabaseOngoingTasksInfoItem()
             {
@@ -320,6 +325,7 @@ namespace Raven.Server.Dashboard
                 ReplicationSinkCount = replicationSinkCountOnNode,
                 RavenEtlCount = ravenEtlCountOnNode,
                 SqlEtlCount = sqlEtlCountOnNode,
+                ElasticSearchEtlCount = elasticSearchEtlCountOnNode,
                 OlapEtlCount = olapEtlCountOnNode,
                 PeriodicBackupCount = periodicBackupCountOnNode,
                 SubscriptionCount = subscriptionCountOnNode
