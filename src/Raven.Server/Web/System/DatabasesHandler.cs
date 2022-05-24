@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
@@ -14,6 +16,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
@@ -410,8 +413,19 @@ namespace Raven.Server.Web.System
                 if (online == false)
                 {
                     // if state of database is found in the cache we can continue
-                    if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
-                    {
+                    if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson => { 
+                            
+                        var periodicBackups = new List<PeriodicBackup>();
+
+                        foreach (var periodicBackupConfiguration in dbRecord.PeriodicBackups)
+                        {
+                            periodicBackups.Add(new PeriodicBackup
+                            {
+                                Configuration = periodicBackupConfiguration,
+                                BackupStatus = BackupUtils.GetBackupStatusFromCluster(ServerStore, context, databaseName, periodicBackupConfiguration.TaskId)
+                            });
+                        }
+
                         databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                         {
                             [nameof(DatabaseInfo.Disabled)] = disabled,
@@ -419,7 +433,15 @@ namespace Raven.Server.Web.System
                             [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus,
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
                             [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress),
-                            [nameof(DatabaseInfo.Environment)] = studioEnvironment
+                            [nameof(DatabaseInfo.Environment)] = studioEnvironment,
+                            [nameof(DatabaseInfo.BackupInfo)] = BackupUtils.GetBackupInfo(
+                                new BackupUtils.BackupInfoParameters()
+                                {
+                                    ServerStore = ServerStore,
+                                    PeriodicBackups = periodicBackups,
+                                    DatabaseName = databaseName,
+                                    Context = context
+                                })
                         };
 
                         context.Write(writer, databaseInfoJson);
@@ -541,7 +563,8 @@ namespace Raven.Server.Web.System
         private static BackupInfo GetBackupInfo(DocumentDatabase db, TransactionOperationContext context)
         {
             var periodicBackupRunner = db?.PeriodicBackupRunner;
-            return periodicBackupRunner?.GetBackupInfo(context);
+            var results = periodicBackupRunner?.GetBackupInfo(context);
+            return results;
         }
 
         private static TimeSpan GetUptime(DocumentDatabase db)

@@ -330,7 +330,7 @@ namespace Tests.Infrastructure
             return waitingList;
         }
 
-        protected async Task<Task> ActionWithLeader(Func<RachisConsensus<CountingStateMachine>, Task> action)
+        protected async Task ActionWithLeader(Func<RachisConsensus<CountingStateMachine>, Task> action)
         {
             var retires = 5;
             Exception lastException;
@@ -344,7 +344,8 @@ namespace Tests.Infrastructure
                         var tasks = RachisConsensuses.Select(x => x.WaitForState(RachisState.Leader, cts.Token));
                         await Task.WhenAny(tasks);
                         var leader = RachisConsensuses.Single(x => x.CurrentState == RachisState.Leader);
-                        return action(leader);
+                        await action(leader);
+                        return;
                     }
                 }
                 catch (Exception e)

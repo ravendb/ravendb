@@ -5,6 +5,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
@@ -77,7 +78,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
                 foreach (var periodicBackupTaskId in periodicBackupTaskIds)
                 {
-                    var status = PeriodicBackupRunner.GetBackupStatusFromCluster(serverStore, context, databaseName, periodicBackupTaskId);
+                    var status = BackupUtils.GetBackupStatusFromCluster(serverStore, context, databaseName, periodicBackupTaskId);
                     if (status == null)
                         continue; // we have a backup task but no backup was ever done
 
