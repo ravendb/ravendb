@@ -204,6 +204,13 @@ class certificateModel {
         newItem.name(itemToRegenerate.Name);
         newItem.thumbprint(itemToRegenerate.Thumbprint);
         newItem.securityClearance(itemToRegenerate.SecurityClearance);
+
+        for (let dbItem in itemToRegenerate.Permissions) {
+            const permission = new certificatePermissionModel();
+            permission.databaseName(dbItem);
+            permission.accessLevel(itemToRegenerate.Permissions[dbItem]);
+            newItem.permissions.push(permission);
+        }
         
         return newItem;
     }
