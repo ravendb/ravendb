@@ -2551,6 +2551,18 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            var numberOfSubscriptionConnections = database.SubscriptionStorage.GetNumberOfRunningSubscriptions();
+            if (statistics != null)
+                statistics.NumberOfSubscriptionConnections = numberOfSubscriptionConnections;
+
+            if (numberOfSubscriptionConnections > 0)
+            {
+                if (statistics == null)
+                    return false;
+
+                statistics.Explanations.Add($"Cannot unload database because number of Subscriptions connections ({numberOfSubscriptionConnections}) is greater than 0");
+            }
+
             var hasActiveOperations = database.Operations.HasActive;
             if (statistics != null)
                 statistics.HasActiveOperations = hasActiveOperations;

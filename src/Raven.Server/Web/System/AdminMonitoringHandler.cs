@@ -148,7 +148,7 @@ namespace Raven.Server.Web.System
         private MemoryMetrics GetMemoryMetrics()
         {
             var result = new MemoryMetrics();
-            var memoryInfoResult = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
+            var memoryInfoResult = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds);
 
             result.InstalledMemoryInMb = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Megabytes);
             result.PhysicalMemoryInMb = memoryInfoResult.TotalPhysicalMemory.GetValue(SizeUnit.Megabytes);

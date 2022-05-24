@@ -17,7 +17,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override Gauge32 GetData()
         {
-            return new Gauge32(_metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended).WorkingSet.GetValue(SizeUnit.Megabytes));
+            return new Gauge32(_metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds).WorkingSet.GetValue(SizeUnit.Megabytes));
         }
     }
 }
