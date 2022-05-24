@@ -11,7 +11,9 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
+using SlowTests.Issues;
 using Sparrow;
+using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -827,12 +829,24 @@ namespace SlowTests.Client.TimeSeries.Replication
 
         public static async Task AssertNoLeftOvers(DocumentDatabase db)
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             await db.TombstoneCleaner.ExecuteCleanup();
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(ctx));
-                Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.Stats.GetNumberOfEntries(ctx));
+                if (db.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(ctx) != 0)
+                {
+                    var logs = await socket.CloseAndGetLogsAsync();
+                    Assert.True(false,$"GetNumberOfTimeSeriesSegments is {db.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(ctx)} expected 0, logs={logs}");
+                }
+                
+                if (db.DocumentsStorage.TimeSeriesStorage.Stats.GetNumberOfEntries(ctx)!= 0)
+                {
+                    var logs = await socket.CloseAndGetLogsAsync();
+                    Assert.True(false,$"CloseAndGetLogsAsync is {db.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(ctx)} expected 0, logs={logs}");
+                }
             }
         }
 

@@ -8,6 +8,8 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using SlowTests.Issues;
+using Sparrow.Logging;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
@@ -198,6 +200,10 @@ namespace RachisTests
         [Fact]
         public async Task CanElectOnDivergence()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+
+            
             var firstLeader = await CreateNetworkAndGetLeader(3);
             var followers = GetFollowers();
 
@@ -221,7 +227,13 @@ namespace RachisTests
                 firstLeader.InsertToLeaderLog(ctx, currentTerm, ctx.ReadObject(cmd.ToJson(ctx), "bar"), RachisEntryFlags.StateMachineCommand);
                 tx.Commit();
             }
-            Assert.True(await firstLeader.WaitForLeaveState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait));
+
+            if (await firstLeader.WaitForLeaveState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait) == false)
+            {
+                var logs = await socket.CloseAndGetLogsAsync();
+                Assert.True(false,$"LeaderState={firstLeader.CurrentState} logs={logs}");
+
+            }
 
             List<Task> waitingList = new List<Task>();
             while (true)

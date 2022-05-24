@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes.Counters;
@@ -8,6 +9,8 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Issues;
+using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -162,6 +165,9 @@ namespace SlowTests.Server.Documents.Counters
         [Fact]
         public async Task ReplicationCleanCounterTombstones()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -211,7 +217,13 @@ namespace SlowTests.Server.Documents.Counters
                     c += storage.DocumentsStorage.GetNumberOfTombstones(context);
                     c += storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
                 }
-                Assert.Equal(0, c);
+
+                if (c != 0)
+                {
+                    var logs = await socket.CloseAndGetLogsAsync();
+                    Assert.True(false,$"count is {c} expected 1, logs={logs}");
+                }
+
 
                 long count1 = 0;
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -397,6 +409,9 @@ namespace SlowTests.Server.Documents.Counters
         [Fact]
         public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_RegularReplication()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -430,7 +445,11 @@ namespace SlowTests.Server.Documents.Counters
                 using (context.OpenWriteTransaction())
                 {
                     var c2 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
-                    Assert.Equal(1, c2);
+                    if (c2 != 1)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {c2} expected 1, logs={logs}");
+                    }
                 }
 
                 await EnsureReplicatingAsync(store1, store2);
@@ -478,6 +497,9 @@ namespace SlowTests.Server.Documents.Counters
         [Fact]
         public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ConflictReplication()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -533,8 +555,13 @@ namespace SlowTests.Server.Documents.Counters
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
+                    
                     var c2 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
-                    Assert.Equal(1, c2);
+                    if (c2 != 1)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {c2} expected 1, logs={logs}");
+                    }
                 }
 
                 var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
@@ -542,7 +569,12 @@ namespace SlowTests.Server.Documents.Counters
                 using (context.OpenWriteTransaction())
                 {
                     var c2 = storage2.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
-                    Assert.Equal(1, c2);
+                    if (c2 != 1)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {c2} expected 1, logs={logs}");
+                    }
+                    
                 }
 
                 await EnsureReplicatingAsync(store1, store2);
@@ -591,6 +623,9 @@ namespace SlowTests.Server.Documents.Counters
         [Fact]
         public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCounterDelete()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -660,7 +695,11 @@ namespace SlowTests.Server.Documents.Counters
                 using (context.OpenReadTransaction())
                 {
                     var cv = db2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
-                    Assert.Equal(1023, cv);
+                    if (cv != 1023)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {cv} expected 1023, logs={logs}");
+                    }
                 }
 
                 long count1 = 0;
@@ -783,6 +822,9 @@ namespace SlowTests.Server.Documents.Counters
         [Fact]
         public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDelete2()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -823,7 +865,11 @@ namespace SlowTests.Server.Documents.Counters
                 using (context.OpenWriteTransaction())
                 {
                     var c2 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
-                    Assert.Equal(512, c2);
+                    if (c2 != 512)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {c2} expected 512, logs={logs}");
+                    }
                 }
 
                 await EnsureReplicatingAsync(store1, store2);
@@ -833,8 +879,11 @@ namespace SlowTests.Server.Documents.Counters
                 using (context.OpenWriteTransaction())
                 {
                     var c2 = storage2.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
-                    Assert.Equal(512, c2);
-                }
+                    if (c2 != 512)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {c2} expected 512, logs={logs}");
+                    }                }
 
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
@@ -845,7 +894,12 @@ namespace SlowTests.Server.Documents.Counters
                 using (context.OpenReadTransaction())
                 {
                     var cv = storage.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
-                    Assert.Equal(512, cv);
+                    if (cv != 512)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {cv} expected 512, logs={logs}");
+                    }
+                    
                 }
 
                 cleaner = storage2.TombstoneCleaner;
@@ -856,7 +910,12 @@ namespace SlowTests.Server.Documents.Counters
                 using (context.OpenReadTransaction())
                 {
                     var cv = db2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
-                    Assert.Equal(512, cv);
+                    if (cv != 512)
+                    {
+                        var logs = await socket.CloseAndGetLogsAsync();
+                        Assert.True(false,$"count is {cv} expected 512, logs={logs}");
+                    }
+                    
                 }
 
                 long count1 = 0;
@@ -865,7 +924,11 @@ namespace SlowTests.Server.Documents.Counters
                 {
                     count1 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
                 }
-                Assert.Equal(0, count1);
+                if (count1 != 0)
+                {
+                    var logs = await socket.CloseAndGetLogsAsync();
+                    Assert.True(false,$"count is {count1} expected 0, logs={logs}");
+                }
 
 
                 long count2 = 0;
@@ -874,13 +937,21 @@ namespace SlowTests.Server.Documents.Counters
                 {
                     count2 = storage2.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
                 }
-                Assert.Equal(count1, count2);
+                if (count1 != count2)
+                {
+                    var logs = await socket.CloseAndGetLogsAsync();
+                    Assert.True(false,$"count1 {count1} is not equal to count2 {count2}, logs={logs}");
+                }
+
             }
         }
 
         [Fact]
         public async Task ShouldDeleteCounterFromStorageWhenExecuteCleanup_ManyCountersAndCountersDelete3()
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -972,7 +1043,11 @@ namespace SlowTests.Server.Documents.Counters
                 {
                     count1 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
                 }
-                Assert.Equal(0, count1);
+                if (count1 != 0)
+                {
+                    var logs = await socket.CloseAndGetLogsAsync();
+                    Assert.True(false,$"count is {count1} expected 0, logs={logs}");
+                }
 
 
                 long count2 = 0;

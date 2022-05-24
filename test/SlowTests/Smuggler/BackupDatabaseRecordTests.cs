@@ -25,6 +25,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
+using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1279,6 +1280,9 @@ namespace SlowTests.Smuggler
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
         {
+            using var socket = new DummyWebSocket();
+            var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
+            
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -1342,41 +1346,68 @@ namespace SlowTests.Smuggler
                         var tasksCount = 0;
                         foreach (var task in databaseRecord.ExternalReplications)
                         {
-                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            if (disableOngoingTasks != task.Disabled)
+                            {
+                                var logs = await socket.CloseAndGetLogsAsync();
+                                Assert.True(false,$"databaseRecord.ExternalReplications\ndisableOngoingTasks: {disableOngoingTasks} != task.Disabled: {task.Disabled}, logs={logs}");
+                            }
                             tasksCount++;
                         }
 
                         foreach (var task in databaseRecord.RavenEtls)
                         {
-                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            if (disableOngoingTasks != task.Disabled)
+                            {
+                                var logs = await socket.CloseAndGetLogsAsync();
+                                Assert.True(false,$"databaseRecord.RavenEtls\ndisableOngoingTasks: {disableOngoingTasks} != task.Disabled: {task.Disabled}, logs={logs}");
+                            }
                             tasksCount++;
                         }
 
                         foreach (var task in databaseRecord.PeriodicBackups)
                         {
-                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            if (disableOngoingTasks != task.Disabled)
+                            {
+                                var logs = await socket.CloseAndGetLogsAsync();
+                                Assert.True(false,$"databaseRecord.RavenEtls\ndisableOngoingTasks: {disableOngoingTasks} != task.Disabled: {task.Disabled}, logs={logs}");
+                            }
                             tasksCount++;
                         }
 
                         foreach (var task in databaseRecord.ExternalReplications)
                         {
-                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            if (disableOngoingTasks != task.Disabled)
+                            {
+                                var logs = await socket.CloseAndGetLogsAsync();
+                                Assert.True(false,$"databaseRecord.ExternalReplications\ndisableOngoingTasks: {disableOngoingTasks} != task.Disabled: {task.Disabled}, logs={logs}");
+                            }
                             tasksCount++;
                         }
 
                         foreach (var task in databaseRecord.HubPullReplications)
                         {
-                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            if (disableOngoingTasks != task.Disabled)
+                            {
+                                var logs = await socket.CloseAndGetLogsAsync();
+                                Assert.True(false,$"databaseRecord.HubPullReplications\ndisableOngoingTasks: {disableOngoingTasks} != task.Disabled: {task.Disabled}, logs={logs}");
+                            }
                             tasksCount++;
                         }
 
                         foreach (var task in databaseRecord.SinkPullReplications)
                         {
-                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            if (disableOngoingTasks != task.Disabled)
+                            {
+                                var logs = await socket.CloseAndGetLogsAsync();
+                                Assert.True(false,$"databaseRecord.SinkPullReplications\ndisableOngoingTasks: {disableOngoingTasks} != task.Disabled: {task.Disabled}, logs={logs}");
+                            }
                             tasksCount++;
                         }
-
-                        Assert.Equal(6, tasksCount);
+                        if (tasksCount != 6)
+                        {
+                            var logs = await socket.CloseAndGetLogsAsync();
+                            Assert.True(false,$"count is {tasksCount} expected 6, logs={logs}");
+                        }
                     }
                 }
             }
