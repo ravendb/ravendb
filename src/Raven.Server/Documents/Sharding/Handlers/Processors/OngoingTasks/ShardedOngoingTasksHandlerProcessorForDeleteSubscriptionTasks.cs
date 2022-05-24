@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.OngoingTasks;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
@@ -11,10 +12,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override async ValueTask DeleteOngoingTaskAsync()
+        protected override async ValueTask RaiseNotificationForSubscriptionTaskRemoval()
         {
-            using (var processor = new ShardedOngoingTasksHandlerProcessorForDeleteOngoingTask(RequestHandler))
-                await processor.ExecuteAsync();
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
+                "Implement this correctly after it is implemented in ShardedOngoingTasksHandlerProcessorForDeleteOngoingTask");
+            var tasks = RequestHandler.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(RequestHandler.DatabaseName);
+            foreach (var task in tasks)
+            {
+                var db = await task;
+                db.SubscriptionStorage.RaiseNotificationForTaskRemoved(TaskName);
+            }
         }
     }
 }
