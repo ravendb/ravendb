@@ -966,6 +966,34 @@ namespace Raven.Server.Rachis
                         return true;
                     }
 
+                    using (context.OpenReadTransaction())
+                    {
+                        var term = _engine.GetTermFor(context, negotiation.PrevLogIndex);
+                        if (term != negotiation.PrevLogTerm)
+                        {
+                            // divergence at the first leader entry
+                            var lastCommittedIndex = _engine.GetLastCommitIndex(context);
+                            if (lastCommittedIndex + 1 == negotiation.PrevLogIndex)
+                            {
+                                if (_engine.Log.IsInfoEnabled)
+                                {
+                                    _engine.Log.Info($"{ToString()}: found divergence at the first leader entry");
+                                }
+
+                                connection.Send(context, new LogLengthNegotiationResponse
+                                {
+                                    Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                                    Message = $"agreed on our last committed index {lastCommittedIndex}",
+                                    CurrentTerm = _term,
+                                    LastLogIndex = lastCommittedIndex,
+                                });
+
+                                // leader's first entry is the next we need 
+                                return false;
+                            }
+                        }
+                    }
+
                     // the leader already truncated the suggested index
                     // Let's try to negotiate from that index upto our last appended index
                     maxIndex = lastIndex;
