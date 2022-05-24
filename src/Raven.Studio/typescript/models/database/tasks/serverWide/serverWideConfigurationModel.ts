@@ -9,15 +9,18 @@ abstract class serverWideConfigurationModel {
     stateText: KnockoutComputed<string>;
     
     mentorNode = ko.observable<string>();
+    pinMentorNode = ko.observable<boolean>(false);
     manualChooseMentor = ko.observable<boolean>(false);
     
     excludeInfo = ko.observable<serverWideExcludeModel>();
 
-    constructor(taskId: number, taskName: string, disabled: boolean, mentorNode: string, excludedDatabases: string[]) {
+    constructor(taskId: number, taskName: string, disabled: boolean, mentorNode: string, pinMentorNode: boolean, excludedDatabases: string[]) {
         this.taskId(taskId);
         this.taskName(taskName);
         
         this.mentorNode(mentorNode);
+        this.pinMentorNode(pinMentorNode);
+        
         this.disabled(disabled);
 
         this.manualChooseMentor(!!mentorNode);
@@ -37,6 +40,10 @@ abstract class serverWideConfigurationModel {
 
             return "Enabled";
         });
+    }
+
+    togglePinMentorNode() {
+        this.pinMentorNode.toggle();
     }
 }
 
