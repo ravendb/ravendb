@@ -410,7 +410,7 @@ class certificates extends viewModelBase {
 
     enterRegenerateCertificateMode(itemToRegenerate: unifiedCertificateDefinition) {
         eventsCollector.default.reportEvent("certificates", "re-generate");
-        this.model(certificateModel.regenerate(itemToRegenerate.Name, itemToRegenerate.SecurityClearance, itemToRegenerate.Thumbprint));
+        this.model(certificateModel.regenerate(itemToRegenerate));
 
         for (let dbItem in itemToRegenerate.Permissions) {
             const permission = new certificatePermissionModel();
@@ -446,6 +446,7 @@ class certificates extends viewModelBase {
 
     save() {
         const model = this.model();
+        const thumbprint = model.thumbprint();
         
         if (!this.isValid(model.validationGroup)) {
             return;
@@ -453,7 +454,7 @@ class certificates extends viewModelBase {
 
         const maybeWarnTask = $.Deferred<void>();
         
-        if (this.model().mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
+        if (model.mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
             this.confirmationMessage("Did you forget about assigning database privileges?",
             "Leaving the database privileges section empty is going to prevent users from accessing the database.",
                 {
@@ -489,7 +490,7 @@ class certificates extends viewModelBase {
                                 notificationCenter.instance.monitorOperation(null, operationId)
                                     .done(() => {
                                         if (model.deleteExpired()) {
-                                            this.deleteCertificate(this.model().thumbprint());
+                                            this.deleteCertificate(thumbprint);
                                         }
                                         messagePublisher.reportSuccess("Client certificate was generated and downloaded successfully.");
                                     })
