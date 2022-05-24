@@ -270,7 +270,7 @@
                         <div class="flex-horizontal margin-bottom">
                             <div class="flex-grow">
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
-                                <h3 data-bind="visible: mode() === 'reGenerate'">Regenerate expired client certificate</h3>
+                                <h3 data-bind="visible: mode() === 'regenerate'">Regenerate expired client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
                                 <h3 data-bind="visible: mode() === 'replace'">Replace server certificates (cluster-wide)</h3>
@@ -334,13 +334,13 @@
                                     <p class="help-block" data-bind="validationMessage: $root.importedFileName"></p>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'replace'">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'regenerate' || mode() === 'replace'">
                                 <label class="control-label">
                                     Certificate Passphrase
                                 </label>
                                 <input class="form-control" type="password" data-bind="textInput: certificatePassphrase">
                             </div>
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate', validationElement: validityPeriod">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'regenerate', validationElement: validityPeriod">
                                 <label class="control-label">
                                     Expire in
                                 </label>
@@ -452,7 +452,7 @@
                                 </div>
                             </div>
                             <hr class="margin-top-lg" />
-                            <div class="toggle margin-left-sm" data-bind="visible: mode() === 'reGenerate'">
+                            <div class="toggle margin-left-sm" data-bind="visible: mode() === 'regenerate'">
                                 <input id="deleteExpired" type="checkbox" class="styled" data-bind="checked: deleteExpired" />
                                 <label for="deleteExpired" data-placement="bottom" data-toggle="tooltip" data-animation="true" title="The expired certificate will be deleted upon clicking 'Generate'">
                                     <span>Delete expired certificate</span>&nbsp;<small>(<code data-bind="text: thumbprint()"></code>)</small>
@@ -466,7 +466,7 @@
                                         <span>Cancel</span>
                                     </button>
                                     <button class="btn btn-success" type="submit" data-placement="bottom" data-toggle="tooltip" title="The generated certificate will be downloaded in your browser" data-animation="true"
-                                            data-bind="visible: mode() === 'generate' || mode() === 'reGenerate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
+                                            data-bind="visible: mode() === 'generate' || mode() === 'regenerate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-magic-wand"></i>
                                         <span>Generate</span>
                                     </button>

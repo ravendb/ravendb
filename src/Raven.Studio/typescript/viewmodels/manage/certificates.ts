@@ -103,7 +103,7 @@ class certificates extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterReGenerateCertificateMode",
+        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterRegenerateCertificateMode",
             "deletePermission", "fileSelected", "copyThumbprint",
             "deleteCertificateConfirm", "renewServerCertificate", "canBeAutomaticallyRenewed",
             "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters",
@@ -408,18 +408,14 @@ class certificates extends viewModelBase {
         this.model(certificateModel.generate());
     }
 
-    enterReGenerateCertificateMode(itemToReGenerate: unifiedCertificateDefinition) {
+    enterRegenerateCertificateMode(itemToRegenerate: unifiedCertificateDefinition) {
         eventsCollector.default.reportEvent("certificates", "re-generate");
-        this.model(certificateModel.reGenerate());
+        this.model(certificateModel.regenerate(itemToRegenerate.Name, itemToRegenerate.SecurityClearance, itemToRegenerate.Thumbprint));
 
-        this.model().name(itemToReGenerate.Name);
-        this.model().securityClearance(itemToReGenerate.SecurityClearance);
-        this.model().thumbprint(itemToReGenerate.Thumbprint);
-
-        for (let dbItem in itemToReGenerate.Permissions) {
+        for (let dbItem in itemToRegenerate.Permissions) {
             const permission = new certificatePermissionModel();
             permission.databaseName(dbItem);
-            permission.accessLevel(itemToReGenerate.Permissions[dbItem]);
+            permission.accessLevel(itemToRegenerate.Permissions[dbItem]);
             this.model().permissions.push(permission);
         }
     }
@@ -479,12 +475,7 @@ class certificates extends viewModelBase {
 
                 switch (model.mode()) {
                     case "generate":
-                    case "reGenerate":
-                        
-                        if (model.deleteExpired()) {
-                            this.deleteCertificate(this.model().thumbprint());
-                        }
-                        
+                    case "regenerate":
                         this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
 
                         new getNextOperationId(null)
@@ -497,6 +488,9 @@ class certificates extends viewModelBase {
 
                                 notificationCenter.instance.monitorOperation(null, operationId)
                                     .done(() => {
+                                        if (model.deleteExpired()) {
+                                            this.deleteCertificate(this.model().thumbprint());
+                                        }
                                         messagePublisher.reportSuccess("Client certificate was generated and downloaded successfully.");
                                     })
                                     .fail(() => {
