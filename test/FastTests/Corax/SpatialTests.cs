@@ -77,11 +77,8 @@ public class SpatialTests : StorageTest
                 var reader = searcher.GetReaderFor(ids[0]);
 
                 var fieldType = reader.GetFieldType(CoordinatesIndex, out int intOffset);
-                Assert.Equal(IndexEntryFieldType.Extended, fieldType);
-
-                var specialFieldType = reader.GetSpecialFieldType(ref intOffset);
-                Assert.Equal(ExtendedEntryFieldType.SpatialPoint, specialFieldType);
-
+                Assert.Equal(IndexEntryFieldType.SpatialPoint, fieldType);
+                
                 reader.Read(CoordinatesIndex, out (double, double) coords);
                 Assert.Equal(coords.Item1, latitude);
                 Assert.Equal(coords.Item2, longitude);
@@ -118,8 +115,7 @@ public class SpatialTests : StorageTest
 
         var reader = new IndexEntryReader(buffer);
 
-        Assert.True(reader.GetFieldType(CoordinatesIndex, out var intOffset).HasFlag(IndexEntryFieldType.ExtendedList));
-        Assert.True(reader.GetSpecialFieldType(ref intOffset).HasFlag(ExtendedEntryFieldType.SpatialPoint));
+        Assert.True(reader.GetFieldType(CoordinatesIndex, out var intOffset).HasFlag(IndexEntryFieldType.SpatialPointList));
         var iterator = reader.ReadManySpatialPoint(CoordinatesIndex);
         List<CoraxSpatialPointEntry> entriesInIndex = new();
         
