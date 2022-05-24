@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -14,7 +15,6 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,7 +28,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
     }
 
     [Fact]
-    public async Task ETL_Task_Should_Be_Pinned_To_Mentor_Node()
+    public async Task Can_Set_Pin_To_Mentor_Node_Etl()
     {
         const string srcDb = "ETL-src";
         const string dstDb = "ETL-dst";
@@ -153,7 +153,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
     }
 
     [Fact]
-    public async Task ETL_Should_Fail_Over_When_Removing_Mentor_Node_And_Pin_To_MentorNode()
+    public async Task Can_Fail_Over_When_Removing_Mentor_Node_Etl()
     {
         const string srcDb = "ETL-src";
         const string dstDb = "ETL-dst";
@@ -330,24 +330,28 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         var hubMentorNode = mentorNodes[0];
         var sinkMentorNode = mentorNodes[1];
 
-
-
         using (var hubStore = GetDocumentStore(new Options
                {
-                   Server = hubLeader, ReplicationFactor = 3, AdminCertificate = adminHubClusterCert, ClientCertificate = adminHubClusterCert,
+                   Server = hubLeader,
+                   ReplicationFactor = 3,
+                   AdminCertificate = adminHubClusterCert,
+                   ClientCertificate = adminHubClusterCert,
                }))
         {
             
             using (var sinkStore = GetDocumentStore(new Options
                    {
-                       Server = sinkMentorNode, ReplicationFactor = 3, AdminCertificate = adminHubClusterCert, ClientCertificate = adminHubClusterCert,
+                       Server = sinkMentorNode,
+                       ReplicationFactor = 3,
+                       AdminCertificate = adminHubClusterCert,
+                       ClientCertificate = adminHubClusterCert,
                    }))
-            {
-                    await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            { 
+                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 MentorNode = hubMentorNode.ServerStore.NodeTag,
                 PinToMentorNode = true,
-                Name = "HUB",
+                Name = hubStore.Database + "HUB",
             }));
 
             await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
@@ -360,9 +364,10 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
                 ConnectionStringName = hubStore.Database + "ConStr",
-                HubName = "HUB",
+                HubName =  hubStore.Database + "HUB",
             }));
-            
+            WaitForUserToContinueTheTest(hubStore,true,hubStore.Database,adminHubClusterCert);
+
             using (var hubSession = hubStore.OpenSession())
             {
                 hubSession.Store(new User
@@ -393,19 +398,114 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
                 RunInMemory = true,
                 DataDirectory = disposedServer.DataDirectory
             });
+            var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
+            Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
             Assert.True(WaitForDocument<User>(sinkStore, "users/2", u => u.Name == "Arava2",30_000)); 
-            // Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
-            // Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
-         
-            Console.WriteLine("IGal");
-            // sinkStore.Dispose();
-            // hubStore.Dispose();
-
+            Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 3));
+            Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
             }
         }
-
     }
-         
+   
+    [Fact]
+    public async Task Can_Set_Pin_To_Node_Pull_Replication_As_Sink()
+    {
+        const int clusterSize = 3;
+    
+        var (hubNodes, hubLeader, hubCertificatesHolder) = await CreateRaftClusterWithSsl(clusterSize, watcherCluster: true, shouldRunInMemory: true);
+        var adminHubClusterCert = hubCertificatesHolder.ServerCertificate.Value;
+        
+        var mentorNodes = hubNodes.Where(s => s.ServerStore.NodeTag != hubLeader.ServerStore.NodeTag).ToList();
+       
+        var hubMentorNode = mentorNodes[0];
+        var sinkMentorNode = mentorNodes[1];
+        using (var hubStore = GetDocumentStore(new Options
+               {
+                   Server = hubMentorNode,
+                   ReplicationFactor = 1,
+                   AdminCertificate = adminHubClusterCert,
+                   ClientCertificate = adminHubClusterCert,
+               }))
+        {
+            using (var sinkStore = GetDocumentStore(new Options
+                   {
+                       Server = hubLeader,
+                       ReplicationFactor = 3,
+                       AdminCertificate = adminHubClusterCert,
+                       ClientCertificate = adminHubClusterCert,
+                   }))
+            {
+    
+                using (var hubSession = hubStore.OpenAsyncSession())
+                {
+                    await hubSession.StoreAsync(new {Type = "Eggs"}, "menus/breakfast");
+                    await hubSession.StoreAsync(new {Name = "Bird Seed Milkshake"}, "recipes/bird-seed-milkshake");
+                    await hubSession.StoreAsync(new {Name = "3 USD"}, "prices/eastus/2");
+                    await hubSession.StoreAsync(new {Name = "3 EUR"}, "prices/eu/1");
+                    await hubSession.SaveChangesAsync();
+                }
+    
+                using (var sinkSession = sinkStore.OpenAsyncSession())
+                {
+                    await sinkSession.StoreAsync(new {Name = "Candy"}, "orders/bert/3");
+                    await sinkSession.SaveChangesAsync();
+                }
+    
+                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+                {
+                    Name = "Franchises",
+                    Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
+                }));
+    
+                await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("Franchises",
+                    new ReplicationHubAccess
+                    {
+                        Name = "Franchises",
+                        CertificateBase64 = Convert.ToBase64String(hubCertificatesHolder.ClientCertificate1.Value.Export(X509ContentType.Cert)),
+                        AllowedSinkToHubPaths = new[] {"orders/*","users/*"},
+                        AllowedHubToSinkPaths = new[] {"menus/*", "prices/eastus/*", "recipes/*"}
+                    }));
+    
+                await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Database = hubStore.Database, Name = "HopperConStr", TopologyDiscoveryUrls = hubStore.Urls
+                }));
+                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+                {
+                    ConnectionStringName = "HopperConStr",
+                    PinToMentorNode = true,
+                    MentorNode = sinkMentorNode.ServerStore.NodeTag,
+                    CertificateWithPrivateKey = Convert.ToBase64String(hubCertificatesHolder.ClientCertificate1.Value.Export(X509ContentType.Pfx)),
+                    HubName = "Franchises",
+                    Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub
+                }));
+    
+                var disposedServer = await DisposeServerAndWaitForFinishOfDisposalAsync(sinkMentorNode);
+                using (var sinkSession = sinkStore.OpenAsyncSession())
+                {
+                    await sinkSession.StoreAsync(new User {Name = "Arava",}, "users/1");
+                    await sinkSession.SaveChangesAsync();
+                }
+                var revivedServer = GetNewServer(new ServerCreationOptions
+                {
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        {RavenConfiguration.GetKey(x => x.Core.ServerUrls), disposedServer.Url},
+                        {RavenConfiguration.GetKey(x => x.Security.CertificatePath), hubCertificatesHolder.ServerCertificatePath}
+                    },
+                    RunInMemory = true,
+                    DataDirectory = disposedServer.DataDirectory
+                });
+                var waitForNotPassive = revivedServer.ServerStore.Engine.WaitForLeaveState(RachisState.Passive, CancellationToken.None);
+                Assert.True(waitForNotPassive.Wait(TimeSpan.FromSeconds(20_000)));
+                Assert.True(WaitForDocument<User>(hubStore, "users/1", u => u.Name == "Arava", 30_000));
+                Assert.Equal(1, await WaitForValueAsync(async () => await GetMembersCount(hubStore, hubStore.Database), 1));
+                Assert.Equal(3, await WaitForValueAsync(async () => await GetMembersCount(sinkStore, sinkStore.Database), 3));
+            }
+        }
+    }
+    
     private static AddEtlOperationResult AddEtl<T>(IDocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
     {
         var putResult = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
@@ -414,5 +514,4 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         var addResult = src.Maintenance.Send(new AddEtlOperation<T>(configuration));
         return addResult;
     }
-
 }
