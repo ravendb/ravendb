@@ -60,8 +60,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                 [nameof(TaskState)] = TaskState,
                 [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
                 [nameof(TaskName)] = TaskName,
-                [nameof(MentorNode)] = MentorNode,
-                [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(Error)] = Error
             };
         }
