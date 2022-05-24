@@ -29,6 +29,12 @@ namespace Raven.Server.Documents.Indexes
 
         public static void TryPopulateReferencedCollections(AbstractStaticIndexBase compiled, ref HashSet<string> referencedCollections)
         {
+            if (compiled == null)
+            {
+                // auto index
+                return;
+            }
+
             if (compiled.ReferencedCollections == null)
                 return;
 

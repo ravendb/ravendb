@@ -383,7 +383,8 @@ namespace Raven.Server.Documents.Patch.V8
             }
             if (o is JsHandleV8 js)
                 return js;
-            throw new InvalidOperationException("No idea how to convert " + o + " to JsHandleV8");
+
+            throw new InvalidOperationException($"No idea how to convert {o} to {nameof(JsHandleV8)}");
         }
 
     }

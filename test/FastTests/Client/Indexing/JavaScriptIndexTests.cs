@@ -110,6 +110,8 @@ namespace FastTests.Client.Indexing
                     });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
+                    WaitForUserToContinueTheTest(store);
+
                     var result = session.Query<UsersByPhones.UsersByPhonesResult>("UsersByPhones")
                         .Where(x => x.Phone == "555-234-8765")
                         .OfType<User>()
@@ -184,8 +186,10 @@ namespace FastTests.Client.Indexing
                     });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
-                    
-                    var res = session.Query<DateWithAmount, FanoutByPaymentsWithReduce>().Where(x => x.Amount == 42.833333333333336).ToList();
+                    var q = session.Query<DateWithAmount, FanoutByPaymentsWithReduce>().Where(x => x.Amount == 42.833333333333336);
+                    Console.WriteLine(q);
+                 //   WaitForUserToContinueTheTest(store);
+                    var res = q.ToList();
                     Assert.Equal(3, res.Count);
                 }
             }

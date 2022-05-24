@@ -398,6 +398,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 int arrayLength = values.Count;
                 var jsItems = new T[arrayLength];
+
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     var val = values[i];
@@ -408,7 +409,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     jsItems[i] = jsValueHandle;
                 }
 
-                return EngineHandle.CreateArray(jsItems);
+                return EngineHandle.CreateArray((IEnumerable<T>)jsItems);
             }
         }
         
@@ -496,7 +497,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (property.Value is MemberExpression me)
                             path = GetPropertyPath(me).ToArray();
 
-                        var propertyName = property.GetKey((Engine)EngineForParsing);
+                        var propertyName = property.GetKey(EngineForParsing);
                         cur.Add(CreateField(propertyName.AsString(), path));
                     }
                 }

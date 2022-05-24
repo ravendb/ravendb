@@ -147,8 +147,9 @@ public class JavaScriptIndexJint : AbstractJavaScriptIndexJint, IJavaScriptIndex
                                     }
                                 }
                             }
-               
-                            operation.Analyze(_engineForParsing);
+
+                            //  operation.Analyze(_engineForParsing);
+                            operation.Analyze(this.Engine);
 
                             var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
                             if (referencedCollections.Count > 0)

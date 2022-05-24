@@ -16,6 +16,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
@@ -711,7 +712,37 @@ namespace FastTests
                 _frozen = frozen;
             }
 
-            public static Options ForMode(RavenDatabaseMode mode)
+            private static Options ForJavascriptMode(Options options, RavenJavascriptEngineMode? mode)
+            {
+                if (mode == null)
+                    return options;
+
+                switch (mode)
+                {
+                    case RavenJavascriptEngineMode.Jint:
+                        options.ModifyDatabaseRecord += record =>
+                        {
+                            record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = JavaScriptEngineType.Jint.ToString();
+                        };
+                        options.AddToDescription($"{nameof(RavenDataAttribute.JavascriptEngineMode)} = {nameof(JavaScriptEngineType.Jint)}");
+
+                        return options;
+
+                    case RavenJavascriptEngineMode.V8:
+
+                        options.ModifyDatabaseRecord += record =>
+                        {
+                            record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = JavaScriptEngineType.V8.ToString();
+                        };
+                        options.AddToDescription($"{nameof(RavenDataAttribute.JavascriptEngineMode)} = {nameof(JavaScriptEngineType.V8)}");
+                        return options;
+                    case RavenJavascriptEngineMode.All:
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+                }
+            }
+
+            public static Options ForMode(RavenDatabaseMode mode, RavenJavascriptEngineMode? javascriptMode = null)
             {
                 var options = new Options();
                 switch (mode)
@@ -719,7 +750,7 @@ namespace FastTests
                     case RavenDatabaseMode.Single:
                         options.DatabaseMode = RavenDatabaseMode.Single;
                         options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Single)}");
-
+                        options = ForJavascriptMode(options, javascriptMode);
                         return options;
                     case RavenDatabaseMode.Sharded:
 
@@ -746,6 +777,7 @@ namespace FastTests
 
                         options.DatabaseMode = RavenDatabaseMode.Sharded;
                         options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");
+                        options = ForJavascriptMode(options, javascriptMode);
 
                         return options;
                     case RavenDatabaseMode.All:

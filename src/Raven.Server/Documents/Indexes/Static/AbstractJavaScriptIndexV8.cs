@@ -22,7 +22,7 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
     public V8EngineEx.ContextEx _contextExV8;
     private JavaScriptUtilsV8 JsUtilsV8;
     protected AbstractJavaScriptIndexV8(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
-        : base(definition, configuration, mapCode, indexVersion)
+        : base(definition)
     {
         _scriptEngineV8Pooled = V8EngineEx.GetPool(configuration).GetValue();
         var engineEx = _scriptEngineV8Pooled.Value;
@@ -40,7 +40,7 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
 
         lock (EngineHandle)
         {
-            Initialize(modifyMappingFunctions);
+            Initialize(modifyMappingFunctions, mapCode, indexVersion);
         }
     }
 
@@ -62,17 +62,17 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
 
     //    return null;
     //}
-    public override JavaScriptReduceOperation<JsHandleV8> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, JsHandleV8 reduce, JsHandleV8 groupByKey)
+    public override JavaScriptReduceOperation<JsHandleV8> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, JsHandleV8 reduce, JsHandleV8 groupByKey, long indexVersion)
     {
-        return new JavaScriptReduceOperationV8(this, JsIndexUtils, groupByKeyForParsingJint, _engineForParsing, reduce, groupByKey, _indexVersion)
+        return new JavaScriptReduceOperationV8(this, JsIndexUtils, groupByKeyForParsingJint, _engineForParsing, reduce, groupByKey, indexVersion)
             { ReduceString = Definition.Reduce };
     }
-    protected override List<MapMetadata> InitializeEngine(List<string> maps)
+    protected override List<MapMetadata> InitializeEngine(List<string> maps, string mapCode)
     {
         OnInitializeEngine();
 
         EngineHandle.ExecuteWithReset(Code, "Code");
-        EngineHandle.ExecuteWithReset(MapCode, "MapCode");
+        EngineHandle.ExecuteWithReset(mapCode, "MapCode");
         //TODO: egor add those to v8
         //_engineForParsing.ExecuteWithReset(Code);
         //_engineForParsing.ExecuteWithReset(MapCode);

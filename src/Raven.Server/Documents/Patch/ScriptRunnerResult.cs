@@ -67,8 +67,7 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
         if (IsNull)
             return null;
 
-        _parent.JsBlittableBridge.Translate(context, Instance, modifier, usageMode);
-        return null;
+        return _parent.JsBlittableBridge.Translate(context, Instance, modifier, usageMode);
     }
 
     public  void Dispose()

@@ -388,7 +388,10 @@ namespace Raven.Server.Documents.Patch.Jint
             }
             if (o is JsValue js)
                 return new JsHandleJint(js);
-            throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");
+            if (o is JsHandleJint jsHandleJint)
+                return jsHandleJint;
+
+            throw new InvalidOperationException($"No idea how to convert {o} to {nameof(JsHandleJint)}");
         }
     }
 }

@@ -26,24 +26,22 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
 
     public IJsEngineHandle<T> EngineHandle;
     protected T _definitions;
-    protected readonly long _indexVersion;
 
 
-    protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, string mapCode, long indexVersion)
-        : base(definition, configuration, mapCode)
+    protected AbstractJavaScriptIndex(IndexDefinition definition)
+        : base(definition)
     {
-        _indexVersion = indexVersion;
     }
 
     public abstract IDisposable DisableConstraintsOnInit();
 
-    protected void Initialize(Action<List<string>> modifyMappingFunctions)
+    protected void Initialize(Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
     {
         using (DisableConstraintsOnInit())
         {
             var maps = GetMappingFunctions(modifyMappingFunctions);
 
-            var mapReferencedCollections = InitializeEngine(maps);
+            var mapReferencedCollections = InitializeEngine(maps, mapCode);
 
             //TODO: egor why we have both of them??? Cant we use only _definitions?
             _definitionsForParsing = GetDefinitionsForParsingJint();
@@ -51,7 +49,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
 
             ProcessMaps(maps, mapReferencedCollections, out var collectionFunctions);
 
-            ProcessReduce();
+            ProcessReduce(indexVersion);
 
             ProcessFields(collectionFunctions);
         }
@@ -120,7 +118,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         public bool HasCompareExchangeReferences;
     }
     //TODO: egor this should be abstract and devided into 2 methods? (_definitions & _definitionsForParsing) the I can use it normally to create JavaScriptReduceOperation
-    private void ProcessReduce()
+    private void ProcessReduce(long indexVersion)
     {
         using (var reduceObj = _definitions.GetProperty(ReduceProperty))
         {
@@ -136,11 +134,13 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
                         throw new ArgumentException("Failed to get reduce key object");
                     }
 
-                    using (var groupByKey = reduceObj.GetProperty(KeyProperty))
-                    using (var reduce = reduceObj.GetProperty(AggregateByProperty))
-                    {
-                        ReduceOperation = CreateJavaScriptReduceOperation(groupByKeyForParsingJint, reduce, groupByKey);
-                    }
+                    var groupByKey = reduceObj.GetProperty(KeyProperty);
+                    var reduce = reduceObj.GetProperty(AggregateByProperty);
+                        //using (var groupByKey = reduceObj.GetProperty(KeyProperty))
+                        //using (var reduce = reduceObj.GetProperty(AggregateByProperty))
+                        //{
+                        ReduceOperation = CreateJavaScriptReduceOperation(groupByKeyForParsingJint, reduce, groupByKey, indexVersion);
+                //    }
 
                     GroupByFields = ReduceOperation.GetReduceFieldsNames();
                     Reduce = ReduceOperation.IndexingFunction;
@@ -151,8 +151,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         }
     }
 
-    public abstract JavaScriptReduceOperation<T> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, T reduce, T groupByKey);
-
+    public abstract JavaScriptReduceOperation<T> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, T reduce, T groupByKey, long indexVersion);
 
     protected abstract void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation<T>>>> collectionFunctions);
 
@@ -161,7 +160,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         var loadFunc = EngineHandle.CreateClrCallBack(Load, LoadDocument);
 
         var noTrackingObject = EngineHandle.CreateObject();
-        noTrackingObject.FastAddProperty(Load, loadFunc.Clone(), false, false, false);
+        noTrackingObject.FastAddProperty(Load, loadFunc.Clone(), writable: false, enumerable: false, configurable: false);
         EngineHandle.SetGlobalProperty(NoTracking, noTrackingObject);
 
         EngineHandle.SetGlobalProperty(Load, loadFunc);
@@ -170,7 +169,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         EngineHandle.SetGlobalClrCallBack("recurse", Recurse);
     }
 
-    protected abstract List<MapMetadata> InitializeEngine(List<string> maps);
+    protected abstract List<MapMetadata> InitializeEngine(List<string> maps, string mapCode);
 
     private T LoadDocument(T self, T[] args)
     {

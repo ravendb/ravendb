@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -642,6 +643,21 @@ var process = {
     public JsHandleV8 CreateArray(IEnumerable<object> items)
     {
         var obj = Engine.CreateArray(items);
+        return new JsHandleV8(ref obj);
+    }
+
+    public JsHandleV8 CreateArray(IEnumerable<JsHandleV8> items)
+    {
+        var empty = true;
+        List<InternalHandle> jsValues = new List<InternalHandle>();
+        foreach (var item in items)
+        {
+            empty = false;
+            jsValues.Add(item.Item);
+        }
+        if (empty)
+            return CreateEmptyArray();
+        var obj = Engine.CreateArray(jsValues.ToArray());
         return new JsHandleV8(ref obj);
     }
 

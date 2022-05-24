@@ -83,9 +83,10 @@ public interface IJsEngineHandle<T> : /*IJavaScriptEngineForParsing<T>,*/ IScrip
 
     T CreateEmptyArray();
 
-    T CreateArray(System.Array items);
+   // T CreateArray(System.Array items);
 
     T CreateArray(IEnumerable<object> items);
+    T CreateArray(IEnumerable<T> items);
 
     T CreateUndefinedValue();
 

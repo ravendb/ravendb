@@ -654,12 +654,7 @@ namespace Raven.Server.Documents.Indexes.Static
         protected const string AggregateByProperty = "aggregateBy";
         protected const string KeyProperty = "key";
 
-        public SingleIndexConfiguration IndexConfiguration;
-        public IJavaScriptOptions JsOptions;
         protected readonly IndexDefinition Definition;
-
-        protected string MapCode;
-
 
         public static AbstractStaticIndexBase Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
@@ -699,13 +694,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
         }
-        protected AbstractJavaScriptIndexBase(IndexDefinition definition, RavenConfiguration configuration, string mapCode)
+
+        protected AbstractJavaScriptIndexBase(IndexDefinition definition)
         {
             Definition = definition;
-            MapCode = mapCode;
-
-            IndexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
-            JsOptions = new JavaScriptOptions(IndexConfiguration, configuration);
         }
 
         protected List<string> GetMappingFunctions(Action<List<string>> modifyMappingFunctions)
@@ -713,8 +705,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (Definition.Maps == null || Definition.Maps.Count == 0)
                 ThrowIndexCreationException("does not contain any mapping functions to process.");
 
-            var mappingFunctions = Definition.Maps.ToList();
-            ;
+            var mappingFunctions = Definition.Maps.ToList(); 
             modifyMappingFunctions?.Invoke(mappingFunctions);
 
             return mappingFunctions;

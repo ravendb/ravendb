@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Esprima;
 using Jint;
 using Jint.Native.Function;
 using Raven.Client.Documents.Indexes;
@@ -17,7 +18,7 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
     public Engine Engine;
 
     protected AbstractJavaScriptIndexJint(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
-        : base(definition, configuration, mapCode, indexVersion)
+        : base(definition)
     {
         // we create the engine instance directly instead of using SingleRun
         // because the index is single threaded and long lived
@@ -25,15 +26,13 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
         EngineEx = new JintEngineEx(configuration, refResolver);
         Engine = EngineEx.Engine;
         _engineForParsing = EngineEx.Engine;
-        EngineHandle = new JintEngineEx(configuration, refResolver);
+        EngineHandle = EngineEx;
         JsUtils = JavaScriptUtilsJint.Create(null, EngineEx);
         JsIndexUtils = new JavaScriptIndexUtilsJint(JsUtils, Engine);
 
-
-
         lock (EngineHandle)
         {
-            Initialize(modifyMappingFunctions);
+            Initialize(modifyMappingFunctions, mapCode, indexVersion);
         }
     }
 
@@ -62,30 +61,29 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
     //protected abstract override void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections,
     //    out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation<JsHandleJint>>>> collectionFunctions);
 
-    public override JavaScriptReduceOperation<JsHandleJint> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, JsHandleJint reduce, JsHandleJint groupByKey)
+    public override JavaScriptReduceOperation<JsHandleJint> CreateJavaScriptReduceOperation(ScriptFunctionInstance groupByKeyForParsingJint, JsHandleJint reduce, JsHandleJint groupByKey, long indexVersion)
     {
-        return new JavaScriptReduceOperationJint(this, JsIndexUtils, groupByKeyForParsingJint, _engineForParsing, reduce, groupByKey, _indexVersion)
+        return new JavaScriptReduceOperationJint(this, JsIndexUtils, groupByKeyForParsingJint, Engine, reduce, groupByKey, indexVersion)
         { ReduceString = Definition.Reduce };
     }
 
-    protected override List<MapMetadata> InitializeEngine(List<string> maps)
+    protected override List<MapMetadata> InitializeEngine(List<string> maps, string mapCode)
     {
         OnInitializeEngine();
 
-        //EngineHandle.ExecuteWithReset(Code, "Code");
-        //EngineHandle.ExecuteWithReset(MapCode, "MapCode");
+        EngineHandle.ExecuteWithReset(Code, "Code");
+        EngineHandle.ExecuteWithReset(mapCode, "MapCode");
         ////TODO: egor add those to v8
-        _engineForParsing.ExecuteWithReset(Code);
-        _engineForParsing.ExecuteWithReset(MapCode);
+      //  _engineForParsing.ExecuteWithReset(Code);
+       // _engineForParsing.ExecuteWithReset(mapCode);
 
         var sb = new StringBuilder();
         if (Definition.AdditionalSources != null)
         {
-            foreach (var kvpScript in Definition.AdditionalSources)
+            foreach (var script in Definition.AdditionalSources.Values)
             {
-                var script = kvpScript.Value;
-              //  EngineHandle.ExecuteWithReset(script, $"./{Definition.Name}/additionalSource/{kvpScript.Key}");
-                   _engineForParsing.ExecuteWithReset(script);
+                EngineHandle.ExecuteWithReset(script);
+                // TODO: egor add _engineFOrParsing
                 sb.Append(Environment.NewLine);
                 sb.AppendLine(script);
             }
@@ -95,21 +93,36 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
         var mapReferencedCollections = new List<MapMetadata>();
         foreach (var map in maps)
         {
-           // EngineHandle.ExecuteWithReset(map, "map");
-                _engineForParsing.ExecuteWithReset(map);
-            var result = CollectReferencedCollections(map, additionalSources);
+            var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
             mapReferencedCollections.Add(result);
         }
 
         if (Definition.Reduce != null)
         {
-           // EngineHandle.ExecuteWithReset(Definition.Reduce, "reduce");
-                _engineForParsing.ExecuteWithReset(Definition.Reduce);
+            EngineHandle.ExecuteWithReset(Definition.Reduce, "reduce");
+             //   _engineForParsing.ExecuteWithReset(Definition.Reduce);
         }
 
         return mapReferencedCollections;
     }
+    private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
+    {
 
+        var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
+        var program = javascriptParser.ParseScript();
+        //   engine.ExecuteWithReset(program);
+        EngineHandle.ExecuteWithReset(code, "map");
+        var loadVisitor = new EsprimaReferencedCollectionVisitor();
+        if (string.IsNullOrEmpty(additionalSources) == false)
+            loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
+
+        loadVisitor.Visit(program);
+        return new MapMetadata
+        {
+            ReferencedCollections = loadVisitor.ReferencedCollection,
+            HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
+        };
+    }
     public override JsHandleJint ConvertToJsHandle(object value)
     {
         switch (value)

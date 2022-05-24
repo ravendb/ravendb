@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using Jint.Native.Object;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Patch;
@@ -46,24 +47,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, JavaScriptEngineType engineType, bool isObjectInstance = false)
         {
-            //TODO: egor check this
-            if (isObjectInstance || typeof(IObjectInstance<>).IsAssignableFrom(type))
+            if(instance is JsHandleJint jint)
             {
-                if (typeof(IObjectInstance<>).IsAssignableFrom(type))
+                var tt = jint.Item.GetType();
+                if(isObjectInstance || tt == typeof(ObjectInstance) || tt.IsSubclassOf(typeof(ObjectInstance)))
                 {
-                    switch (engineType)
-                    {
-                        case JavaScriptEngineType.Jint:
-                            return new JsPropertyAccessorJint(null);
-                        case JavaScriptEngineType.V8:
-                            return new JsPropertyAccessorV8(null);
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(engineType), engineType, null);
-                    }
+                    return new JsPropertyAccessorJint(groupByFields);
+                }
+            } else if (instance is JsHandleV8)
+            {
+                if (isObjectInstance || typeof(IObjectInstance<>).IsAssignableFrom(type))
+                {
+                    return new JsPropertyAccessorV8(groupByFields);
                 }
             }
+            ////TODO: egor check this
+            //if (isObjectInstance || typeof(IObjectInstance<>).IsAssignableFrom(type))
+            //{
+            //    if (typeof(IObjectInstance<>).IsAssignableFrom(type))
+            //    {
+            //        switch (engineType)
+            //        {
+            //            case JavaScriptEngineType.Jint:
+            //                return new JsPropertyAccessorJint(null);
+            //              //  return new JsPropertyAccessorJint(groupByFields);
+            //            case JavaScriptEngineType.V8:
+            //                return new JsPropertyAccessorV8(null);
+            //            default:
+            //                throw new ArgumentOutOfRangeException(nameof(engineType), engineType, null);
+            //        }
+            //    }
+            //}
+            //else if (isObjectInstance || type == typeof(ObjectInstance) || type.IsSubclassOf(typeof(ObjectInstance)))
+            //{
 
-            if (instance is Dictionary<string, object> dict)
+            //}
+
+                if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict, groupByFields);
 
             if (type == null)
@@ -198,17 +218,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _groupByFields = groupByFields;
         }
 
-        protected void AssertTargetType(object target, [CallerMemberName] string caller = null)
-        {
-            if (typeof(IObjectInstance<>).IsAssignableFrom(target.GetType()) == false)
-            {
-                throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target assignable from 'IObjectInstance' but got one of type '{target.GetType().Name}' with interfaces: {string.Join(",", target.GetType().GetInterfaces().ToList())}");
-            }
+        //protected void AssertTargetType(object target, [CallerMemberName] string caller = null)
+        //{
+        //    if (typeof(IObjectInstance<>).IsAssignableFrom(target.GetType()) == false)
+        //    {
+        //        throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target assignable from 'IObjectInstance' but got one of type '{target.GetType().Name}' with interfaces: {string.Join(",", target.GetType().GetInterfaces().ToList())}");
+        //    }
 
-            AssertTargetTypeInternal(target,caller);
-        }
+        //    AssertTargetTypeInternal(target,caller);
+        //}
 
-        protected abstract void AssertTargetTypeInternal(object target, [CallerMemberName] string caller = null);
+        protected abstract void AssertTargetType(object target, [CallerMemberName] string caller = null);
 
         public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
@@ -314,11 +334,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        protected override void AssertTargetTypeInternal(object target, [CallerMemberName] string caller = null)
+        protected override void AssertTargetType(object target, [CallerMemberName] string caller = null)
         {
-            if (target.GetType() != typeof(JsHandleJint))
+            if (target is JsHandleJint jsHandleJint == false)
                 throw new ArgumentException(
                     $"{caller} is expecting a target of type of '{nameof(JsHandleJint)}' but got one of type '{target.GetType().Name}'.");
+
+
+            if (jsHandleJint.Item is ObjectInstance == false)
+            {
+                throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target assignable from 'IObjectInstance' but got one of type '{target.GetType().Name}' with interfaces: {string.Join(",", target.GetType().GetInterfaces().ToList())}");
+            }
         }
     }
 
@@ -328,7 +354,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        protected override void AssertTargetTypeInternal(object target, [CallerMemberName] string caller = null)
+        protected override void AssertTargetType(object target, [CallerMemberName] string caller = null)
         {
             if (target.GetType() != typeof(JsHandleV8))
                 throw new ArgumentException(

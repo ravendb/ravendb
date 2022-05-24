@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Server.Documents.Indexes;
@@ -410,28 +411,30 @@ namespace Raven.Server.Utils
             if (js.IsDate)
                 return js.AsDate/*.ToDateTime()*/;
             //object wrapper is an object so it must come before the object
-            //if (js is ObjectWrapper ow)
-            //{
-            //    var target = ow.Target;
-            //    switch (target)
-            //    {
-            //        case LazyStringValue lsv:
-            //            return lsv;
-            //        case LazyCompressedStringValue lcsv:
-            //            return lcsv;
-            //        case LazyNumberValue lnv:
-            //            return lnv; //should be already blittable supported type.
-            //    }
 
-            //    ThrowInvalidObject(js);
-            //}
+            // TODO: egor can we drop this?
+            ObjectWrapper ow = js as ObjectWrapper;
+            if (ow is not null)
+            {
+                var target = ow.Target;
+                switch (target)
+                {
+                    case LazyStringValue lsv:
+                        return lsv;
+                    case LazyCompressedStringValue lcsv:
+                        return lcsv;
+                    case LazyNumberValue lnv:
+                        return lnv; //should be already blittable supported type.
+                }
+
+                ThrowInvalidObject(js);
+            }
             //Array is an object in Jint
-            //else if (js.IsArray)
-            //{
-            //    var arr = js.AsArray;
-            //    var convertedArray = EnumerateArray(root, arr, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
-            //    return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
-            //}
+            else if (js.IsArray)
+            {
+                var convertedArray = EnumerateArray(root, js, flattenArrays, forIndexing, recursiveLevel + 1, jsBlittableBridge._scriptEngine, context);
+                return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
+            }
             else if (js.IsObject)
             {
                 return jsBlittableBridge.Translate(context, /*engine,*/ js);
@@ -479,7 +482,6 @@ namespace Raven.Server.Utils
         }
 
         private static IEnumerable<object> EnumerateArray<T>(object root, ArrayInstance arr, bool flattenArrays, bool forIndexing, int recursiveLevel, IJsEngineHandle<T> engine, JsonOperationContext context)
-
             where T : IJsHandle<T>
         {
             foreach (var (key, val) in arr.GetOwnPropertiesWithoutLength())
@@ -488,7 +490,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static IEnumerable<object> EnumerateArray<T>(object root, InternalHandle jsArr, bool flattenArrays, bool forIndexing, int recursiveLevel, IJsEngineHandle<T> engine, JsonOperationContext context)
+        private static IEnumerable<object> EnumerateArray<T>(object root, T jsArr, bool flattenArrays, bool forIndexing, int recursiveLevel, IJsEngineHandle<T> engine, JsonOperationContext context)
             where T : IJsHandle<T>
         {
             for (int i = 0; i < jsArr.ArrayLength; i++)

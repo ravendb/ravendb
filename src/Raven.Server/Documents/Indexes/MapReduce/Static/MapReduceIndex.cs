@@ -21,6 +21,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
@@ -584,19 +585,27 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         if (_propertyQueue.Count > 0)
                             _propertyQueue.Clear();
 
-                        foreach (var property in accessor.GetPropertiesInOrder(output))
+                        try
                         {
-                            var value = property.Value;
-                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
-                            V8EngineEx.DisposeJsObjectsIfNeeded(value);
-
-                            _propertyQueue.Enqueue((property.Key, blittableValue));
-
-                            if (property.IsGroupByField)
+                            foreach (var property in accessor.GetPropertiesInOrder(output))
                             {
-                                var valueForProcessor = property.GroupByField.GetValue(value, blittableValue);
-                                _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
+                                var value = property.Value;
+                                var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
+                            //    V8EngineEx.DisposeJsObjectsIfNeeded(value);
+
+                                _propertyQueue.Enqueue((property.Key, blittableValue));
+
+                                if (property.IsGroupByField)
+                                {
+                                    var valueForProcessor = property.GroupByField.GetValue(value, blittableValue);
+                                    _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
+                                }
                             }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
                         }
 
                         _parent._indexContext.CachedProperties.NewDocument();

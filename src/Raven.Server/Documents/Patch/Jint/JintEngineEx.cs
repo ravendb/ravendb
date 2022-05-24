@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using JetBrains.Annotations;
 using Jint;
 using Jint.Constraints;
 using Jint.Native;
+using Jint.Native.Array;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.Util;
@@ -56,6 +58,10 @@ var process = {
         public JintEngineEx(RavenConfiguration configuration, JintPreventResolvingTasksReferenceResolver refResolver = null)
         {
             var jsOptions = configuration.JavaScript;
+            //if (refResolver == null)
+            //{
+            //    refResolver = new JintPreventResolvingTasksReferenceResolver();
+            //}
             Engine = new Engine(options =>
             {
                 if (jsOptions == null)
@@ -64,15 +70,19 @@ var process = {
                 {
                     var maxDurationMs = jsOptions.MaxDuration.GetValue(TimeUnit.Milliseconds);
                     options.LimitRecursion(64)
-                        .SetReferencesResolver(refResolver)
-                        .Strict(jsOptions.StrictMode)
                         .MaxStatements(jsOptions.MaxSteps)
+                        .Strict(jsOptions.StrictMode)
                         .AddObjectConverter(new JintGuidConverter())
                         .AddObjectConverter(new JintStringConverter())
                         .AddObjectConverter(new JintEnumConverter())
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
                         .LocalTimeZone(TimeZoneInfo.Utc);
+
+                    if (refResolver != null)
+                    {
+                        options.SetReferencesResolver(refResolver);
+                    }
 
                     //options.TimeoutInterval(maxDurationMs == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(maxDurationMs)); // TODO [shlomo] to switch it on when tests get stable to exclude break because of operation timeout
                 }
@@ -229,7 +239,8 @@ var process = {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public JsHandleJint GetGlobalProperty(string propertyName)
         {
-            return new JsHandleJint(Engine.GetValue(propertyName));
+            var prop = Engine.GetValue(propertyName);
+            return new JsHandleJint(prop);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -287,17 +298,43 @@ var process = {
             return new JsHandleJint(JintExtensions.CreateArray(Engine, jsItems));
         }
 
-        public JsHandleJint CreateArray(System.Array items)
+        public JsHandleJint CreateArray(IEnumerable<JsHandleJint> items)
         {
-            int arrayLength = items.Length;
-            var jsItems = new JsValue[arrayLength];
-            for (int i = 0; i < arrayLength; ++i)
+            var empty = true;
+            List<JsValue> jsValues = new List<JsValue>();
+            foreach (var item in items)
             {
-                jsItems[i] = Engine.FromObject(items.GetValue(i));
+                empty = false;
+                jsValues.Add(item.Item);
             }
-            return new JsHandleJint(JintExtensions.CreateArray(Engine, jsItems));
+            if (empty)
+                return CreateEmptyArray();
+
+            var jsValue = JintExtensions.CreateArray(Engine, jsValues.ToArray());
+            var jsHandleJint = new JsHandleJint(jsValue);
+            return jsHandleJint;
         }
 
+        //public JsHandleJint CreateArray(System.Array items)
+        //{
+        //    if (items.Length == 0)
+        //        return CreateEmptyArray();
+        //    var f1 = items[0];
+        //    var f2 = items.First();
+
+        //   foreach (JsHandleJint item in items)
+        //   {
+               
+        //   }
+
+        //    int arrayLength = items.Length;
+        //    var jsItems = new JsValue[arrayLength];
+        //    for (int i = 0; i < arrayLength; ++i)
+        //    {
+        //        jsItems[i] = Engine.FromObject(items.GetValue(i));
+        //    }
+        //    return new JsHandleJint(JintExtensions.CreateArray(Engine, jsItems));
+        //}
         public JsHandleJint CreateArray(IEnumerable<object> items)
         {
             var list = Engine.CreateEmptyArray();
