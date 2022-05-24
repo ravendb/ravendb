@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Subscriptions
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
                 SubscriptionId = subscriptionId,
+                PinToMentorNode = options.PinToMentorNode,
                 Disabled = disabled ?? false
             };
 
@@ -484,6 +485,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = @base.SubscriptionId;
                 SubscriptionName = @base.SubscriptionName;
                 MentorNode = @base.MentorNode;
+                PinToMentorNode = @base.PinToMentorNode;
                 NodeTag = @base.NodeTag;
                 LastBatchAckTime = @base.LastBatchAckTime;
                 LastClientConnectionTime = @base.LastClientConnectionTime;
