@@ -57,49 +57,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostExport()
         {
-            var result = new SmugglerResult();
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                try
-                {
-                    await Export(context, Database.Name, ExportDatabaseInternalAsync, Database.Operations, operationId);
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Export failed .", e);
-
-                    result.AddError($"Error occurred during export. Exception: {e.Message}");
-                    await WriteResultAsync(context, result, ResponseBodyStream());
-
-                    HttpContext.Abort();
-                }
-            }
+            using (var processor = new SmugglerHandlerProcessorForExport(this))
+                await processor.ExecuteAsync();
         }
-
-        public async Task<IOperationResult> ExportDatabaseInternalAsync(
-            DatabaseSmugglerOptionsServerSide options,
-            long startDocumentEtag,
-            long startRaftIndex,
-            Action<IOperationProgress> onProgress,
-            JsonOperationContext jsonOperationContext,
-            OperationCancelToken token)
-        {
-            using (token)
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex, Logger);
-                await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
-                {
-                    var destination = new StreamDestination(outputStream, context, source);
-                    var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time,
-                        jsonOperationContext, options, onProgress: onProgress, token: token.Token);
-                    return await smuggler.ExecuteAsync();
-                }
-            }
-        }
-
+        
         [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetImport()
         {
