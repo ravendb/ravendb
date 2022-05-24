@@ -59,8 +59,12 @@ class certificateModel {
         validityPeriod: this.validityPeriod
     });
     
-    private constructor(mode: certificateMode) {
+    private constructor(mode: certificateMode,
+                        name?: string, clearance?: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, thumbprint?: string) {
         this.mode(mode);
+        this.name(name);
+        this.securityClearance(clearance);
+        this.thumbprint(thumbprint);
 
         _.bindAll(this, "setClearanceMode", "changeValidityPeriodUnits");
         
@@ -198,8 +202,8 @@ class certificateModel {
         return new certificateModel("generate");
     }
 
-    static reGenerate() {
-        return new certificateModel("reGenerate");
+    static regenerate(name: string, clearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, thumbprint: string) {
+        return new certificateModel("regenerate", name, clearance, thumbprint);
     }
     
     static upload() {
