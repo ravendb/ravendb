@@ -23,8 +23,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import document = require("models/database/documents/document");
 import testRavenEtlCommand = require("commands/database/tasks/testRavenEtlCommand");
-import popoverUtils = require("common/popoverUtils");
-import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 type resultItem = {
@@ -249,11 +247,6 @@ class editRavenEtlTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-raven-etl-task [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
 
     private getAllConnectionStrings() {
