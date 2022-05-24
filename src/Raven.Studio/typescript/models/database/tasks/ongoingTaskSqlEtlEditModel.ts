@@ -36,6 +36,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.taskState,
             this.connectionStringName,
             this.mentorNode,
+            this.pinMentorNode,
             this.manualChooseMentor,
             this.parameterizedDeletes,
             this.forceRecompileQuery,
@@ -99,6 +100,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.commandTimeout(dto.Configuration.CommandTimeout);
             
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
+            this.pinMentorNode(dto.Configuration.PinToMentorNode);
             
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskSqlEtlTransformationModel(x, false, false)));
             this.sqlTables(dto.Configuration.SqlTables.map(x => new ongoingTaskSqlEtlTableModel(x, false)));
@@ -113,13 +115,13 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
             Disabled: this.taskState() === "Disabled",
-            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined, 
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            PinToMentorNode: this.pinMentorNode(),
             FactoryName: "System.Data.SqlClient",
             ForceQueryRecompile: this.forceRecompileQuery(),
             ParameterizeDeletes: this.parameterizedDeletes(),
             CommandTimeout: this.commandTimeout() || null,
             QuoteTables: this.tableQuotation(),
-            PinToMentorNode: false,
             Transforms: this.transformationScripts().map(x => x.toDto()),
             SqlTables: this.sqlTables().map(x => x.toDto())
         

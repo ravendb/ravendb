@@ -82,11 +82,6 @@ class editServerWideExternalReplication extends viewModelBase {
         super.compositionComplete();
         
         $('.edit-server-wide-replication [data-toggle="tooltip"]').tooltip();
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
    
     private initObservables() {

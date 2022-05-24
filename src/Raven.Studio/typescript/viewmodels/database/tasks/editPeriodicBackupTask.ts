@@ -137,11 +137,6 @@ class editPeriodicBackupTask extends viewModelBase {
             {
                 content: tasksCommonContent.backupAgeInfo
             });
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
 
     onSubmit() {
