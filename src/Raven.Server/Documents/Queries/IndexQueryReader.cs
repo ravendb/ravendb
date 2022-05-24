@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries;
 
-public struct IndexQueryReader
+public struct IndexQueryReader // TODO arek - remove?
 {
     private readonly int _start, _pageSize;
     private readonly HttpContext _httpContext;
@@ -47,7 +47,7 @@ public struct IndexQueryReader
             json = q;
         }
 
-        return IndexQueryServerSide.Create(_httpContext, json, _queryMetadataCache, tracker, _addSpatialProperties, database: _database, queryType: queryType);
+        return IndexQueryServerSide.Create(_httpContext, json, _queryMetadataCache, tracker, _addSpatialProperties, queryType: queryType);
     }
 
     private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker)

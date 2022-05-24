@@ -11,6 +11,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -41,6 +42,15 @@ namespace Raven.Server.Documents.Handlers
         public Task Get()
         {
             return HandleQuery(HttpMethod.Get);
+        }
+
+        [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
+        public async Task Patch()
+        {
+            using (var processor = new DatabaseQueriesHandlerProcessorForPatch(this))
+            {
+                await processor.ExecuteAsync();
+            }
         }
 
         public async Task HandleQuery(HttpMethod httpMethod)
@@ -380,40 +390,6 @@ namespace Raven.Server.Documents.Handlers
                 });
 
                 writer.WriteEndObject();
-            }
-        }
-
-        [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
-        public async Task Patch()
-        {
-            var queryContext = QueryOperationContext.Allocate(Database); // we don't dispose this as operation is async
-
-            try
-            {
-                var reader = await queryContext.Documents.ReadForMemoryAsync(RequestBodyStream(), "queries/patch");
-                if (reader == null)
-                    throw new BadRequestException("Missing JSON content.");
-                if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
-                    throw new BadRequestException("Missing 'Query' property.");
-
-                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, queryType: QueryType.Update);
-
-                query.DisableAutoIndexCreation = GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    TrafficWatchQuery(query);
-
-                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
-
-                await ExecuteQueryOperation(query,
-                    (runner, options, onProgress, token) => runner.ExecutePatchQuery(
-                        query, options, patch, query.QueryParameters, queryContext, onProgress, token),
-                    queryContext, OperationType.UpdateByQuery);
-            }
-            catch
-            {
-                queryContext.Dispose();
-                throw;
             }
         }
 

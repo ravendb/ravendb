@@ -139,7 +139,6 @@ namespace Raven.Server.Documents.Queries
             RequestTimeTracker tracker,
             bool addSpatialProperties = false,
             string clientQueryId = null,
-            DocumentDatabase database = null,
             QueryType queryType = QueryType.Select)
         {
             IndexQueryServerSide result = null;
