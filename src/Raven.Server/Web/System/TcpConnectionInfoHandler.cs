@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -169,6 +170,12 @@ namespace Raven.Server.Web.System
             while (topology.Members.Count > 0)
             {
                 var next = topology.WhoseTaskIsIt(ServerStore.CurrentRachisState, mentorNodeTask, null);
+                if (next.Equals(mentorNode) && pinToMentorNode)
+                {
+                    // if it's pinned to the mentor node than the list will always contain one node (only if the node exists in the topology)
+                    list.Add(next);
+                    return list;
+                }
                 list.Add(next);
                 topology.Members.Remove(next);
             }
