@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
@@ -24,8 +25,8 @@ namespace rvn
 
         private static CommandLineApplication _app;
 
-        private const string OwnCertificate = "own-certificate";
-        private const string LetsEncrypt = "lets-encrypt";
+        internal const string OwnCertificate = "own-certificate";
+        internal const string LetsEncrypt = "lets-encrypt";
 
         public static int Run(string[] args)
         {
@@ -47,6 +48,7 @@ namespace rvn
             ConfigureWindowsServiceCommand();
             ConfigureLogsCommand();
             ConfigureSetupPackage();
+            ConfigureInitSetupParams();
 
             _app.OnExecute(() =>
             {
@@ -62,6 +64,59 @@ namespace rvn
             {
                 return ExitWithError(parsingException.Message, _app);
             }
+        }
+
+        private static void ConfigureInitSetupParams()
+        {
+            _app.Command("init-setup-params", cmd =>
+            {
+                cmd.Description = "Initializes a skeleton of a RavenDB setup parameters JSON file.";
+                
+                cmd.HelpOption(HelpOptionString);
+                var outputPathOption = ConfigureOutputPathForInitSetupParams(cmd);
+                var mode = ConfigureModeOptionForInitSetupParams(cmd);
+
+                cmd.OnExecuteAsync(async token =>
+                {
+                    string outputFilePath = GetInitSetupParamsOutputPath(outputPathOption, cmd);
+                    string setupMode = GetInitSetupParamsSetupMode(mode, cmd);
+
+                    await InitSetupParams.RunAsync(outputFilePath, setupMode, token);
+                });
+            });
+            
+        }
+
+        private static string GetInitSetupParamsSetupMode(CommandOption mode, CommandLineApplication app)
+        {
+            if (mode.HasValue() == false)
+                ExitWithError("Output path must have a value.", app);
+
+            var modeValue = mode.Value();
+            switch (modeValue)
+            {
+                case LetsEncrypt:
+                case OwnCertificate:
+                    break;
+                default:
+                    ExitWithError($"Unknown setup mode {modeValue}.", app);
+                    break;
+            }
+            
+            return modeValue;
+        }
+
+        private static string GetInitSetupParamsOutputPath(CommandOption outputPathOption, CommandLineApplication app)
+        {
+            if (outputPathOption.HasValue() == false)
+                ExitWithError("Output path must have a value.", app);
+
+            var outputFilePath = outputPathOption.Value();
+
+            if (File.Exists(outputFilePath))
+                ExitWithError($"Output file {outputFilePath} already exists.", app);
+            
+            return outputFilePath;
         }
 
         private static void ConfigureSetupPackage()
@@ -575,6 +630,13 @@ namespace rvn
             return 1;
         }
 
+        private static CommandOption ConfigureModeOptionForInitSetupParams(CommandLineApplication cmd)
+        {
+            var opt = cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt' or 'own-certificate'", CommandOptionType.SingleValue);
+            opt.DefaultValue = "lets-encrypt";
+            return opt;
+        }
+        
         private static CommandOption ConfigureModeOption(CommandLineApplication cmd)
         {
             return cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt' or 'own-certificate'", CommandOptionType.SingleValue);
@@ -588,6 +650,13 @@ namespace rvn
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
         {
             return cmd.Option("-o|--package-output-path", "Setup package output path (default is $DOMAIN.zip where $DOMAIN comes from setup-json file)", CommandOptionType.SingleValue);
+        }
+        
+        private static CommandOption ConfigureOutputPathForInitSetupParams(CommandLineApplication cmd)
+        {
+            var opt = cmd.Option("-o|--output-path", "Setup params output path (default: setup.json)", CommandOptionType.SingleValue);
+            opt.DefaultValue = "setup.json";
+            return opt;
         }
 
         private static CommandOption ConfigureCertPath(CommandLineApplication cmd)
