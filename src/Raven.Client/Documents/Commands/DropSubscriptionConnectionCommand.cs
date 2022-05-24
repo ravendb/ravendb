@@ -10,6 +10,7 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly string _name;
         private readonly string _workerId;
+        private readonly long? _subscriptionTaskId;
 
         public DropSubscriptionConnectionCommand(string name)
         {
@@ -24,23 +25,37 @@ namespace Raven.Client.Documents.Commands
             _workerId = workerId;
         }
 
+        internal DropSubscriptionConnectionCommand(string name, long? subscriptionTaskId, string workerId) : this(name, workerId)
+        {
+            _subscriptionTaskId = subscriptionTaskId;
+        }
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
                 .Append("/subscriptions/drop");
-            
-            if(string.IsNullOrEmpty(_name) == false)
+
+            if (string.IsNullOrEmpty(_name) == false && _subscriptionTaskId.HasValue)
             {
                 path.Append("?name=").Append(Uri.EscapeDataString(_name));
-
-                if (string.IsNullOrEmpty(_workerId) == false)
-                {
-                    path.Append("&workerId=").Append(_workerId);
-                }
+                path.Append("&id=").Append(_subscriptionTaskId);
             }
-            
+            else if (string.IsNullOrEmpty(_name) == false)
+            {
+                path.Append("?name=").Append(Uri.EscapeDataString(_name));
+            }
+            else
+            {
+                path.Append("?id=").Append(_subscriptionTaskId);
+            }
+
+            if (string.IsNullOrEmpty(_workerId) == false)
+            {
+                path.Append("&workerId=").Append(_workerId);
+            }
+
             url = path.ToString();
             var request = new HttpRequestMessage
             {
