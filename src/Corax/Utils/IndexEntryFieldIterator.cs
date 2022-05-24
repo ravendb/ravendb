@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -63,7 +63,7 @@ public ref struct IndexEntryFieldIterator
             offset += length;
 
             _nullTableOffset = MemoryMarshal.Read<int>(_buffer[offset..]);
-            if (Type.HasFlag(IndexEntryFieldType.Tuple))
+            if (Type.HasFlag(IndexEntryFieldType.Tuple) && !Type.HasFlag(IndexEntryFieldType.Empty))
             {
                 _longOffset = MemoryMarshal.Read<int>(_buffer[(offset + sizeof(int))..]);
                 _doubleOffset = (offset + 2 * sizeof(int)); // Skip the pointer from sequences and longs.
@@ -123,7 +123,7 @@ public ref struct IndexEntryFieldIterator
         {
             get
             {
-                if (_currentIdx >= Count)
+                if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
 
                 int stringLength = VariableSizeEncoding.Read<int>(_buffer, out _, _spanTableOffset);
@@ -137,7 +137,7 @@ public ref struct IndexEntryFieldIterator
             {
                 if (!IsTuple)
                     throw new InvalidOperationException();
-                if (_currentIdx >= Count)
+                if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
 
                 return VariableSizeEncoding.Read<long>(_buffer, out _, _longOffset);
@@ -150,9 +150,10 @@ public ref struct IndexEntryFieldIterator
             {
                 if (!IsTuple)
                     throw new InvalidOperationException();
-                if (_currentIdx >= Count)
-                    throw new IndexOutOfRangeException();
 
+                if (Count == 0 || _currentIdx >= Count)
+                    throw new IndexOutOfRangeException();
+            
                 return Unsafe.ReadUnaligned<double>(ref MemoryMarshal.GetReference(_buffer[_doubleOffset..]));
             }
         }

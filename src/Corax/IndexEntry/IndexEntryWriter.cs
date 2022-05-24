@@ -269,7 +269,7 @@ public unsafe ref partial struct IndexEntryWriter
 
             // Signal that we will have to deal with the nulls.
             Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation],
-                Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.EmptyList);
+                Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
             return;
         }
 
@@ -364,7 +364,7 @@ public unsafe ref partial struct IndexEntryWriter
             _dataIndex = dataLocation;
 
             // Signal that we will have to deal with the nulls.
-            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.EmptyList);
+            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
             return;
         }
 

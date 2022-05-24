@@ -261,7 +261,7 @@ public unsafe readonly ref struct IndexEntryReader
         // When we dont ask about the type, we dont usually care about the empty lists either.
         // The behavior in those cases is that trying to access an element by index when the list is empty
         // should return false (as in failure). 
-        if (type.HasFlag(IndexEntryFieldType.EmptyList))
+        if (type.HasFlag(IndexEntryFieldType.Empty))
             return false;
 
         return result;
@@ -292,7 +292,7 @@ public unsafe readonly ref struct IndexEntryReader
             else
                 goto FailNull;
         }
-        if (type.HasFlag(IndexEntryFieldType.EmptyList))
+        if (type.HasFlag(IndexEntryFieldType.Empty))
         {
             goto EmptyList;
         }
@@ -405,7 +405,7 @@ public unsafe readonly ref struct IndexEntryReader
         // When we dont ask about the type, we dont usually care about the empty lists either.
         // The behavior in those cases is that trying to access an element by index when the list is empty
         // should return false (as in failure). 
-        if (type.HasFlag(IndexEntryFieldType.EmptyList))
+        if (type.HasFlag(IndexEntryFieldType.Empty))
             return false;
 
         return result;
@@ -419,13 +419,34 @@ public unsafe readonly ref struct IndexEntryReader
 
         type = GetFieldType(field, out intOffset);
         if (type == IndexEntryFieldType.Null)
-            goto IsNull;
-        if (type.HasFlag(IndexEntryFieldType.Tuple) == false || type.HasFlag(IndexEntryFieldType.List))
-            goto Fail;
+            goto NullOrEmpty;
 
-
+        // The read method here will work either if we have a list or a single tuple as long as the type is correct.
+        // This has a long history and it is been done for consistency. All internal primitives handling lists like 
+        // Sets at the tree levels have the semantic of accessing the first element of the list in case of single
+        // reads. Handling lists of elements at the Corax level is an explicit action. The rationale is that the
+        // setup costs for handling multiple elements are usually much higher than to access the first element, where
+        // data layout is optimized for. 
+        if (type.HasFlag(IndexEntryFieldType.Tuple) == false)
+            goto Fail;        
+        
         if (type.HasFlag(IndexEntryFieldType.HasNulls))
-            goto HasNull;
+        {
+            if (type.HasFlag(IndexEntryFieldType.List))
+                type = IndexEntryFieldType.HasNulls | IndexEntryFieldType.List;
+            else
+                type = IndexEntryFieldType.HasNulls;
+            goto NullOrEmpty;
+        }
+        
+        if( type.HasFlag(IndexEntryFieldType.Empty))
+        {
+            if (type.HasFlag(IndexEntryFieldType.List))
+                type = IndexEntryFieldType.Empty | IndexEntryFieldType.List;
+            else
+                type = IndexEntryFieldType.Empty;
+            goto NullOrEmpty;
+        }            
 
         longValue = VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Read
         intOffset += length;
@@ -447,17 +468,10 @@ public unsafe readonly ref struct IndexEntryReader
         type = IndexEntryFieldType.Invalid;
         return false;
 
-    HasNull:
+    NullOrEmpty:
         Unsafe.SkipInit(out longValue);
         Unsafe.SkipInit(out doubleValue);
         sequenceValue = Span<byte>.Empty;
-        type = IndexEntryFieldType.HasNulls;
-        return true;
-    IsNull:
-        Unsafe.SkipInit(out longValue);
-        Unsafe.SkipInit(out doubleValue);
-        sequenceValue = Span<byte>.Empty;
-        type = IndexEntryFieldType.Null;
         return true;
     }
 
