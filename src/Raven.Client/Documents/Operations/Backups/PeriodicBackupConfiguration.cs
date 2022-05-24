@@ -17,6 +17,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public long TaskId { get; set; }
         public bool Disabled { get; set; }
         public string MentorNode { get; set; }
+        public bool PinToMentorNode { get; set; }
         public RetentionPolicy RetentionPolicy { get; set; }
 
         /// <summary>
@@ -60,6 +61,11 @@ namespace Raven.Client.Documents.Operations.Backups
             return true;
         }
 
+        public bool IsPinnedToMentorNode()
+        {
+            return PinToMentorNode;
+        }
+
         public bool HasBackupFrequencyChanged(PeriodicBackupConfiguration other)
         {
             if (other == null)
@@ -81,6 +87,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(TaskId)] = TaskId;
             json[nameof(Disabled)] = Disabled;
             json[nameof(MentorNode)] = MentorNode;
+            json[nameof(PinToMentorNode)] = PinToMentorNode;
             json[nameof(FullBackupFrequency)] = FullBackupFrequency;
             json[nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency;
             json[nameof(RetentionPolicy)] = RetentionPolicy?.ToJson();
