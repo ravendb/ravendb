@@ -144,11 +144,6 @@ class editReplicationHubTask extends viewModelBase {
                         "</li>" +
                     "</ul>"
             });
-
-        popoverUtils.longWithHover($(".responsible-node"),
-            {
-                content: tasksCommonContent.responsibleNodeInfo
-            });
     }
     
     private loadPossibleMentors() {
