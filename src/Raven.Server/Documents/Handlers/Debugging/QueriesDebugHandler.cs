@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task KillQuery()
         {
-            string clientQueryId = GetStringQueryString("clientQueryId");
+            string clientQueryId = GetStringQueryString("clientQueryId", required: false);
             ExecutingQueryInfo query;
 
             if (clientQueryId != null)

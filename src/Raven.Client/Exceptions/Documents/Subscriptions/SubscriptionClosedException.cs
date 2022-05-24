@@ -24,5 +24,9 @@ namespace Raven.Client.Exceptions.Documents.Subscriptions
         public SubscriptionClosedException(string message, Exception inner) : base(message, inner)
         {
         }
+        public SubscriptionClosedException(string message, bool canReconnect, Exception inner) : base(message, inner)
+        {
+            CanReconnect = canReconnect;
+        }
     }
 }

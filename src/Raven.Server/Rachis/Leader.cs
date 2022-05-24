@@ -100,6 +100,8 @@ namespace Raven.Server.Rachis
                 clusterTopology = _engine.GetTopology(context);
             }
 
+            _engine.ForTestingPurposes?.LeaderLock?.LockLeaderThread();
+
             RefreshAmbassadors(clusterTopology, connections);
 
             _leaderLongRunningWork =
@@ -173,17 +175,11 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"{ToString()}: Skipping refreshing ambassadors because we are been disposed of");
                     }
-                    return;
+
+                    throw new ObjectDisposedException($"{ToString()} is being disposed.");
                 }
 
-                if (Term != _engine.CurrentTerm)
-                {
-                    if (_engine.Log.IsInfoEnabled)
-                    {
-                        _engine.Log.Info($"{ToString()}: We are no longer the actual leader, since the current term is {_engine.CurrentTerm}");
-                    }
-                    return;
-                }
+                _engine.ValidateTerm(Term);
 
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -468,8 +464,13 @@ namespace Raven.Server.Rachis
 
             bool changedFromLeaderElectToLeader;
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenWriteTransaction())
+            using (var tx = context.OpenWriteTransaction())
             {
+                if (_engine.ForTestingPurposes?.LeaderLock != null)
+                    tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => _engine.ForTestingPurposes?.LeaderLock?.Complete();
+
+                _engine.ValidateTerm(Term);
+
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
                 if (_lastCommit >= maxIndexOnQuorum ||
@@ -492,7 +493,7 @@ namespace Raven.Server.Rachis
 
                 _lastCommit = maxIndexOnQuorum;
             }
-
+            
             foreach (var kvp in _entries)
             {
                 if (kvp.Key > _lastCommit)
@@ -870,6 +871,8 @@ namespace Raven.Server.Rachis
                 Monitor.TryEnter(this, TimeSpan.FromSeconds(15), ref lockTaken);
                 try
                 {
+                    _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
+
                     if (lockTaken == false)
                     {
                         var message = $"{ToString()}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
