@@ -14,7 +14,6 @@ public ref struct SpatialPointFieldIterator
 
 
     public readonly IndexEntryFieldType Type;
-    public readonly ExtendedEntryFieldType ExtendedType;
     public readonly bool IsValid;
     public readonly int Count;
     private int _currentIdx;
@@ -28,13 +27,11 @@ public ref struct SpatialPointFieldIterator
     public SpatialPointFieldIterator(ReadOnlySpan<byte> buffer, int offset)
     {
         _buffer = buffer;
-        Type = (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, offset);
-        offset += length;
+        Type = MemoryMarshal.Read<IndexEntryFieldType>(buffer.Slice(offset));
+        offset += sizeof(IndexEntryFieldType);
 
-        ExtendedType = (ExtendedEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out length, offset);
-        offset += length;
 
-        if (((byte)Type & (byte)IndexEntryFieldType.List) == 0 || ((byte)ExtendedType & (byte)ExtendedEntryFieldType.SpatialPoint) == 0)
+        if (Type.HasFlag(IndexEntryFieldType.SpatialPointList) == false)
         {
             IsValid = false;
             Unsafe.SkipInit(out _currentIdx);
@@ -46,7 +43,7 @@ public ref struct SpatialPointFieldIterator
             return;
         }
 
-        Count = VariableSizeEncoding.Read<ushort>(_buffer, out length, offset);
+        Count = VariableSizeEncoding.Read<ushort>(_buffer, out var length, offset);
         offset += length;
 
         _geohashLevel = VariableSizeEncoding.Read<ushort>(_buffer, out length, offset);

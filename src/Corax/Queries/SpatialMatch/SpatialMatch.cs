@@ -8,6 +8,7 @@ using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Debugging;
 
 namespace Corax.Queries;
 
@@ -15,7 +16,6 @@ public class SpatialMatch : IQueryMatch
 {
     private readonly IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
-    private readonly ExtendedEntryFieldType _extendedEntryFieldType;
     private readonly string _fieldName;
     private readonly double _error;
     private readonly IShape _shape;
@@ -47,6 +47,7 @@ public class SpatialMatch : IQueryMatch
             ? SpatialHelper.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
             : SpatialHelper.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
         GoNextMatch();
+        DebugStuff.RenderAndShow(tree);
     }
 
     private bool GoNextMatch()

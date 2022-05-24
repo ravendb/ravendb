@@ -157,89 +157,6 @@ namespace Corax
             return Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0L;
         }
 
-        [SkipLocalsInit]
-        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId,
-            IndexFieldBinding binding)
-        {
-            Analyzer analyzer = binding.Analyzer;
-            analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out int bufferSize, out int tokenSize);
-
-            byte* tempWordsSpace = stackalloc byte[bufferSize];
-            Token* tempTokenSpace = stackalloc Token[tokenSize];
-
-            int tokenField = binding.FieldId;
-            var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
-            if (fieldType.HasFlag(IndexEntryFieldType.Raw))
-            {
-                return;
-            }
-            
-            if (fieldType.HasFlag(IndexEntryFieldType.List))
-            {
-                // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
-                //       that will ensure faster turnaround and more efficient execution. 
-                if (fieldType.HasFlag(IndexEntryFieldType.Extended))
-                {
-                    var extendedType = entryReader.GetSpecialFieldType(ref intOffset);
-
-                    if (extendedType.HasFlag(ExtendedEntryFieldType.SpatialPoint) == false)
-                        throw new NotSupportedException("Currently we support only SpatialPoint.");
-                    
-                    
-                    var iterator = entryReader.ReadManySpatialPoint(binding.FieldId);
-                    while (iterator.ReadNext())
-                    {
-                        for(int i = 1; i <= iterator.Geohash.Length; ++i)
-                            ProcessTerm(iterator.Geohash.Slice(0, i));
-                    }
-                }
-                else
-                {
-                    var iterator = entryReader.ReadMany(tokenField);
-                    while (iterator.ReadNext())
-                    {
-                        ProcessTerm(iterator.Sequence);
-                    }
-                }
-            }
-            else if (fieldType.HasFlag(IndexEntryFieldType.Extended))
-            {
-                entryReader.Read(binding.FieldId, out Span<byte> geohash);
-                for (int i = 0; i <= geohash.Length; ++i)
-                    ProcessTerm(geohash.Slice(0, i));
-            }
-            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) ||
-                     fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
-            {
-                entryReader.Read(tokenField, out var value);
-                ProcessTerm(value);
-            }
-
-            void ProcessTerm(ReadOnlySpan<byte> value)
-            {
-                var words = new Span<byte>(tempWordsSpace, bufferSize);
-                var tokens = new Span<Token>(tempTokenSpace, tokenSize);
-                analyzer.Execute(value, ref words, ref tokens);
-
-                for (int i = 0; i < tokens.Length; i++)
-                {
-                    ref var token = ref tokens[i];
-
-                    using var _ = Slice.From(context, words.Slice(token.Offset, (int)token.Length), ByteStringType.Mutable, out var slice);
-                    if (field.TryGetValue(slice, out var term) == false)
-                    {
-                        var fieldName = slice.Clone(context);
-                        field[fieldName] = term = new List<long>();
-                    }
-
-                    AddMaybeAvoidDuplicate(term, entryId);
-
-                    if (binding.HasSuggestions)
-                        AddSuggestions(binding, slice);
-                }
-            }
-        }
-
         private unsafe void AddSuggestions(IndexFieldBinding binding, Slice slice)
         {
             _suggestionsAccumulator ??= new Dictionary<int, Dictionary<Slice, int>>();
@@ -308,30 +225,117 @@ namespace Corax
         }
 
         [SkipLocalsInit]
+        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId,
+            IndexFieldBinding binding)
+        {
+            Analyzer analyzer = binding.Analyzer;
+            analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out int bufferSize, out int tokenSize);
+
+            byte* tempWordsSpace = stackalloc byte[bufferSize];
+            Token* tempTokenSpace = stackalloc Token[tokenSize];
+
+            int tokenField = binding.FieldId;
+            var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
+            if (fieldType == IndexEntryFieldType.Null)
+            {
+                ProcessTerm(Constants.NullValueSlice);
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.Raw))
+            {
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.List))
+            {
+                // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
+                //       that will ensure faster turnaround and more efficient execution. 
+
+                if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
+                {
+                    var iterator = entryReader.ReadManySpatialPoint(binding.FieldId);
+                    while (iterator.ReadNext())
+                    {
+                        for (int i = 1; i <= iterator.Geohash.Length; ++i)
+                            ProcessTerm(iterator.Geohash.Slice(0, i));
+                    }
+                }
+                else
+                {
+                    var iterator = entryReader.ReadMany(tokenField);
+                    while (iterator.ReadNext())
+                    {
+                        if (iterator.IsNull)
+                        {
+                            ProcessTerm(Constants.NullValueSlice);
+                            continue;
+                        }
+
+                        ProcessTerm(iterator.Sequence);
+                    }
+                }
+            }
+            else
+            {
+                entryReader.Read(binding.FieldId, out Span<byte> valueInEntry);
+                if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
+                {
+                    for (int i = 1; i <= valueInEntry.Length; ++i)
+                        ProcessTerm(valueInEntry.Slice(0, i));
+                }
+                else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
+                {
+                    ProcessTerm(valueInEntry);
+                }
+            }
+
+            void ProcessTerm(ReadOnlySpan<byte> value)
+            {
+                var words = new Span<byte>(tempWordsSpace, bufferSize);
+                var tokens = new Span<Token>(tempTokenSpace, tokenSize);
+                analyzer.Execute(value, ref words, ref tokens);
+
+                for (int i = 0; i < tokens.Length; i++)
+                {
+                    ref var token = ref tokens[i];
+
+                    using var _ = Slice.From(context, words.Slice(token.Offset, (int)token.Length), ByteStringType.Mutable, out var slice);
+                    if (field.TryGetValue(slice, out var term) == false)
+                    {
+                        var fieldName = slice.Clone(context);
+                        field[fieldName] = term = new List<long>();
+                    }
+
+                    AddMaybeAvoidDuplicate(term, entryId);
+
+                    if (binding.HasSuggestions)
+                        AddSuggestions(binding, slice);
+                }
+            }
+        }
+
+        [SkipLocalsInit]
         private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId,
             IndexFieldBinding binding)
         {
             int fieldId = binding.FieldId;
             var fieldType = entryReader.GetFieldType(fieldId, out var intOffset);
-            
-            if (fieldType.HasFlag(IndexEntryFieldType.Raw))
-            {
-                return;
-            }
-            if (fieldType.HasFlag(IndexEntryFieldType.List))
-            {
-                if (fieldType.HasFlag(IndexEntryFieldType.Extended))
-                {
-                    var extendedType = entryReader.GetSpecialFieldType(ref intOffset);
 
-                    if (extendedType.HasFlag(ExtendedEntryFieldType.SpatialPoint) == false)
-                        throw new NotSupportedException("Currently we support only SpatialPoint.");
-                    
-                    
-                    var iterator = entryReader.ReadManySpatialPoint(fieldId);
+            if (fieldType == IndexEntryFieldType.Null)
+            {
+                ProcessTerm(Constants.NullValueSlice);
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.Raw))
+            {
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.List))
+            {
+                // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
+                //       that will ensure faster turnaround and more efficient execution. 
+
+                if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
+                {
+                    var iterator = entryReader.ReadManySpatialPoint(binding.FieldId);
                     while (iterator.ReadNext())
                     {
-                        for(int i = 1; i <= iterator.Geohash.Length; ++i)
+                        for (int i = 1; i <= iterator.Geohash.Length; ++i)
                             ProcessTerm(iterator.Geohash.Slice(0, i));
                     }
                 }
@@ -340,20 +344,28 @@ namespace Corax
                     var iterator = entryReader.ReadMany(fieldId);
                     while (iterator.ReadNext())
                     {
+                        if (iterator.IsNull)
+                        {
+                            ProcessTerm(Constants.NullValueSlice);
+                            continue;
+                        }
+
                         ProcessTerm(iterator.Sequence);
                     }
                 }
             }
-            else if (fieldType.HasFlag(IndexEntryFieldType.Extended))
+            else
             {
-                entryReader.Read(fieldId, out Span<byte> geohash);
-                for (int i = 0; i <= geohash.Length; ++i)
-                    ProcessTerm(geohash.Slice(0, i));
-            }
-            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
-            {
-                entryReader.Read(fieldId, out var value);
-                ProcessTerm(value);
+                entryReader.Read(binding.FieldId, out Span<byte> valueInEntry);
+                if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
+                {
+                    for (int i = 1; i <= valueInEntry.Length; ++i)
+                        ProcessTerm(valueInEntry.Slice(0, i));
+                }
+                else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
+                {
+                    ProcessTerm(valueInEntry);
+                }
             }
 
 
@@ -388,7 +400,7 @@ namespace Corax
             {
                 if (binding.IsAnalyzed == false)
                     continue;
-                
+
                 binding.Analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out var tempOutputSize, out var tempTokenSize);
                 maxWordsSpaceLength = Math.Max(maxWordsSpaceLength, tempOutputSize);
                 maxTokensSpaceLength = Math.Max(maxTokensSpaceLength, tempTokenSize);
@@ -405,23 +417,16 @@ namespace Corax
                 {
                     if (binding.IsIndexed == false)
                         continue;
-                    
-                    var fieldType = entryReader.GetFieldType(binding.FieldId, out var intOffset);
 
+                    var fieldType = entryReader.GetFieldType(binding.FieldId, out var intOffset);
                     if (fieldType.HasFlag(IndexEntryFieldType.List))
                     {
-                        if (fieldType.HasFlag(IndexEntryFieldType.Extended))
+                        if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
                         {
-                            var extendedType = entryReader.GetSpecialFieldType(ref intOffset);
-
-                            if (extendedType.HasFlag(ExtendedEntryFieldType.SpatialPoint) == false)
-                                throw new NotSupportedException("Currently we support only SpatialPoint.");
-                    
-                    
                             var iterator = entryReader.ReadManySpatialPoint(binding.FieldId);
                             while (iterator.ReadNext())
                             {
-                                for(int i = 1; i <= iterator.Count; ++i)
+                                for (int i = 1; i <= iterator.Count; ++i)
                                     DeleteToken(iterator.Geohash.Slice(0, i), tmpBuf, binding, tempWordsSpace, tempTokenSpace);
                             }
                         }
@@ -429,8 +434,12 @@ namespace Corax
                         {
                             var it = entryReader.ReadMany(binding.FieldId);
                             while (it.ReadNext())
-                                DeleteToken(it.Sequence, tmpBuf, binding, tempWordsSpace, tempTokenSpace);
-
+                            {
+                                if (it.IsNull)
+                                    DeleteToken(Constants.NullValueSlice.AsSpan(), tmpBuf, binding, tempWordsSpace, tempTokenSpace);
+                                else
+                                    DeleteToken(it.Sequence, tmpBuf, binding, tempWordsSpace, tempTokenSpace);
+                            }
                         }
                     }
                     else
@@ -445,7 +454,7 @@ namespace Corax
                 llt.RootObjects.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1);
                 var numberOfEntries = llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
                 Debug.Assert(numberOfEntries >= 0);
-                
+
                 void DeleteToken(ReadOnlySpan<byte> termValue, Span<byte> tmpBuf, IndexFieldBinding binding, Span<byte> wordSpace, Span<Token> tokenSpace)
                 {
                     if (binding.IsAnalyzed == false)
@@ -453,10 +462,10 @@ namespace Corax
                         DeleteField(id, binding.FieldName, tmpBuf, termValue);
                         if (binding.HasSuggestions)
                             RemoveSuggestions(binding, termValue);
-                        
+
                         return;
                     }
-                    
+
                     var analyzer = binding.Analyzer;
                     analyzer.Execute(termValue, ref wordSpace, ref tokenSpace);
 
@@ -470,7 +479,6 @@ namespace Corax
                         if (binding.HasSuggestions)
                             RemoveSuggestions(binding, termValue);
                     }
-                    
                 }
             }
 
