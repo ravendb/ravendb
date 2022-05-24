@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors.Smuggler;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -30,57 +31,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/smuggler/export", "POST")]
         public async Task PostExport()
         {
-            var result = new SmugglerResult();
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var operationId = GetLongQueryString("operationId", false) ?? DatabaseContext.Operations.GetNextOperationId();
-
-                try
-                {
-                    await Export(context, DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, DatabaseContext.Operations, operationId);
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Export failed .", e);
-
-                    result.AddError($"Error occurred during export. Exception: {e}");
-                    await WriteResultAsync(context, result, ResponseBodyStream());
-
-                    HttpContext.Abort();
-                }
-            }
-        }
-
-        public async Task<IOperationResult> ExportShardedDatabaseInternalAsync(
-            DatabaseSmugglerOptionsServerSide options,
-            long startDocumentEtag,
-            long startRaftIndex,
-            Action<IOperationProgress> onProgress,
-            JsonOperationContext jsonOperationContext,
-            OperationCancelToken token)
-        {
-            // we use here a negative number to avoid possible collision between the server and database ids
-            var operationId = DatabaseContext.Operations.GetNextOperationId();
-            options.IsShard = true;
-
-            await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
-            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("BuildVersion");
-                writer.WriteInteger(ServerVersion.Build);
-
-                var exportOperation = new ShardedExportOperation(this, operationId, options, writer);
-                // we execute one by one so requests will not timeout since the export can take long
-                await ShardExecutor.ExecuteOneByOneForAllAsync(exportOperation);
-
-                writer.WriteEndObject();
-            }
-
-            var getStateOperation = new GetShardedOperationStateOperation(HttpContext, operationId);
-            return (await ShardExecutor.ExecuteParallelForAllAsync(getStateOperation)).Result;
+            using (var processor = new ShardedSmugglerHandlerProcessorForExport(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/smuggler/import", "POST")]
