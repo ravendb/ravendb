@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             await base.ParseSubscriptionOptionsAsync();
 
             // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
-            _options.MaxDocsPerBatch = Math.Min((int)Math.Ceiling((double)_options.MaxDocsPerBatch / TcpConnection.DatabaseContext.ShardCount), _options.MaxDocsPerBatch);
+            _options.MaxDocsPerBatch = Math.Max(Math.Min(_options.MaxDocsPerBatch / TcpConnection.DatabaseContext.ShardCount, _options.MaxDocsPerBatch), 1);
 
             // add to connections
             if (Connections.TryAdd(_options.SubscriptionName, this) == false)

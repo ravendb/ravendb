@@ -23,10 +23,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 
             return new SubscriptionConnectionsDetails()
             {
-                Results = new() {
+                Results = new()
+                {
                     new SubscriptionConnectionDetails
                     {
-                        ClientUri = connection?.ClientUri, 
+                        ClientUri = connection?.ClientUri,
                         Strategy = connection?.Strategy
                     }
                 },

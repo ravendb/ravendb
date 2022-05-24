@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
@@ -8,12 +7,6 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
     {
         public OngoingTasksHandlerProcessorForPostSubscriptionTasksState([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-        }
-
-        protected override async ValueTask ToggleSubscriptionTaskStateAsync()
-        {
-            using (var processor = new OngoingTasksHandlerProcessorForToggleTaskState(RequestHandler))
-                await processor.ExecuteAsync();
         }
     }
 }
