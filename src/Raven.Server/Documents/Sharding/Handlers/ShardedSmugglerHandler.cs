@@ -61,7 +61,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             JsonOperationContext jsonOperationContext,
             OperationCancelToken token)
         {
-            // we use here a negative number to avoid possible collision between the server and database ids
             var operationId = DatabaseContext.Operations.GetNextOperationId();
             options.IsShard = true;
 

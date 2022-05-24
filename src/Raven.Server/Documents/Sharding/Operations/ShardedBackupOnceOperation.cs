@@ -1,10 +1,6 @@
-﻿using System.Diagnostics;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Web;
-using Microsoft.AspNetCore.Http;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -12,73 +8,36 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    public readonly struct ShardedBackupOnceOperation : IShardedOperation
+    public class ShardedBackupOnceOperation : ShardedBackupOperationBase, IShardedBackupOperation
     {
-        private readonly ShardedDatabaseRequestHandler _handler;
-        private readonly BlittableJsonReaderObject _config;
-        private readonly long _operationId;
-        private readonly string _queryString;
-        private readonly Task<IOperationResult>[] _operations;
-        private readonly DocumentConventions _conventions;
+        private readonly BackupConfiguration _configuration;
 
-        public ShardedBackupOnceOperation(ShardedDatabaseRequestHandler handler, long operationId, BlittableJsonReaderObject config)
+        public ShardedBackupOnceOperation(ShardedDatabaseRequestHandler handler, BackupConfiguration configuration) : base(handler)
         {
-            _handler = handler;
-            _config = config;
-            _operationId = operationId;
-            _operations = new Task<IOperationResult>[_handler.DatabaseContext.DatabaseRecord.Shards.Length];
-            _conventions = new DocumentConventions
+            _configuration = configuration;
+        }
+
+        public RavenCommand<object> CreateCommandForShard(int shardNumber)
+        {
+            AddOperationFor(shardNumber);
+            return new ShardedBackupOnceCommand(_configuration, QueryString);
+        }
+
+        private class ShardedBackupOnceCommand : ShardedBackupNowCommand
+        {
+            private readonly BackupConfiguration _configuration;
+
+            public ShardedBackupOnceCommand(BackupConfiguration configuration, string queryString) : base(queryString)
             {
-                OperationStatusFetchMode = OperationStatusFetchMode.Polling
-            };
-
-            Debug.Assert(handler.HttpContext.Request.QueryString.Value != null);
-            var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
-            queryString["operationId"] = operationId.ToString();
-
-            _queryString = $"{handler.BaseShardUrl}?{queryString}";
-        }
-
-        public RavenCommand<object> CreateCommandForShard(int shard)
-        {
-            var op = new Operation(_handler.DatabaseContext.ShardExecutor.GetRequestExecutorAt(shard),
-                changes: null,
-                _conventions,
-                _operationId);
-
-            _operations[shard] = op.WaitForCompletionAsync();
-
-            return new ShardedBackupOnceCommand(_config, _queryString);
-        }
-
-        public HttpRequest HttpRequest => _handler.HttpContext.Request;
-
-        public Task WaitForBackupToCompleteOnAllShards()
-        {
-            return Task.WhenAll(_operations);
-        }
-
-        private class ShardedBackupOnceCommand : RavenCommand
-        {
-            private readonly BlittableJsonReaderObject _content;
-            private readonly string _queryString;
-
-            public override bool IsReadRequest => false;
-
-            public ShardedBackupOnceCommand(BlittableJsonReaderObject backupConfig, string queryString)
-            {
-                _content = backupConfig;
-                _queryString = queryString;
+                _configuration = configuration;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}{_queryString}";
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async (stream) => await _content.WriteJsonToAsync(stream)),
-                };
+                var request = base.CreateRequest(ctx, node, out url);
+
+                var blittable = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx);
+                request.Content = new BlittableJsonContent(async stream => await blittable.WriteJsonToAsync(stream));
 
                 return request;
             }
