@@ -203,7 +203,7 @@
                             <div class="flex-grow"></div>
                             <div class="flex-horizontal">
                                 <div class="actions">
-                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterReGenerateCertificateMode, $data), visible: $root.canEdit($data)() && isExpired" title="Re-generate certificate">
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterRegenerateCertificateMode, $data), visible: $root.canEdit($data)() && isExpired" title="Re-generate certificate">
                                         <i class="icon-magic-wand"></i>
                                     </button>
                                     <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data), visible: $root.canEdit($data)() && !isExpired" title="Edit certificate">
