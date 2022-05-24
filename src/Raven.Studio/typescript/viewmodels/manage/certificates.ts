@@ -411,13 +411,6 @@ class certificates extends viewModelBase {
     enterRegenerateCertificateMode(itemToRegenerate: unifiedCertificateDefinition) {
         eventsCollector.default.reportEvent("certificates", "re-generate");
         this.model(certificateModel.regenerate(itemToRegenerate));
-
-        for (let dbItem in itemToRegenerate.Permissions) {
-            const permission = new certificatePermissionModel();
-            permission.databaseName(dbItem);
-            permission.accessLevel(itemToRegenerate.Permissions[dbItem]);
-            this.model().permissions.push(permission);
-        }
     }
     
     enterUploadCertificateMode() {
