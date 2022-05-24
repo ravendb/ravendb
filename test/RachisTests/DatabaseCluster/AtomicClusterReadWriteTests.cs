@@ -333,7 +333,7 @@ namespace RachisTests.DatabaseCluster
                 return await session.LoadAsync<TestObj>(notDelete);
             });
 
-            var r = await WaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")),timeout:500);
+            var r = await WaitForSingleAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")),timeout: 15_000);
             if (r.Count != 1)
             {
                 // temp loggin to solve issue RavenDB-17890.
