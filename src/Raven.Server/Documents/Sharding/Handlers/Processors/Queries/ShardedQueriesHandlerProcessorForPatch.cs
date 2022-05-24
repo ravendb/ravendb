@@ -1,54 +1,48 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Server.Documents.Handlers.Processors;
+using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Json;
-using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
-internal class ShardedQueriesHandlerProcessorForPatch : AbstractDatabaseHandlerProcessor<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal class ShardedQueriesHandlerProcessorForPatch : AbstractOperationQueriesHandlerProcessor<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedQueriesHandlerProcessorForPatch([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    public ShardedQueriesHandlerProcessorForPatch([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache)
     {
     }
+    protected override HttpMethod OperationMethod => HttpMethod.Patch;
 
-    public override async ValueTask ExecuteAsync()
+    protected override long GetNextOperationId()
     {
-        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        using (var tracker = new RequestTimeTracker(HttpContext, Logger, null, "Query"))
+        return RequestHandler.DatabaseContext.Operations.GetNextOperationId();
+    }
+
+    protected override IDisposable AllocateContextForAsyncOperation(out TransactionOperationContext asyncOperationContext)
+    {
+        return ContextPool.AllocateOperationContext(out asyncOperationContext);
+    }
+
+    protected override async ValueTask ExecuteOperationAsync(TransactionOperationContext asyncOperationContext, IndexQueryServerSide query, long operationId, QueryOperationOptions options)
+    {
+        using (asyncOperationContext)
         {
-            var indexQueryReader = new IndexQueryReader(
-                RequestHandler.GetStart(),
-                RequestHandler.GetPageSize(),
-                HttpContext,
-                RequestHandler.RequestBodyStream(),
-                RequestHandler.DatabaseContext.QueryMetadataCache,
-                database: null,
-                addSpatialProperties: false);
-
-            var updateToQuery = await indexQueryReader.GetIndexQueryAsync(context, HttpMethod.Patch, tracker);
-
-            var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? RequestHandler.DatabaseContext.Operations.GetNextOperationId();
-
-            _ = RequestHandler.DatabaseContext.Operations
+            await RequestHandler.DatabaseContext.Operations
                 .AddRemoteOperation(
                     operationId,
                     OperationType.UpdateByQuery,
                     "Test description",
                     detailedDescription: null,
-                    c => new PatchByQueryOperation.PatchByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, c, updateToQuery), RequestHandler.CreateOperationToken());
-
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
-            }
+                    c => new PatchByQueryOperation.PatchByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, c, query, options, operationId),
+                    RequestHandler.CreateOperationToken());
         }
     }
+
 }

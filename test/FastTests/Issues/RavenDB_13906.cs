@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void OnAfterSaveChangesOnPatchShouldWork()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void OnAfterSaveChangesOnPatchShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var condition = false;
                 string id;

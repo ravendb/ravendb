@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Linq;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -62,10 +65,11 @@ loadToPeople(person);
             }
         }
 
-        [Fact]
-        public void CanDeleteEverything()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanDeleteEverything(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -74,8 +78,12 @@ loadToPeople(person);
                 var operation = store.Operations.Send(new PatchByQueryOperation("from @all_docs as doc update {  del(id(doc)); }"));
                 operation.WaitForCompletion(TimeSpan.FromMinutes(5));
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(8, stats.CountOfDocuments); // hi-lo
+                var tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
+
+                tester.AssertAll((_, stats) =>
+                {
+                    Assert.True(stats.CountOfDocuments <= 8, $"stats.CountOfDocuments: {stats.CountOfDocuments}"); // hi-lo
+                });
             }
         }
     }

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,10 +25,11 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void DocumentWithBytes()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void DocumentWithBytes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
