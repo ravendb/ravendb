@@ -9,6 +9,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
+using Raven.Server.Documents.Handlers.Processors.ETL;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -63,22 +64,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
         [RavenAction("/databases/*/admin/etl/sql/test", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostScriptTest()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var dbDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "TestSqlEtlScript");
-                var testScript = JsonDeserializationServer.TestSqlEtlScript(dbDoc);
-
-                using (SqlEtl.TestScript(testScript, Database, ServerStore, context, out var testResult))
-                {
-                    var result = (SqlEtlTestScriptResult)testResult;
-                    
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                        writer.WriteObject(context.ReadObject(djv, "et/sql/test"));
-                    }
-                }
-            }
+            using (var processor = new SqlEtlHandlerProcessorForTestSqlEtl(this))
+                await processor.ExecuteAsync();
         }
     }
 }
