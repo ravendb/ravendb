@@ -1455,7 +1455,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/subscription-tasks", "DeleteSubscriptionTask", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DeleteSubscriptionTask()
         {
             // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
