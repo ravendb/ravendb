@@ -532,10 +532,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     
                     if ((type & IndexEntryFieldType.List) != 0)
                     {
-                        reader.TryReadMany(binding.FieldId, out var iterator);
                         var enumerableEntries = new List<object>();
+                        if ((type & IndexEntryFieldType.SpatialPoint) != 0)
+                        {
+                            reader.TryReadManySpatialPoint(binding.FieldId, out var spatialIterator);
+                            while (spatialIterator.ReadNext())
+                            {
+                                for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
+                                    enumerableEntries.Add(Encodings.Utf8.GetString(spatialIterator.Geohash.Slice(0, i)));
+                            }
+                            doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
+                            continue;
+                        }
+                        
+                        
+                        reader.TryReadMany(binding.FieldId, out var iterator);
                         while (iterator.ReadNext())
                         {
+                            if (iterator.IsNull || iterator.IsEmpty)
+                                continue;
+                            
                             if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
                             {
                                 enumerableEntries.Add(Encodings.Utf8.GetString(iterator.Sequence));
@@ -544,12 +560,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                             enumerableEntries.Add(GetAnalyzedItem(binding, iterator.Sequence));
                         }
-
                         doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
                     }
                     else
                     {
                         reader.Read(binding.FieldId, out Span<byte> value);
+                        if ((type & IndexEntryFieldType.SpatialPoint) != 0)
+                        {
+                            var enumerableEntries = new List<object>();
+                            for (int i = 1; i <= value.Length; ++i)
+                                enumerableEntries.Add(Encodings.Utf8.GetString(value.Slice(0, i)));
+                            doc[binding.FieldNameAsString] = enumerableEntries.ToArray();
+                        }
+                        
                         if (binding.FieldIndexingMode is FieldIndexingMode.Exact)
                         {
                             doc[binding.FieldNameAsString] = Encodings.Utf8.GetString(value);

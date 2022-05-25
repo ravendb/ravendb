@@ -42,7 +42,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     protected readonly IndexFieldsMapping _knownFields;
     protected readonly ByteStringContext _allocator;
 
-    private const int InitialSizeOfEnumerableBuffer = 32;
+    private const int InitialSizeOfEnumerableBuffer = 128;
 
     private bool EnumerableDataStructExist =>
         StringsListForEnumerableScope is not null && LongsListForEnumerableScope is not null && DoublesListForEnumerableScope is not null;

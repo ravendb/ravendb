@@ -17,12 +17,4 @@ public readonly struct CoraxSpatialPointEntry
         Longitude = longitude;
         Geohash = geohash;
     }
-
-    public Span<byte> GeohashAsBytes
-    {
-        get
-        {
-            return Encodings.Utf8.GetBytes(Geohash);
-        }
-    }
 }

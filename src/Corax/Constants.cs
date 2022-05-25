@@ -6,8 +6,8 @@ namespace Corax
 {
     public static class Constants
     {
-        public const string NullValue = "NULL_VALUE";
-        public const string EmptyValue = "EMPTY_VALUE";
+        public const string NullValue = "null_value";
+        public const string EmptyValue = "empty_value";
         public static readonly Slice NullValueSlice, EmptyValueSlice;
 
         static Constants()
@@ -34,7 +34,10 @@ namespace Corax
         public static class IndexWriter
         {
             public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice;
-            public const int KnownFieldMask = unchecked((int)0x80000000);
+            public const int IntKnownFieldMask = unchecked((int)0x80000000);
+            public const short ShortKnownFieldMask = unchecked((short)0x8000);
+            public const short ByteKnownFieldMask = unchecked((byte)0x80);
+
             static IndexWriter()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))

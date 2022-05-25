@@ -2,7 +2,9 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,14 +17,22 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void SpatialOnAutoIndex(Options options)
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void SpatialOnAutoIndex(RavenTestParameters config)
         {
             var databaseName = $"{nameof(SpatialOnAutoIndex)}-{Guid.NewGuid()}";
             var path = NewDataPath();
             using (var store = GetDocumentStore(new Options
             {
+                Path = path,
+                ModifyDatabaseName = s => databaseName,
+                DeleteDatabaseOnDispose = false,
+                ModifyDatabaseRecord = d =>
+                {
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                }
             }))
             {
                 using (var session = store.OpenSession())
@@ -78,7 +88,12 @@ namespace SlowTests.Issues
             {
                 Path = path,
                 ModifyDatabaseName = s => databaseName,
-                CreateDatabase = false
+                CreateDatabase = false,
+                ModifyDatabaseRecord = d =>
+                {
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                }
             }))
             {
                 var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)); // checking it index survived restart

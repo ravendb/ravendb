@@ -681,11 +681,11 @@ public static class CoraxQueryBuilder
 
         var operation = spatialMethod switch
         {
-            MethodType.Spatial_Within => global::Corax.Utils.SpatialHelper.SpatialRelation.Within,
-            MethodType.Spatial_Disjoint => global::Corax.Utils.SpatialHelper.SpatialRelation.Disjoint,
-            MethodType.Spatial_Intersects => global::Corax.Utils.SpatialHelper.SpatialRelation.Intersects,
-            MethodType.Spatial_Contains => global::Corax.Utils.SpatialHelper.SpatialRelation.Contains,
-            _ => (global::Corax.Utils.SpatialHelper.SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters)
+            MethodType.Spatial_Within => global::Corax.Utils.Spatial.SpatialRelation.Within,
+            MethodType.Spatial_Disjoint => global::Corax.Utils.Spatial.SpatialRelation.Disjoint,
+            MethodType.Spatial_Intersects => global::Corax.Utils.Spatial.SpatialRelation.Intersects,
+            MethodType.Spatial_Contains => global::Corax.Utils.Spatial.SpatialRelation.Contains,
+            _ => (global::Corax.Utils.Spatial.SpatialRelation)QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters)
         };
 
 
@@ -772,7 +772,7 @@ public static class CoraxQueryBuilder
                     : 0D;
 
                 sortArray[sortIndex++] = new OrderMetadata(field.Name, distanceFieldId, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
-                    spatialField.Units is SpatialUnits.Kilometers ? SpatialHelper.SpatialUnits.Kilometers : SpatialHelper.SpatialUnits.Miles);
+                    spatialField.Units is SpatialUnits.Kilometers ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers : global::Corax.Utils.Spatial.SpatialUnits.Miles);
                 continue;
             }
 
@@ -806,6 +806,8 @@ public static class CoraxQueryBuilder
         switch (orderMetadata.Length)
         {
             //Note: we want to use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
+            case 0:
+                return match;
             case 1:
             {
                 var order = orderMetadata[0];

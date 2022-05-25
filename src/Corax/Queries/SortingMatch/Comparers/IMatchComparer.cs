@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Corax.Utils;
+using Corax.Utils.Spatial;
 using Spatial4n.Core.Shapes;
 
 namespace Corax.Queries
@@ -31,7 +32,7 @@ namespace Corax.Queries
     {
         double Round { get; }
         
-        SpatialHelper.SpatialUnits Units { get; }
+        SpatialUnits Units { get; }
         
         IPoint Point { get; }
     }

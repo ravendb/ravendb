@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Corax.Utils;
+using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Spatial4n.Core.Context;
 using Spatial4n.Core.Shapes;
@@ -9,6 +9,7 @@ using Spatial4n.Core.Shapes.Impl;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Debugging;
+using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 
 namespace Corax.Queries;
 
@@ -24,7 +25,7 @@ public class SpatialMatch : IQueryMatch
     private TermMatch _currentMatch;
     private readonly ByteStringContext _allocator;
     private readonly int _fieldId;
-    private readonly SpatialHelper.SpatialRelation _spatialRelation;
+    private readonly Utils.Spatial.SpatialRelation _spatialRelation;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
     private Slice _startsWith;
@@ -32,20 +33,20 @@ public class SpatialMatch : IQueryMatch
 
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, string fieldName, IShape shape,
         CompactTree tree,
-        double errorInPercentage, int fieldId, SpatialHelper.SpatialRelation spatialRelation)
+        double errorInPercentage, int fieldId, Utils.Spatial.SpatialRelation spatialRelation)
     {
         _fieldId = fieldId;
         _indexSearcher = indexSearcher;
-        _spatialContext = spatialContext ?? throw new NullReferenceException("SpatialContext is null");
+        _spatialContext = spatialContext ?? throw new ArgumentNullException($"{nameof(spatialContext)} passed to {nameof(SpatialMatch)} is null.");
         _fieldName = fieldName;
-        _error = SpatialHelper.GetErrorFromPercentage(spatialContext, shape, errorInPercentage);
+        _error = SpatialUtils.GetErrorFromPercentage(spatialContext, shape, errorInPercentage);
         _shape = shape;
         _tree = tree;
         _allocator = allocator;
         _spatialRelation = spatialRelation;
-        _termGenerator = spatialRelation == SpatialHelper.SpatialRelation.Disjoint 
-            ? SpatialHelper.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
-            : SpatialHelper.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
+        _termGenerator = spatialRelation == Utils.Spatial.SpatialRelation.Disjoint 
+            ? SpatialUtils.GetGeohashesForQueriesOutsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator() 
+            : SpatialUtils.GetGeohashesForQueriesInsideShape(_indexSearcher, tree, allocator, spatialContext, shape).GetEnumerator();
         GoNextMatch();
         DebugStuff.RenderAndShow(tree);
     }
@@ -80,7 +81,7 @@ public class SpatialMatch : IQueryMatch
             {
                 if (GoNextMatch() == false)
                 {
-                    return currentIdx;
+                    break;
                 }
 
                 continue;
@@ -92,11 +93,12 @@ public class SpatialMatch : IQueryMatch
             }
             else if (read > 0)
             {
+                var slicedMatches = matches.Slice(currentIdx);
                 for (int i = 0; i < read; ++i)
                 {
-                    if (CheckEntryManually(matches[i]))
+                    if (CheckEntryManually(slicedMatches[i]))
                     {
-                        matches[currentIdx++] = matches[i];
+                        matches[currentIdx++] = slicedMatches[i];
                     }
                 }
             }
@@ -143,10 +145,10 @@ public class SpatialMatch : IQueryMatch
     
     public bool IsTrue(SpatialRelation answer) => answer switch
     {
-        SpatialRelation.WITHIN or SpatialRelation.CONTAINS => _spatialRelation is SpatialHelper.SpatialRelation.Within
-            or SpatialHelper.SpatialRelation.Contains,
-        SpatialRelation.DISJOINT => _spatialRelation is SpatialHelper.SpatialRelation.Disjoint,
-        SpatialRelation.INTERSECTS => _spatialRelation is SpatialHelper.SpatialRelation.Intersects,
+        SpatialRelation.WITHIN or SpatialRelation.CONTAINS => _spatialRelation is Utils.Spatial.SpatialRelation.Within
+            or Utils.Spatial.SpatialRelation.Contains,
+        SpatialRelation.DISJOINT => _spatialRelation is Utils.Spatial.SpatialRelation.Disjoint,
+        SpatialRelation.INTERSECTS => _spatialRelation is Utils.Spatial.SpatialRelation.Intersects,
         _ => throw new NotSupportedException()
     };
 

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
+using Corax.Utils.Spatial;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;
@@ -66,7 +67,7 @@ public unsafe ref partial struct IndexEntryWriter
     public void WriteNull(int field)
     {
         // Write known field.
-        _knownFieldsLocations[field] = _dataIndex | Constants.IndexWriter.KnownFieldMask;
+        _knownFieldsLocations[field] = _dataIndex | Constants.IndexWriter.IntKnownFieldMask;
         Unsafe.WriteUnaligned(ref _buffer[_dataIndex], IndexEntryFieldType.Null);
         _dataIndex += sizeof(IndexEntryFieldType);
     }
@@ -109,7 +110,7 @@ public unsafe ref partial struct IndexEntryWriter
 
         int dataLocation = _dataIndex;
         // Write known field.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
+        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Raw);
         dataLocation += sizeof(IndexEntryFieldType);
@@ -134,7 +135,7 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
+        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the tuple information. 
         Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.SpatialPoint);
@@ -157,7 +158,7 @@ public unsafe ref partial struct IndexEntryWriter
         _dataIndex = dataLocation + encodedGeohash.Length;
     }
 
-    public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries, int geohashLevel = SpatialHelper.DefaultGeohashLevel)
+    public void WriteSpatial(int field, ReadOnlySpan<CoraxSpatialPointEntry> entries, int geohashLevel = SpatialUtils.DefaultGeohashLevel)
     {
         //<type:byte><extended_type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
         //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
@@ -170,7 +171,7 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
+        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.SpatialPointList);
         dataLocation += sizeof(IndexEntryFieldType);
@@ -201,7 +202,7 @@ public unsafe ref partial struct IndexEntryWriter
         MemoryMarshal.Write(geohashPtrTableLocation, ref dataLocation);
         for (int i = 0; i < entries.Length; ++i)
         {
-            entries[i].GeohashAsBytes.CopyTo(_buffer[dataLocation..]);
+            Encodings.Utf8.GetBytes(entries[i].Geohash).CopyTo(_buffer[dataLocation..]);
             dataLocation += geohashLevel;
         }
 
@@ -216,7 +217,7 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
+        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the tuple information. 
         Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Tuple);
@@ -247,7 +248,7 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
+        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the list metadata information. 
         int indexEntryFieldLocation = dataLocation;
@@ -335,7 +336,7 @@ public unsafe ref partial struct IndexEntryWriter
         int dataLocation = _dataIndex;
 
         // Write known field pointer.
-        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.KnownFieldMask;
+        _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the list metadata information. 
         int indexEntryFieldLocation = dataLocation;
@@ -363,8 +364,7 @@ public unsafe ref partial struct IndexEntryWriter
             _dataIndex = dataLocation;
 
             // Signal that we will have to deal with the nulls.
-            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation],
-                Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.EmptyList);
+            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.EmptyList);
             return;
         }
 
@@ -504,9 +504,9 @@ public unsafe ref partial struct IndexEntryWriter
             {
                 location |= Unsafe.SizeOf<T>() switch
                 {
-                    sizeof(int) => Constants.IndexWriter.KnownFieldMask,
-                    sizeof(short) => 0x8000,
-                    sizeof(byte) => 0x80,
+                    sizeof(int) => Constants.IndexWriter.IntKnownFieldMask,
+                    sizeof(short) => Constants.IndexWriter.ShortKnownFieldMask,
+                    sizeof(byte) => Constants.IndexWriter.ByteKnownFieldMask,
                     _ => 0
                 };
             }

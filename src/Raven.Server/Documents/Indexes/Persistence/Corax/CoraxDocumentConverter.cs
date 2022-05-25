@@ -58,7 +58,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
                         value = StaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
                 }
 
                 InsertRegularField(indexField, value, indexContext, ref entryWriter, scope);

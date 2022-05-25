@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Corax.Queries;
 using Sparrow.Server;
 using Spatial4n.Core.Context;
 using Spatial4n.Core.Distance;
@@ -10,43 +11,74 @@ using Spatial4n.Core.Util;
 using Voron;
 using Voron.Data.CompactTrees;
 
-namespace Corax.Utils;
+namespace Corax.Utils.Spatial;
 
-public class SpatialHelper
+public class SpatialUtils
 {
-    //Source: https://github.com/apache/lucenenet/blob/master/src/Lucene.Net.Spatial/Query/SpatialArgs.cs
-    private static readonly char[] alphabet =
+    /// <summary>
+    ///Source: https://github.com/apache/lucenenet/blob/master/src/Lucene.Net.Spatial/Query/SpatialArgs.cs
+    /// </summary>
+    private static readonly char[] Alphabet =
     {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
     };
 
-    public const int DefaultGeohashLevel = 9;
-    private static readonly Dictionary<string, IRectangle> CachedFigures;
-    private const int CachePrefixLength = 4;
-    private const int Threshold = 2 << 10;
-    
-    public enum SpatialUnits
+    /// <summary>
+    ///Source: https://github.com/apache/lucenenet/blob/master/src/Lucene.Net.Spatial/Query/SpatialArgs.cs
+    /// </summary>
+    internal static double GetErrorFromPercentage(SpatialContext ctx, IShape shape, double percentage)
     {
-        Kilometers,
-        Miles
-    }
-    
-    public enum SpatialRelation
-    {
-        Within,
-        Contains,
-        Disjoint,
-        Intersects
+        if (percentage is < 0D or > 0.5D)
+            throw new InvalidDataException("Error must be in [0; 0.5] range.");
+
+
+        var boundingBox = shape.BoundingBox;
+        //Our shape is inside the bounding box so lets calculate diagonal length of it;
+        var diagonal = ctx.CalcDistance(ctx.MakePoint(boundingBox.MinX, boundingBox.MinY), boundingBox.MaxX, boundingBox.MaxY);
+        return Math.Abs(diagonal) * percentage;
     }
 
+
+    public const int DefaultGeohashLevel = 9;
+    private static readonly Dictionary<string, IRectangle> CachedFigures = new ();
+    private const int CachePrefixLength = 4;
+
+    /// <summary>
+    ///  Minimum amount of terms in specific area required to start compressing query into smaller ones.
+    /// </summary>
+    private const int Threshold = 2 << 10;
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static double GetRoundedValue(in double roundFactor, in double value)
+    internal static double GetGeoDistance<TComparer>(in (double lat, double lng) fieldCoordinates, in TComparer comparer)
+        where TComparer : ISpatialComparer
+    {
+        var distance = HaverstineDistanceInInternationalNauticalMiles(comparer.Point.Center.Y, comparer.Point.Center.X, fieldCoordinates.lat, fieldCoordinates.lng);
+        const double NumberOfMilesInNauticalMile = 1.1515;
+        const double NumberOfKilometersInNauticalMile = 1.852;
+
+        distance = comparer.Units switch
+        {
+            SpatialUnits.Miles => distance * NumberOfMilesInNauticalMile,
+            SpatialUnits.Kilometers => distance * NumberOfKilometersInNauticalMile,
+            _ => distance
+        };
+
+        if (comparer.Round <= 0)
+            return distance;
+        
+        return distance - distance % comparer.Round;
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private static double GetRoundedValue(in double roundFactor, double value)
     {
         return value - value % roundFactor;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    internal static double HaverstineDistanceInMiles(double lat1, double lng1, double lat2, double lng2)
+    internal static double HaverstineDistanceInInternationalNauticalMiles(double lat1, double lng1, double lat2, double lng2)
     {
         // from : https://www.geodatasource.com/developers/javascript
         if ((lat1 == lat2) && (lng1 == lng2))
@@ -65,48 +97,18 @@ public class SpatialHelper
             {
                 dist = 1;
             }
+
             dist = Math.Acos(dist);
             dist = dist * DistanceUtils.RADIANS_TO_DEGREES;
 
-            const double NumberOfMilesInNauticalMile = 1.1515;
             const double NauticalMilePerDegree = 60;
-            dist = dist * NauticalMilePerDegree * NumberOfMilesInNauticalMile;
-            return dist;
-        }
-    }
-    
-    static SpatialHelper()
-    {
-        CachedFigures = new();
-        Rec();
-
-        void Rec(int lvl = 1, string parent = "")
-        {
-            if (lvl > CachePrefixLength)
-                return;
-
-            foreach (var a in alphabet)
-            {
-                var current = parent + a;
-                CachedFigures.Add(current, GeohashUtils.DecodeBoundary(current, SpatialContext.GEO));
-                Rec(lvl + 1, current);
-            }
+            return dist * NauticalMilePerDegree;
         }
     }
 
-    internal static double GetErrorFromPercentage(SpatialContext ctx, IShape shape, double percentage)
-    {
-        if (percentage is < 0D or > 0.5D)
-            throw new InvalidDataException("Error must be in [0; 0.5] range.");
 
-
-        var boundingBox = shape.BoundingBox;
-        //Our shape is inside the bounding box so lets calculate diagonal length of it;
-        var diagonal = ctx.CalcDistance(ctx.MakePoint(boundingBox.MinX, boundingBox.MinY), boundingBox.MaxX, boundingBox.MaxY);
-        return Math.Abs(diagonal) * percentage;
-    }
-    
-    public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesOutsideShape(IndexSearcher searcher, CompactTree tree, ByteStringContext allocator,
+    public static IEnumerable<(string Geohash, bool IsTermMatch)> GetGeohashesForQueriesOutsideShape(IndexSearcher searcher, CompactTree tree,
+        ByteStringContext allocator,
         SpatialContext ctx,
         IShape shape, int currentPrecision = 0, string currentGeohash = "", int maxPrecision = DefaultGeohashLevel)
     {
@@ -116,7 +118,7 @@ public class SpatialHelper
         }
         else
         {
-            foreach (var character in alphabet)
+            foreach (var character in Alphabet)
             {
                 var geohashToCheck = currentGeohash + character;
                 if (CachedFigures.TryGetValue(geohashToCheck, out var boundary) == false)
@@ -136,7 +138,7 @@ public class SpatialHelper
                                 continue;
                             }
 
-                      
+
                             yield return (geohashToCheck, true);
                         }
 
@@ -150,14 +152,18 @@ public class SpatialHelper
                         {
                             var amount = searcher.TermAmount(tree, term);
                             if (amount == 0)
-                            { continue; }
+                            {
+                                continue;
+                            }
+
                             if (amount <= Threshold)
                             {
                                 yield return (geohashToCheck, false);
                             }
                             else
                             {
-                                var innerGeohashes = GetGeohashesForQueriesOutsideShape(searcher, tree, allocator, ctx, shape, currentPrecision + 1, geohashToCheck, maxPrecision);
+                                var innerGeohashes = GetGeohashesForQueriesOutsideShape(searcher, tree, allocator, ctx, shape, currentPrecision + 1, geohashToCheck,
+                                    maxPrecision);
 
                                 foreach (var geohash in innerGeohashes)
                                 {
@@ -199,7 +205,7 @@ public class SpatialHelper
         }
         else
         {
-            foreach (var character in alphabet)
+            foreach (var character in Alphabet)
             {
                 var geohashToCheck = currentGeohash + character;
                 if (CachedFigures.TryGetValue(geohashToCheck, out var boundary) == false)
@@ -219,15 +225,19 @@ public class SpatialHelper
                         {
                             var amount = searcher.TermAmount(tree, term);
                             if (amount == 0)
-                            {continue;}
+                            {
+                                continue;
+                            }
+
                             if (amount <= Threshold)
                             {
                                 yield return (geohashToCheck, false);
                             }
                             else
                             {
-                                var innerGeohashes = GetGeohashesForQueriesInsideShape(searcher, tree, allocator, ctx, shape, currentPrecision + 1, geohashToCheck, maxPrecision);
-                                
+                                var innerGeohashes = GetGeohashesForQueriesInsideShape(searcher, tree, allocator, ctx, shape, currentPrecision + 1, geohashToCheck,
+                                    maxPrecision);
+
                                 foreach (var geohash in innerGeohashes)
                                 {
                                     yield return geohash;
@@ -235,45 +245,10 @@ public class SpatialHelper
                             }
                         }
 
-                        break;
+                        continue;
                     default:
-                        break;
+                        continue;
                 }
-            }
-        }
-    }
-
-    public static void FulfillShape(SpatialContext ctx, IShape shape, List<string> termMatch, List<string> listNeedsToBeCheckedExactly, int currentPrecision = 0,
-        string currentGeohash = "", int maxPrecision = 9)
-    {
-        //Notice this is only prototype. We have to get rid off all of this strings allocation
-        if (currentPrecision > maxPrecision)
-        {
-            //This geohash to be check manually during querying.
-            listNeedsToBeCheckedExactly.Add(currentGeohash);
-            return;
-        }
-
-        foreach (var character in alphabet)
-        {
-            var geohashToCheck = currentGeohash + character;
-            if (CachedFigures.TryGetValue(geohashToCheck, out var boundary) == false)
-            {
-                boundary = GeohashUtils.DecodeBoundary(geohashToCheck, Spatial4n.Core.Context.SpatialContext.GEO);
-            }
-
-            switch (shape.Relate(boundary))
-            {
-                case Spatial4n.Core.Shapes.SpatialRelation.CONTAINS:
-                    //This is termmatch.
-                    termMatch.Add(geohashToCheck);
-                    break;
-                case Spatial4n.Core.Shapes.SpatialRelation.WITHIN:
-                case Spatial4n.Core.Shapes.SpatialRelation.INTERSECTS:
-                    FulfillShape(ctx, shape, termMatch, listNeedsToBeCheckedExactly, currentPrecision + 1, geohashToCheck, maxPrecision);
-                    continue;
-                default:
-                    continue;
             }
         }
     }
