@@ -1,15 +1,21 @@
 import { ComponentMeta } from "@storybook/react";
-import React from "react";
-import { DatabaseLocationSelector } from "./DatabaseLocationSelector";
+import React, { useState } from "react";
+import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
 
 export default {
-    title: "Database location selector",
-    component: DatabaseLocationSelector,
-} as ComponentMeta<typeof DatabaseLocationSelector>;
+    title: "Database location selector - multiple",
+    component: MultipleDatabaseLocationSelector,
+} as ComponentMeta<typeof MultipleDatabaseLocationSelector>;
 
 const Template = (args: { locations: databaseLocationSpecifier[] }) => {
+    const [locations, setLocations] = useState<databaseLocationSpecifier[]>([]);
+
     return (
-        <DatabaseLocationSelector locations={args.locations} selectedLocations={[]} setSelectedLocations={() => {}} />
+        <MultipleDatabaseLocationSelector
+            locations={args.locations}
+            selectedLocations={locations}
+            setSelectedLocations={setLocations}
+        />
     );
 };
 

@@ -3,7 +3,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dumpIndexCommand = require("commands/database/index/dumpIndexCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import database from "models/resources/database";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import { SingleDatabaseLocationSelector } from "../../../components/common/SingleDatabaseLocationSelector";
 
 class dumpDialog extends dialogViewModelBase {
     
@@ -11,11 +11,15 @@ class dumpDialog extends dialogViewModelBase {
 
     indexName = ko.observable<string>();
     
+    location = ko.observable<databaseLocationSpecifier>();
+    
     directoryPath = ko.observable<string>();
     directoryPathOptions = ko.observableArray<string>([]);
     directoryPathHasFocus = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
+
+    locationSelectorOptions: ReactInKnockout<typeof SingleDatabaseLocationSelector>;
     
     constructor(indexName: string, private db: database) {
         super();
@@ -33,15 +37,35 @@ class dumpDialog extends dialogViewModelBase {
         this.directoryPath.throttle(300).subscribe(newPathValue => {
             this.updateDirectoryPathOptions(newPathValue);
         });
+        
+        const locations = this.db.getLocations();
+        if (locations.length === 1) {
+            // when single node - auto select context
+            this.location(locations[0]);
+        }
+
+        this.locationSelectorOptions = ko.pureComputed(() => ({
+            component: SingleDatabaseLocationSelector,
+            props: {
+                locations,
+                selectedLocation: this.location(),
+                setSelectedLocation: l => this.location(l)
+            } as Parameters<typeof SingleDatabaseLocationSelector>[0]
+        }));
     }
 
     private initValidation(): void {
         this.directoryPath.extend({
             required: true
         });
+        
+        this.location.extend({
+            required: true
+        });
 
         this.validationGroup = ko.validatedObservable({
-            directoryPath: this.directoryPath
+            directoryPath: this.directoryPath,
+            location: this.location
         });
     }
 
@@ -68,8 +92,9 @@ class dumpDialog extends dialogViewModelBase {
             return;
         }
         
-        new dumpIndexCommand(this.indexName(), this.db, this.directoryPath(), this.db.getFirstLocation(clusterTopologyManager.default.localNodeTag()))
-            .execute();
+        new dumpIndexCommand(this.indexName(), this.db, this.directoryPath(), this.location())
+            .execute()
+            .done(() => this.close());
     }
 
     close() {

@@ -28,6 +28,17 @@
                         <span class="help-block" data-bind="validationMessage: directoryPath"></span>
                     </div>
                 </div>
+
+                <div class="form-group margin-top word-break" data-bind="visible: $root.db.getLocations().length > 1">
+                    <label class="control-label">Context<i class="required"></i></label>
+                    <div>
+                        <div data-bind="react: locationSelectorOptions">
+                        </div>
+                        <div data-bind="validationElement: location">
+                            <span class="help-block" data-bind="validationMessage: location"></span>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
         <div class="modal-footer">
