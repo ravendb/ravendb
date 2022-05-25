@@ -2,7 +2,6 @@ import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");

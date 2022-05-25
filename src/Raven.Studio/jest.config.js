@@ -16,10 +16,11 @@ module.exports = {
         "^.+\\.html?$": "html-loader-jest"
     },
     "setupFiles": [
-        "./scripts/setup_jest.js"
+        "./scripts/setup_jest.js",
     ],
     "setupFilesAfterEnv": [
-      "jest-extended"
+        "./scripts/setup_runtime.ts",
+        "jest-extended"
     ],
     moduleDirectories: [
         "node_modules",

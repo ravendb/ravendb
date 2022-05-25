@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
@@ -45,11 +44,10 @@ import rqlLanguageService = require("common/rqlLanguageService");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
-import shardedDatabase from "models/resources/shardedDatabase";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import { shardingTodo } from "common/developmentHelper";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import killQueryCommand from "commands/database/query/killQueryCommand";
+import getEssentialDatabaseStatsCommand from "commands/resources/getEssentialDatabaseStatsCommand";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -203,7 +201,7 @@ class query extends shardViewModelBase {
 
     savedQueries = ko.observableArray<storedQueryDto>();
 
-    indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
+    indexes = ko.observableArray<Raven.Client.Documents.Operations.EssentialIndexInformation>();
 
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
     lastCriteriaExecuted: queryCriteria = queryCriteria.empty();
@@ -280,7 +278,7 @@ class query extends shardViewModelBase {
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
 
     queriedIndex: KnockoutComputed<string>;
-    queriedIndexInfo = ko.observable<Raven.Client.Documents.Operations.IndexInformation>();
+    queriedIndexInfo = ko.observable<Raven.Client.Documents.Operations.EssentialIndexInformation>();
     
     queriedIndexLabel: KnockoutComputed<string>;
     queriedIndexDescription: KnockoutComputed<string>;
@@ -900,12 +898,9 @@ class query extends shardViewModelBase {
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
-        shardingTodo("Marcin");
-        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary fix! 
-        
-        return new getDatabaseStatsCommand(dbToUse)
+        return new getEssentialDatabaseStatsCommand(db)
             .execute()
-            .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
+            .done((results: Raven.Client.Documents.Operations.EssentialDatabaseStatistics) => {
                 this.indexes(results.Indexes);
             });
     }

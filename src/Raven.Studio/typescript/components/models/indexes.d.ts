@@ -1,5 +1,6 @@
 ﻿import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
+import { loadStatus } from "./common";
 
 export type IndexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
 
@@ -25,7 +26,7 @@ export interface IndexSharedInfo {
 
 export interface IndexNodeInfo {
     location: databaseLocationSpecifier;
-    status: "notLoaded" | "loading" | "loaded" | "error";
+    status: loadStatus;
     details: IndexNodeInfoDetails;
     progress: IndexProgressInfo;
 }

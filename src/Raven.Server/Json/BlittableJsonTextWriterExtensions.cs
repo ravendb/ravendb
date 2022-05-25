@@ -957,6 +957,7 @@ namespace Raven.Server.Json
         private static void WriteDatabaseStatisticsInternal(AbstractBlittableJsonTextWriter writer, DatabaseStatistics statistics)
         {
             WriteEssentialDatabaseStatisticsInternal(writer, statistics);
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
@@ -1031,7 +1032,6 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.TempBuffersSizeOnDisk.SizeInBytes);
 
             writer.WriteEndObject();
-            writer.WriteComma();
         }
 
         private static void WriteEssentialDatabaseStatisticsInternal<TIndexInformation>(AbstractBlittableJsonTextWriter writer, AbstractDatabaseStatistics<TIndexInformation> statistics)
@@ -1119,6 +1119,8 @@ namespace Raven.Server.Json
                 else
                     w.WriteNull();
 
+                w.WriteComma();
+                
                 WriteBasicIndexInformationInternal(w, index as TIndexInformation);
 
                 w.WriteEndObject();
@@ -1173,7 +1175,6 @@ namespace Raven.Server.Json
 
                 w.WritePropertyName(nameof(index.SourceType));
                 w.WriteString(index.SourceType.ToString());
-                w.WriteComma();
             }
         }
 
