@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         private void AssertCanExecute(string backupName, BackupConfiguration backupConfiguration)
         {
-            PeriodicBackupRunner.CheckServerHealthBeforeBackup(ServerStore, backupName);
+            BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
             ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
             BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
             BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
