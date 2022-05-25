@@ -911,3 +911,10 @@ type databaseLocationSpecifier = {
 interface PopoverUtilsOptions extends PopoverOptions {
     rounded?: boolean;
 }
+
+interface ReactInKnockoutOptions<T> {
+    component: T;
+    props?: Parameters<typeof T>[0];
+}
+
+type ReactInKnockout<T> = KnockoutComputed<ReactInKnockoutOptions<T>>;

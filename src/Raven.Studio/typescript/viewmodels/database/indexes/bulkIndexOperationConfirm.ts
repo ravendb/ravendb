@@ -1,6 +1,6 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 import { IndexSharedInfo } from "../../../components/models/indexes";
-import { DatabaseLocationSelector } from "../../../components/common/DatabaseLocationSelector";
+import { MultipleDatabaseLocationSelector } from "../../../components/common/MultipleDatabaseLocationSelector";
 
 interface bulkIndexOperationConfirmResult extends confirmDialogResult {
     locations: databaseLocationSpecifier[];
@@ -17,13 +17,13 @@ class bulkIndexOperationConfirm extends confirmViewModelBase<bulkIndexOperationC
     title: string;
     subTitleHtml: string;
     
-    locationSelectorOptions = ko.pureComputed(() => ({
-        component: DatabaseLocationSelector,
+    locationSelectorOptions: ReactInKnockout<typeof MultipleDatabaseLocationSelector> = ko.pureComputed(() => ({
+        component: MultipleDatabaseLocationSelector,
         props: {
             locations: this.locations,
             selectedLocations: this.selectedLocations(),
             setSelectedLocations: l => this.selectedLocations(l)
-        } as Parameters<typeof DatabaseLocationSelector>[0]
+        } as Parameters<typeof MultipleDatabaseLocationSelector>[0]
     }))
 
     protected prepareResponse(can: boolean): bulkIndexOperationConfirmResult {

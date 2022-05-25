@@ -16,7 +16,7 @@ export class indexes extends shardViewModelBase {
         }
     }
 
-    reactOptions = ko.pureComputed(() => ({
+    reactOptions: ReactInKnockout<typeof IndexesPage> = ko.pureComputed(() => ({
         component: IndexesPage,
         props: this.props
     }));

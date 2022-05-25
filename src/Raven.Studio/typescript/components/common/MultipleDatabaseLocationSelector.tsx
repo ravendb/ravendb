@@ -1,13 +1,13 @@
 ﻿import React, { useState } from "react";
 import genUtils from "common/generalUtils";
 
-interface DatabaseLocationSelectorProps {
+interface MultipleDatabaseLocationSelectorProps {
     locations: databaseLocationSpecifier[];
     selectedLocations: databaseLocationSpecifier[];
     setSelectedLocations: (locations: databaseLocationSpecifier[]) => void;
 }
 
-export function DatabaseLocationSelector(props: DatabaseLocationSelectorProps) {
+export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocationSelectorProps) {
     const { locations, selectedLocations, setSelectedLocations } = props;
 
     const [uniqId] = useState(() => _.uniqueId("location-selector-"));
