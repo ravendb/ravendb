@@ -2,10 +2,12 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
@@ -24,7 +26,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
 
     protected abstract IDisposable AllocateContextForAsyncOperation(out TOperationContext asyncOperationContext);
 
-    protected abstract ValueTask ExecuteOperationAsync(TOperationContext asyncOperationContext, IndexQueryServerSide query, long operationId, QueryOperationOptions options);
+    protected abstract void ScheduleOperation(TOperationContext asyncOperationContext, IDisposable returnAsyncOperationContext, IndexQueryServerSide query, long operationId, QueryOperationOptions options);
 
     public override async ValueTask ExecuteAsync()
     {
@@ -34,13 +36,18 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
             var options = GetQueryOperationOptions();
 
-            var returnContext = AllocateContextForAsyncOperation(out var asyncOperationContext);
+            var returnContext = AllocateContextForAsyncOperation(out var asyncOperationContext); // we don't dispose this as operation is async
 
             try
             {
                 var query = await GetIndexQueryAsync(asyncOperationContext, OperationMethod, tracker, addSpatialProperties: false);
 
-                await ExecuteOperationAsync(asyncOperationContext, query, operationId, options);
+                query.DisableAutoIndexCreation = RequestHandler.GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    RequestHandler.TrafficWatchQuery(query);
+
+                ScheduleOperation(asyncOperationContext, returnContext, query, operationId, options);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
@@ -63,6 +70,21 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
             MaxOpsPerSecond = RequestHandler.GetIntValueQueryString("maxOpsPerSec", required: false),
             StaleTimeout = RequestHandler.GetTimeSpanQueryString("staleTimeout", required: false),
             RetrieveDetails = RequestHandler.GetBoolValueQueryString("details", required: false) ?? false
+        };
+    }
+
+    protected static string GetOperationDescription(IndexQueryServerSide query)
+    {
+        return query.Metadata.IsDynamic
+            ? (query.Metadata.IsCollectionQuery ? "collection/" : "dynamic/") + query.Metadata.CollectionName
+            : query.Metadata.IndexName;
+    }
+
+    protected static BulkOperationResult.OperationDetails GetDetailedDescription(IndexQueryServerSide query)
+    {
+        return new BulkOperationResult.OperationDetails
+        {
+            Query = query.Query
         };
     }
 }

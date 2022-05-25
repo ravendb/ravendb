@@ -76,19 +76,21 @@ namespace Raven.Client.Documents.Operations
 
         public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new DeleteByQueryCommand(conventions, _queryToDelete, _options);
+            return new DeleteByQueryCommand<Parameters>(conventions, _queryToDelete, _options);
         }
 
-        private class DeleteByQueryCommand : RavenCommand<OperationIdResult>
+        internal class DeleteByQueryCommand<T> : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
-            private readonly IndexQuery _queryToDelete;
+            private readonly IndexQuery<T> _queryToDelete;
+            private readonly long? _operationId;
             private readonly QueryOperationOptions _options;
 
-            public DeleteByQueryCommand(DocumentConventions conventions, IndexQuery queryToDelete, QueryOperationOptions options = null)
+            public DeleteByQueryCommand(DocumentConventions conventions, IndexQuery<T> queryToDelete, QueryOperationOptions options = null, long? operationId = null)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _queryToDelete = queryToDelete ?? throw new ArgumentNullException(nameof(queryToDelete));
+                _operationId = operationId;
                 _options = options ?? new QueryOperationOptions();
             }
 
@@ -110,6 +112,13 @@ namespace Raven.Client.Documents.Operations
                     path
                         .Append("&staleTimeout=")
                         .Append(_options.StaleTimeout.Value);
+                }
+
+                if (_operationId.HasValue)
+                {
+                    path
+                        .Append("&operationId=")
+                        .Append(_operationId.Value);
                 }
 
                 var request = new HttpRequestMessage

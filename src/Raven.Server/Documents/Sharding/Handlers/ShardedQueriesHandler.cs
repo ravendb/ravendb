@@ -38,6 +38,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/queries", "DELETE")]
+        public async Task Delete()
+        {
+            using (var processor = new ShardedQueriesHandlerProcessorForDelete(this))
+                await processor.ExecuteAsync();
+        }
+
         public async Task HandleQuery(HttpMethod httpMethod)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Wrap this in a Processor");

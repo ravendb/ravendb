@@ -2,6 +2,7 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanSendOperationsWithSettingExplicitDbName()
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSendOperationsWithSettingExplicitDbName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var other = new DocumentStore
             {
                 Urls = store.Urls,
@@ -27,10 +29,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanSendOperationsWithSettingExplicitDbName2()
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSendOperationsWithSettingExplicitDbName2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var other = new DocumentStore
             {
                 Urls = store.Urls,

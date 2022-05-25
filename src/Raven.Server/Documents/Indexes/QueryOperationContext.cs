@@ -116,11 +116,6 @@ namespace Raven.Server.Documents.Indexes
             return new QueryOperationContext(database, needsServerContext);
         }
 
-        public static QueryOperationContext Allocate(DocumentDatabase database, DocumentsOperationContext documentsContext, bool releaseDocumentsContext, bool needsServerContext = false)
-        {
-            return new QueryOperationContext(database, documentsContext, releaseDocumentsContext: releaseDocumentsContext, needsServerContext);
-        }
-
         public static QueryOperationContext Allocate(DocumentDatabase database, Index index)
         {
             var queryContext = Allocate(database);

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,10 +50,11 @@ public class RavenDB_17807 : RavenTestBase
         }
     }
 
-    [Fact]
-    public async Task CanDeleteByQueryOnIndexQueryWithInClause()
+    [RavenTheory(RavenTestCategory.Patching)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanDeleteByQueryOnIndexQueryWithInClause(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             store.Maintenance.Send(
                 new PutIndexesOperation(new[] { new IndexDefinition { Maps = { "from doc in docs.Items select new { doc.Name }" }, Name = "MyIndex" } }));

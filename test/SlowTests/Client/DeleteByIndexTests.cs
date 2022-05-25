@@ -6,6 +6,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +19,11 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
-        public void Delete_By_Index()
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Delete_By_Index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -46,9 +49,15 @@ namespace SlowTests.Client
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
-                var databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
+                var tester = store.Maintenance.ForTesting(() => new GetStatisticsOperation());
 
-                Assert.Equal(1, databaseStatistics.CountOfDocuments);
+                tester.AssertAll((_, s) =>
+                {
+                    if (options.DatabaseMode == RavenDatabaseMode.Single)
+                        Assert.Equal(1, s.CountOfDocuments);
+                    else
+                        Assert.True(s.CountOfDocuments <= 1, "s.CountOfDocuments <= 1");
+                });
             }
         }
 
