@@ -7,7 +7,6 @@ import columnsSelector = require("viewmodels/partial/columnsSelector");
 import documentObject = require("models/database/documents/document");
 import router = require("plugins/router");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
 import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");

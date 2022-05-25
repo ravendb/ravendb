@@ -3,13 +3,11 @@ import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import endpoints = require("endpoints");
 import genUtils from "common/generalUtils";
-import { shardingTodo } from "common/developmentHelper";
 
 class getDatabaseStatsCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier = null) {
+    constructor(private db: database, private location: databaseLocationSpecifier) {
         super();
-        shardingTodo("Danielle"); // TODO - handle the location param, calling methods should pass either a known location or the 'getFirstLocation' info
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {

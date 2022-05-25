@@ -205,6 +205,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));
+            scripter.AddType(typeof(EssentialDatabaseStatistics));
+            
 
             // database settings
             scripter.AddType(typeof(SettingsResult));

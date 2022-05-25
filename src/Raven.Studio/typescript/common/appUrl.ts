@@ -625,6 +625,10 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats";
     }
 
+    static forEssentialStatsRawData(db: database | databaseInfo): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats/essential";
+    }
+
     static forIndexesRawData(db: database | databaseInfo): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
