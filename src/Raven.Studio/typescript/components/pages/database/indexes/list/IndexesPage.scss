@@ -3,13 +3,28 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
+.popover {
+    &.rounded {
+        background-color: transparent;
+        border: none;
+        border-radius: sizes.$gutter-xs;
+        box-shadow: 0 2px 10px 2px colors.$black;
+        padding: 0;
+
+        .popover-content {
+            border-radius: sizes.$gutter-xs;
+            padding: 0;
+            overflow: hidden;
+        }
+    }
+}
+
 .index-tooltip {
     background-color: colors.$gray-700;
     border-radius: sizes.$gutter-xs;
     display: grid;
     grid-template-columns: auto auto;
-    z-index: 1000;
-    box-shadow: 0 2px 10px 2px colors.$black;
+    z-index: 1000;    
     
     .index-location {
         display: flex;
@@ -248,9 +263,35 @@
 
                 .index-detail-item {
                     padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+                    display: flex;
+                    align-items: center;
 
-                    i {
+                    & > i {
                         margin-right: sizes.$gutter-xxs;
+                    }
+
+                    .value {
+                        margin-left: sizes.$gutter-xxs;
+                        font-weight: bold;
+                        color: colors.$white;
+                    }
+
+                    .state {
+                        display: flex;
+                        align-items: center;
+                        flex-direction: row;
+                        padding: 0;
+
+                        .state-desc {
+                            margin-bottom: 0;
+                        }
+
+                        .state-indicator {
+                            margin-right: sizes.$gutter-xs;
+                            order: -1;
+                            margin-top: -7px;
+                            margin-bottom: -7px;
+                        }
                     }
                 }
             }
@@ -259,7 +300,7 @@
                 padding: sizes.$gutter-sm;
                 padding-left: sizes.$gutter-md;
                 display: grid;
-                grid-template-columns: 100px repeat(auto-fill, minmax(120px, max-content));
+                grid-template-columns: 100px repeat(auto-fill, minmax(130px, max-content));
                 margin: sizes.$gutter-xs/-2;
 
 
@@ -323,7 +364,8 @@
                     transition: background-color .2s;
 
                     & > div {
-                        padding: 0 sizes.$gutter-xs;
+                        padding-left: sizes.$gutter-xs;
+                        padding-right: sizes.$gutter-xs;
                         line-height: 1em;
                         transition: opacity .2s ease-in;
                     }
@@ -346,7 +388,7 @@
                         }
                     }
 
-                    
+
 
                     @keyframes loadingAnimation {
                         0% {
