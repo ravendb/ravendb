@@ -14,7 +14,6 @@ namespace SlowTests.Monitoring
         [Fact]
         public async Task DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
-            var start = Stopwatch.StartNew();
             var currentDirectory = Directory.GetCurrentDirectory();
             var diskStatsGetter = new DiskStatsGetter(TimeSpan.FromMilliseconds(100));
 
@@ -30,26 +29,27 @@ namespace SlowTests.Monitoring
             baseTime /= controlGroupCount;
 
             var errorCount = 0;
-            var tasks = Enumerable.Range(0, 100).Select(i =>
+            const int taskCount = 100;
+            const int iterationsCount = 100;
+
+            var tasks = Enumerable.Range(0, taskCount).Select(i =>
                 Task.Run(async () =>
                 {
-                    var count = 0;
-                    while(start.Elapsed < TimeSpan.FromSeconds(5))
+                    var stop = Stopwatch.StartNew();
+
+                    for (int j = 0; j < iterationsCount; j++)
                     {
-                        var stop = Stopwatch.StartNew();
+                        stop.Restart();
                         _ = await diskStatsGetter.GetAsync(currentDirectory);
                         var stopElapsed = stop.Elapsed;
                         if(10 * baseTime < stopElapsed)
                             Interlocked.Increment(ref errorCount);
-                        count++;
                     }
-                    return count;
                 })).ToArray();
 
             await Task.WhenAll(tasks);
-            var total = tasks.Sum(t => t.Result);
-            var α = (double)errorCount / total;
-            Assert.True(α < 0.01, $"baseTime:{baseTime} errorCount:{errorCount} total:{total} α:{α}");
+            var α = (double)errorCount / taskCount * iterationsCount;
+            Assert.True(α < 0.01, $"baseTime:{baseTime} errorCount:{errorCount} total:{taskCount * iterationsCount} α:{α}");
         }
     }
 }

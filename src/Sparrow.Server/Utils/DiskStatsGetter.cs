@@ -40,7 +40,7 @@ namespace Sparrow.Server.Utils
             {
                 if (_previousInfo.TryGetValue(drive, out var prevTask) == false)
                 {
-                    state = new State {Drive = drive};
+                    state ??= new State {Drive = drive};
                     var task = new Task<PrevInfo>(GetStats, state);
                     if (_previousInfo.TryAdd(drive, task) == false)
                         continue;
