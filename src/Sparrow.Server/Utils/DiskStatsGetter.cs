@@ -110,18 +110,27 @@ namespace Sparrow.Server.Utils
 
         private DiskStatsRawResult GetDiskInfo(string path)
         {
-            // https://github.com/whotwagner/statx-fun/blob/master/statx.h
-            if (Syscall.statx(0, path, 0, 0x00000fffU, out var buf) != 0)
+            try
+            {
+                // https://github.com/whotwagner/statx-fun/blob/master/statx.h
+                if (Syscall.statx(0, path, 0, 0x00000fffU, out var buf) != 0)
+                {
+                    if(Logger.IsInfoEnabled)
+                        Logger.Info($"Could not get statx of {path} - {Marshal.GetLastWin32Error()}");
+                    return null;
+                }
+
+                var statPath = $"/sys/dev/block/{buf.stx_dev_major}:{buf.stx_dev_minor}/stat";
+                using var reader = File.OpenRead(statPath);
+            
+                return ReadParse(reader);
+            }
+            catch (Exception e)
             {
                 if(Logger.IsInfoEnabled)
-                    Logger.Info($"Could not get statx of {path} - {Marshal.GetLastWin32Error()}");
+                    Logger.Info($"Could not get GetDiskInfo of {path}", e);
                 return null;
             }
-
-            var statPath = $"/sys/dev/block/{buf.stx_dev_major}:{buf.stx_dev_minor}/stat";
-            using var reader = File.OpenRead(statPath);
-            
-            return ReadParse(reader);
         }
 
         private static DiskStatsRawResult ReadParse(FileStream buffer)
