@@ -8,13 +8,6 @@ using Raven.Server.Documents.Sharding.Handlers;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    public interface IShardedBackupOperation : IShardedOperation
-    {
-        public long OperationId { get; }
-
-        Task WaitForBackupToCompleteOnAllShards();
-    }
-
     public class ShardedBackupOperationBase
     {
         public long OperationId { get; }

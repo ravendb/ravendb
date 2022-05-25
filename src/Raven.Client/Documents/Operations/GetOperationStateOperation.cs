@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -119,34 +119,10 @@ namespace Raven.Client.Documents.Operations
 
             internal static void CombineBackupResults(BackupResult finalResult, BackupResult backupResult)
             {
-
                 CombineSmugglerResults(finalResult, backupResult);
 
-/*
-                public Counts SnapshotBackup { get; set; }
-
-                public UploadToS3 S3Backup { get; set; }
-
-                public UploadToAzure AzureBackup { get; set; }
-
-                public UploadToGoogleCloud GoogleCloudBackup { get; set; }
-
-                public UploadToGlacier GlacierBackup { get; set; }
-
-                public UploadToFtp FtpBackup { get; set; }
-
-                public LocalBackup LocalBackup { get; set; }
-*/
-
-
-
-                finalResult.SnapshotBackup.ReadCount += backupResult.SnapshotBackup.ReadCount;
-                finalResult.SnapshotBackup.ErroredCount += backupResult.SnapshotBackup.ErroredCount;
-
-                finalResult.S3Backup.UploadProgress.UploadedInBytes += backupResult.S3Backup.UploadProgress.UploadedInBytes;
-                //finalResult.SnapshotBackup.ErroredCount += backupResult.SnapshotBackup.ErroredCount;
-
-
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
+                    "need to combine all other BackupResult properties, e.g. LocalBackup, S3Backup, etc.");
             }
         }
     }

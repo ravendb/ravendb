@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    public class ShardedBackupNowOperation : ShardedBackupOperationBase, IShardedBackupOperation
+    public class ShardedBackupNowOperation : ShardedBackupOperationBase, IShardedOperation
     {
         public ShardedBackupNowOperation(ShardedDatabaseRequestHandler handler) : base(handler)
         {

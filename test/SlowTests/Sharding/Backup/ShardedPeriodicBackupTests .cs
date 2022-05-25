@@ -356,21 +356,6 @@ namespace SlowTests.Sharding.Backup
 
                     await AssertDocs(store2, idPrefix, options.DatabaseMode);
                 }
-
-                /*var client = store.GetRequestExecutor().HttpClient;
-                var response = await client.GetAsync(store.Urls.First() + $"/databases?name={store.Database}");
-                string result2 = response.Content.ReadAsStringAsync().Result;
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                {
-                    using var bjro = ctx.Sync.ReadForMemory(result2, "test");
-                    var databaseInfo = JsonDeserializationServer.DatabaseInfo(bjro);
-                    Assert.NotNull(databaseInfo);
-                    Assert.Equal(BackupTaskType.OneTime, databaseInfo.BackupInfo.BackupTaskType);
-                    Assert.Equal(1, databaseInfo.BackupInfo.Destinations.Count);
-                    Assert.Equal(nameof(BackupConfiguration.BackupDestination.Local), databaseInfo.BackupInfo.Destinations.First());
-                    Assert.NotNull(databaseInfo.BackupInfo.LastBackup);
-                    Assert.Equal(0, databaseInfo.BackupInfo.IntervalUntilNextBackupInSec);
-                }*/
             }
         }
 

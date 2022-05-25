@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    public class ShardedBackupOnceOperation : ShardedBackupOperationBase, IShardedBackupOperation
+    public class ShardedBackupOnceOperation : ShardedBackupOperationBase, IShardedOperation
     {
         private readonly BackupConfiguration _configuration;
 
