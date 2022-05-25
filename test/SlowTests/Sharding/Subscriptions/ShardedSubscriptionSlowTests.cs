@@ -659,14 +659,14 @@ namespace SlowTests.Sharding.Subscriptions
                             if (item.Id == "user/6")
                             {
                                 amre2.Set();
-                                await amre.WaitAsync();
+                                await amre.WaitAsync(_reasonableWaitTime);
                             }
                             
                             con1Docs.Add(item.Id);
                         }
                     });
 
-                    await amre2.WaitAsync();
+                    await amre2.WaitAsync(_reasonableWaitTime);
                     await AssertWaitForTrueAsync(async () =>
                     {
                         var batches = await store.Maintenance.SendAsync(new GetSubscriptionBatchesStateOperation(subscription.SubscriptionName));

@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Commands
 
             if (string.IsNullOrEmpty(_workerId) == false)
             {
-                path.Append("&workerId=").Append(_workerId);
+                path.Append("&workerId=").Append(Uri.EscapeDataString(_workerId));
             }
 
             url = path.ToString();

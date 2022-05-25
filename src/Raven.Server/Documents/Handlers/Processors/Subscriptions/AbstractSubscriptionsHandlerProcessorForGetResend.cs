@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         return;
                     }
                     
-                    resendItems = SubscriptionStorage.GetResendItems(context, RequestHandler.DatabaseName, subscriptionState.SubscriptionId).ToList();
+                    resendItems = SubscriptionStorage.GetResendItems(context, RequestHandler.DatabaseName, subscriptionState.SubscriptionId);
                     activeBatches = GetActiveBatches(context, subscriptionState);
 
                     if (activeBatches == null)
@@ -53,9 +53,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return;
                     }
-                }
 
-                await WriteSubscriptionBatchesStateAsync(context, resendItems, activeBatches);
+                    await WriteSubscriptionBatchesStateAsync(context, resendItems, activeBatches);
+                }
             }
         }
 
