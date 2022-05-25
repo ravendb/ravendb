@@ -552,7 +552,7 @@ function InlineDetails(props: InlineDetailsProps) {
             <div className="index-detail-item">
                 <i className="icon-list" />
                 Entries
-                {nodeInfo.details.entriesCount.toLocaleString()}
+                <div className="value">{nodeInfo.details.entriesCount.toLocaleString()}</div>
             </div>
             <div
                 className={classNames("index-detail-item", {
@@ -561,9 +561,9 @@ function InlineDetails(props: InlineDetailsProps) {
             >
                 <i className="icon-warning" />
                 Errors
-                {nodeInfo.details.errorCount.toLocaleString()}
+                <div className="value">{nodeInfo.details.errorCount.toLocaleString()}</div>
             </div>
-            <div id={indexId}>
+            <div className="index-detail-item" id={indexId}>
                 <IndexState nodeInfo={nodeInfo} />
             </div>
             <IndexProgressTooltip
