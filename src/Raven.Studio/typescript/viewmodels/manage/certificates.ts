@@ -24,6 +24,10 @@ import fileImporter = require("common/fileImporter");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
+type certificatesSortMode = "default" |
+                            "byNameAsc"  | "byExpirationAsc"  | "byValidFromAsc" |
+                            "byNameDesc" | "byExpirationDesc" | "byValidFromDesc";
+
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
     expirationText: string;
@@ -97,6 +101,7 @@ class certificates extends viewModelBase {
     filterAndSortDescription: KnockoutComputed<string>;
     sortCriteria = ko.observable<string>();
     noCertificateIsVisible: KnockoutComputed<boolean>;
+    currentSortMode = ko.observable<certificatesSortMode>("default");
 
     deleteExistingCertificate = ko.observable<boolean>(false);
     
@@ -106,7 +111,7 @@ class certificates extends viewModelBase {
         this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterRegenerateCertificateMode",
             "deletePermission", "fileSelected", "copyThumbprint",
             "deleteCertificateConfirm", "renewServerCertificate", "canBeAutomaticallyRenewed",
-            "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters",
+            "sortCertificates", "clearAllFilters",
             "addPermission","addPermissionWithBlink","addDatabase","addDatabaseWithBlink");
         
         this.initObservables();
@@ -568,6 +573,7 @@ class certificates extends viewModelBase {
                 
                 this.wellKnownAdminCerts(certificatesInfo.WellKnownAdminCerts || []);
                 this.filterCertificates();
+                this.sortCertificates(this.currentSortMode());
             });
     }
     
@@ -723,13 +729,41 @@ class certificates extends viewModelBase {
         return orderedCertificates
     }
     
-    sortByName(mode: string): void {
+    sortCertificates(mode: certificatesSortMode) {
+        this.currentSortMode(mode);
+        
+        switch (mode) {
+            case "byNameAsc":
+                this.sortByName("asc");
+                break;
+            case "byNameDesc":
+                this.sortByName("desc");
+                break;
+            case "byExpirationAsc":
+                this.sortByExpiration("asc");
+                break;
+            case "byExpirationDesc":
+                this.sortByName("desc");
+                break;
+            case "byValidFromAsc":
+                this.sortByValidFrom("asc");
+                break;
+            case "byValidFromDesc":
+                this.sortByValidFrom("desc");
+                break;
+            case "default":
+                this.sortByDefault();
+                break;
+        }
+    }
+
+    private sortByName(mode: sortMode): void {
         this.sortCriteria(`Name - ${this.getModeText(mode)}`);
         this.certificates.sort((a, b) =>
             generalUtils.sortAlphaNumeric(a.Name.toLocaleLowerCase(), b.Name.toLocaleLowerCase(), mode as sortMode));
     }
 
-    sortByExpiration(mode: string): void {
+    private sortByExpiration(mode: sortMode): void {
         this.sortCriteria(`Expiration Date - ${this.getModeText(mode)}`);
         
         this.certificates.sort((a, b) =>
@@ -739,7 +773,7 @@ class certificates extends viewModelBase {
         });
     }
 
-    sortByValidFrom(mode: string): void {
+    private sortByValidFrom(mode: sortMode): void {
         this.sortCriteria(`Valid-From Date - ${this.getModeText(mode)}`);
 
         this.certificates.sort((a, b) =>
