@@ -158,11 +158,15 @@
     <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.110" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.7.5" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.11.0" />    
+    <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.2.0" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.2.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.1.1" />
     <PackageReference Include="CsvHelper" Version="27.2.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2022.1.0">
+    <PackageReference Include="EasyNetQ" Version="6.4.1" />
+    <PackageReference Include="JetBrains.Annotations" Version="2021.3.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.30-ravendb" />

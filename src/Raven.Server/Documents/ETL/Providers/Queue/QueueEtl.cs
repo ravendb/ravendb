@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Amqp;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Amqp;
 using CloudNative.CloudEvents.Extensions;
 using CloudNative.CloudEvents.Kafka;
 using Confluent.Kafka;
+using EasyNetQ;
 using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
@@ -34,9 +36,10 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
     private const string DefaultCloudEventId = "cloud-event-id";
     private const string DefaultType = "ravendb.etl.put";
-    private const string DefaultSource = "https://ravendb.net/";
+    
     public const string QueueEtlTag = "Queue ETL";
-    public string TransactionalId => $"{Database.DbId}-{Name}";
+    private string TransactionalId => $"{Database.DbId}-{Name}";
+    private string DefaultSource => $"{Database.Configuration.Core.ServerUrls.First()}-{Database.DbId}-{Name}";
     public override EtlType EtlType => EtlType.Queue;
     public override bool ShouldTrackCounters() => false;
     public override bool ShouldTrackTimeSeries() => false;
@@ -125,16 +128,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
                 foreach (var insertItem in queueItem.Inserts)
                 {
-                    var eventMessage = new CloudEvent
-                    {
-                        Id = DefaultCloudEventId,
-                        DataContentType = "application/json",
-                        Type = string.IsNullOrWhiteSpace(queueItem.Type) ? DefaultType : queueItem.Type,
-                        Source = new Uri(string.IsNullOrWhiteSpace(queueItem.Source) ? DefaultSource : queueItem.Source),
-                        Data = insertItem.TransformationResult
-                    };
-
-                    eventMessage.SetPartitionKey(insertItem.ChangeVector);
+                    CloudEvent eventMessage = CreateEventMessage(insertItem, queueItem);
 
                     events.Add(new KafkaMessageEvent
                     {
@@ -147,7 +141,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
             if (_kafkaProducer == null)
             {
-                _kafkaProducer = QueueHelper.CreateKafkaClient(Configuration.Connection, TransactionalId,
+                _kafkaProducer = QueueHelper.CreateKafkaClient(Configuration.Connection, TransactionalId, Logger,
                     Database.ServerStore.Server.Certificate.Certificate);
                 _kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
             }
@@ -165,9 +159,10 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
                 }
             }
 
+            _kafkaProducer.BeginTransaction();
+            
             try
             {
-                _kafkaProducer.BeginTransaction();
                 foreach (var @event in events)
                 {
                     _kafkaProducer.Produce(@event.Topic, @event.Message, ReportHandler);
@@ -177,7 +172,15 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
             }
             catch (Exception ex)
             {
-                if (ex is KafkaException) _kafkaProducer.AbortTransaction();
+                try
+                {
+                    _kafkaProducer.AbortTransaction();
+                }
+                catch (Exception e)
+                {
+                    Logger.Info("Aborting kafka transaction failed.", e);
+                }
+                
                 throw new QueueLoadException(ex.Message, ex);
             }
         }
@@ -199,16 +202,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
                 foreach (var insertItem in queueItem.Inserts)
                 {
-                    var eventMessage = new CloudEvent
-                    {
-                        Id = DefaultCloudEventId,
-                        DataContentType = "application/json",
-                        Type = string.IsNullOrWhiteSpace(queueItem.Type) ? DefaultType : queueItem.Type,
-                        Source = new Uri(string.IsNullOrWhiteSpace(queueItem.Source) ? DefaultSource : queueItem.Source),
-                        Data = insertItem.TransformationResult
-                    };
-
-                    eventMessage.SetPartitionKey(insertItem.ChangeVector);
+                    CloudEvent eventMessage = CreateEventMessage(insertItem, queueItem);
 
                     events.Add(new RabbitMqMessageEvent
                     {
@@ -227,12 +221,28 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
             foreach (var @event in events)
             {
-                _rabbitMqProducer.QueueDeclare(@event.Topic, durable: false, exclusive: false, autoDelete: false, arguments: null);
-                _rabbitMqProducer.BasicPublish("", "test", null, @event.Message.Encode().Buffer);
+                //loadToOrders
+                //_rabbitMqProducer.QueueDeclare(@event.Topic, durable: false, exclusive: false, autoDelete: false, arguments: null);
+                _rabbitMqProducer.BasicPublish("Test-topic", "", null, @event.Message.Encode().Buffer);
             }
         }
 
         return count;
+    }
+
+    private CloudEvent CreateEventMessage(QueueItem insertItem, QueueWithEvents queueItem)
+    {
+        var eventMessage = new CloudEvent
+        {
+            Id = insertItem.ChangeVector,
+            DataContentType = "application/json",
+            Type = string.IsNullOrWhiteSpace(queueItem.Type) ? DefaultType : queueItem.Type,
+            Source = new Uri(DefaultSource),
+            Data = insertItem.TransformationResult
+        };
+
+        eventMessage.SetPartitionKey(insertItem.ChangeVector);
+        return eventMessage;
     }
 
     public QueueEtlTestScriptResult RunTest(IEnumerable<QueueWithEvents> records, DocumentsOperationContext context)

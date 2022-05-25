@@ -4,12 +4,13 @@ using System.Security.Cryptography.X509Certificates;
 using Confluent.Kafka;
 using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
 public static class QueueHelper
 {
-    public static IProducer<string, byte[]> CreateKafkaClient(QueueConnectionString connectionString, string transactionalId,
+    public static IProducer<string, byte[]> CreateKafkaClient(QueueConnectionString connectionString, string transactionalId, Logger logger,
         X509Certificate2 certificate = null)
     {
         ProducerConfig config = new ProducerConfig()
@@ -35,6 +36,7 @@ public static class QueueHelper
         IProducer<string, byte[]> producer = new ProducerBuilder<string?, byte[]>(config)
             .SetErrorHandler((producer, error) =>
             {
+                logger.Info($"Kafka producer error: {error.Reason}");
             })
             .Build();
 
