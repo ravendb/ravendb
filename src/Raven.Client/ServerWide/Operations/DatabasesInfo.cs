@@ -169,9 +169,9 @@ namespace Raven.Client.ServerWide.Operations
 
         public double IoWriteOperations { get; set; }
         
-        public long ReadThroughputInKilobytes { get; set; }
+        public long ReadThroughputInKb { get; set; }
         
-        public long WriteThroughputInKilobytes { get; set; }
+        public long WriteThroughputInKb { get; set; }
         
         public long? QueueLength { get; set; }
 
@@ -181,8 +181,8 @@ namespace Raven.Client.ServerWide.Operations
             {
                 [nameof(IoReadOperations)] = IoReadOperations,
                 [nameof(IoWriteOperations)] = IoWriteOperations,
-                [nameof(ReadThroughputInKilobytes)] = ReadThroughputInKilobytes,
-                [nameof(WriteThroughputInKilobytes)] = WriteThroughputInKilobytes,
+                [nameof(ReadThroughputInKb)] = ReadThroughputInKb,
+                [nameof(WriteThroughputInKb)] = WriteThroughputInKb,
                 [nameof(QueueLength)] = QueueLength,
             };
         }

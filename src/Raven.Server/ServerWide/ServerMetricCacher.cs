@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide
 
         private DiskSpaceResult CalculateDiskSpaceInfo()
         {
-            return DiskHelper.GetDiskSpaceInfo(_server.ServerStore.Configuration.Core.DataDirectory.FullPath);
+            return DiskUtils.GetDiskSpaceInfo(_server.ServerStore.Configuration.Core.DataDirectory.FullPath);
         }
 
         private GCMemoryInfo CalculateGcMemoryInfo(GCKind gcKind)

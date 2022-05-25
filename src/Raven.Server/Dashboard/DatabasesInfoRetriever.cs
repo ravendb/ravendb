@@ -493,7 +493,7 @@ namespace Raven.Server.Dashboard
             foreach (var mountPointUsage in databaseInfo.MountPointsUsage)
             {
                 var driveName = mountPointUsage.DiskSpaceResult.DriveName;
-                var diskSpaceResult = DiskHelper.GetDiskSpaceInfo(
+                var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(
                     mountPointUsage.DiskSpaceResult.DriveName,
                     new DriveInfoBase
                     {
@@ -519,8 +519,8 @@ namespace Raven.Server.Dashboard
                     {
                         IoReadOperations = diskStatsResult.IoReadOperations,
                         IoWriteOperations = diskStatsResult.IoWriteOperations,
-                        ReadThroughputInKilobytes = diskStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
-                        WriteThroughputInKilobytes = diskStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
+                        ReadThroughputInKb = diskStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
+                        WriteThroughputInKb = diskStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
                         QueueLength = diskStatsResult.QueueLength,
                     };
                 }

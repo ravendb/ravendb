@@ -10,9 +10,9 @@ using Sparrow.Server.Platform.Posix;
 
 namespace Sparrow.Server.Utils
 {
-    public static class DiskHelper
+    public static class DiskUtils
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(DiskHelper).FullName);
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(DiskUtils).FullName);
 
         // from https://github.com/dotnet/corefx/blob/9c06da6a34fcefa6fb37776ac57b80730e37387c/src/Common/src/System/IO/PathInternal.Windows.cs#L52
         public const short WindowsMaxPath = short.MaxValue;
