@@ -3,21 +3,35 @@
 import extractNodesInfoFromPackageCommand = require("commands/wizard/extractNodesInfoFromPackageCommand");
 import fileImporter = require("common/fileImporter");
 
+interface configurationNodeInfo  {
+    publicServerUrl: string;
+    serverUrl: string;
+    tag: string;
+}
+
 class continueSetup {
 
     importedFileName = ko.observable<string>();
     hasFileSelected = ko.observable(false);
-    nodesInfo = ko.observableArray<Raven.Server.Web.System.ConfigurationNodeInfo>([]);
-    
+    nodesInfo = ko.observableArray<configurationNodeInfo>([]);
     
     zipFile = ko.observable<string>();
     nodeTag = ko.observable<string>();
     serverUrl = ko.observable<string>();
     
+    isZipFileSecure: KnockoutComputed<boolean>;
+    
     validationGroup: KnockoutValidationGroup;
     
     constructor() {
         _.bindAll(this, "fileSelected", "onConfigEntrySelected");
+        
+        this.isZipFileSecure = ko.pureComputed(() => {
+            const nodes = this.nodesInfo();
+            return this.zipFile() && nodes.length && !!nodes[0].publicServerUrl; 
+            // nodes from unsecure zip contain ServerUrl
+            // nodes from secure zip contain PublicServerUrl
+        })
         
         this.initValidation();
     }
@@ -36,10 +50,9 @@ class continueSetup {
         });
     }
     
-    
-    onConfigEntrySelected(item: Raven.Server.Web.System.ConfigurationNodeInfo) {
-        this.nodeTag(item.Tag);
-        this.serverUrl(item.PublicServerUrl);
+    onConfigEntrySelected(item: configurationNodeInfo) {
+        this.nodeTag(item.tag);
+        this.serverUrl(item.publicServerUrl || item.serverUrl);
     }
 
     fileSelected(fileInput: HTMLInputElement) {
@@ -59,7 +72,11 @@ class continueSetup {
         new extractNodesInfoFromPackageCommand(this.zipFile())
             .execute()
             .done((nodesInfo) => {
-                this.nodesInfo(nodesInfo);
+                let nodes = nodesInfo.map(x => {
+                    return { tag: x.Tag, serverUrl: x.ServerUrl, publicServerUrl: x.PublicServerUrl }
+                });
+
+                this.nodesInfo(nodes);
             });
     }
 }
