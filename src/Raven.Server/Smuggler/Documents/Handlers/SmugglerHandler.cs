@@ -450,11 +450,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportAsync()
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                await Import(context, Database.Name, DoImportInternalAsync, Database.Operations, operationId);
-            }
+            using (var processor = new SmugglerHandlerProcessorForImport(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
@@ -602,7 +599,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream, DatabaseSmugglerOptionsServerSide options,
+        public async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream, DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             ContextPool.AllocateOperationContext(out DocumentsOperationContext context);

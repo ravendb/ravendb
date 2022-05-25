@@ -38,15 +38,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/smuggler/import", "POST")]
         public async Task PostImportAsync()
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var operationId = GetLongQueryString("operationId", false) ?? DatabaseContext.Operations.GetNextOperationId();
-
-                await Import(context, DatabaseContext.DatabaseName, DoImportInternalAsync, DatabaseContext.Operations, operationId);
-            }
+            using (var processor = new ShardedSmugglerHandlerProcessorForImport(this))
+                await processor.ExecuteAsync();
         }
 
-        private async Task DoImportInternalAsync(
+        public async Task DoImportInternalAsync(
             JsonOperationContext jsonOperationContext,
             Stream stream,
             DatabaseSmugglerOptionsServerSide options,
