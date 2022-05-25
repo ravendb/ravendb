@@ -1,8 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Subscriptions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
 
@@ -23,6 +26,21 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
             }
             finally
             {
+                if (string.IsNullOrEmpty(subscriptionName))
+                {
+                    if (subscriptionId.HasValue == false)
+                        throw new ArgumentException("Subscription drop operation must get either subscription name or subscription task id");
+                    
+                    //get subscription name from state
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    {
+                        subscriptionName = ServerStore.Cluster.Subscriptions.GetSubscriptionNameById(context, RequestHandler.DatabaseName, subscriptionId.Value);
+                    }
+
+                    if (subscriptionName == null)
+                        throw new SubscriptionDoesNotExistException($"Could not find a subscription with a subscription id of {subscriptionId.Value}");
+                }
+
                 if (ShardedSubscriptionConnection.Connections.TryRemove(subscriptionName, out ShardedSubscriptionConnection connection))
                 {
                     connection.Dispose();

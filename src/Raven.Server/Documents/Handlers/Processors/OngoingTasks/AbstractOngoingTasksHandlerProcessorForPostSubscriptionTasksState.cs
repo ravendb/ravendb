@@ -19,13 +19,17 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
             var typeStr = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            ValidateSubscriptionTaskType(typeStr);
+            return base.OnUpdateConfiguration(context, _, raftRequestId);
+        }
+
+        public static void ValidateSubscriptionTaskType(string typeStr)
+        {
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", nameof(type));
 
             if (type != OngoingTaskType.Subscription)
                 throw new ArgumentException("Only Subscription type can call this method");
-
-            return base.OnUpdateConfiguration(context, _, raftRequestId);
         }
     }
 }
