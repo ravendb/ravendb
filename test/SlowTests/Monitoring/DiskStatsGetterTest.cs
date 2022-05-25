@@ -5,13 +5,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Monitoring
 {
     public class DiskStatsGetterTest
     {
-        [Fact]
+        [MultiplatformFact(RavenPlatform.Linux)]
         public async Task DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
             var currentDirectory = Directory.GetCurrentDirectory();

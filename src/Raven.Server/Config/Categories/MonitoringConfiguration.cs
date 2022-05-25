@@ -22,10 +22,9 @@ namespace Raven.Server.Config.Categories
         public string CpuUsageMonitorExecArguments { get; set; }
 
         [Description("The minimum interval between measures to calculate the disk stats")]
-        [DefaultValue(1)]
-        [MinValue(1000)]
+        [DefaultValue(1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Monitoring.MinDiskStatsIntervalInMs", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Monitoring.Disk.ReadStatsDebounceTimeInMs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MinDiskStatsInterval { get; set; }
         
         public MonitoringConfiguration()

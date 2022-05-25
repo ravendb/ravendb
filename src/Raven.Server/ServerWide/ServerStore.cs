@@ -3282,7 +3282,7 @@ namespace Raven.Server.ServerWide
             var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
             
             var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
-            var diskSpaceResult = DiskHelper.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
+            var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
             if (diskSpaceResult == null)
                 yield break;
 
@@ -3306,7 +3306,7 @@ namespace Raven.Server.ServerWide
             }
             else
             {
-                var journalDiskSpaceResult = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
+                var journalDiskSpaceResult = DiskUtils.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
                 if (journalDiskSpaceResult != null)
                 {
                     var journalUsage = new Client.ServerWide.Operations.MountPointUsage
@@ -3332,7 +3332,7 @@ namespace Raven.Server.ServerWide
                 }
                 else
                 {
-                    var tempBuffersDiskSpaceResult = DiskHelper.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+                    var tempBuffersDiskSpaceResult = DiskUtils.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
                     if (tempBuffersDiskSpaceResult != null)
                     {
                         var tempBuffersUsage = new Client.ServerWide.Operations.MountPointUsage
@@ -3371,8 +3371,8 @@ namespace Raven.Server.ServerWide
             {
                 IoReadOperations = ioStatsResult.IoReadOperations, 
                 IoWriteOperations = ioStatsResult.IoWriteOperations,
-                ReadThroughputInKilobytes = ioStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
-                WriteThroughputInKilobytes = ioStatsResult.WriteThroughput.GetValue(SizeUnit.Bytes),
+                ReadThroughputInKb = ioStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
+                WriteThroughputInKb = ioStatsResult.WriteThroughput.GetValue(SizeUnit.Bytes),
                 QueueLength = ioStatsResult.QueueLength,
             };
         }

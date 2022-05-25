@@ -146,8 +146,8 @@ namespace Raven.Server.Utils.Monitoring
         public int RemainingStorageSpacePercentage { get; set; }
         public double IoReadOperations { get; set; }
         public double IoWriteOperations { get; set; }
-        public long ReadThroughputInKilobytes { get; set; }
-        public long WriteThroughputInKilobytes { get; set; }
+        public long ReadThroughputInKb { get; set; }
+        public long WriteThroughputInKb { get; set; }
         public long? QueueLength { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -160,8 +160,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(RemainingStorageSpacePercentage)] = RemainingStorageSpacePercentage,
                 [nameof(IoReadOperations)] = IoReadOperations,
                 [nameof(IoWriteOperations)] = IoWriteOperations,
-                [nameof(ReadThroughputInKilobytes)] = ReadThroughputInKilobytes,
-                [nameof(WriteThroughputInKilobytes)] = WriteThroughputInKilobytes,
+                [nameof(ReadThroughputInKb)] = ReadThroughputInKb,
+                [nameof(WriteThroughputInKb)] = WriteThroughputInKb,
                 [nameof(QueueLength)] = QueueLength
             };
         }
