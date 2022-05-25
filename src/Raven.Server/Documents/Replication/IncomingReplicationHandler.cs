@@ -1108,284 +1108,292 @@ namespace Raven.Server.Documents.Replication
 
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
-                        if (lastTransactionMarker != item.TransactionMarker)
+                        try
                         {
-                            context.TransactionMarkerOffset++;
-                            lastTransactionMarker = item.TransactionMarker;
-                        }
+                            if (lastTransactionMarker != item.TransactionMarker)
+                            {
+                                context.TransactionMarkerOffset++;
+                                lastTransactionMarker = item.TransactionMarker;
+                            }
 
-                        operationsCount++;
+                            operationsCount++;
 
-                        if (_isSink)
-                            ReplaceKnownSinkEntries(context, ref item.ChangeVector);
+                            if (_isSink)
+                                ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
-                        var changeVectorToMerge = item.ChangeVector;
+                            var changeVectorToMerge = item.ChangeVector;
 
-                        if (_isHub)
-                            changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
+                            if (_isHub)
+                                changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
 
-                        var rcvdChangeVector = item.ChangeVector;
+                            var rcvdChangeVector = item.ChangeVector;
 
-                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVectorToMerge, context.LastDatabaseChangeVector);
+                            context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVectorToMerge, context.LastDatabaseChangeVector);
 
-                        TimeSeriesStorage tss;
-                        LazyStringValue docId;
-                        LazyStringValue name;
+                            TimeSeriesStorage tss;
+                            LazyStringValue docId;
+                            LazyStringValue name;
 
-                        switch (item)
-                        {
-                            case AttachmentReplicationItem attachment:
+                            switch (item)
+                            {
+                                case AttachmentReplicationItem attachment:
 
-                                var localAttachment = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, attachment.Key);
-                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentStream))
-                                {
-                                    if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
+                                    var localAttachment = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, attachment.Key);
+                                    if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentStream))
                                     {
-                                        Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
-                                            "the stream should have been written when the revision was added by the document");
-                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
-                                    }
-
-                                    handledAttachmentStreams.Add(attachment.Base64Hash);
-                                }
-
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
-
-                                if (localAttachment == null || ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector) !=
-                                    ConflictStatus.AlreadyMerged)
-                                {
-                                    database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.ChangeVector);
-                                }
-
-                                break;
-
-                            case AttachmentTombstoneReplicationItem attachmentTombstone:
-
-                                var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
-                                if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
-                                    continue;
-
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    rcvdChangeVector,
-                                    attachmentTombstone.LastModifiedTicks);
-                                break;
-
-                            case RevisionTombstoneReplicationItem revisionTombstone:
-
-                                Slice id;
-                                if (_isSink)
-                                {
-                                    var currentId = revisionTombstone.Id.ToString();
-                                    ReplaceKnownSinkEntries(context, ref currentId);
-                                    toDispose.Add(Slice.From(context.Allocator, currentId, out id));
-                                }
-                                else
-                                {
-                                    toDispose.Add(Slice.From(context.Allocator, revisionTombstone.Id, out id));
-                                }
-
-                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
-                                    rcvdChangeVector, revisionTombstone.LastModifiedTicks);
-                                break;
-
-                            case CounterReplicationItem counter:
-                                var changed = database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector,
-                                    counter.Values);
-                                if (changed && _replicationInfo.SupportedFeatures.Replication.CaseInsensitiveCounters == false)
-                                {
-                                    // 4.2 counters
-                                    docCountersToRecreate ??= new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
-                                    docCountersToRecreate.Add(counter.Id);
-                                }
-
-                                break;
-
-                            case TimeSeriesDeletedRangeItem deletedRange:
-                                tss = database.DocumentsStorage.TimeSeriesStorage;
-
-                                TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out docId, out name);
-
-                                var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
-                                {
-                                    DocumentId = docId,
-                                    Collection = deletedRange.Collection,
-                                    Name = name,
-                                    From = deletedRange.From,
-                                    To = deletedRange.To
-                                };
-                                var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
-                                if (removedChangeVector != null)
-                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
-
-                                break;
-
-                            case TimeSeriesReplicationItem segment:
-                                tss = database.DocumentsStorage.TimeSeriesStorage;
-                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out _, out var baseline);
-                                UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
-
-                                if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
-                                {
-                                    var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
-                                    continue;
-                                }
-
-                                var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
-                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, segment.ChangeVector, verifyName: false);
-                                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
-
-                                break;
-
-                            case DocumentReplicationItem doc:
-                                Debug.Assert(doc.Flags.Contain(DocumentFlags.Artificial) == false);
-
-                                BlittableJsonReaderObject document = doc.Data;
-
-                                if (doc.Data != null)
-                                {
-                                    // if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                                    // the other side will receive negative ack and will retry sending again.
-                                    try
-                                    {
-                                        AssertAttachmentsFromReplication(context, doc.Id, document);
-                                    }
-                                    catch (MissingAttachmentException)
-                                    {
-                                        if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
+                                        if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                         {
-                                            throw;
+                                            Debug.Assert(localAttachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                                "the stream should have been written when the revision was added by the document");
+                                            database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                         }
 
-                                        database.NotificationCenter.Add(AlertRaised.Create(
-                                            database.Name,
-                                            "Incoming Replication",
-                                            $"Detected missing attachments for document '{doc.Id}'. Existing attachments in metadata:" +
-                                            $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
-                                            AlertType.ReplicationMissingAttachments,
-                                            NotificationSeverity.Warning));
+                                        handledAttachmentStreams.Add(attachment.Base64Hash);
                                     }
-                                }
 
-                                var nonPersistentFlags = NonPersistentDocumentFlags.FromReplication;
-                                if (doc.Flags.Contain(DocumentFlags.Revision))
-                                {
-                                    database.DocumentsStorage.RevisionsStorage.Put(
-                                        context,
-                                        doc.Id,
-                                        document,
-                                        doc.Flags,
-                                        nonPersistentFlags,
+                                    toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
+                                    toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
+
+                                    if (localAttachment == null || ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector) !=
+                                        ConflictStatus.AlreadyMerged)
+                                    {
+                                        database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
+                                            contentType, attachment.Base64Hash, attachment.ChangeVector);
+                                    }
+
+                                    break;
+
+                                case AttachmentTombstoneReplicationItem attachmentTombstone:
+
+                                    var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
+                                    if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
+                                        continue;
+
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                         rcvdChangeVector,
-                                        doc.LastModifiedTicks);
-                                    continue;
-                                }
+                                        attachmentTombstone.LastModifiedTicks);
+                                    break;
 
-                                if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
-                                {
-                                    database.DocumentsStorage.RevisionsStorage.Delete(
-                                        context,
-                                        doc.Id,
-                                        document,
-                                        doc.Flags,
-                                        nonPersistentFlags,
-                                        rcvdChangeVector,
-                                        doc.LastModifiedTicks);
-                                    continue;
-                                }
+                                case RevisionTombstoneReplicationItem revisionTombstone:
 
-                                var hasRemoteClusterTx = doc.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out var hasLocalClusterTx);
-                                var flags = doc.Flags;
-                                var resolvedDocument = document;
+                                    Slice id;
+                                    if (_isSink)
+                                    {
+                                        var currentId = revisionTombstone.Id.ToString();
+                                        ReplaceKnownSinkEntries(context, ref currentId);
+                                        toDispose.Add(Slice.From(context.Allocator, currentId, out id));
+                                    }
+                                    else
+                                    {
+                                        toDispose.Add(Slice.From(context.Allocator, revisionTombstone.Id, out id));
+                                    }
 
-                                switch (conflictStatus)
-                                {
-                                    case ConflictStatus.Update:
+                                    database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
+                                        rcvdChangeVector, revisionTombstone.LastModifiedTicks);
+                                    break;
 
-                                        if (resolvedDocument != null)
+                                case CounterReplicationItem counter:
+                                    var changed = database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector,
+                                        counter.Values);
+                                    if (changed && _replicationInfo.SupportedFeatures.Replication.CaseInsensitiveCounters == false)
+                                    {
+                                        // 4.2 counters
+                                        docCountersToRecreate ??= new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
+                                        docCountersToRecreate.Add(counter.Id);
+                                    }
+
+                                    break;
+
+                                case TimeSeriesDeletedRangeItem deletedRange:
+                                    tss = database.DocumentsStorage.TimeSeriesStorage;
+
+                                    TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out docId, out name);
+
+                                    var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                                    {
+                                        DocumentId = docId,
+                                        Collection = deletedRange.Collection,
+                                        Name = name,
+                                        From = deletedRange.From,
+                                        To = deletedRange.To
+                                    };
+                                    var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
+                                    if (removedChangeVector != null)
+                                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
+
+                                    break;
+
+                                case TimeSeriesReplicationItem segment:
+                                    tss = database.DocumentsStorage.TimeSeriesStorage;
+                                    TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out _, out var baseline);
+                                    UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
+
+                                    if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
+                                    {
+                                        var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+                                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
+                                        continue;
+                                    }
+
+                                    var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
+                                    var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, segment.ChangeVector, verifyName: false);
+                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
+
+                                    break;
+
+                                case DocumentReplicationItem doc:
+                                    Debug.Assert(doc.Flags.Contain(DocumentFlags.Artificial) == false);
+
+                                    BlittableJsonReaderObject document = doc.Data;
+
+                                    if (doc.Data != null)
+                                    {
+                                        // if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                                        // the other side will receive negative ack and will retry sending again.
+                                        try
                                         {
-                                            if (flags.Contain(DocumentFlags.HasCounters) &&
-                                                _replicationInfo.SupportedFeatures.Replication.CaseInsensitiveCounters == false)
+                                            AssertAttachmentsFromReplication(context, doc.Id, document);
+                                        }
+                                        catch (MissingAttachmentException)
+                                        {
+                                            if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
                                             {
-                                                var oldDoc = context.DocumentDatabase.DocumentsStorage.Get(context, doc.Id);
-                                                if (oldDoc == null)
-                                                {
-                                                    // 4.2 documents might have counter names in metadata which don't exist in storage
-                                                    // we need to replace metadata counters with the counter names from storage
+                                                throw;
+                                            }
 
-                                                    nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
+                                            database.NotificationCenter.Add(AlertRaised.Create(
+                                                database.Name,
+                                                "Incoming Replication",
+                                                $"Detected missing attachments for document '{doc.Id}'. Existing attachments in metadata:" +
+                                                $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
+                                                AlertType.ReplicationMissingAttachments,
+                                                NotificationSeverity.Warning));
+                                        }
+                                    }
+
+                                    var nonPersistentFlags = NonPersistentDocumentFlags.FromReplication;
+                                    if (doc.Flags.Contain(DocumentFlags.Revision))
+                                    {
+                                        database.DocumentsStorage.RevisionsStorage.Put(
+                                            context,
+                                            doc.Id,
+                                            document,
+                                            doc.Flags,
+                                            nonPersistentFlags,
+                                            rcvdChangeVector,
+                                            doc.LastModifiedTicks);
+                                        continue;
+                                    }
+
+                                    if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                                    {
+                                        database.DocumentsStorage.RevisionsStorage.Delete(
+                                            context,
+                                            doc.Id,
+                                            document,
+                                            doc.Flags,
+                                            nonPersistentFlags,
+                                            rcvdChangeVector,
+                                            doc.LastModifiedTicks);
+                                        continue;
+                                    }
+
+                                    var hasRemoteClusterTx = doc.Flags.Contain(DocumentFlags.FromClusterTransaction);
+                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out var hasLocalClusterTx);
+                                    var flags = doc.Flags;
+                                    var resolvedDocument = document;
+
+                                    switch (conflictStatus)
+                                    {
+                                        case ConflictStatus.Update:
+
+                                            if (resolvedDocument != null)
+                                            {
+                                                if (flags.Contain(DocumentFlags.HasCounters) &&
+                                                    _replicationInfo.SupportedFeatures.Replication.CaseInsensitiveCounters == false)
+                                                {
+                                                    var oldDoc = context.DocumentDatabase.DocumentsStorage.Get(context, doc.Id);
+                                                    if (oldDoc == null)
+                                                    {
+                                                        // 4.2 documents might have counter names in metadata which don't exist in storage
+                                                        // we need to replace metadata counters with the counter names from storage
+
+                                                        nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
+                                                    }
+                                                }
+
+                                                try
+                                                {
+                                                    database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
+                                                        rcvdChangeVector, null, flags, nonPersistentFlags);
+                                                }
+                                                catch (DocumentCollectionMismatchException)
+                                                {
+                                                    goto case ConflictStatus.Conflict;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                using (DocumentIdWorker.GetSliceFromId(context, doc.Id, out Slice keySlice))
+                                                {
+                                                    database.DocumentsStorage.Delete(
+                                                        context, keySlice, doc.Id, null,
+                                                        doc.LastModifiedTicks,
+                                                        rcvdChangeVector,
+                                                        new CollectionName(doc.Collection),
+                                                        nonPersistentFlags,
+                                                        flags);
                                                 }
                                             }
 
-                                            try
+                                            break;
+
+                                        case ConflictStatus.Conflict:
+                                            if (_replicationInfo.Logger.IsInfoEnabled)
+                                                _replicationInfo.Logger.Info(
+                                                    $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {doc.ChangeVector}");
+
+                                            if (hasLocalClusterTx == hasRemoteClusterTx)
                                             {
-                                                database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
-                                                    rcvdChangeVector, null, flags, nonPersistentFlags);
+                                                // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
+                                                // it is a case of a conflict between documents which were modified in a cluster transaction
+                                                // in two _different clusters_, so we will treat it as a "normal" conflict
+
+                                                IsIncomingReplication = false;
+                                                _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
+                                                    document, rcvdChangeVector, doc.Flags);
+                                                continue;
                                             }
-                                            catch (DocumentCollectionMismatchException)
-                                            {
-                                                goto case ConflictStatus.Conflict;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            using (DocumentIdWorker.GetSliceFromId(context, doc.Id, out Slice keySlice))
-                                            {
-                                                database.DocumentsStorage.Delete(
-                                                    context, keySlice, doc.Id, null,
-                                                    doc.LastModifiedTicks,
-                                                    rcvdChangeVector,
-                                                    new CollectionName(doc.Collection),
-                                                    nonPersistentFlags,
-                                                    flags);
-                                            }
-                                        }
 
-                                        break;
+                                            // cluster tx has precedence over regular tx
 
-                                    case ConflictStatus.Conflict:
-                                        if (_replicationInfo.Logger.IsInfoEnabled)
-                                            _replicationInfo.Logger.Info(
-                                                $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {doc.ChangeVector}");
+                                            if (hasLocalClusterTx)
+                                                goto case ConflictStatus.AlreadyMerged;
 
-                                        if (hasLocalClusterTx == hasRemoteClusterTx)
-                                        {
-                                            // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
-                                            // it is a case of a conflict between documents which were modified in a cluster transaction
-                                            // in two _different clusters_, so we will treat it as a "normal" conflict
+                                            if (hasRemoteClusterTx)
+                                                goto case ConflictStatus.Update;
 
-                                            IsIncomingReplication = false;
-                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
-                                                document, rcvdChangeVector, doc.Flags);
-                                            continue;
-                                        }
+                                            break;
 
-                                        // cluster tx has precedence over regular tx
+                                        case ConflictStatus.AlreadyMerged:
+                                            // we have to do nothing here
+                                            break;
 
-                                        if (hasLocalClusterTx)
-                                            goto case ConflictStatus.AlreadyMerged;
+                                        default:
+                                            throw new ArgumentOutOfRangeException(nameof(conflictStatus),
+                                                "Invalid ConflictStatus: " + conflictStatus);
+                                    }
 
-                                        if (hasRemoteClusterTx)
-                                            goto case ConflictStatus.Update;
+                                    break;
 
-                                        break;
-
-                                    case ConflictStatus.AlreadyMerged:
-                                        // we have to do nothing here
-                                        break;
-
-                                    default:
-                                        throw new ArgumentOutOfRangeException(nameof(conflictStatus),
-                                            "Invalid ConflictStatus: " + conflictStatus);
-                                }
-
-                                break;
-
-                            default:
-                                throw new ArgumentOutOfRangeException(item.GetType().ToString());
+                                default:
+                                    throw new ArgumentOutOfRangeException(item.GetType().ToString());
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            var errorMessage = BuildErrorMessage(item);
+                            throw new InvalidOperationException(errorMessage, e);
                         }
                     }
 
@@ -1420,6 +1428,23 @@ namespace Raven.Server.Documents.Replication
 
                     IsIncomingReplication = false;
                 }
+            }
+
+            private string BuildErrorMessage(ReplicationBatchItem baseItem)
+            {
+                string identifier = baseItem switch
+                {
+                    AttachmentReplicationItem item => item.Key.ToString(),
+                    AttachmentTombstoneReplicationItem item => item.Key.ToString(),
+                    CounterReplicationItem item => item.Id,
+                    DocumentReplicationItem item => item.Id,
+                    RevisionTombstoneReplicationItem item => item.Id,
+                    TimeSeriesDeletedRangeItem item => item.Key.ToString(),
+                    TimeSeriesReplicationItem item => item.Key.ToString(),
+                    _ => throw new InvalidOperationException($"Type {baseItem.Type} is unknown")
+                };
+
+                return $"Replicated {baseItem.Type} : \"{identifier}\"";
             }
 
             private static void RemoveExpiresFromSinkBatchItem(DocumentReplicationItem doc, JsonOperationContext context)
