@@ -159,7 +159,7 @@ namespace Raven.Server.Web.System
                 var backupConfiguration = JsonDeserializationServer.BackupConfiguration(json);
                 var backupName = $"One Time Backup #{Interlocked.Increment(ref _oneTimeBackupCounter)}";
 
-                PeriodicBackupRunner.CheckServerHealthBeforeBackup(ServerStore, backupName);
+                BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
                 BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);

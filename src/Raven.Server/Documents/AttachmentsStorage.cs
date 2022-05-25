@@ -1246,6 +1246,10 @@ namespace Raven.Server.Documents
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
+
+            if (table.VerifyKeyExists(keySlice))
+                return; // attachments (and attachment tombstones) are immutable, we can safely ignore this
+
             using (table.Allocate(out TableValueBuilder tvb))
             using (Slice.From(context.Allocator, changeVector, out var cv))
             {

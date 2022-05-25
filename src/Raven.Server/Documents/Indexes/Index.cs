@@ -4396,6 +4396,7 @@ namespace Raven.Server.Documents.Indexes
                     ref _currentMaximumAllowedMemory,
                     allocated,
                     _environment.Options.RunningOn32Bits,
+                    DocumentDatabase.ServerStore.Server.MetricCacher,
                     _logger,
                     out var memoryUsage) == false)
                 {

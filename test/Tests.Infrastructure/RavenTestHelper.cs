@@ -54,6 +54,24 @@ namespace FastTests
             return newDataDir;
         }
 
+        public static void AssertTrue(bool condition, Func<string> messageOnFailure)
+        {
+            string failureMessage = null;
+            if (condition == false)
+            {
+                try
+                {
+                    failureMessage = messageOnFailure();
+                }
+                catch (Exception e)
+                {
+                    failureMessage = e.ToString();
+                }
+            }
+
+            Xunit.Assert.True(condition, failureMessage);
+        }
+
         public static void DeletePaths(ConcurrentSet<string> pathsToDelete, ExceptionAggregator exceptionAggregator)
         {
             var localPathsToDelete = pathsToDelete.ToArray();

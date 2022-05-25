@@ -97,13 +97,15 @@ class certificates extends viewModelBase {
     filterAndSortDescription: KnockoutComputed<string>;
     sortCriteria = ko.observable<string>();
     noCertificateIsVisible: KnockoutComputed<boolean>;
+
+    deleteExistingCertificate = ko.observable<boolean>(false);
     
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterReGenerateCertificateMode",
+        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterRegenerateCertificateMode",
             "deletePermission", "fileSelected", "copyThumbprint",
-            "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed",
+            "deleteCertificateConfirm", "renewServerCertificate", "canBeAutomaticallyRenewed",
             "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters",
             "addPermission","addPermissionWithBlink","addDatabase","addDatabaseWithBlink");
         
@@ -374,19 +376,24 @@ class certificates extends viewModelBase {
         }
     }
 
-    deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+    deleteCertificateConfirm(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + generalUtils.escapeHtml(certificate.Thumbprint) + "", {
             buttons: ["No", "Yes, delete"],
             html: true
         })
             .done(result => {
                 if (result.can) {
-                    eventsCollector.default.reportEvent("certificates", "delete");
-                    new deleteCertificateCommand(certificate.Thumbprint)
-                        .execute()
-                        .always(() => this.loadCertificates());
+                    this.deleteCertificate(certificate.Thumbprint);
                 }
             });
+    }
+    
+    private deleteCertificate(thumbprint: string) {
+        eventsCollector.default.reportEvent("certificates", "delete");
+        
+        new deleteCertificateCommand(thumbprint)
+            .execute()
+            .always(() => this.loadCertificates());
     }
 
     exportServerCertificates() {
@@ -401,19 +408,9 @@ class certificates extends viewModelBase {
         this.model(certificateModel.generate());
     }
 
-    enterReGenerateCertificateMode(itemToReGenerate: unifiedCertificateDefinition) {
+    enterRegenerateCertificateMode(itemToRegenerate: unifiedCertificateDefinition) {
         eventsCollector.default.reportEvent("certificates", "re-generate");
-        this.model(certificateModel.generate());
-
-        this.model().name(itemToReGenerate.Name);
-        this.model().securityClearance(itemToReGenerate.SecurityClearance);
-
-        for (let dbItem in itemToReGenerate.Permissions) {
-            const permission = new certificatePermissionModel();
-            permission.databaseName(dbItem);
-            permission.accessLevel(itemToReGenerate.Permissions[dbItem]);
-            this.model().permissions.push(permission);
-        }
+        this.model(certificateModel.regenerate(itemToRegenerate));
     }
     
     enterUploadCertificateMode() {
@@ -442,6 +439,7 @@ class certificates extends viewModelBase {
 
     save() {
         const model = this.model();
+        const thumbprint = model.thumbprint();
         
         if (!this.isValid(model.validationGroup)) {
             return;
@@ -449,7 +447,7 @@ class certificates extends viewModelBase {
 
         const maybeWarnTask = $.Deferred<void>();
         
-        if (this.model().mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
+        if (model.mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
             this.confirmationMessage("Did you forget about assigning database privileges?",
             "Leaving the database privileges section empty is going to prevent users from accessing the database.",
                 {
@@ -471,6 +469,7 @@ class certificates extends viewModelBase {
 
                 switch (model.mode()) {
                     case "generate":
+                    case "regenerate":
                         this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
 
                         new getNextOperationId(null)
@@ -483,6 +482,9 @@ class certificates extends viewModelBase {
 
                                 notificationCenter.instance.monitorOperation(null, operationId)
                                     .done(() => {
+                                        if (model.deleteExpired()) {
+                                            this.deleteCertificate(thumbprint);
+                                        }
                                         messagePublisher.reportSuccess("Client certificate was generated and downloaded successfully.");
                                     })
                                     .fail(() => {
@@ -499,6 +501,7 @@ class certificates extends viewModelBase {
                                 this.onCloseEdit();
                             });
                         break;
+                        
                     case "upload":
                         new uploadCertificateCommand(model)
                             .execute()
@@ -518,6 +521,7 @@ class certificates extends viewModelBase {
                                 this.onCloseEdit();
                             });
                         break;
+                        
                     case "replace":
                         new replaceClusterCertificateCommand(model)
                             .execute()

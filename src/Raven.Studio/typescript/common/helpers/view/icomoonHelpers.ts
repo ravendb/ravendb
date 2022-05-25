@@ -39,7 +39,12 @@ class icomoonHelpers {
         "connection-lost": 0xf120,
         "empty-set": 0xf121,
         "disabled": 0xf122,
-        "conflicts": 0xf123
+        "conflicts": 0xf123,
+        "waiting": 0xf124,
+        "cluster-member": 0xf125,
+        "cluster-promotable": 0xf126,
+        "cluster-watcher": 0xf127
+        
     } as const;
     
     static getCodePointForCanvas(iconName: keyof typeof icomoonHelpers.fixedCodepoints): string {

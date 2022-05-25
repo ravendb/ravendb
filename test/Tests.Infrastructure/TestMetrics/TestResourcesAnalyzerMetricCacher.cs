@@ -19,7 +19,7 @@ namespace Tests.Infrastructure.TestMetrics
 
             Register(Keys.Server.CpuUsage, _cacheRefreshRate, cpuUsageCalculator.Calculate);
             Register(Keys.Server.MemoryInfo, _cacheRefreshRate, CalculateMemoryInfo);
-            Register(Keys.Server.MemoryInfoExtended, _cacheRefreshRate, CalculateMemoryInfoExtended);
+            Register(Keys.Server.MemoryInfoExtended.RefreshRate15Seconds, _cacheRefreshRate, CalculateMemoryInfoExtended);
         }
 
         private static object CalculateMemoryInfo()
@@ -32,6 +32,6 @@ namespace Tests.Infrastructure.TestMetrics
             => GetValue<(double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)>(Keys.Server.CpuUsage);
 
         public MemoryInfoResult GetMemoryInfoExtended()
-            => GetValue<MemoryInfoResult>(Keys.Server.MemoryInfoExtended);
+            => GetValue<MemoryInfoResult>(Keys.Server.MemoryInfoExtended.RefreshRate15Seconds);
     }
 }

@@ -607,7 +607,7 @@ namespace Raven.Client.Http
                             if (_lastKnownUrls == null)
                             {
                                 // shouldn't happen
-                                throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug");
+                                throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug", topologyUpdate?.Exception);
                             }
 
                             _firstTopologyUpdate = FirstTopologyUpdate(_lastKnownUrls, null);
