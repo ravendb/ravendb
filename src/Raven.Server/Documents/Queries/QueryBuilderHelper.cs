@@ -572,9 +572,9 @@ public static class QueryBuilderHelper
     {
         (true, MatchCompareFieldType.Spatial, _) => ComparerType.AscendingSpatial,
         (false, MatchCompareFieldType.Spatial, _) => ComparerType.DescendingSpatial,
+        (_, MatchCompareFieldType.Score, _) => ComparerType.Boosting,
         (true, MatchCompareFieldType.Alphanumeric, _) => ComparerType.AscendingAlphanumeric,
         (false, MatchCompareFieldType.Alphanumeric, _) => ComparerType.DescendingAlphanumeric,
-        (_, _, ScoreId) => ComparerType.Boosting,
         (true, _, _) => ComparerType.Ascending,
         (false, _, _) => ComparerType.Descending,
     };

@@ -30,8 +30,8 @@ public unsafe readonly ref struct IndexEntryReader
     {
         _buffer = buffer;
     }
-    
-    
+
+
     /// <summary>
     /// Read unmanaged field entry from buffer.
     /// To get coordinates from Spatial entry you've to set T as (double Latitude, double Longitude)
@@ -132,12 +132,12 @@ public unsafe readonly ref struct IndexEntryReader
         }
 
         throw new NotSupportedException($"The type {nameof(T)} is unsupported.");
-        
-        Fail:
+
+    Fail:
         Unsafe.SkipInit(out value);
         type = IndexEntryFieldType.Invalid;
         return false;
-        IsNull:
+    IsNull:
         Unsafe.SkipInit(out value);
         type = IndexEntryFieldType.Null;
         return true;
@@ -152,7 +152,7 @@ public unsafe readonly ref struct IndexEntryReader
     {
         return Read(field, out var _, out value);
     }
-    
+
     public IndexEntryFieldType GetFieldType(int field, out int intOffset)
     {
         (intOffset, var isTyped) = GetMetadataFieldLocation(_buffer, field);
@@ -187,8 +187,8 @@ public unsafe readonly ref struct IndexEntryReader
             iterator = new SpatialPointFieldIterator(_buffer, intOffset);
             return true;
         }
-        
-        Failed:
+
+    Failed:
         iterator = default;
         return false;
     }
@@ -248,7 +248,7 @@ public unsafe readonly ref struct IndexEntryReader
         iterator = new IndexEntryFieldIterator(_buffer, intOffset);
         return iterator.IsValid;
 
-        Failed:
+    Failed:
         iterator = default;
         return false;
     }
@@ -284,7 +284,7 @@ public unsafe readonly ref struct IndexEntryReader
         }
 
         type = GetFieldType(field, out intOffset);
-       
+
         if (type == IndexEntryFieldType.Null)
         {
             if (elementIdx == 0)
@@ -296,7 +296,7 @@ public unsafe readonly ref struct IndexEntryReader
         {
             goto EmptyList;
         }
-        
+
         if (type.HasFlag(IndexEntryFieldType.List))
         {
             int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out int length, intOffset);
@@ -368,32 +368,32 @@ public unsafe readonly ref struct IndexEntryReader
         }
         else if ((type & IndexEntryFieldType.SpatialPoint) != 0)
         {
-            intOffset += 2 * sizeof(double); 
+            intOffset += 2 * sizeof(double);
             stringLength = VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
             intOffset += length;
         }
 
 
-        ReturnSuccessful:
+    ReturnSuccessful:
         value = _buffer.Slice(intOffset, stringLength);
         return true;
 
-        EmptyList:
+    EmptyList:
         value = Span<byte>.Empty;
         return true;
-        HasNull:
+    HasNull:
         type = IndexEntryFieldType.HasNulls;
         value = Span<byte>.Empty;
         return true;
-        IsNull:
+    IsNull:
         value = Span<byte>.Empty;
         type = IndexEntryFieldType.Null;
         return true;
-        Fail:
+    Fail:
         value = Span<byte>.Empty;
         type = IndexEntryFieldType.Invalid;
         return false;
-        FailNull:
+    FailNull:
         throw new InvalidOperationException("Cannot request an internal value when the field is null.");
     }
 
@@ -420,75 +420,40 @@ public unsafe readonly ref struct IndexEntryReader
         type = GetFieldType(field, out intOffset);
         if (type == IndexEntryFieldType.Null)
             goto IsNull;
-        if (type.HasFlag(IndexEntryFieldType.Tuple) == false)
+        if (type.HasFlag(IndexEntryFieldType.Tuple) == false || type.HasFlag(IndexEntryFieldType.List))
             goto Fail;
 
 
-        int stringLength;
-        if (type.HasFlag(IndexEntryFieldType.List))
-        {
+        if (type.HasFlag(IndexEntryFieldType.HasNulls))
+            goto HasNull;
 
-            throw new Exception("This shouldnt be here!!!");
-            
-            int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out int length, intOffset);
-            intOffset += length;
+        longValue = VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Read
+        intOffset += length;
+        doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
+        intOffset += sizeof(double);
 
-            var spanOffset = intOffset + 2 * sizeof(int) + totalElements * sizeof(double);
+        int stringLength = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
+        intOffset += length;
 
-            var spanTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
-            intOffset += sizeof(int);
-            var longTableOffset = Unsafe.ReadUnaligned<int>(ref _buffer[intOffset]);
-            intOffset += sizeof(int);
-
-            if (type.HasFlag(IndexEntryFieldType.HasNulls))
-            {
-                byte* nullTablePtr = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
-                if (PtrBitVector.GetBitInPointer(nullTablePtr + spanTableOffset, 0) == true)
-                    goto HasNull;
-
-                int nullBitStreamSize = totalElements / (sizeof(long) * 8) + totalElements % (sizeof(long) * 8) == 0 ? 0 : 1;
-                spanTableOffset += nullBitStreamSize; // Point after the null table.                             
-            }
-
-            doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
-            longValue = VariableSizeEncoding.Read<long>(_buffer, out length, longTableOffset); // Read
-            stringLength = VariableSizeEncoding.Read<ushort>(_buffer, out _, spanTableOffset); // Read
-
-            // Jump to the string location
-            intOffset = spanOffset;
-        }
-        else
-        {
-            if (type.HasFlag(IndexEntryFieldType.HasNulls))
-                goto HasNull;
-
-            longValue = VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Read
-            intOffset += length;
-            doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
-            intOffset += sizeof(double);
-
-            stringLength = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset); // Read
-            intOffset += length;
-        }
 
         sequenceValue = _buffer.Slice(intOffset, stringLength);
         return true;
 
 
-        Fail:
+    Fail:
         Unsafe.SkipInit(out longValue);
         Unsafe.SkipInit(out doubleValue);
         sequenceValue = Span<byte>.Empty;
         type = IndexEntryFieldType.Invalid;
         return false;
 
-        HasNull:
+    HasNull:
         Unsafe.SkipInit(out longValue);
         Unsafe.SkipInit(out doubleValue);
         sequenceValue = Span<byte>.Empty;
         type = IndexEntryFieldType.HasNulls;
         return true;
-        IsNull:
+    IsNull:
         Unsafe.SkipInit(out longValue);
         Unsafe.SkipInit(out doubleValue);
         sequenceValue = Span<byte>.Empty;
@@ -534,18 +499,18 @@ public unsafe readonly ref struct IndexEntryReader
             offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
             if (offset == unchecked((int)0xFFFF_FFFF))
                 goto Fail;
-            isTyped = (offset & Constants.IndexWriter.KnownFieldMask) != 0;
-            offset &= ~Constants.IndexWriter.KnownFieldMask;
+            isTyped = (offset & Constants.IndexWriter.IntKnownFieldMask) != 0;
+            offset &= ~Constants.IndexWriter.IntKnownFieldMask;
             goto End;
         }
 
-        Fail:
+    Fail:
         return (Invalid, false);
 
-        End:
+    End:
         return (offset, isTyped);
     }
-    
+
     public string DebugDump(Dictionary<Slice, int> knownFields)
     {
         string result = string.Empty;

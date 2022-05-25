@@ -92,9 +92,6 @@ namespace SlowTests.Tests.Spatial
 
                 new MyIndex().Execute(store);
 
-               
-                
-                
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics stats;

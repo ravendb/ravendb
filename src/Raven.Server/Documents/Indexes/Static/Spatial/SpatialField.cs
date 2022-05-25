@@ -10,6 +10,7 @@ using Microsoft.Extensions.Azure;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using Raven.Client;
+using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow.Json;
@@ -101,9 +102,8 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             var shape = value as IShape;
             if (shape != null || TryReadShape(value, out shape))
             {
-                if (shape.HasArea)
-                    throw new NotSupportedException("We do not support indexing of figure.");
-                // Notice its a point so bounding box is just Point
+                if (shape is not IPoint)
+                    throw new NotSupportedInCoraxException($"{nameof(Corax)} does not support indexing objects that are not points on a world map.");
                
                 var geohashRaw = Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(shape.Center.Y ,shape.Center.X, _options?.MaxTreeLevel ?? SpatialOptions.DefaultGeohashLevel);
 

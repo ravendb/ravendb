@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Corax.Utils;
-using NetTopologySuite.Utilities;
+using Corax.Utils.Spatial;
 using Sparrow;
-using Spatial4n.Core.Shapes;
-using Spatial4n.Distance;
 using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
@@ -147,6 +142,7 @@ namespace Corax.Queries
             return fieldType switch
             {
                 MatchCompareFieldType.Sequence => &CompareSequence<TComparer>,
+                MatchCompareFieldType.Alphanumeric => &CompareSequence<TComparer>,
                 MatchCompareFieldType.Integer => &CompareNumerical<TComparer, long>,
                 MatchCompareFieldType.Floating => &CompareNumerical<TComparer, double>,
                 MatchCompareFieldType.Score => &CompareNumerical<TComparer, float>,
@@ -186,14 +182,8 @@ namespace Corax.Queries
                     goto Failed;
 
                 var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
-                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialAscendingMatchComparer.Point.Center.Y, spatialAscendingMatchComparer.Point.Center.X, coordinates.lat,
-                    coordinates.lon);
-                if (spatialAscendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
-                    distance *= DistanceUtils.MilesToKilometers;
-
-                if (spatialAscendingMatchComparer.Round != 0)
-                    distance = SpatialHelper.GetRoundedValue(spatialAscendingMatchComparer.Round, distance);
-
+                var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
+                
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
                 return readX;
             }
@@ -203,13 +193,7 @@ namespace Corax.Queries
                     goto Failed;
                 
                 var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
-                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialDescendingMatchComparer.Point.Center.Y, spatialDescendingMatchComparer.Point.Center.X, coordinates.lat,
-                    coordinates.lon);
-                if (spatialDescendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
-                    distance *= DistanceUtils.MilesToKilometers;
-
-                if (spatialDescendingMatchComparer.Round != 0)
-                    distance = SpatialHelper.GetRoundedValue(spatialDescendingMatchComparer.Round, distance);
+                var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
                 return readX; 
@@ -288,11 +272,11 @@ namespace Corax.Queries
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int Compare<TComparer, TIn> (TComparer comparer, Item ix, Item iy)
-                where TComparer : IMatchComparer
+            public static int Compare<TInnerComparer, TIn> (TInnerComparer comparer, Item ix, Item iy)
+                where TInnerComparer : IMatchComparer
                 where TIn : struct
             {
-                if (typeof(TComparer) == typeof(BoostingComparer))
+                if (typeof(TInnerComparer) == typeof(BoostingComparer))
                 {
                     float score = iy.Score - ix.Score;
                     return Math.Abs(score) < Constants.Boosting.ScoreEpsilon ? 0 : Math.Sign(score);
@@ -553,20 +537,9 @@ namespace Corax.Queries
 
             if (readX && readY)
             {
-                var readerXDistance = SpatialHelper.HaverstineDistanceInMiles(resultX.lat, resultX.lon, comparer.Point.Center.Y, comparer.Point.Center.X);
-                var readerYDistance = SpatialHelper.HaverstineDistanceInMiles(resultY.lat, resultY.lon, comparer.Point.Center.Y, comparer.Point.Center.X);
-                if (comparer.Units is SpatialHelper.SpatialUnits.Kilometers)
-                {
-                    readerXDistance *= DistanceUtils.MilesToKilometers;
-                    readerYDistance *= DistanceUtils.MilesToKilometers;
-                }
+                var readerXDistance = SpatialUtils.GetGeoDistance(in resultX, in comparer);
+                var readerYDistance = SpatialUtils.GetGeoDistance(in resultY, in comparer);
 
-                if (comparer.Round != 0)
-                {
-                    readerXDistance = SpatialHelper.GetRoundedValue(comparer.Round, in readerXDistance);
-                    readerYDistance = SpatialHelper.GetRoundedValue(comparer.Round, in readerYDistance);
-                }
-                
                 var result = comparer.CompareNumerical(readerXDistance, readerYDistance);
                 int nextComparer = comparerIdx + 1;
                 if (result == 0 && nextComparer < current._totalComparers)

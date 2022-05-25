@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
+using Corax.Utils.Spatial;
 using Sparrow;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
@@ -85,13 +86,7 @@ namespace Corax.Queries
                     goto Failed;
 
                 var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
-                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialAscendingMatchComparer.Point.Center.Y, spatialAscendingMatchComparer.Point.Center.X, coordinates.lat,
-                    coordinates.lon);
-                if (spatialAscendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
-                    distance *= DistanceUtils.MilesToKilometers;
-
-                if (spatialAscendingMatchComparer.Round != 0)
-                    distance = SpatialHelper.GetRoundedValue(spatialAscendingMatchComparer.Round, distance);
+                var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
                 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
                 return readX;
@@ -102,14 +97,8 @@ namespace Corax.Queries
                     goto Failed;
                 
                 var readX = reader.Read(fieldId, out (double lat, double lon) coordinates);
-                var distance = SpatialHelper.HaverstineDistanceInMiles(spatialDescendingMatchComparer.Point.Center.Y, spatialDescendingMatchComparer.Point.Center.X, coordinates.lat,
-                    coordinates.lon);
-                if (spatialDescendingMatchComparer.Units is SpatialHelper.SpatialUnits.Kilometers)
-                    distance *= DistanceUtils.MilesToKilometers;
+                var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
-                if (spatialDescendingMatchComparer.Round != 0)
-                    distance = SpatialHelper.GetRoundedValue(spatialDescendingMatchComparer.Round, distance);
-                
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
                 return readX; 
             }

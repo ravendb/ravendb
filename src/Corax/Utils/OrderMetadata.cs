@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using Corax.Queries;
+using Corax.Utils.Spatial;
 using Spatial4n.Core.Shapes;
 
 namespace Corax.Utils;
@@ -13,7 +14,7 @@ public readonly struct OrderMetadata
     public readonly MatchCompareFieldType FieldType;
     public readonly IPoint Point;
     public readonly double Round;
-    public readonly SpatialHelper.SpatialUnits Units;
+    public readonly SpatialUnits Units;
 
     public OrderMetadata(bool hasBoost, MatchCompareFieldType fieldType, bool ascending = true)
     {
@@ -41,7 +42,7 @@ public readonly struct OrderMetadata
         FieldType = fieldType;
     }
 
-    public OrderMetadata(string fieldName, int fieldId, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialHelper.SpatialUnits units)
+    public OrderMetadata(string fieldName, int fieldId, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units)
     {
         Unsafe.SkipInit(out HasBoost);
         FieldName = fieldName;

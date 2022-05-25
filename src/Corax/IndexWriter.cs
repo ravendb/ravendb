@@ -89,18 +89,6 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
 
             _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
-
-            // //We are gonna read additional fields.
-            // var dynamicFieldsTree = Transaction.ReadTree(Constants.IndexWriter.DynamicFields);
-            // var iterator = dynamicFieldsTree.Iterate(false);
-            // while (iterator.MoveNext())
-            // {
-            //     if (_fieldsMapping.TryGetByFieldName(iterator.CurrentKey, out _) == false)
-            //     { 
-            //         //Found dynamic field
-            //         _fieldsMapping.AddBinding(_fieldsMapping.Count + 1, "test", fieldIndexingMode: FieldIndexingMode.Exact);
-            //     }
-            // }
         }
 
 

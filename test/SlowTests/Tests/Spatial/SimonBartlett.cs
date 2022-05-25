@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, Skip = "Corax is not supporting area indexing.")]
         public void LineStringsShouldIntersect(Options options)
         {
             using (var store = GetDocumentStore(options))
