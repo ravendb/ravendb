@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             // Reset scripts if needed
-            var scriptsToReset = RequestHandler.GetStringValuesQueryString("reset");
+            var scriptsToReset = RequestHandler.GetStringValuesQueryString("reset", required: false);
             configuration.TryGet(nameof(RavenEtlConfiguration.Name), out string etlConfigurationName);
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
