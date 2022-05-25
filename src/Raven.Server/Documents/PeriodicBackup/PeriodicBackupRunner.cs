@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (configuration.Disabled || configuration.IncrementalBackupFrequency == null && configuration.FullBackupFrequency == null || configuration.HasBackup() == false)
                 return null;
 
-            var backupStatus = GetBackupStatusFromCluster(_serverStore, context, databaseName, configuration.TaskId);
+            var backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, databaseName, configuration.TaskId);
             if (backupStatus == null)
             {
                 // we want to wait for the backup occurrence
@@ -154,7 +154,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             // we don't have changes since the last backup and the next backup is incremental
             var lastFullBackup = backupStatus.LastFullBackupInternal ?? nowUtc;
-            var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, lastFullBackup, configuration, skipErrorLog: false);
+            var nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.NextBackupOccurrenceParameters
+            {
+                BackupFrequency = configuration.FullBackupFrequency,
+                LastBackupUtc = lastFullBackup,
+                Configuration = configuration,
+                OnParsingError = OnParsingError
+            });
+
             if (nextFullBackup < nowUtc)
             {
                 if (_logger.IsOperationsEnabled)
@@ -175,92 +182,16 @@ namespace Raven.Server.Documents.PeriodicBackup
             string responsibleNodeTag,
             bool skipErrorLog = false)
         {
-            var nowUtc = SystemTime.UtcNow;
-            var lastFullBackupUtc = backupStatus.LastFullBackupInternal ?? _databaseWakeUpTimeUtc ?? nowUtc;
-            var lastIncrementalBackupUtc = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? _databaseWakeUpTimeUtc ?? nowUtc;
-            var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency,
-                lastFullBackupUtc, configuration, skipErrorLog: skipErrorLog);
-            var nextIncrementalBackup = GetNextBackupOccurrenceLocal(configuration.IncrementalBackupFrequency,
-                lastIncrementalBackupUtc, configuration, skipErrorLog: skipErrorLog);
-
-            if (nextFullBackup == null && nextIncrementalBackup == null)
+            return BackupUtils.GetNextBackupDetails(new BackupUtils.NextBackupDetailsParameters
             {
-                var message = "Couldn't schedule next backup " +
-                              $"full backup frequency: {configuration.FullBackupFrequency}, " +
-                              $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
-                if (string.IsNullOrWhiteSpace(configuration.Name) == false)
-                    message += $", backup name: {configuration.Name}";
-
-                _database.NotificationCenter.Add(AlertRaised.Create(
-                    _database.Name,
-                    "Couldn't schedule next backup, this shouldn't happen",
-                    message,
-                    AlertType.PeriodicBackup,
-                    NotificationSeverity.Warning));
-
-                return null;
-            }
-
-            Debug.Assert(configuration.TaskId != 0);
-
-            var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup, responsibleNodeTag);
-            var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
-            var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
-            var timeSpan = nextBackupTimeLocal - nowLocalTime;
-
-            TimeSpan nextBackupTimeSpan;
-            if (timeSpan.Ticks <= 0)
-            {
-                // overdue backup of current node or first backup
-                if (backupStatus.NodeTag == _serverStore.NodeTag || backupStatus.NodeTag == null)
-                {
-                    // the backup will run now
-                    nextBackupTimeSpan = TimeSpan.Zero;
-                    nextBackupTimeLocal = nowLocalTime;
-                }
-                else
-                {
-                    // overdue backup from other node
-                    nextBackupTimeSpan = TimeSpan.FromMinutes(1);
-                    nextBackupTimeLocal = nowLocalTime + nextBackupTimeSpan;
-                }
-            }
-            else
-            {
-                nextBackupTimeSpan = timeSpan;
-            }
-
-            return new NextBackup
-            {
-                TimeSpan = nextBackupTimeSpan,
-                DateTime = nextBackupTimeLocal.ToUniversalTime(),
-                IsFull = isFullBackup,
-                TaskId = configuration.TaskId
-            };
-        }
-
-        private bool IsFullBackup(PeriodicBackupStatus backupStatus,
-            PeriodicBackupConfiguration configuration,
-            DateTime? nextFullBackup, DateTime? nextIncrementalBackup, string responsibleNodeTag)
-        {
-            if (backupStatus.LastFullBackup == null ||
-                backupStatus.NodeTag != responsibleNodeTag ||
-                backupStatus.BackupType != configuration.BackupType ||
-                backupStatus.LastEtag == null)
-            {
-                // Reasons to start a new full backup:
-                // 1. there is no previous full backup, we are going to create one now
-                // 2. the node which is responsible for the backup was replaced
-                // 3. the backup type changed (e.g. from backup to snapshot)
-                // 4. last etag wasn't updated
-
-                return true;
-            }
-
-            // 1. there is a full backup setup but the next incremental backup wasn't setup
-            // 2. there is a full backup setup and the next full backup is before the incremental one
-            return nextFullBackup != null &&
-                   (nextIncrementalBackup == null || nextFullBackup <= nextIncrementalBackup);
+                OnParsingError = skipErrorLog ? null : OnParsingError,
+                Configuration = configuration,
+                BackupStatus = backupStatus,
+                ResponsibleNodeTag = responsibleNodeTag,
+                DatabaseWakeUpTimeUtc = _databaseWakeUpTimeUtc,
+                NodeTag = _serverStore.NodeTag,
+                OnMissingNextBackupInfo = OnMissingNextBackupInfo
+            });
         }
 
         private static bool IsFullBackupOrSnapshot(string filePath)
@@ -270,58 +201,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                    Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                    Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                    Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static DateTime GetNextBackupDateTime(DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
-        {
-            Debug.Assert(nextFullBackup != null || nextIncrementalBackup != null);
-
-            if (nextFullBackup == null)
-                return nextIncrementalBackup.Value;
-
-            if (nextIncrementalBackup == null)
-                return nextFullBackup.Value;
-
-            var nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
-            return nextBackup;
-        }
-
-        private DateTime? GetNextBackupOccurrenceLocal(string backupFrequency,
-            DateTime lastBackupUtc, PeriodicBackupConfiguration configuration, bool skipErrorLog)
-        {
-            if (string.IsNullOrWhiteSpace(backupFrequency))
-                return null;
-
-            try
-            {
-                var backupParser = CrontabSchedule.Parse(backupFrequency);
-                return backupParser.GetNextOccurrence(lastBackupUtc.ToLocalTime());
-            }
-            catch (Exception e)
-            {
-                if (skipErrorLog == false)
-                {
-                    var message = "Couldn't parse periodic backup " +
-                                  $"frequency {backupFrequency}, task id: {configuration.TaskId}";
-                    if (string.IsNullOrWhiteSpace(configuration.Name) == false)
-                        message += $", backup name: {configuration.Name}";
-
-                    message += $", error: {e.Message}";
-
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(message);
-
-                    _database.NotificationCenter.Add(AlertRaised.Create(
-                        _database.Name,
-                        "Backup frequency parsing error",
-                        message,
-                        AlertType.PeriodicBackup,
-                        NotificationSeverity.Error,
-                        details: new ExceptionDetails(e)));
-                }
-
-                return null;
-            }
         }
 
         internal void TimerCallback(object backupTaskDetails)
@@ -497,7 +376,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return runningTask.Id;
                 }
 
-                CheckServerHealthBeforeBackup(_serverStore, periodicBackup.Configuration.Name);
+                BackupUtils.CheckServerHealthBeforeBackup(_serverStore, periodicBackup.Configuration.Name);
                 _serverStore.ConcurrentBackupsCounter.StartBackup(periodicBackup.Configuration.Name, _logger);
 
                 var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -592,33 +471,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     throw;
                 }
-            }
-        }
-
-        internal static void CheckServerHealthBeforeBackup(ServerStore serverStore, string name)
-        {
-            if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
-            {
-                throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.")
-                {
-                    DelayPeriod = serverStore.Configuration.Server.CpuCreditsExhaustionBackupDelay.AsTimeSpan
-                };
-            }
-
-            if (LowMemoryNotification.Instance.LowMemoryState)
-            {
-                throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in low memory state.")
-                {
-                    DelayPeriod = serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
-                };
-            }
-
-            if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty)
-            {
-                throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in high dirty memory state.")
-                {
-                    DelayPeriod = serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
-                };
             }
         }
 
@@ -800,23 +652,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
         {
             var backupStatus = GetBackupStatusFromCluster(_serverStore, _database.Name, taskId);
-            return ComparePeriodicBackupStatus(taskId, backupStatus, inMemoryBackupStatus);
-        }
-
-        private static PeriodicBackupStatus ComparePeriodicBackupStatus(long taskId, PeriodicBackupStatus backupStatus, PeriodicBackupStatus inMemoryBackupStatus)
-        {
-            if (backupStatus == null)
-            {
-                backupStatus = inMemoryBackupStatus ?? new PeriodicBackupStatus { TaskId = taskId };
-            }
-            else if (inMemoryBackupStatus?.Version > backupStatus.Version && inMemoryBackupStatus.NodeTag == backupStatus.NodeTag)
-            {
-                // the in memory backup status is more updated
-                // and is of the same node (current one)
-                backupStatus = inMemoryBackupStatus;
-            }
-
-            return backupStatus;
+            return BackupUtils.ComparePeriodicBackupStatus(taskId, backupStatus, inMemoryBackupStatus);
         }
 
         private static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, string databaseName, long taskId)
@@ -824,19 +660,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
+                return BackupUtils.GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
             }
-        }
-
-        internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
-        {
-            var statusBlittable = serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
-
-            if (statusBlittable == null)
-                return null;
-
-            var periodicBackupStatusJson = JsonDeserializationClient.PeriodicBackupStatus(statusBlittable);
-            return periodicBackupStatusJson;
         }
 
         private long GetMinLastEtag()
@@ -855,7 +680,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // if there is no status for this, we don't need to take into account tombstones
                         continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
                     }
-                    var status = GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
+                    var status = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
                     if (status == null)
                     {
                         // if there is no status for this, we don't need to take into account tombstones
@@ -943,8 +768,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (taskState == TaskStatus.ActiveByCurrentNode)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"New backup task '{taskId}' state is '{taskState}', will arrange a new backup timer.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"New backup task '{taskId}' state is '{taskState}', will arrange a new backup timer.");
 
                     var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
                     periodicBackup.UpdateTimer(GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag), lockTaken: false);
@@ -982,8 +807,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // a backup is already running, the next one will be re-scheduled by the backup task if needed
                     if (existingBackupState.RunningTask != null)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
 
                         return;
                     }
@@ -991,8 +816,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // backup frequency hasn't changed, and we have a scheduled backup
                     if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false && existingBackupState.HasScheduledBackup())
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', the task doesn't have frequency changes and has scheduled backup, will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Backup task '{taskId}' state is '{taskState}', the task doesn't have frequency changes and has scheduled backup, will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
 
                         return;
                     }
@@ -1125,88 +950,66 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return GetBackupInfoInternal(context);
+                return BackupUtils.GetBackupInfo(
+                    new BackupUtils.BackupInfoParameters
+                    {
+                        Context = context,
+                        ServerStore = _serverStore,
+                        PeriodicBackups = _periodicBackups.Values.ToList(),
+                        DatabaseName = _database.Name
+                    }
+                );
             }
         }
 
         public BackupInfo GetBackupInfo(TransactionOperationContext context)
         {
-            return GetBackupInfoInternal(context);
+            return BackupUtils.GetBackupInfo(
+                new BackupUtils.BackupInfoParameters
+                {
+                    Context = context,
+                    ServerStore = _serverStore,
+                    PeriodicBackups = _periodicBackups.Values.ToList(),
+                    DatabaseName = _database.Name
+                }
+            );
         }
 
-        private BackupInfo GetBackupInfoInternal(TransactionOperationContext context)
+        private void OnMissingNextBackupInfo(PeriodicBackupConfiguration configuration)
         {
-            var oneTimeBackupStatus = GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId: 0L);
+            var message = "Couldn't schedule next backup " +
+                          $"full backup frequency: {configuration.FullBackupFrequency}, " +
+                          $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
+            if (string.IsNullOrWhiteSpace(configuration.Name) == false)
+                    message += $", backup name: {configuration.Name}";
+            
+            _database.NotificationCenter.Add(AlertRaised.Create(
+                _database.Name,
+                "Couldn't schedule next backup, this shouldn't happen",
+                message,
+                AlertType.PeriodicBackup,
+                NotificationSeverity.Warning));
+        }
 
-            if (_periodicBackups.Count == 0 && oneTimeBackupStatus == null)
-                return null;
+        private void OnParsingError(BackupUtils.OnParsingErrorParameters parameters)
+        {
+            var message = "Couldn't parse periodic backup " +
+                          $"frequency {parameters.BackupFrequency}, task id: {parameters.Configuration.TaskId}";
+            if (string.IsNullOrWhiteSpace(parameters.Configuration.Name) == false)
+                message += $", backup name: {parameters.Configuration.Name}";
 
-            var lastBackup = 0L;
-            PeriodicBackupStatus lastBackupStatus = null;
-            var intervalUntilNextBackupInSec = long.MaxValue;
-            if (oneTimeBackupStatus?.LastFullBackup != null && oneTimeBackupStatus.LastFullBackup.Value.Ticks > lastBackup)
-            {
-                lastBackup = oneTimeBackupStatus.LastFullBackup.Value.Ticks;
-                lastBackupStatus = oneTimeBackupStatus;
-            }
+            message += $", error: {parameters.Exception.Message}";
 
-            foreach (var periodicBackup in _periodicBackups)
-            {
-                var status = ComparePeriodicBackupStatus(periodicBackup.Value.Configuration.TaskId,
-                    backupStatus: GetBackupStatusFromCluster(_serverStore, context, _database.Name, periodicBackup.Value.Configuration.TaskId),
-                    inMemoryBackupStatus: periodicBackup.Value.BackupStatus);
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations(message);
 
-                if (status.LastFullBackup != null && status.LastFullBackup.Value.Ticks > lastBackup)
-                {
-                    lastBackup = status.LastFullBackup.Value.Ticks;
-                    lastBackupStatus = status;
-                }
-
-                if (status.LastIncrementalBackup != null && status.LastIncrementalBackup.Value.Ticks > lastBackup)
-                {
-                    lastBackup = status.LastIncrementalBackup.Value.Ticks;
-                    lastBackupStatus = status;
-                }
-
-                var nextBackup = GetNextBackupDetails(periodicBackup.Value.Configuration, status, _serverStore.NodeTag, skipErrorLog: true);
-                if (nextBackup == null)
-                    continue;
-
-                if (nextBackup.TimeSpan.Ticks < intervalUntilNextBackupInSec)
-                    intervalUntilNextBackupInSec = nextBackup.TimeSpan.Ticks;
-            }
-
-            return new BackupInfo
-            {
-                LastBackup = lastBackup == 0L ? (DateTime?)null : new DateTime(lastBackup),
-                IntervalUntilNextBackupInSec = intervalUntilNextBackupInSec == long.MaxValue ? 0 : new TimeSpan(intervalUntilNextBackupInSec).TotalSeconds,
-                BackupTaskType = lastBackupStatus?.TaskId == 0 ? BackupTaskType.OneTime : BackupTaskType.Periodic,
-                Destinations = AddDestinations(lastBackupStatus)
-            };
-
-            static List<string> AddDestinations(PeriodicBackupStatus backupStatus)
-            {
-                if (backupStatus == null)
-                    return null;
-
-                var destinations = new List<string>();
-                if (backupStatus.UploadToAzure?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.Azure));
-                if (backupStatus.UploadToGlacier?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonGlacier));
-                if (backupStatus.UploadToFtp?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.FTP));
-                if (backupStatus.UploadToGoogleCloud?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.GoogleCloud));
-                if (backupStatus.UploadToS3?.Skipped == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonS3));
-                if (backupStatus.LocalBackup?.TempFolderUsed == false)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.Local));
-                if (destinations.Count == 0)
-                    destinations.Add(nameof(BackupConfiguration.BackupDestination.None));
-
-                return destinations;
-            }
+            _database.NotificationCenter.Add(AlertRaised.Create(
+                _database.Name,
+                "Backup frequency parsing error",
+                message,
+                AlertType.PeriodicBackup,
+                NotificationSeverity.Error,
+                details: new ExceptionDetails(parameters.Exception)));
         }
 
         public RunningBackup OnGoingBackup(long taskId)

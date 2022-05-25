@@ -203,13 +203,13 @@
                             <div class="flex-grow"></div>
                             <div class="flex-horizontal">
                                 <div class="actions">
-                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterReGenerateCertificateMode, $data), visible: $root.canEdit($data)() && isExpired" title="Re-generate certificate">
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterRegenerateCertificateMode, $data), visible: $root.canEdit($data)() && isExpired" title="Re-generate certificate">
                                         <i class="icon-magic-wand"></i>
                                     </button>
                                     <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data), visible: $root.canEdit($data)() && !isExpired" title="Edit certificate">
                                         <i class="icon-edit"></i>
                                     </button>
-                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance, $data)" title="Remove certificate">
+                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificateConfirm, $data), visible: $root.canDelete(SecurityClearance, $data)" title="Remove certificate">
                                         <i class="icon-trash"></i>
                                     </button>
                                 </div>
@@ -270,6 +270,7 @@
                         <div class="flex-horizontal margin-bottom">
                             <div class="flex-grow">
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
+                                <h3 data-bind="visible: mode() === 'regenerate'">Regenerate expired client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
                                 <h3 data-bind="visible: mode() === 'replace'">Replace server certificates (cluster-wide)</h3>
@@ -333,13 +334,13 @@
                                     <p class="help-block" data-bind="validationMessage: $root.importedFileName"></p>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'replace'">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'regenerate' || mode() === 'replace'">
                                 <label class="control-label">
                                     Certificate Passphrase
                                 </label>
                                 <input class="form-control" type="password" data-bind="textInput: certificatePassphrase">
                             </div>
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate', validationElement: validityPeriod">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'regenerate', validationElement: validityPeriod">
                                 <label class="control-label">
                                     Expire in
                                 </label>
@@ -390,7 +391,7 @@
                                 </div>
                             </div>
                             <div data-bind="visible: mode() !== 'replace'">
-                                <hr />
+                                <hr class="margin-top-lg" />
                                 <h4>Database Permissions</h4>
                                 <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
                                     <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
@@ -422,17 +423,17 @@
                                         <div data-bind="validationOptions: { insertMessages: false }">
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="Admin"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }" />
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index() }" />
                                                 <label class="text-success" data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
                                             </div>
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="ReadWrite"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }" />
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index() }" />
                                                 <label class="text-warning" data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
                                             </div>
                                             <div class="radio radio-default radio-inline">
                                                 <input type="radio" value="Read"
-                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_r_' + $index(), name: 'accessLevel_' + $index() }" />
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_r_' + $index() }" />
                                                 <label class='text-danger' data-bind="attr: { for: 'accessLevel_r_' + $index() }"> Read </label>
                                             </div>
                                         </div>
@@ -450,6 +451,13 @@
                                     </div>
                                 </div>
                             </div>
+                            <hr class="margin-top-lg" />
+                            <div class="toggle margin-left-sm" data-bind="visible: mode() === 'regenerate'">
+                                <input id="deleteExpired" type="checkbox" class="styled" data-bind="checked: deleteExpired" />
+                                <label for="deleteExpired" data-placement="bottom" data-toggle="tooltip" data-animation="true" title="The expired certificate will be deleted upon clicking 'Generate'">
+                                    <span>Delete expired certificate</span>&nbsp;<small>(<code data-bind="text: thumbprint()"></code>)</small>
+                                </label>
+                            </div>
                             <div class="flex-horizontal margin-top">
                                 <div class="flex-separator"></div>
                                 <div>
@@ -458,7 +466,7 @@
                                         <span>Cancel</span>
                                     </button>
                                     <button class="btn btn-success" type="submit" data-placement="bottom" data-toggle="tooltip" title="The generated certificate will be downloaded in your browser" data-animation="true"
-                                            data-bind="visible: mode() === 'generate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
+                                            data-bind="visible: mode() === 'generate' || mode() === 'regenerate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-magic-wand"></i>
                                         <span>Generate</span>
                                     </button>

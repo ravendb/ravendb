@@ -531,7 +531,7 @@ interface queryCompleterProviders {
 type rqlQueryType = "Select" | "Update";
 
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;
-type certificateMode = "generate" | "upload" | "editExisting" | "replace";
+type certificateMode = "generate" | "regenerate" | "upload" | "editExisting" | "replace";
 
 type dbCreationMode = "newDatabase" | "restore" | "legacyMigration";
 

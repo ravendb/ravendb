@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +30,7 @@ namespace Raven.Client.Documents.BulkInsert
     public class BulkInsertOperation : BulkInsertOperationBase<object>, IDisposable, IAsyncDisposable
     {
         private readonly BulkInsertOptions _options;
+        private readonly string _database;
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
@@ -115,17 +115,36 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly int _timeSeriesBatchSize;
         private long _concurrentCheck;
         private bool _first = true;
+        public CompressionLevel CompressionLevel;
 
-        public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
+        private IDisposable _unsubscribeChanges;
+        private event EventHandler<BulkInsertOnProgressEventArgs> _onProgress;
+        private bool _onProgressInitialized = false;
+
+        public event EventHandler<BulkInsertOnProgressEventArgs> OnProgress
+        {
+            add
+            {
+                _onProgress += value;
+                _onProgressInitialized = true;
+            }
+            remove
+            {
+                _onProgress -= value;
+            }
+        }
 
         public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
-            CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
-            _options = options ?? new BulkInsertOptions();
-            _token = token;
-            _conventions = store.Conventions;
             if (string.IsNullOrWhiteSpace(database))
                 ThrowNoDatabase();
+
+            CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
+            _options = options ?? new BulkInsertOptions();
+            _database = database;
+            _token = token;
+            _conventions = store.Conventions;
+            _store = store;
             _requestExecutor = store.GetRequestExecutor(database);
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _writer = new BulkInsertWriter(_context, _token);
@@ -177,6 +196,7 @@ namespace Raven.Client.Documents.BulkInsert
                             await ThrowBulkInsertAborted(e, flushEx).ConfigureAwait(false);
                         }
                     }
+                    _unsubscribeChanges?.Dispose();
                 }
                 finally
                 {
@@ -187,10 +207,10 @@ namespace Raven.Client.Documents.BulkInsert
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default) : this(database, store, null, token)
         {
-            
+
         }
 
-        private void ThrowNoDatabase()
+        private static void ThrowNoDatabase()
         {
             throw new InvalidOperationException(
                 $"Cannot start bulk insert operation without specifying a name of a database to operate on. " +
@@ -204,8 +224,22 @@ namespace Raven.Client.Documents.BulkInsert
 
             var bulkInsertGetIdRequest = new GetNextOperationIdCommand();
             await ExecuteAsync(bulkInsertGetIdRequest, token: _token).ConfigureAwait(false);
+
             OperationId = bulkInsertGetIdRequest.Result;
             _nodeTag = bulkInsertGetIdRequest.NodeTag;
+
+            if (_onProgressInitialized && _unsubscribeChanges is null)
+            {
+                _unsubscribeChanges = _store
+                    .Changes(_database, _nodeTag)
+                    .ForOperationId(OperationId)
+                    .Subscribe(new BulkInsertObserver(this));
+            }
+        }
+
+        internal void InvokeOnProgress(BulkInsertProgress progress)
+        {
+            _onProgress?.Invoke(this, new BulkInsertOnProgressEventArgs(progress));
         }
 
         public void Store(object entity, string id, IMetadataDictionary metadata = null)
@@ -285,6 +319,7 @@ namespace Raven.Client.Documents.BulkInsert
                     _writer.Write('}');
 
                     await _writer.FlushIfNeeded().ConfigureAwait(false);
+
                 }
                 catch (Exception e)
                 {
@@ -457,6 +492,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly DisposeOnceAsync<SingleAttempt> _disposeOnce;
 
         private readonly DocumentConventions _conventions;
+        private readonly IDocumentStore _store;
 
         public async ValueTask DisposeAsync()
         {
@@ -778,7 +814,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         public class TypedTimeSeriesBulkInsert<TValues> : TimeSeriesBulkInsertBase where TValues : new()
         {
-            public TypedTimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name): base(operation, id, name)
+            public TypedTimeSeriesBulkInsert(BulkInsertOperation operation, string id, string name) : base(operation, id, name)
             {
             }
 

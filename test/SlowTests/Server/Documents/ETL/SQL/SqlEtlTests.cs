@@ -31,6 +31,7 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.Migration;
 using Sparrow.Server;
 using Tests.Infrastructure.ConnectionString;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -65,7 +66,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders(orderData);
 ";
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task ReplicateMultipleBatches()
         {
             using (var store = GetDocumentStore())
@@ -156,7 +157,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task SimpleTransformation()
         {
             using (var store = GetDocumentStore())
@@ -202,7 +203,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
 
 
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task ShouldHandleCaseMismatchBetweenTableDefinitionAndLoadTo()
         {
             using (var store = GetDocumentStore())
@@ -256,7 +257,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanLoadToTableWithSchemaName()
         {
             using (var store = GetDocumentStore())
@@ -369,7 +370,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task NullPropagation_WithExplicitNull()
         {
             using (var store = GetDocumentStore())
@@ -419,7 +420,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task RavenDB_3341()
         {
             using (var store = GetDocumentStore())
@@ -471,7 +472,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanUpdateToBeNoItemsInChildTable()
         {
             using (var store = GetDocumentStore())
@@ -516,7 +517,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanDelete()
         {
             using (var store = GetDocumentStore())
@@ -557,7 +558,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task RavenDB_3172()
         {
             using (var store = GetDocumentStore())
@@ -602,7 +603,7 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task WillLog()
         {
             using (var client = new ClientWebSocket())
@@ -706,7 +707,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        using(SqlEtl.TestScript(
+                        using (SqlEtl.TestScript(
                             new TestSqlEtlScript
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
@@ -788,7 +789,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        using(SqlEtl.TestScript(
+                        using (SqlEtl.TestScript(
                             new TestSqlEtlScript
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
@@ -804,12 +805,12 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                         new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
                                         new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
                                     },
-                                    Transforms = {new Transformation() {Collections = {"Orders"}, Name = "OrdersAndLines", Script = defaultScript}}
+                                    Transforms = { new Transformation() { Collections = { "Orders" }, Name = "OrdersAndLines", Script = defaultScript } }
                                 }
                             }, database, database.ServerStore, context, out var testResult))
                         {
                             var result = (SqlEtlTestScriptResult)testResult;
-                            
+
                             Assert.Equal(0, result.TransformationErrors.Count);
                             Assert.Equal(0, result.LoadErrors.Count);
                             Assert.Equal(0, result.SlowSqlWarnings.Count);
@@ -831,7 +832,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task LoadingSingleAttachment()
         {
             using (var store = GetDocumentStore())
@@ -847,7 +848,7 @@ CREATE TABLE [dbo].[Orders]
 )
 ");
 
-                    var attachmentBytes = new byte[] {1, 2, 3};
+                    var attachmentBytes = new byte[] { 1, 2, 3 };
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -900,7 +901,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task Should_error_if_attachment_doesnt_exist()
         {
             using (var store = GetDocumentStore())
@@ -916,7 +917,7 @@ CREATE TABLE [dbo].[Orders]
 )
 ");
 
-                    var attachmentBytes = new byte[] {1, 2, 3};
+                    var attachmentBytes = new byte[] { 1, 2, 3 };
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -973,7 +974,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task LoadingMultipleAttachments()
         {
             using (var store = GetDocumentStore())
@@ -1048,7 +1049,7 @@ for (var i = 0; i < attachments.length; i++)
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanSkipSettingFieldIfAttachmentDoesntExist()
         {
             using (var store = GetDocumentStore())
@@ -1105,7 +1106,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task LoadingFromMultipleCollections()
         {
             using (var store = GetDocumentStore())
@@ -1124,14 +1125,14 @@ loadToOrders(orderData);
                             }
                         });
 
-                        await session.StoreAsync(new FavouriteOrder {OrderLines = new List<OrderLine> {new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},}});
+                        await session.StoreAsync(new FavouriteOrder { OrderLines = new List<OrderLine> { new OrderLine { Cost = 3, Product = "Milk", Quantity = 3 }, } });
 
                         await session.SaveChangesAsync();
                     }
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    SetupSqlEtl(store, connectionString, defaultScript, collections: new List<string> {"Orders", "FavouriteOrders"});
+                    SetupSqlEtl(store, connectionString, defaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -1152,14 +1153,14 @@ loadToOrders(orderData);
             }
         }
 
-            [Fact]
-            public async Task CanUseVarcharAndNVarcharFunctions()
+        [RetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task CanUseVarcharAndNVarcharFunctions()
+        {
+            using (var store = GetDocumentStore())
             {
-                using (var store = GetDocumentStore())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
-                    {
-                        CreateRdbmsSchema(connectionString, @"
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Users]
 (
     [Id] [nvarchar](50) NOT NULL,
@@ -1169,21 +1170,21 @@ CREATE TABLE [dbo].[Users]
     [LastName2] [nvarchar](30) NULL
 )
 ");
-                        using (var session = store.OpenAsyncSession())
-                        {
-                            await session.StoreAsync(new User {Name = "Joe Doń"});
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Joe Doń" });
 
-                            await session.SaveChangesAsync();
-                        }
+                        await session.SaveChangesAsync();
+                    }
 
-                        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                        AddEtl(store, new SqlEtlConfiguration()
-                        {
-                            Name = "CanUserNonVarcharAndNVarcharFunctions",
-                            ConnectionStringName = "test",
-                            SqlTables = {new SqlEtlTable {TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false},},
-                            Transforms =
+                    AddEtl(store, new SqlEtlConfiguration()
+                    {
+                        Name = "CanUserNonVarcharAndNVarcharFunctions",
+                        ConnectionStringName = "test",
+                        SqlTables = { new SqlEtlTable { TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false }, },
+                        Transforms =
                             {
                                 new Transformation()
                                 {
@@ -1203,62 +1204,62 @@ loadToUsers(
 "
                                 }
                             }
-                        }, new SqlConnectionString {Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
+                    }, new SqlConnectionString { Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
 
-                        etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                        using (var con = new SqlConnection())
+                    using (var con = new SqlConnection())
+                    {
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
                         {
-                            con.ConnectionString = connectionString;
-                            con.Open();
-
-                            using (var dbCommand = con.CreateCommand())
-                            {
-                                dbCommand.CommandText = " SELECT COUNT(*) FROM Users";
-                                Assert.Equal(1, dbCommand.ExecuteScalar());
-                            }
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Users";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
                         }
                     }
                 }
             }
+        }
 
-            [Fact]
-                public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+        [RetryFact(delayBetweenRetriesMs: 1000)]
+        public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+        {
+            using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
-                    {
-                        using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
-                        {
-                            CreateRdbmsSchema(connectionString, @"
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
 (
     [Id] [nvarchar](50) NOT NULL,
     [Pic] [varbinary](max) NULL
 )
 ");
-                            using (var session = store.OpenSession())
-                            {
+                    using (var session = store.OpenSession())
+                    {
 
-                                for (int i = 0; i < 6; i++)
-                                {
-                                    var order = new Orders.Order();
-                                    session.Store(order);
+                        for (int i = 0; i < 6; i++)
+                        {
+                            var order = new Orders.Order();
+                            session.Store(order);
 
-                                    var r = new Random(i);
+                            var r = new Random(i);
 
-                                    var bytes = new byte[1024 * 1024 * 1];
+                            var bytes = new byte[1024 * 1024 * 1];
 
-                                    r.NextBytes(bytes);
+                            r.NextBytes(bytes);
 
-                                    session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
-                                }
+                            session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
+                        }
 
-                                session.SaveChanges();
-                            }
+                        session.SaveChanges();
+                    }
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses >= 5);
 
-                            SetupSqlEtl(store, connectionString, @"
+                    SetupSqlEtl(store, connectionString, @"
 
 var orderData = {
     Id: id(this),
@@ -1268,24 +1269,24 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                            etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                            var database = GetDatabase(store.Database).Result;
+                    var database = GetDatabase(store.Database).Result;
 
-                            var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
+                    var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
 
-                            var stats = etlProcess.GetPerformanceStats();
+                    var stats = etlProcess.GetPerformanceStats();
 
-                            Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
+                    Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
 
                     etlDone = WaitForEtl(store, (n, s) => s.LoadSuccesses >= 6);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
-                        }
-                    }
                 }
+            }
+        }
 
-                private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
+        private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
         {
             using (var ms = new MemoryStream())
             {

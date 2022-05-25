@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Rachis;
@@ -92,24 +93,22 @@ namespace RachisTests
             var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
             Assert.True(await waitForAllCommits.WaitWithoutExceptionAsync(LongWaitTime), "didn't commit in time");
 
-            Assert.True(tasks.All(t => t.Status == TaskStatus.RanToCompletion), "Some commands didn't complete");
+            Assert.True(await Task.WhenAll(tasks).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(15)), $"Some commands didn't complete");
             DisconnectFromNode(leader);
-            using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            
+            try
             {
-                try
-                {
-                    var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
-                    Assert.True(await task.WaitWithoutExceptionAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
-                    await task;
-                    Assert.True(false, "We should have gotten an error");
-                }
-                // expecting either one of those
-                catch (TimeoutException)
-                {
-                }
-                catch (NotLeadingException)
-                {
-                }
+                var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
+                Assert.True(await task.WaitWithoutExceptionAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
+                await task;
+                Assert.True(false, "We should have gotten an error");
+            }
+            // expecting either one of those
+            catch (TimeoutException)
+            {
+            }
+            catch (NotLeadingException)
+            {
             }
         }
     }

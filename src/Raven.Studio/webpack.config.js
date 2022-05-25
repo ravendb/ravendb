@@ -161,7 +161,11 @@ module.exports = (env, args) => {
                                     "connection-lost": 0xf120,
                                     "empty-set": 0xf121,
                                     "disabled": 0xf122,
-                                    "conflicts": 0xf123
+                                    "conflicts": 0xf123,
+                                    "waiting": 0xf124,
+                                    "cluster-member": 0xf125,
+                                    "cluster-promotable": 0xf126,
+                                    "cluster-watcher": 0xf127
                                 },
                                 cssTemplate: path.resolve(__dirname, "wwwroot/Content/css/fonts/icomoon.template.css.hbs")
                             }

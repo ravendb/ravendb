@@ -569,7 +569,7 @@ namespace SlowTests.SparrowTests
 
             var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
             var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var socket = new DummyWebSocket();
+            var socket = new MyDummyWebSocket();
             socket.ReceiveAsyncFunc = () => tcs.Task;
             var context = new LoggingSource.WebSocketContext();
 
@@ -713,7 +713,7 @@ namespace SlowTests.SparrowTests
 
             var logger = new Logger(loggingSource, "Source" + name, "Logger" + name);
             var tcs = new TaskCompletionSource<WebSocketReceiveResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var socket = new DummyWebSocket();
+            var socket = new MyDummyWebSocket();
             socket.ReceiveAsyncFunc = () => tcs.Task;
             var context = new LoggingSource.WebSocketContext();
 
@@ -739,7 +739,7 @@ namespace SlowTests.SparrowTests
             Assert.DoesNotContain(uniqForInformation, logContent);
         }
 
-        private class DummyWebSocket : WebSocket
+        private class MyDummyWebSocket : WebSocket
         {
             private bool _close;
             public string LogsReceived { get; private set; } = "";

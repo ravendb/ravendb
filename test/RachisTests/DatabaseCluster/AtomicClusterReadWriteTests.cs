@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
 

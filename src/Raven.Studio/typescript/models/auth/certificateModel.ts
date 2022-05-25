@@ -50,6 +50,8 @@ class certificateModel {
 
     securityClearanceLabel: KnockoutComputed<string>;
     canEditClearance: KnockoutComputed<boolean>;
+
+    deleteExpired = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         name: this.name,
@@ -194,6 +196,23 @@ class certificateModel {
     
     static generate() {
         return new certificateModel("generate");
+    }
+
+    static regenerate(itemToRegenerate: unifiedCertificateDefinition) {
+        const newItem = new certificateModel("regenerate");
+        
+        newItem.name(itemToRegenerate.Name);
+        newItem.thumbprint(itemToRegenerate.Thumbprint);
+        newItem.securityClearance(itemToRegenerate.SecurityClearance);
+
+        for (let dbItem in itemToRegenerate.Permissions) {
+            const permission = new certificatePermissionModel();
+            permission.databaseName(dbItem);
+            permission.accessLevel(itemToRegenerate.Permissions[dbItem]);
+            newItem.permissions.push(permission);
+        }
+        
+        return newItem;
     }
     
     static upload() {
