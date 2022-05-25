@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,13 +31,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUsePollingForFetchingOperationStatus()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePollingForFetchingOperationStatus(Options options)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = documentStore => documentStore.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling
-            }))
+            options.ModifyDocumentStore = documentStore => documentStore.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling;
+            using (var store = GetDocumentStore(options))
             {
                 new Company_ByName().Execute(store);
                 put_1500_companies(store);

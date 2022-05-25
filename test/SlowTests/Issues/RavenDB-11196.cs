@@ -65,7 +65,7 @@ loadToPeople(person);
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenTheory(RavenTestCategory.Patching)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanDeleteEverything(Options options)
         {

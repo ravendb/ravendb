@@ -28,7 +28,7 @@ namespace FastTests.Client
                 "ModifyConflictSolverCommand", "PromoteDatabaseNodeCommand", "RestoreBackupCommand", "ToggleDatabaseStateCommand", "OfflineMigrationCommand",
                 "GetLogsConfigurationCommand", "GetServerWideBackupConfigurationCommand", "GetServerWideBackupConfigurationsCommand",
                 "GetServerWideClientConfigurationCommand", "PutServerWideClientConfigurationCommand", "CreateClientCertificateCommand", "GetCertificateCommand",
-                "GetCertificatesCommand", "DeleteByQueryCommand", "GetCollectionStatisticsCommand", "GetDetailedCollectionStatisticsCommand",
+                "GetCertificatesCommand", "DeleteByQueryCommand", "DeleteByQueryCommand`1", "GetCollectionStatisticsCommand", "GetDetailedCollectionStatisticsCommand",
                 "GetDetailedStatisticsCommand", "GetOperationStateCommand", "GetStatisticsCommand", "PatchByQueryCommand`1", "PatchCommand",
                 "ReplayTransactionsRecordingCommand", "ConfigureRevisionsCommand", "GetReplicationPerformanceStatisticsCommand",
                 "UpdatePullReplicationDefinitionCommand", "UpdateExternalReplication", "UpdatePullEdgeReplication", "ConfigureRefreshCommand",

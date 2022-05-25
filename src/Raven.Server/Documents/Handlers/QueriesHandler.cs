@@ -47,10 +47,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Patch()
         {
-            using (var processor = new DatabaseQueriesHandlerProcessorForPatch(this))
-            {
+            using (var processor = new DatabaseQueriesHandlerProcessorForPatch(this)) 
                 await processor.ExecuteAsync();
-            }
+        }
+
+        [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task Delete()
+        {
+            using (var processor = new DatabaseQueriesHandlerProcessorForDelete(this))
+                await processor.ExecuteAsync();
         }
 
         public async Task HandleQuery(HttpMethod httpMethod)
@@ -267,33 +272,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public async Task Delete()
-        {
-            var queryContext = QueryOperationContext.Allocate(Database); // we don't dispose this as operation is async
-
-            try
-            {
-                using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "DeleteByQuery"))
-                {
-                    var reader = await queryContext.Documents.ReadForMemoryAsync(RequestBodyStream(), "queries/delete");
-                    var query = IndexQueryServerSide.Create(HttpContext, reader, Database.QueryMetadataCache, tracker);
-
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        TrafficWatchQuery(query);
-
-                    await ExecuteQueryOperation(query,
-                        (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, queryContext, onProgress, token),
-                        queryContext, OperationType.DeleteByQuery);
-                }
-            }
-            catch
-            {
-                queryContext.Dispose();
-                throw;
-            }
-        }
-
         [RavenAction("/databases/*/queries/test", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PatchTest()
         {
@@ -391,53 +369,6 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
-        }
-
-        /// <summary>
-        /// TrafficWatchQuery writes query data to httpContext
-        /// </summary>
-        /// <param name="indexQuery"></param>
-
-        private async Task ExecuteQueryOperation(IndexQueryServerSide query,
-                Func<QueryRunner,
-                QueryOperationOptions,
-                Action<IOperationProgress>, OperationCancelToken,
-                Task<IOperationResult>> operation,
-                IDisposable returnContextToPool,
-                OperationType operationType)
-        {
-            var options = GetQueryOperationOptions();
-            var token = CreateTimeLimitedQueryOperationToken();
-
-            var operationId = GetLongQueryString("operationId", required: false) ?? Database.Operations.GetNextOperationId();
-
-            var indexName = query.Metadata.IsDynamic
-                ? (query.Metadata.IsCollectionQuery ? "collection/" : "dynamic/") + query.Metadata.CollectionName
-                : query.Metadata.IndexName;
-
-            var details = new BulkOperationResult.OperationDetails
-            {
-                Query = query.Query
-            };
-
-            var task = Database.Operations.AddLocalOperation(operationId,
-                operationType,
-                indexName,
-                details,
-                onProgress => operation(Database.QueryRunner, options, onProgress, token),
-                token);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
-            }
-
-            _ = task.ContinueWith(_ =>
-            {
-                using (returnContextToPool)
-                    token.Dispose();
-            });
         }
 
         private async Task Debug(QueryOperationContext queryContext, string debug, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)

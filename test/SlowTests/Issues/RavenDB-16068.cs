@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,12 +19,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task PatchByIdQuery(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All)]
+        public async Task PatchByIdQuery(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var idsList = new List<string>();
                 using (var bulkInsert = store.BulkInsert())
@@ -102,12 +103,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task DeleteByIdQuery(string baseQuery)
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData("from Users", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("from @all_docs", DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DeleteByIdQuery(Options options, string baseQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var idsList = new List<string>();
                 using (var bulkInsert = store.BulkInsert())

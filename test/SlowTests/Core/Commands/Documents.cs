@@ -149,10 +149,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public async Task CanDeleteAndUpdateDocumentByIndex()
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanDeleteAndUpdateDocumentByIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
