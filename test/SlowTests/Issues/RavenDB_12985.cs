@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenTheory(RavenTestCategory.Patching)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void CanUsePagingWhilePatchingOrDeleting(Options options)
         {

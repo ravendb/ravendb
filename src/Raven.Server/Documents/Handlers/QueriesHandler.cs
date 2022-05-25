@@ -417,16 +417,5 @@ namespace Raven.Server.Documents.Handlers
                 await writer.WriteIndexEntriesQueryResultAsync(queryContext.Documents, result, token.Token);
             }
         }
-
-        private QueryOperationOptions GetQueryOperationOptions()
-        {
-            return new QueryOperationOptions
-            {
-                AllowStale = GetBoolValueQueryString("allowStale", required: false) ?? false,
-                MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false),
-                StaleTimeout = GetTimeSpanQueryString("staleTimeout", required: false),
-                RetrieveDetails = GetBoolValueQueryString("details", required: false) ?? false
-            };
-        }
     }
 }
