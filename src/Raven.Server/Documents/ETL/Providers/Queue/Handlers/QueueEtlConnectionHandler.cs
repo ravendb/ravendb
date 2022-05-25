@@ -26,11 +26,11 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
                 {
                     Url = url, KafkaConnectionOptions = config.Configuration,
                     UseRavenCertificate = config.UseRavenCertificate
-                }, Guid.NewGuid().ToString());
+                }, Guid.NewGuid().ToString(), Logger);
 
                 kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
                 kafkaProducer.AbortTransaction();
-                
+
                 DynamicJsonValue result = new()
                 {
                     [nameof(NodeConnectionTestResult.Success)] = true, [nameof(NodeConnectionTestResult.TcpServerUrl)] = url,

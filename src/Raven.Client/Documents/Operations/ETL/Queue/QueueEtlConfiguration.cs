@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         
         public override string GetDestination()
         {
-            var url = Connection.KafkaConnectionOptions["BootstrapServers"];
+            var url = Connection.Url;
             return _destination ??= $"@{string.Join(",",url)}";
         }
 
