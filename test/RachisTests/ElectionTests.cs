@@ -373,7 +373,7 @@ namespace RachisTests
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
             var follower = GetFollowers().Single();
 
-            var timeToWait = TimeSpan.FromMilliseconds(1000 * numberOfNodes);
+            var timeToWait = TimeSpan.FromMilliseconds(5000 * numberOfNodes);
             await IssueCommandsAndWaitForCommit(10, "test", 1);
             var currentTerm = firstLeader.CurrentTerm;
             
