@@ -323,8 +323,10 @@ namespace RachisTests
                     }
 
                     var maxTerm = followers.Max(f => f.CurrentTerm);
-                    Assert.True(currentTerm + 1 <= maxTerm, $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})" +
-                                                            $"{string.Join(',',followers.Select(f=>$"{f.Tag}={f.CurrentState}:{f.CurrentTerm}"))}");
+                    RavenTestHelper.AssertTrue(currentTerm + 1 <= maxTerm, () =>
+                        $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})" +
+                        $"{string.Join(',', followers.Select(f => $"{f.Tag}={f.CurrentState}:{f.CurrentTerm}"))}");
+
                     Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
                     currentTerm = maxTerm;
                     waitingList.Clear();
@@ -386,7 +388,8 @@ namespace RachisTests
 
             RavenTestHelper.AssertTrue(await firstLeader.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait), () =>
                 $"leader: {firstLeader.CurrentState} in term {firstLeader.CurrentTerm} with last index {GetLastCommittedIndex(firstLeader)}{Environment.NewLine}, " +
-                $"follower: state {follower.CurrentState} in term {follower.CurrentTerm} with last index {GetLastCommittedIndex(follower)}");
+                $"follower: state {follower.CurrentState} in term {follower.CurrentTerm} with last index {GetLastCommittedIndex(follower)}{Environment.NewLine}" +
+                $"{GetCandidateStatus(RachisConsensuses)}");
 
             Assert.True(currentTerm + 2 <= firstLeader.CurrentTerm,$"{currentTerm} + 2 <= {firstLeader.CurrentTerm}");
 
