@@ -261,6 +261,107 @@ namespace Raven.Server.Commercial
             return cert;
         }
 
+        public static async Task<IOperationResult> ContinueUnsecuredClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo continueSetupInfo, ServerStore serverStore, CancellationToken token)
+        {
+            var progress = new SetupProgressAndResult(tuple =>
+            {
+                if (Logger is {IsInfoEnabled: true})
+                    Logger.Info(tuple.Message, tuple.Exception);
+            })
+            {
+                Processed = 0,
+                Total = 4
+            };
+            
+            try
+            {
+                AssertNoClusterDefined(serverStore);
+
+                progress.AddInfo($"Continuing cluster setup on node {continueSetupInfo.NodeTag}.");
+                onProgress(progress);
+
+                byte[] zipBytes;
+
+                try
+                {
+                    zipBytes = Convert.FromBase64String(continueSetupInfo.Zip);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Unable to parse the {nameof(continueSetupInfo.Zip)} property, expected a Base64 value", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo("Extracting setup settings from zip file.");
+                onProgress(progress);
+
+                using (serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    byte[] serverCertBytes;
+                    BlittableJsonReaderObject settingsJsonObject;
+                    Dictionary<string, string> otherNodesUrls;
+                    string firstNodeTag;
+                    License license;
+                    try
+                    {
+                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes,
+                            continueSetupInfo.NodeTag,
+                            context,
+                            out _,
+                            out _,
+                            out _,
+                            out firstNodeTag,
+                            out otherNodesUrls,
+                            out license);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
+                    }
+
+                    progress.Processed++;
+                    progress.AddInfo("Starting validation.");
+                    onProgress(progress);
+
+                    try
+                    {
+                        //await LetsEncryptValidationHelper.ValidateServerCanRunOnThisNode(settingsJsonObject, serverCert, serverStore, continueSetupInfo.NodeTag, token);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Validation failed.", e);
+                    }
+
+                    progress.Processed++;
+                    progress.AddInfo("Validation is successful.");
+                    progress.AddInfo("Writing configuration settings and certificate.");
+                    onProgress(progress);
+
+                    try
+                    {
+                        await CompleteUnsecuredConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverStore, firstNodeTag, otherNodesUrls, license, context);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Could not complete configuration for new node.", e);
+                    }
+
+                    progress.Processed++;
+                    progress.AddInfo("Configuration settings created.");
+                    progress.AddInfo("Setting up RavenDB in 'Secured Mode' finished successfully.");
+                    onProgress(progress);
+
+                    settingsJsonObject.Dispose();
+                }
+            }
+            catch (Exception e)
+            {
+                LogErrorAndThrow(onProgress, progress, $"Cluster setup on node {continueSetupInfo.NodeTag} has failed", e);
+            }
+
+            return progress;
+        }
+
         public static async Task<IOperationResult> ContinueClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo continueSetupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult(tuple =>
@@ -334,7 +435,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert,
+                        await CompleteSecuredConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert,
                             clientCert, serverStore, firstNodeTag, otherNodesUrls, license, context);
                     }
                     catch (Exception e)
@@ -357,8 +458,6 @@ namespace Raven.Server.Commercial
 
             return progress;
         }
-
-
 
         public static async Task<LicenseStatus> GetUpdatedLicenseStatus(ServerStore serverStore, License currentLicense, Reference<License> updatedLicense = null)
         {
@@ -639,7 +738,7 @@ namespace Raven.Server.Commercial
         return progress;
     }
 
-        private static async Task CompleteConfigurationForNewNode(
+        private static async Task CompleteSecuredConfigurationForNewNode(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
             ContinueSetupInfo continueSetupInfo,
@@ -818,6 +917,110 @@ namespace Raven.Server.Commercial
             }
         }
 
+        
+          private static async Task CompleteUnsecuredConfigurationForNewNode(
+            Action<IOperationProgress> onProgress,
+            SetupProgressAndResult progress,
+            ContinueSetupInfo continueSetupInfo,
+            BlittableJsonReaderObject settingsJsonObject,
+            ServerStore serverStore,
+            string firstNodeTag,
+            Dictionary<string, string> otherNodesUrls,
+            License license,
+            JsonOperationContext context)
+        {
+            try
+            {
+                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
+            }
+
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
+
+            if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
+            {
+                await serverStore.EnsureNotPassiveAsync(serverUrl, firstNodeTag);
+
+                await DeleteAllExistingCertificates(serverStore);
+
+                if (setupMode == SetupMode.Unsecured && license != null)
+                {
+                    await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
+                    await serverStore.LicenseManager.ActivateAsync(license, RaftIdGenerator.DontCareId);
+                }
+
+                // We already verified that leader's port is not 0, no need for it here.
+                serverStore.HasFixedPort = true;
+
+                foreach (var url in otherNodesUrls)
+                {
+                    progress.AddInfo($"Adding node '{url.Key}' to the cluster.");
+                    onProgress(progress);
+
+                    try
+                    {
+                        await serverStore.AddNodeToClusterAsync(url.Value, url.Key, validateNotInTopology: false);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to add node '{continueSetupInfo.NodeTag}' to the cluster.", e);
+                    }
+                }
+            }
+
+            try
+            {
+                // During setup we use the System database to store cluster configurations as well as the trusted certificates.
+                // We need to make sure that the currently used data dir will be the one written (or not written) in the resulting settings.json
+                var dataDirKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                var currentDataDir = serverStore.Configuration.GetServerWideSetting(dataDirKey) ?? serverStore.Configuration.GetSetting(dataDirKey);
+                var currentHasKey = string.IsNullOrWhiteSpace(currentDataDir) == false;
+
+                if (currentHasKey)
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject) {[dataDirKey] = currentDataDir};
+                }
+                else if (settingsJsonObject.TryGet(dataDirKey, out string _))
+                {
+                    settingsJsonObject.Modifications = new DynamicJsonValue(settingsJsonObject);
+                    settingsJsonObject.Modifications.Remove(dataDirKey);
+                }
+
+                if (settingsJsonObject.Modifications != null)
+                    settingsJsonObject = context.ReadObject(settingsJsonObject, "settings.json");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to determine the data directory", e);
+            }
+
+            try
+            {
+                progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
+                onProgress(progress);
+
+                var indentedJson = JsonStringHelper.Indent(settingsJsonObject.ToString());
+                SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to save configuration at {serverStore.Configuration.ConfigPath}.", e);
+            }
+
+            try
+            {
+                progress.Readme = SettingsZipFileHelper.CreateReadmeText(continueSetupInfo.NodeTag, serverUrl, true, false);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to create the readme text.", e);
+            }
+        }
+          
         private static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationAndGetSettingsZipUnsecuredSetup(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
