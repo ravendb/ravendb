@@ -7,8 +7,6 @@ namespace Raven.Server.Dashboard
 {
     public class TrafficWatch : AbstractDashboardNotification
     {
-        public override DashboardNotificationType Type => DashboardNotificationType.TrafficWatch;
-
         public List<TrafficWatchItem> Items { get; set; }
 
         public double AverageRequestDuration { get; set; }
@@ -16,35 +14,6 @@ namespace Raven.Server.Dashboard
         public TrafficWatch()
         {
             Items = new List<TrafficWatchItem>();
-        }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
-            json[nameof(AverageRequestDuration)] = AverageRequestDuration;
-            return json;
-        }
-
-        public override DynamicJsonValue ToJsonWithFilter(CanAccessDatabase filter)
-        {
-            var items = new DynamicJsonArray();
-
-            foreach (var trafficWatchItem in Items)
-            {
-                if (filter(trafficWatchItem.Database, requiresWrite: false))
-                {
-                    items.Add(trafficWatchItem.ToJson());
-                }
-            }
-
-            if (items.Count == 0)
-                return null;
-
-            var json = base.ToJson();
-            json[nameof(Items)] = items;
-            json[nameof(AverageRequestDuration)] = AverageRequestDuration;
-            return json;
         }
     }
 
