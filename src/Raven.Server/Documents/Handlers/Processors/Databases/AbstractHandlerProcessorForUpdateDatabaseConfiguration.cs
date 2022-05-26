@@ -24,6 +24,8 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
         _isBlittable = typeof(T) == typeof(BlittableJsonReaderObject);
     }
 
+    protected virtual bool RequireAdmin => true;
+
     protected virtual HttpStatusCode GetResponseStatusCode() => HttpStatusCode.OK;
 
     protected virtual async ValueTask<T> GetConfigurationAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer)
@@ -49,7 +51,7 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
     protected virtual async ValueTask AssertCanExecuteAsync()
     {
-        var canAccessDatabase = await RequestHandler.CanAccessDatabaseAsync(RequestHandler.DatabaseName, requireAdmin: true, requireWrite: true);
+        var canAccessDatabase = await RequestHandler.CanAccessDatabaseAsync(RequestHandler.DatabaseName, requireAdmin: RequireAdmin, requireWrite: true);
         if (canAccessDatabase == false)
             throw new AuthorizationException($"Cannot modify configuration of '{RequestHandler.DatabaseName}' database due to insufficient privileges.");
     }

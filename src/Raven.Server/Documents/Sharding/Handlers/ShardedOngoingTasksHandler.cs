@@ -74,14 +74,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscription-tasks/state", "POST")]
         public async Task ToggleSubscriptionTaskState()
         {
-            using (var processor = new ShardedOngoingTasksHandlerProcessorForToggleTaskState(this))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForToggleTaskState(this, requireAdmin: false))
                 await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/admin/tasks/state", "POST")]
         public async Task ToggleTaskState()
         {
-            using (var processor = new ShardedOngoingTasksHandlerProcessorForToggleTaskState(this))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForToggleTaskState(this, requireAdmin: true))
                 await processor.ExecuteAsync();
         }
 
