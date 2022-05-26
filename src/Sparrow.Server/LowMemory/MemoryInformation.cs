@@ -194,7 +194,7 @@ namespace Sparrow.LowMemory
             throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. " +
                                                 $"Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}, " +
                                                 $"Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}, " +
-                                                $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
+                                                $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
                                                 $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}", memInfo);
         }
         

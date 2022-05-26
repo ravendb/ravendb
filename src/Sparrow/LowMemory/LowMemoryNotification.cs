@@ -54,12 +54,12 @@ namespace Sparrow.LowMemory
                         _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
                                            $"Commit charge: {memoryInfo.CurrentCommitCharge} / {memoryInfo.TotalCommittableMemory}, " +
                                            $"Memory: {memoryInfo.TotalPhysicalMemory - memoryInfo.AvailableMemory} / {memoryInfo.TotalPhysicalMemory}, " +
-                                           $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
+                                           $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
                                            $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}");
                 }
                 catch
                 {
-                    // ignored
+                    // can fail because of oom error
                 }
 
                 foreach (var lowMemoryHandler in _lowMemoryHandlers)
