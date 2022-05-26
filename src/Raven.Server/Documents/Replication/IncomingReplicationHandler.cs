@@ -23,6 +23,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -482,6 +483,8 @@ namespace Raven.Server.Documents.Replication
             public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
             public Logger Logger { get; set; }
+            
+            public NotificationCenter.NotificationCenter NotificationCenter { get; set; }
 
             public void Dispose()
             {
@@ -525,7 +528,8 @@ namespace Raven.Server.Documents.Replication
                 ConflictManager = _conflictManager,
                 SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
                 SupportedFeatures = SupportedFeatures,
-                Logger = _log
+                Logger = _log,
+                NotificationCenter = _parent._server.NotificationCenter
             })
             {
                 try
@@ -1393,7 +1397,21 @@ namespace Raven.Server.Documents.Replication
                         catch (Exception e)
                         {
                             var errorMessage = BuildErrorMessage(item);
-                            throw new InvalidOperationException(errorMessage, e);
+                            
+                            if (_replicationInfo.Logger.IsOperationsEnabled)
+                                _replicationInfo.Logger.Operations(errorMessage, e);
+                            
+                            _replicationInfo.NotificationCenter.Add(
+                                AlertRaised.Create(
+                                    database.Name,
+                                    "Replication Failure",
+                                    errorMessage,
+                                    AlertType.Replication,
+                                    NotificationSeverity.Error, 
+                                    key:$"{_replicationInfo.SourceDatabaseId}:{_mode}",
+                                    details: new ExceptionDetails(e)
+                                ));
+                            throw;
                         }
                     }
 
@@ -1444,7 +1462,7 @@ namespace Raven.Server.Documents.Replication
                     _ => throw new InvalidOperationException($"Type {baseItem.Type} is unknown")
                 };
 
-                return $"Replicated {baseItem.Type} : \"{identifier}\"";
+                return $"Failed to replicated {baseItem.Type} : \"{identifier}\". SourceDatabaseId:{_replicationInfo.SourceDatabaseId}, lastEtag:{_lastEtag}, mode:{_mode}";
             }
 
             private static void RemoveExpiresFromSinkBatchItem(DocumentReplicationItem doc, JsonOperationContext context)
