@@ -18,10 +18,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 
         protected override async ValueTask ExportAsync(JsonOperationContext context, long? operationId)
         {
-            if(operationId.HasValue == false)
-                operationId = RequestHandler.Database.Operations.GetNextOperationId();
-
-            await RequestHandler.Export(context, RequestHandler.DatabaseName, ExportDatabaseInternalAsync, RequestHandler.Database.Operations, operationId.Value);
+            operationId ??= RequestHandler.Database.Operations.GetNextOperationId();
+            await Export(context, RequestHandler.DatabaseName, ExportDatabaseInternalAsync, RequestHandler.Database.Operations, operationId.Value);
         }
 
         protected async Task<IOperationResult> ExportDatabaseInternalAsync(
@@ -36,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var source = new DatabaseSource(RequestHandler.Database, startDocumentEtag, startRaftIndex, Logger);
-                await using (var outputStream = RequestHandler.GetOutputStream(RequestHandler.ResponseBodyStream(), options))
+                await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
                     var smuggler = SmugglerBase.GetDatabaseSmuggler(RequestHandler.Database, source, destination, RequestHandler.Database.Time,

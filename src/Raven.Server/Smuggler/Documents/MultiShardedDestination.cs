@@ -10,6 +10,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
@@ -63,7 +64,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private async Task PrepareShardStreamDestination(StreamDestinationHolder[] holders, int shard, SmugglerResult result, long buildVersion)
         {
-            var stream = _handler.GetOutputStream(holders[shard].OutStream.OutputStream.Result, _options);
+            var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shard].OutStream.OutputStream.Result, _options);
             holders[shard].InputStream = stream;
             holders[shard].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
             var destination = new StreamDestination(stream, context, _source);
