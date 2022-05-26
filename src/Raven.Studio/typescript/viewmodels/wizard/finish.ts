@@ -9,6 +9,7 @@ import saveUnsecuredSetupCommand = require("commands/wizard/saveUnsecuredSetupCo
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 import continueClusterConfigurationCommand = require("commands/wizard/continueClusterConfigurationCommand");
 import secureInstructions = require("viewmodels/wizard/secureInstructions");
+import continueClusterConfigurationUnsecureCommand = require("commands/wizard/continueClusterConfigurationUnsecureCommand");
 
 type messageItem = {
     message: string;
@@ -147,8 +148,14 @@ class finish extends setupStep {
             .done((operationId: number) => {
                 this.websocket.watchOperation(operationId, e => this.onChange(e));
 
-                new continueClusterConfigurationCommand(operationId, dto)
-                    .execute();
+                if (this.model.continueSetup().isZipFileSecure()) {
+                    new continueClusterConfigurationCommand(operationId, dto)
+                        .execute();
+                } else {
+                    new continueClusterConfigurationUnsecureCommand(operationId, dto)
+                        .execute();
+                }
+               
             });
     }
     
