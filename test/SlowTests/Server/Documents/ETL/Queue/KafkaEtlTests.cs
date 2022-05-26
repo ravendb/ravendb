@@ -18,13 +18,13 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
-public class QueueEtlTests : EtlTestBase
+public class KafkaEtlTests : EtlTestBase
 {
-    public QueueEtlTests(ITestOutputHelper output) : base(output)
+    public KafkaEtlTests(ITestOutputHelper output) : base(output)
     {
         TopicSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
     }
-    
+
     private string TopicSuffix { get; set; }
     private string OrdersTopicName => $"Orders{TopicSuffix}";
     private string[] DefaultCollections = { "Orders" };
@@ -44,7 +44,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 }
 loadToOrders" + TopicSuffix + @"(orderData);
 ";
-    
+
     [Fact]
     public void SimpleScript()
     {
@@ -72,22 +72,16 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
 
-            var counter = 0;
-            while (counter < 3)
-            {
-                var consumeResult = consumer.Consume();
-                var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
-                var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
+            var consumeResult = consumer.Consume();
+            var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
+            var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
 
-                Assert.NotNull(order);
-                Assert.Equal(order.Id, "orders/1-A");
-                Assert.Equal(order.OrderLinesCount, 2);
-                Assert.Equal(order.TotalCost, 10); 
-                counter++;
-            }
+            Assert.NotNull(order);
+            Assert.Equal(order.Id, "orders/1-A");
+            Assert.Equal(order.OrderLinesCount, 2);
+            Assert.Equal(order.TotalCost, 10);
             
             consumer.Close();
-            
             etlDone.Reset();
         }
     }
@@ -155,7 +149,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
                 Console.WriteLine($"Consume error: {e.Error.Reason}");
             }
         }
-        
+
         Assert.Equal(ordersList.Count, 10);
 
         for (int i = 0; i <= ordersList.Count; i++)
@@ -163,7 +157,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
             var order = ordersList.FirstOrDefault(x => x.Id == $"orders/{i}");
             Assert.NotNull(order);
             Assert.Equal(order.OrderLinesCount, 2);
-            Assert.Equal(order.TotalCost, i*2);
+            Assert.Equal(order.TotalCost, i * 2);
         }
     }
 
@@ -171,9 +165,10 @@ loadToOrders" + TopicSuffix + @"(orderData);
     public void Docs_from_two_collections_loaded_to_single_one()
     {
         using var store = GetDocumentStore();
-        
-        var config = SetupQueueEtl(store, @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + TopicSuffix + @"(userData)",
-            new List<EtlQueue>{ new() { Name = $"Users{TopicSuffix}" } }, new[] { "Users", "People" }, url:DefaultKafkaUrl);
+
+        var config = SetupQueueEtl(store,
+            @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + TopicSuffix + @"(userData)",
+            new List<EtlQueue> { new() { Name = $"Users{TopicSuffix}" } }, new[] { "Users", "People" }, url: DefaultKafkaUrl);
         var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
         using (var session = store.OpenSession())
@@ -184,8 +179,8 @@ loadToOrders" + TopicSuffix + @"(orderData);
         }
 
         AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
-        
-        using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new List<string>{$"Users{TopicSuffix}"});
+
+        using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new List<string> { $"Users{TopicSuffix}" });
 
         var usersList = new List<UserData>();
         while (usersList.Count < 2)
@@ -202,7 +197,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
                 Console.WriteLine($"Consume error: {e.Message}");
             }
         }
-        
+
         Assert.Equal(usersList.Count, 2);
         Assert.NotNull(usersList.FirstOrDefault(x => x.UserId == "users/1"));
         Assert.NotNull(usersList.FirstOrDefault(x => x.UserId == "people/1"));
@@ -237,7 +232,9 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
             config.Initialize(new QueueConnectionString
             {
-                Name = "Foo", KafkaConnectionOptions = new Dictionary<string, string> { }, Url = DefaultKafkaUrl
+                Name = "Foo",
+                Provider = QueueProvider.Kafka,
+                KafkaSettings = new KafkaSettings() { ConnectionOptions = new Dictionary<string, string> { }, Url = DefaultKafkaUrl }
             });
 
             List<string> errors;
@@ -269,7 +266,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
             var result1 = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
             {
-                Name = "simulate", Url = DefaultKafkaUrl
+                Name = "simulate", Provider = QueueProvider.Kafka, KafkaSettings = new KafkaSettings() { Url = DefaultKafkaUrl }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
@@ -349,8 +346,13 @@ output('test output')"
             }
         };
 
-        AddEtl(store, config, new QueueConnectionString { Name = connectionStringName, KafkaConnectionOptions = configuration, Url = url });
-
+        AddEtl(store, config,
+            new QueueConnectionString
+            {
+                Name = connectionStringName,
+                Provider = QueueProvider.Kafka,
+                KafkaSettings = new KafkaSettings() { ConnectionOptions = configuration, Url = url }
+            });
         return config;
     }
 
@@ -378,6 +380,12 @@ output('test output')"
         {
             throw new InvalidOperationException($"Failed to cleanup topics: {topics}. Check inner exceptions for details", e);
         }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        CleanupTopic(DefaultTopics.Select(x => x.Name));
     }
 
     private class Order
@@ -411,7 +419,7 @@ output('test output')"
         public string Id { get; set; }
         public string Name { get; set; }
     }
-    
+
     private class UserData
     {
         public string UserId { get; set; }

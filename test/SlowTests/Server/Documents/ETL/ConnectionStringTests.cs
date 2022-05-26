@@ -54,7 +54,8 @@ namespace SlowTests.Server.Documents.ETL
                 var queueConnectionString = new QueueConnectionString
                 {
                     Name = "ElasticSearchConnectionString",
-                    Url = "http://127.0.0.1:8080"
+                    Provider = QueueProvider.Kafka,
+                    KafkaSettings = new KafkaSettings(){Url = "http://127.0.0.1:8080" }
                 };
 
                 var resultQueue = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(queueConnectionString));
@@ -82,7 +83,7 @@ namespace SlowTests.Server.Documents.ETL
                 
                 Assert.True(record.QueueConnectionStrings.ContainsKey("QueueConnectionString"));
                 Assert.Equal(queueConnectionString.Name , record.QueueConnectionStrings["QueueConnectionString"].Name);
-                Assert.Equal(queueConnectionString.Url, record.QueueConnectionStrings["QueueConnectionString"].Url);
+                Assert.Equal(queueConnectionString.KafkaSettings.Url, record.QueueConnectionStrings["QueueConnectionString"].KafkaSettings.Url);
 
                 var result3 = store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
                 Assert.NotNull(result3.RaftCommandIndex);

@@ -6,8 +6,6 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
 {
     public class QueueEtlConfiguration : EtlConfiguration<QueueConnectionString>
     {
-        private string _destination;
-        
         public QueueEtlConfiguration()
         {
             EtlQueues = new List<EtlQueue>();
@@ -30,8 +28,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         
         public override string GetDestination()
         {
-            var url = Connection.Url;
-            return _destination ??= $"@{string.Join(",",url)}";
+            return Connection.GetUrl();
         }
 
         public override EtlType EtlType => EtlType.Queue;
@@ -39,6 +36,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         public override bool UsingEncryptedCommunicationChannel()
         {            
             //return !Connection.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase);
+            //todo: check with arek what should we do with this
             return true;
         }
 
@@ -61,17 +59,14 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
     {
         public string Name { get; set; }
 
-        public string Type { get; set; }
-
-        public string Source { get; set; }
+        public bool DeleteAfterProcess { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(Type)] = Type,
-                [nameof(Source)] = Source,
+                [nameof(DeleteAfterProcess)] = DeleteAfterProcess
             };
         }
     }

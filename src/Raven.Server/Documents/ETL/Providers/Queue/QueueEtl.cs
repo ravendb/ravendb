@@ -33,13 +33,14 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
     {
         Metrics = new EtlMetricsCountersManager();
     }
-
-    private const string DefaultCloudEventId = "cloud-event-id";
+    
     private const string DefaultType = "ravendb.etl.put";
     
     public const string QueueEtlTag = "Queue ETL";
     private string TransactionalId => $"{Database.DbId}-{Name}";
-    private string DefaultSource => $"{Database.Configuration.Core.ServerUrls.First()}-{Database.DbId}-{Name}";
+
+    private string DefaultSource =>
+        $"{Database.Configuration.Core.PublicServerUrl?.UriValue ?? Database.ServerStore.Server.WebUrl}/{Database.Name}/{Name}";
     public override EtlType EtlType => EtlType.Queue;
     public override bool ShouldTrackCounters() => false;
     public override bool ShouldTrackTimeSeries() => false;
@@ -236,7 +237,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
         {
             Id = insertItem.ChangeVector,
             DataContentType = "application/json",
-            Type = string.IsNullOrWhiteSpace(queueItem.Type) ? DefaultType : queueItem.Type,
+            Type = DefaultType,
             Source = new Uri(DefaultSource),
             Data = insertItem.TransformationResult
         };

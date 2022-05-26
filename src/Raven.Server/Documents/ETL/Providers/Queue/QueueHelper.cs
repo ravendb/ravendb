@@ -15,20 +15,20 @@ public static class QueueHelper
     {
         ProducerConfig config = new ProducerConfig()
         {
-            BootstrapServers = connectionString.Url,
+            BootstrapServers = connectionString.KafkaSettings.Url,
             TransactionalId = transactionalId,
             ClientId = transactionalId,
             EnableIdempotence = true,
         };
 
-        if (connectionString.UseRavenCertificate && certificate != null)
+        if (connectionString.KafkaSettings.UseRavenCertificate && certificate != null)
         {
             config.SslCertificatePem = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
             config.SslKeyPem = Convert.ToBase64String(certificate.Export(X509ContentType.Pkcs7));
             config.SecurityProtocol = SecurityProtocol.Ssl;
         }
 
-        foreach (KeyValuePair<string, string> option in connectionString.KafkaConnectionOptions)
+        foreach (KeyValuePair<string, string> option in connectionString.KafkaSettings.ConnectionOptions)
         {
             config.Set(option.Key, option.Value);
         }
