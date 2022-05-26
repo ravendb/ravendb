@@ -109,8 +109,8 @@ class ongoingTaskSqlEtlTransformationModel {
             this.transformScriptCollections([ongoingTaskSqlEtlTransformationModel.applyToAllCollectionsText]);
         } else {
             this.applyScriptForAllCollections(false);
-            _.remove(this.transformScriptCollections(), x => x === ongoingTaskSqlEtlTransformationModel.applyToAllCollectionsText);
             this.transformScriptCollections.unshift(collectionName);
+            this.transformScriptCollections.remove(ongoingTaskSqlEtlTransformationModel.applyToAllCollectionsText);
         }
 
         this.inputCollection("");

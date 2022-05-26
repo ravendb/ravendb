@@ -131,8 +131,8 @@ class ongoingTaskOlapEtlTransformationModel {
             this.transformScriptCollections([ongoingTaskOlapEtlTransformationModel.applyToAllCollectionsText]);
         } else {
             this.applyScriptForAllCollections(false);
-            _.remove(this.transformScriptCollections(), x => x === ongoingTaskOlapEtlTransformationModel.applyToAllCollectionsText);
             this.transformScriptCollections.unshift(collectionName);
+            this.transformScriptCollections.remove(ongoingTaskOlapEtlTransformationModel.applyToAllCollectionsText);
         }
 
         this.inputCollection("");
