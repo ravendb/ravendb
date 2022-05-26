@@ -534,8 +534,7 @@ namespace Raven.Server.Web.System
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
                 
-                var fileName = $"Unsecure.Cluster.Settings {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}.zip ";
-                //var contentDisposition = "attachment; filename=Unsecure.Cluster.Settings.zip";
+                var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
                 var contentDisposition = $"attachment; filename={fileName}";
                 
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -653,9 +652,8 @@ namespace Raven.Server.Web.System
                     : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password, X509KeyStorageFlags.MachineKeySet);
 
                 var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
-                var fileName = $"{cn}.Cluster.Settings {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}.zip ";
+                var fileName = $"{cn}.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
                 
-                //var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
                 var contentDisposition = $"attachment; filename={fileName}";
                 
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -713,8 +711,7 @@ namespace Raven.Server.Web.System
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                var fileName = $"{setupInfo.Domain}.Cluster.Settings {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}.zip ";
-                //var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
+                var fileName = $"{setupInfo.Domain}.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
                 var contentDisposition = $"attachment; filename={fileName}";
                 
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -809,6 +806,34 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/setup/continue/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task ContinueUnsecuredClusterSetup()
+        {
+            AssertOnlyInSetupMode();
+
+            var operationCancelToken = CreateOperationToken();
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var continueSetupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "continue-cluster-setup"))
+            {
+                var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
+
+                await ServerStore.Operations.AddOperation(
+                    null, "Continue Unsecured Cluster Setup.",
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => SetupManager.ContinueUnsecuredClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
+                    operationId.Value, token: operationCancelToken);
+            }
+
+            NoContentStatus();
+        }
+
+        
+        
         [RavenAction("/setup/continue", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task ContinueClusterSetup()
         {
