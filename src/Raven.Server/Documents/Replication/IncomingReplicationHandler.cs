@@ -540,6 +540,8 @@ namespace Raven.Server.Documents.Replication
                         ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats);
                     }
 
+                    _parent._server.DatabasesLandlord.ForTestingPurposes?.DelayIncomingReplication?.Invoke(_cts.Token);
+
                     if (_allowedPathsValidator != null || _preventIncomingSinkDeletions)
                     {
                         // if the other side sends us any information that we shouldn't get from them,

@@ -1294,10 +1294,12 @@ namespace Raven.Server.Documents.Replication
                     NodeTag = _clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
                     Url = r,
                     Database = Database.Name
-                });
+                }).ToList();
 
                 DropOutgoingConnections(removed, instancesToDispose);
+                DropIncomingConnections(removed, instancesToDispose);
             }
+
             if (internalConnections.AddedDestinations.Count > 0)
             {
                 var added = internalConnections.AddedDestinations.Select(r => new InternalReplication
