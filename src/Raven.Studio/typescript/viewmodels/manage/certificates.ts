@@ -743,7 +743,7 @@ class certificates extends viewModelBase {
                 this.sortByExpiration("asc");
                 break;
             case "byExpirationDesc":
-                this.sortByName("desc");
+                this.sortByExpiration("desc");
                 break;
             case "byValidFromAsc":
                 this.sortByValidFrom("asc");
