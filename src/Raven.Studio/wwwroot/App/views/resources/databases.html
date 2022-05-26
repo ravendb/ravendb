@@ -239,7 +239,7 @@
                                 </a>
                                 <div class="btn-group">
                                     <button class="btn btn-default" data-bind="click: $root.toggleDatabase,
-                                                                    visible: $root.accessManager.canDisableEnableDatabase && canNavigateToDatabase(),
+                                                                    visible: $root.accessManager.canDisableEnableDatabase() && !hasLoadError(),
                                                                     css: { 'btn-spinner': inProgressAction },
                                                                     disable: isBeingDeleted() || inProgressAction()">
                                         <span data-bind="visible: inProgressAction(), text: inProgressAction()"></span>
@@ -289,9 +289,8 @@
                                 <button class="btn btn-success" data-bind="click: _.partial($root.updateDatabaseInfo, name), enable: canNavigateToDatabase(), disable: isBeingDeleted" title="Refresh database statistics">
                                     <i class="icon-refresh-stats"></i>
                                 </button>
-                                <div class="btn-group" data-bind="visible: $root.accessManager.canDelete">
+                                <div class="btn-group" data-bind="visible: $root.accessManager.canDelete() && !hasLoadError()">
                                     <button class="btn" data-bind="click: $root.deleteDatabase,
-                                                                   visible: canNavigateToDatabase,
                                                                    disable: isBeingDeleted() || lockMode() !== 'Unlock',
                                                                    css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock', 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) },
                                                                    attr: { title: lockMode() === 'Unlock' ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }">
@@ -300,7 +299,7 @@
                                         <i class="icon-trash-cutout icon-addon-exclamation" data-bind="visible: lockMode() === 'PreventDeletesError'"></i>
                                     </button>
                                     <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
-                                            data-bind="css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock' }, visible: canNavigateToDatabase">
+                                            data-bind="css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock' }">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
