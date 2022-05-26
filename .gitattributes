@@ -22,6 +22,7 @@
 *.html     text eol=crlf
 *.js       text eol=crlf
 *.ts       text eol=crlf
+*.tsx      text eol=crlf
 *.msbuild  text eol=crlf
 *.resx     text merge=union
 *.ruleset  text
