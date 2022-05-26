@@ -65,7 +65,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Terms',
             route: 'databases/indexes/terms/(:indexName)',
             moduleId: require('viewmodels/database/indexes/indexTerms'),
-            shardingMode: "allShards",
+            shardingMode: "singleShard",
             css: 'icon-terms',
             nav: false
         })
