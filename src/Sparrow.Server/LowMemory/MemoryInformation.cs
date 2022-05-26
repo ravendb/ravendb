@@ -195,7 +195,8 @@ namespace Sparrow.LowMemory
                                                 $"Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}, " +
                                                 $"Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}, " +
                                                 $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
-                                                $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}", memInfo);
+                                                $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}" +
+                                                $"Dirty memory: {memInfo.TotalScratchDirtyMemory}", memInfo);
         }
         
         
