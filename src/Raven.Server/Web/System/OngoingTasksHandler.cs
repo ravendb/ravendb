@@ -991,7 +991,7 @@ namespace Raven.Server.Web.System
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
                         ConnectionStringName = queueEtl.ConnectionStringName,
-                        Url = connection?.Url,
+                        Url = connection?.GetUrl(),
                         Error = error
                     };
                 }

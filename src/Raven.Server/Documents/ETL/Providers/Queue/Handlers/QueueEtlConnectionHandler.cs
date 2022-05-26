@@ -22,11 +22,16 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
                 string jsonConfig = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
                 var config = JsonConvert.DeserializeObject<QueueConfiguration>(jsonConfig);
 
-                var kafkaProducer = QueueHelper.CreateKafkaClient(new QueueConnectionString
-                {
-                    Url = url, KafkaConnectionOptions = config.Configuration,
-                    UseRavenCertificate = config.UseRavenCertificate
-                }, Guid.NewGuid().ToString(), Logger);
+                var kafkaProducer = QueueHelper.CreateKafkaClient(
+                    new QueueConnectionString
+                    {
+                        KafkaSettings = new KafkaSettings()
+                        {
+                            Url = url, 
+                            ConnectionOptions = config.Configuration,
+                            UseRavenCertificate = config.UseRavenCertificate
+                        }
+                    }, Guid.NewGuid().ToString(), Logger);
 
                 kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
                 kafkaProducer.AbortTransaction();
