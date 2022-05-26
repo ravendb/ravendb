@@ -309,14 +309,14 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ToggleSubscriptionTaskState()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForToggleTaskState(this))
+            using (var processor = new OngoingTasksHandlerProcessorForToggleTaskState(this, requireAdmin: false))
                 await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForToggleTaskState(this))
+            using (var processor = new OngoingTasksHandlerProcessorForToggleTaskState(this, requireAdmin: true))
                 await processor.ExecuteAsync();
         }
 
