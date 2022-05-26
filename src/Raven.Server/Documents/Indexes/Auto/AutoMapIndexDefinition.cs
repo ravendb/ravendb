@@ -135,13 +135,15 @@ namespace Raven.Server.Documents.Indexes.Auto
                 json.TryGet(nameof(AutoIndexField.Name), out string name);
                 json.TryGet(nameof(AutoIndexField.Indexing), out string indexing);
                 json.TryGet(nameof(AutoIndexField.HasSuggestions), out bool hasSuggestions);
+                json.TryGet(nameof(AutoIndexField.HasQuotedName), out bool hasQuotedName);
 
                 var field = new AutoIndexField
                 {
                     Name = name,
                     Storage = FieldStorage.No,
                     Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
-                    HasSuggestions = hasSuggestions
+                    HasSuggestions = hasSuggestions,
+                    HasQuotedName = hasQuotedName
                 };
 
                 fields[i] = field;
