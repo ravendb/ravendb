@@ -14,21 +14,9 @@ function aboutItem() {
     });
 }
 
-function serverDashboard() {
-    return new leafMenuItem({
-        route: ["", "dashboard"],
-        moduleId: require('viewmodels/resources/serverDashboard'),
-        title: 'Server Dashboard',
-        tooltip: "Server Dashboard",
-        nav: true,
-        css: 'icon-dashboard',
-        dynamicHash: appUrl.forServerDashboard
-    });
-}
-
 function clusterDashboard() {
     return new leafMenuItem({
-        route: "clusterDashboard",
+        route: ["", "clusterDashboard"],
         moduleId: require('viewmodels/resources/clusterDashboard'),
         title: 'Cluster Dashboard',
         tooltip: "Cluster Dashboard",
@@ -40,6 +28,5 @@ function clusterDashboard() {
 
 export = {
     about: aboutItem,
-    clusterDashboard,
-    dashboard: serverDashboard,
+    clusterDashboard
 };

@@ -168,10 +168,6 @@ class accessManager {
                 </div>`;
     }
 
-    dashboardView = {
-        showCertificatesLink: this.isOperatorOrAbove
-    };
-    
     clusterView = {
         canAddNode: this.isClusterAdminOrClusterNode,
         canDeleteNode: this.isClusterAdminOrClusterNode,
