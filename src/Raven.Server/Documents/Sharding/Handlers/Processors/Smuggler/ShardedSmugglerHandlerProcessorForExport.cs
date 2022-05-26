@@ -20,10 +20,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
 
         protected override async ValueTask ExportAsync(JsonOperationContext context, long? operationId)
         {
-            if(operationId.HasValue == false)
-                operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
-
-            await RequestHandler.Export(context, RequestHandler.DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
+            
+            operationId ??= RequestHandler.DatabaseContext.Operations.GetNextOperationId();
+            await Export(context, RequestHandler.DatabaseContext.DatabaseName, ExportShardedDatabaseInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
         }
 
         protected async Task<IOperationResult> ExportShardedDatabaseInternalAsync(
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
             var operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             options.IsShard = true;
 
-            await using (var outputStream = RequestHandler.GetOutputStream(RequestHandler.ResponseBodyStream(), options))
+            await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
             await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
             {
                 writer.WriteStartObject();

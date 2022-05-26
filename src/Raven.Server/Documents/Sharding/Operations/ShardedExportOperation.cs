@@ -7,8 +7,10 @@ using System.Web;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Handlers.Processors.Smuggler;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -54,7 +56,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
             public override async Task HandleStreamResponse(Stream stream)
             {
-                await using (var gzipStream = new GZipStream(RequestHandler.GetInputStream(stream, _options), CompressionMode.Decompress))
+                await using (var gzipStream = new GZipStream(ShardedSmugglerHandlerProcessorForExport.GetInputStream(stream, _options), CompressionMode.Decompress))
                 {
                     await _writer.WriteStreamAsync(gzipStream);
                 }

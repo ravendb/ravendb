@@ -84,7 +84,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                     var result = await smuggler.ExecuteAsync();
 
-                    await WriteImportResultAsync(context, result, ResponseBodyStream());
+                    await SmugglerHandlerProcessorForImport.WriteSmugglerResultAsync(context, result, ResponseBodyStream());
                 }
             }
         }
@@ -175,7 +175,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext finalContext))
             {
                 var memoryStream = new MemoryStream();
-                await WriteImportResultAsync(finalContext, finalResult, memoryStream);
+                await SmugglerHandlerProcessorForImport.WriteSmugglerResultAsync(finalContext, finalResult, memoryStream);
                 memoryStream.Position = 0;
                 try
                 {
@@ -578,7 +578,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         });
                     }, token: token);
 
-                await WriteImportResultAsync(context, result, ResponseBodyStream());
+                await SmugglerHandlerProcessorForImport.WriteSmugglerResultAsync(context, result, ResponseBodyStream());
             }
         }
 

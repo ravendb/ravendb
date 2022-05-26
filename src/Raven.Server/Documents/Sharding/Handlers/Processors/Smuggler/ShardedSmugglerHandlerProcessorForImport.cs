@@ -14,10 +14,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
 
         protected override async ValueTask ImportAsync(JsonOperationContext context, long? operationId)
         {
-            if(operationId.HasValue == false)
-                operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
-
-            await RequestHandler.Import(context, RequestHandler.DatabaseContext.DatabaseName, RequestHandler.DoImportInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
+            operationId ??= RequestHandler.DatabaseContext.Operations.GetNextOperationId();
+            await Import(context, RequestHandler.DatabaseContext.DatabaseName, RequestHandler.DoImportInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
         }
     }
 }
