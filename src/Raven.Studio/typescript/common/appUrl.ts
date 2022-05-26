@@ -24,7 +24,7 @@ class appUrl {
     private static currentDbComputeds: computedAppUrls = {
         adminSettingsCluster: ko.pureComputed(() => appUrl.forCluster()),
 
-        serverDashboard: ko.pureComputed(() => appUrl.forServerDashboard()),
+        clusterDashboard: ko.pureComputed(() => appUrl.forClusterDashboard()),
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),
@@ -230,10 +230,6 @@ class appUrl {
 
     static forAbout(): string {
         return "#about";
-    }
-    
-    static forServerDashboard(): string {
-        return "#dashboard";
     }
     
     static forClusterDashboard(): string {

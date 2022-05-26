@@ -8,7 +8,7 @@
     </aside>
     <nav class="navbar">
         <div class="navbar-header">
-            <a class="navbar-brand" data-bind="attr: { href: appUrls.serverDashboard }">
+            <a class="navbar-brand" data-bind="attr: { href: appUrls.clusterDashboard }">
                 <img src="../../Content/img/ravendb_logo.svg" class="main-logo" />
                 <i class="icon-raven"></i>
             </a>
@@ -296,10 +296,6 @@
 
     <footer class="status-footer" data-bind="with: $root.footer">
         <div class="footer-left" data-bind="with: stats(), visible: stats">
-            <!-- TODO
-            <div class="footer-item">
-                <a href="#">Dashboard</a>
-            </div>-->
             <div class="footer-item">
                 <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments().toLocaleString()"></span></a>
             </div>

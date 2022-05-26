@@ -77,7 +77,6 @@ function generateAllMenuItems() {
         getManageServerMenuItem(),
         rootItems.about(),
         rootItems.clusterDashboard(),
-        rootItems.dashboard()
     ];
 }
 

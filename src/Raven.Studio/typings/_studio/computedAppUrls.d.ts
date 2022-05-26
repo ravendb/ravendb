@@ -3,7 +3,7 @@ interface computedAppUrls {
     adminSettingsCluster: KnockoutComputed<string>;
 
     databases: KnockoutComputed<string>;
-    serverDashboard: KnockoutComputed<string>;
+    clusterDashboard: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
     clientConfiguration: KnockoutComputed<string>;
     studioConfiguration: KnockoutComputed<string>;
