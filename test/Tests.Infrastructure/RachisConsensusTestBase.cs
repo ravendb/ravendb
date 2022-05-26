@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
+using System.Linq; 
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -148,8 +150,23 @@ namespace Tests.Infrastructure
             {
                 waitingTasks.Add(node.WaitForState(RachisState.Leader, CancellationToken.None));
             }
-            Assert.True(Task.WhenAny(waitingTasks).Wait(3000 * nodes.Count()), "Waited too long for a node to become a leader but no leader was elected.");
+
+            RavenTestHelper.AssertTrue(Task.WhenAny(waitingTasks).Wait(3000 * nodes.Count()), () => GetCandidateStatus(nodes));
             return nodes.FirstOrDefault(x => x.CurrentState == RachisState.Leader);
+        }
+
+        public static string GetCandidateStatus(IEnumerable<RachisConsensus<CountingStateMachine>> nodes)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Waited too long for a node to become a leader but no leader was elected.");
+            foreach (var node in nodes)
+            {
+                sb.AppendLine($"'{node.Tag}' is {node.CurrentState} at term {node.CurrentTerm} (running: {node.Candidate.Running})");
+                sb.AppendJoin(Environment.NewLine, node.Candidate.GetStatus().Values);
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
         }
 
         protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null)
@@ -194,64 +211,69 @@ namespace Tests.Infrastructure
             rachis.Url = url;
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
-            var task = AcceptConnection(tcpListener, rachis);
+            rachis.OnDispose += (sender, args) => tcpListener.Stop();
+
+            for (int i = 0; i < 4; i++)
+            {
+                AcceptConnection(tcpListener, rachis);
+            }
+
             return rachis;
         }
 
-        private async Task AcceptConnection(TcpListener tcpListener, RachisConsensus rachis)
+        private void AcceptConnection(TcpListener tcpListener, RachisConsensus rachis)
         {
-            rachis.OnDispose += (sender, args) => tcpListener.Stop();
-
-            while (true)
+            Task.Factory.StartNew(async () =>
             {
                 TcpClient tcpClient;
                 try
                 {
                     tcpClient = await tcpListener.AcceptTcpClientAsync();
+                    AcceptConnection(tcpListener, rachis);
                 }
-                catch (InvalidOperationException)
+                catch (Exception e)
                 {
-                    break;
+                    if (rachis.IsDisposed)
+                        return;
+
+                    Assert.True(false, $"Unexpected TCP listener exception{Environment.NewLine}{e}");
+                    throw;
                 }
 
-#pragma warning disable 4014
-                Task.Factory.StartNew(() =>
-#pragma warning restore 4014
+                try
                 {
-                    try
-                    {
-                        var stream = tcpClient.GetStream();
-                        var remoteConnection = new RemoteConnection(rachis.Tag, rachis.CurrentTerm, stream, features: new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
+                    var stream = tcpClient.GetStream();
+                    var remoteConnection = new RemoteConnection(rachis.Tag, rachis.CurrentTerm, stream,
+                        features: new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
                         {
                             MultiTree = true
                         }, () => tcpClient.Client.Disconnect(false));
 
-                        rachis.AcceptNewConnection(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
-                        {
-                            if (rachis.Url == null)
-                                return;
-
-                            lock (this)
-                            {
-                                if (_rejectionList.TryGetValue(rachis.Url, out var set))
-                                {
-                                    if (set.Contains(hello.DebugSourceIdentifier))
-                                    {
-                                        throw new InvalidComObjectException("Simulated failure");
-                                    }
-                                }
-
-                                var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
-                                connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
-                            }
-                        });
-                    }
-                    catch
+                    rachis.AcceptNewConnection(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
                     {
-                        // expected
-                    }
-                });
-            }
+                        if (rachis.Url == null)
+                            return;
+
+                        lock (this)
+                        {
+                            if (_rejectionList.TryGetValue(rachis.Url, out var set))
+                            {
+                                if (set.Contains(hello.DebugSourceIdentifier))
+                                {
+                                    throw new InvalidComObjectException("Simulated failure");
+                                }
+                            }
+
+                            var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
+                            connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
+                        }
+                    });
+                }
+                catch
+                {
+                    // expected
+                }
+            });
         }
 
         protected void Disconnect(string to, string from)
@@ -432,8 +454,9 @@ namespace Tests.Infrastructure
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out ClusterOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
+                    time = _parent.ElectionTimeout * Math.Max(_parent.GetTopology(ctx).AllNodes.Count - 2, 1);
                 }
+
                 var tcpClient = await TcpUtils.ConnectAsync(url, time, token: token);
                 try
                 {
