@@ -109,8 +109,8 @@ class ongoingTaskElasticSearchTransformationModel {
             this.transformScriptCollections([ongoingTaskElasticSearchTransformationModel.applyToAllCollectionsText]);
         } else {
             this.applyScriptForAllCollections(false);
-            _.remove(this.transformScriptCollections(), x => x === ongoingTaskElasticSearchTransformationModel.applyToAllCollectionsText);
             this.transformScriptCollections.unshift(collectionName);
+            this.transformScriptCollections.remove(ongoingTaskElasticSearchTransformationModel.applyToAllCollectionsText);
         }
 
         this.inputCollection("");

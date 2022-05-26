@@ -110,8 +110,8 @@ class ongoingTaskRavenEtlTransformationModel {
             this.transformScriptCollections([ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText]);
         } else {
             this.applyScriptForAllCollections(false);
-            _.remove(this.transformScriptCollections(), x => x === ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText);
             this.transformScriptCollections.unshift(collectionName);
+            this.transformScriptCollections.remove(ongoingTaskRavenEtlTransformationModel.applyToAllCollectionsText);
         }
        
         this.inputCollection("");
