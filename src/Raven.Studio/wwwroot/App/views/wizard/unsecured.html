@@ -83,10 +83,10 @@
                     <div data-bind="foreach: ips">
                         <div class="form-group" data-bind="validationElement: ip">
                             <label class="control-label" for="ipInput">
-                                <span>IP Address / Hostname &nbsp;<i class="required"></i></span>
+                                <span>IP Address &nbsp;<i class="required"></i></span>
                             </label>
                             <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }, css: { 'has-warning': $parent.isLoopbackOnly() }">
-                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address / Hostname"
+                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address"
                                        data-bind="textInput: ip" id="ipInput" />
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu" role="menu" style="display: none;"
