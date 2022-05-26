@@ -108,8 +108,7 @@ namespace SlowTests.Issues
 
         protected async Task<List<RavenServer>> CreateMyCluster()
         {
-            int numberOfNodes = 2;
-            var customSettingsArr = new IDictionary<string, string>[] {
+            var customSettingsList = new List<IDictionary<string, string>>() {
                 new Dictionary<string, string>(DefaultClusterSettings)
                 {
                     [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300",
@@ -122,92 +121,14 @@ namespace SlowTests.Issues
                 }
             };
 
+            var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, leaderIndex: 0, customSettingsList: customSettingsList);
 
-            string[] allowedNodeTags = { "A", "B" };
-            int leaderIndex = 0;
-            RavenServer leader = null;
-            var serversToPorts = new Dictionary<RavenServer, string>();
-            var clusterNodes = new List<RavenServer>(); // we need this in case we create more than 1 cluster in the same test
-
-            for (var i = 0; i < numberOfNodes; i++)
+            foreach (var node in nodes)
             {
-                var customSettings = customSettingsArr[i];
-
-                var serverUrl = UseFiddlerUrl("http://127.0.0.1:0");
-                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
-
-                var co = new ServerCreationOptions
-                {
-                    CustomSettings = customSettings,
-                    RunInMemory = null,
-                    RegisterForDisposal = false,
-                    NodeTag = allowedNodeTags[i]
-                };
-                var server = GetNewServer(co, null);
-                var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
-                serverUrl = UseFiddlerUrl($"http://127.0.0.1:{port}");
-                Servers.Add(server);
-                clusterNodes.Add(server);
-
-                serversToPorts.Add(server, serverUrl);
-                if (i == leaderIndex)
-                {
-                    await server.ServerStore.EnsureNotPassiveAsync(null, nodeTag: co.NodeTag);
-                    leader = server;
-                }
-
-                server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+                node.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
             }
 
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
-            {
-                for (var i = 0; i < numberOfNodes; i++)
-                {
-                    if (i == leaderIndex)
-                    {
-                        continue;
-                    }
-                    var follower = clusterNodes[i];
-                    // ReSharper disable once PossibleNullReferenceException
-                    leader = await ActionWithLeader(l =>
-                        l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: false, token: cts.Token), clusterNodes);
-
-                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter, cts.Token);
-
-                }
-            }
-
-            // wait for cluster topology on all nodes
-            foreach (var node in clusterNodes)
-            {
-                var nodesInTopology = await WaitForValueAsync(async () => await Task.FromResult(node.ServerStore.GetClusterTopology().AllNodes.Count), clusterNodes.Count, interval: 444);
-                Assert.Equal(clusterNodes.Count, nodesInTopology);
-            }
-
-            // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(3000);
-            var states = "The leader has changed while waiting for cluster to become stable. All nodes status: ";
-            if (condition == false)
-            {
-                InvalidOperationException e = null;
-
-                // leader changed, try get the new leader if no leader index was selected
-                try
-                {
-                    await ActionWithLeader(_ => Task.CompletedTask, clusterNodes);
-                    return clusterNodes;
-                }
-                catch (InvalidOperationException ex)
-                {
-                    e = ex;
-                }
-
-                states += Cluster.GetLastStatesFromAllServersOrderedByTime();
-                if (e != null)
-                    states += $"{Environment.NewLine}{e}";
-            }
-            Assert.True(condition, states);
-            return clusterNodes;
+            return nodes;
         }
 
     }
