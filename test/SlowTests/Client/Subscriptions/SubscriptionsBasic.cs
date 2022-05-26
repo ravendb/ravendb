@@ -1257,15 +1257,27 @@ namespace SlowTests.Client.Subscriptions
                         await session.StoreAsync(new User());
                         await session.SaveChangesAsync();
                     }
-                    
-                    var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
-                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+
+                    string lastChangeVectorSent = null;
+                    Assert.True(await WaitForValueAsync(async () =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName);
-                        Assert.Equal(firstCV, connectionState.LastChangeVectorSent); //make sure LastChangeVectorSent didn't advance in server even though there was no ack
-                        holdAck.Set();
-                    }
+                        var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
+                        using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName);
+                            if (connectionState == null)
+                                return false;
+                          
+                            lastChangeVectorSent = connectionState.LastChangeVectorSent;
+
+                            return lastChangeVectorSent != null;
+                        }
+                    }, true, interval: 500));
+
+                    Assert.Equal(firstCV, lastChangeVectorSent); //make sure LastChangeVectorSent didn't advance in server even though there was no ack
+
+                    holdAck.Set();
                 }
             }
         }
