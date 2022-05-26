@@ -6,39 +6,11 @@ namespace Raven.Server.Dashboard
 {
     public class DatabasesOngoingTasksInfo : AbstractDashboardNotification
     {
-        public override DashboardNotificationType Type => DashboardNotificationType.OngoingTasks;
-
         public List<DatabaseOngoingTasksInfoItem> Items { get; set; }
 
         public DatabasesOngoingTasksInfo()
         {
             Items = new List<DatabaseOngoingTasksInfoItem>();
-        }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
-            return json;
-        }
-
-        public override DynamicJsonValue ToJsonWithFilter(CanAccessDatabase filter)
-        {
-            var items = new DynamicJsonArray();
-            foreach (var databaseInfoItem in Items)
-            {
-                if (filter(databaseInfoItem.Database, requiresWrite: false))
-                {
-                    items.Add(databaseInfoItem.ToJson());
-                }
-            }
-
-            if (items.Count == 0)
-                return null;
-
-            var json = base.ToJson();
-            json[nameof(Items)] = items;
-            return json;
         }
     }
 

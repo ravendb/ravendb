@@ -329,14 +329,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(EnforceConfigurationResult));
             scripter.AddType(typeof(GetRevisionsCountOperation.DocumentRevisionsCount));
 
-            // server dashboard
-            scripter.AddType(typeof(DashboardNotificationType));
-            scripter.AddType(typeof(TrafficWatch));
-            scripter.AddType(typeof(Raven.Server.Dashboard.DatabasesInfo));
-            scripter.AddType(typeof(IndexingSpeed));
-            scripter.AddType(typeof(MachineResources));
-            scripter.AddType(typeof(DrivesUsage));
-            
             // cluster dashboard
             scripter.AddType(typeof(WidgetRequest));
             scripter.AddType(typeof(WidgetMessage));

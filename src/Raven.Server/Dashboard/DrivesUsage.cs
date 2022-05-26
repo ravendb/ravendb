@@ -6,40 +6,11 @@ namespace Raven.Server.Dashboard
 {
     public class DrivesUsage : AbstractDashboardNotification
     {
-        public override DashboardNotificationType Type => DashboardNotificationType.DriveUsage;
-
         public List<MountPointUsage> Items { get; set; }
 
         public DrivesUsage()
         {
             Items = new List<MountPointUsage>();
-        }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()));
-            return json;
-        }
-
-        public override DynamicJsonValue ToJsonWithFilter(CanAccessDatabase filter)
-        {
-            var items = new DynamicJsonArray();
-            foreach (var mountPointUsage in Items)
-            {
-                var usageAsJson = mountPointUsage.ToJsonWithFilter(filter);
-                if (usageAsJson != null)
-                {
-                    items.Add(usageAsJson);
-                }
-            }
-
-            if (items.Count == 0)
-                return null;
-
-            var json = base.ToJson();
-            json[nameof(Items)] = items;
-            return json;
         }
     }
 
