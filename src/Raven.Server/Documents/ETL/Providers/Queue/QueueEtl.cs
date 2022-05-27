@@ -96,12 +96,12 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
     {
         int count = 0;
 
-        switch (Configuration.Connection.Provider)
+        switch (Configuration.Connection.BrokerType)
         {
-            case QueueProvider.Kafka:
+            case QueueBroker.Kafka:
                 count = ProcessKafka(items, Configuration, context);
                 break;
-            case QueueProvider.RabbitMq:
+            case QueueBroker.RabbitMq:
                 ProcessRabbitMq(items, context);
                 break;
         }

@@ -13,12 +13,12 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
 
         public List<EtlQueue> EtlQueues { get; set; }
 
-        public QueueProvider Provider { get; set; }
+        public QueueBroker BrokerType { get; set; }
 
         public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
             var validationResult = base.Validate(out errors, validateName, validateConnection);
-            if (Connection != null && Provider != Connection.Provider)
+            if (Connection != null && BrokerType != Connection.BrokerType)
             {
                 errors.Add("Provider must be the same in the ETL configuration and in Connection string.");
                 return false;

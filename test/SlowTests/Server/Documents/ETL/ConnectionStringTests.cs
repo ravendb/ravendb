@@ -54,7 +54,7 @@ namespace SlowTests.Server.Documents.ETL
                 var queueConnectionString = new QueueConnectionString
                 {
                     Name = "ElasticSearchConnectionString",
-                    Provider = QueueProvider.Kafka,
+                    BrokerType = QueueBroker.Kafka,
                     KafkaConnectionSettings = new KafkaConnectionSettings(){Url = "http://127.0.0.1:8080" }
                 };
 

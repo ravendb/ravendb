@@ -233,7 +233,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
             config.Initialize(new QueueConnectionString
             {
                 Name = "Foo",
-                Provider = QueueProvider.Kafka,
+                BrokerType = QueueBroker.Kafka,
                 KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, Url = DefaultKafkaUrl }
             });
 
@@ -266,7 +266,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
             var result1 = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
             {
-                Name = "simulate", Provider = QueueProvider.Kafka, KafkaConnectionSettings = new KafkaConnectionSettings() { Url = DefaultKafkaUrl }
+                Name = "simulate", BrokerType = QueueBroker.Kafka, KafkaConnectionSettings = new KafkaConnectionSettings() { Url = DefaultKafkaUrl }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
@@ -350,7 +350,7 @@ output('test output')"
             new QueueConnectionString
             {
                 Name = connectionStringName,
-                Provider = QueueProvider.Kafka,
+                BrokerType = QueueBroker.Kafka,
                 KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, Url = url }
             });
         return config;
