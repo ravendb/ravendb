@@ -169,8 +169,7 @@ namespace Raven.Server.Commercial
         public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentSubscriptions");
 
         public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
-
-        //public bool HasQueueEtl => GetValue<bool>("queueEtl");//todo: change this after enabling it in license
+        
         public bool HasQueueEtl => true;
 
         public bool HasPowerBI => GetValue<bool>("powerBI");
