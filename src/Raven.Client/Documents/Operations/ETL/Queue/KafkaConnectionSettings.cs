@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
 
-public class KafkaSettings
+public class KafkaConnectionSettings
 {
     public string Url { get; set; }
         

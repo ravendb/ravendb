@@ -2,15 +2,15 @@
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
 
-public class RabbitMqSettings
+public class RabbitMqConnectionSettings
 {
-    public string Url { get; set; }
+    public string ConnectionString { get; set; }
     
     public DynamicJsonValue ToJson()
     {
         var json = new DynamicJsonValue
         {
-            [nameof(Url)] = Url,
+            [nameof(ConnectionString)] = ConnectionString,
         };
 
         return json;
