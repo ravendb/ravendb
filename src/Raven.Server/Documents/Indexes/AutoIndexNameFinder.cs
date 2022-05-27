@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes
                 return collectionOnly;
             }
             
-            var combinedFields = string.Join("And", fields.Select(GetName).OrderBy(x => x, StringComparer.Ordinal));
+            var combinedFields = string.Join("And", fields.Select(GetName).OrderBy(x => x));
 
             string formattableString = $"Auto/{collection}/By{combinedFields}";
             if (formattableString.Length > 256)
