@@ -315,7 +315,7 @@ public static class SettingsZipFileHelper
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                 }
 
-                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.ModifyLocalServer)
                 {
                     if (parameters.OnPutServerWideStudioConfigurationValues != null)
                         await parameters.OnPutServerWideStudioConfigurationValues(parameters.UnsecuredSetupInfo.Environment);
@@ -336,10 +336,7 @@ public static class SettingsZipFileHelper
                         currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] =
                             string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcp(ip, node.Value.TcpPort)));
                     }
-
-                    if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
-                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
-
+                    
                     var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
                     var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
@@ -378,8 +375,10 @@ public static class SettingsZipFileHelper
                 parameters.Progress?.AddInfo("Adding readme file to zip archive.");
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
-                string readmeString = CreateReadmeText(parameters.UnsecuredSetupInfo.LocalNodeTag, parameters.CompleteClusterConfigurationResult.PublicServerUrl, parameters.UnsecuredSetupInfo.NodeSetupInfos.Count > 1,
-                   false);
+                string readmeString = CreateReadmeTextForUnsecured(parameters.UnsecuredSetupInfo.LocalNodeTag,
+                    parameters.CompleteClusterConfigurationResult.PublicServerUrl,
+                    parameters.UnsecuredSetupInfo.NodeSetupInfos.Count > 1,
+                    false);
 
                 if (parameters.Progress != null)
                 {
@@ -465,6 +464,56 @@ public static class SettingsZipFileHelper
         }
     }
 
+    public static string CreateReadmeTextForUnsecured(string nodeTag, string serverUrl, bool isCluster, bool zipOnly = false)
+    {
+        var str =
+            string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
+            "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
+            "Your cluster settings configuration, are contained in the downloaded zip file."
+            + Environment.NewLine;
+
+        str += Environment.NewLine +
+               $"The new server is available at: {serverUrl}"
+               + Environment.NewLine;
+
+        if (zipOnly)
+        {
+            str += "You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.";
+            return str;
+        }
+        
+        str += $"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
+               Environment.NewLine;
+
+        if (isCluster)
+        {
+            str +=
+                Environment.NewLine +
+                "You are setting up a cluster. The cluster topology and node addresses have already been configured." +
+                Environment.NewLine +
+                "The next step is to download a new RavenDB server for each of the other nodes." +
+                Environment.NewLine +
+                Environment.NewLine +
+                "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
+                Environment.NewLine +
+                "Do not try to start a new setup process again in this new node, it is not supported." +
+                Environment.NewLine +
+                "You will be asked to upload the zip file which was just downloaded." +
+                Environment.NewLine +
+                "The new server node will join the already existing cluster." +
+                Environment.NewLine +
+                Environment.NewLine +
+                "When the wizard is done and the new node was restarted, the cluster will automatically detect it. " +
+                Environment.NewLine +
+                "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
+                Environment.NewLine +
+                "observe the topology being updated." +
+                Environment.NewLine;
+        }
+
+        return str;
+        
+    }
     // TODO:
     // 1. Call this method w/ relevant 'zipOnly' param
     // 2. Pass relevant 'publicServerUrl' when this is Unsecure

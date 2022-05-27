@@ -128,9 +128,12 @@ public class LetsEncryptValidationHelper
                 await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(publicServerUrl, ips, token);
             }
 
-            // Here we send the actual ips we will bind to in the local machine.
-            await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode,
-                token);
+            if (cert != null)
+            {
+                // Here we send the actual ips we will bind to in the local machine.
+                await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode, token);
+            }
+      
         }
         catch (Exception e)
         {

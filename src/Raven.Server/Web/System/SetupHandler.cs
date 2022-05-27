@@ -545,6 +545,8 @@ namespace Raven.Server.Web.System
 
             NoContentStatus();
         }
+        
+        //TODO: Change toggle functionality and remove this ep
         [RavenAction("/setup/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupUnsecured()
         {
@@ -567,7 +569,7 @@ namespace Raven.Server.Web.System
                     // ignored
                 }
 
-                var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
+                var unsecuredSetupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
                 BlittableJsonReaderObject settingsJson;
                 await using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
@@ -577,37 +579,43 @@ namespace Raven.Server.Web.System
 
                 settingsJson.Modifications = new DynamicJsonValue(settingsJson)
                 {
-                    [RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true,
                     [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured),
                     [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
                 };
-                
-                // TODO - Omer - take info from the nodes list
-                
-                // if (setupInfo.Port == Constants.Network.ZeroValue)
-                //     setupInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
-                //
-                // settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
-                //
-                // if (setupInfo.TcpPort == Constants.Network.ZeroValue)
-                //     setupInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
-                //
-                // settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
-                if (setupInfo.EnableExperimentalFeatures)
+                foreach ((_, NodeInfo nodeInfo) in unsecuredSetupInfo.NodeSetupInfos)
+                {
+                    if (nodeInfo.Port == Constants.Network.ZeroValue)
+                        nodeInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
+
+                    if (nodeInfo.TcpPort == Constants.Network.ZeroValue)
+                        nodeInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
+                }       
+
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";",
+                    unsecuredSetupInfo.NodeSetupInfos.Values.Select(nodeInfo => IpAddressToUrl(nodeInfo.Addresses.First(), nodeInfo.Port)));
+                
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";",
+                    unsecuredSetupInfo.NodeSetupInfos.Values.Select(nodeInfo => IpAddressToUrl(nodeInfo.Addresses.First(), nodeInfo.TcpPort,"tcp")));
+
+                if (unsecuredSetupInfo.EnableExperimentalFeatures)
                 {
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                 }
 
-                if (!string.IsNullOrEmpty(setupInfo.LocalNodeTag))
+                if (!string.IsNullOrEmpty(unsecuredSetupInfo.LocalNodeTag))
                 {
-                    await ServerStore.EnsureNotPassiveAsync(nodeTag: setupInfo.LocalNodeTag);
+                    await ServerStore.EnsureNotPassiveAsync(nodeTag: unsecuredSetupInfo.LocalNodeTag);
                 }
 
-                if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                if (unsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                 {
                     var res = await ServerStore.PutValueInClusterAsync(
-                        new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration { Disabled = false, Environment = setupInfo.Environment },
+                        new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration
+                            {
+                                Disabled = false,
+                                Environment = unsecuredSetupInfo.Environment
+                            },
                             RaftIdGenerator.DontCareId));
                     await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                 }
