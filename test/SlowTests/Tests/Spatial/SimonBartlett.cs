@@ -92,7 +92,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CirclesShouldNotIntersect(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -125,7 +125,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void GeohashIndexDefaultLevel_LineStringShouldNotThrowException(Options options)
         {
             using (var store = GetDocumentStore(options))
