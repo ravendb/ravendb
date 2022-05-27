@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
                 var kafkaProducer = QueueHelper.CreateKafkaClient(
                     new QueueConnectionString
                     {
-                        KafkaSettings = new KafkaSettings()
+                        KafkaConnectionSettings = new KafkaConnectionSettings()
                         {
                             Url = url, 
                             ConnectionOptions = config.Configuration,

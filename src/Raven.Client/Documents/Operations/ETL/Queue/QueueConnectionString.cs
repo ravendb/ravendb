@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
 
@@ -8,41 +9,51 @@ public class QueueConnectionString : ConnectionString
 {
     public QueueProvider Provider { get; set; }
 
-    public KafkaSettings KafkaSettings { get; set; }
+    public KafkaConnectionSettings KafkaConnectionSettings { get; set; }
 
-    public RabbitMqSettings RabbitMqSettings { get; set; }
+    public RabbitMqConnectionSettings RabbitMqConnectionSettings { get; set; }
     
     public override ConnectionStringType Type => ConnectionStringType.Queue;
 
     protected override void ValidateImpl(ref List<string> errors)
     {
-        if (Provider == QueueProvider.Kafka)
+        switch (Provider)
         {
-            if (KafkaSettings == null || string.IsNullOrWhiteSpace(KafkaSettings.Url))
-            {
-                errors.Add($"{nameof(KafkaSettings)} has no valid setting.");
-            }
-        }
-        else if (Provider == QueueProvider.RabbitMq)
-        {
-            if (RabbitMqSettings == null || string.IsNullOrWhiteSpace(RabbitMqSettings.Url))
-            {
-                errors.Add($"{nameof(RabbitMqSettings)} has no valid setting.");
-            }
+            case QueueProvider.Kafka:
+                if (KafkaConnectionSettings == null || string.IsNullOrWhiteSpace(KafkaConnectionSettings.Url))
+                {
+                    errors.Add($"{nameof(KafkaConnectionSettings)} has no valid setting.");
+                }
+                break;
+            case QueueProvider.RabbitMq:
+                if (RabbitMqConnectionSettings == null || string.IsNullOrWhiteSpace(RabbitMqConnectionSettings.ConnectionString))
+                {
+                    errors.Add($"{nameof(RabbitMqConnectionSettings)} has no valid setting.");
+                }
+                break;
+            default:
+                throw new NotSupportedException($"'{Provider}' is not supported");
         }
     }
 
     public string GetUrl()
     {
-        var url = "";
-            
-        if (Provider == QueueProvider.Kafka)
+        string url;
+
+        switch (Provider)
         {
-            url = KafkaSettings.Url;
-        }
-        else if (Provider == QueueProvider.RabbitMq)
-        {
-            url = RabbitMqSettings.Url;
+            case QueueProvider.Kafka:
+                url = KafkaConnectionSettings.Url;
+                break;
+            case QueueProvider.RabbitMq:
+                var connectionString = RabbitMqConnectionSettings.ConnectionString;
+
+                int indexOfStartServerUri = connectionString.IndexOf("@", StringComparison.OrdinalIgnoreCase);
+
+                url = indexOfStartServerUri != -1 ? connectionString.Substring(indexOfStartServerUri + 1) : null;
+                break;
+            default:
+                throw new NotSupportedException($"'{Provider}' is not supported");
         }
 
         return url;
@@ -52,7 +63,7 @@ public class QueueConnectionString : ConnectionString
     {
         DynamicJsonValue json = base.ToJson();
         json[nameof(Provider)] = Provider;
-        json[nameof(KafkaSettings)] = KafkaSettings?.ToJson();
+        json[nameof(KafkaConnectionSettings)] = KafkaConnectionSettings?.ToJson();
 
         return json;
     }
