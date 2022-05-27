@@ -20,6 +20,7 @@ public class FeatureGuardian
     {
         switch (feature)
         {
+            case Feature.Corax:
             case Feature.GraphApi:
             case Feature.PostgreSql:
                 AssertExperimental(feature, getExceptionMessage);
@@ -31,6 +32,7 @@ public class FeatureGuardian
     {
         switch (feature)
         {
+            case Feature.Corax:
             case Feature.GraphApi:
             case Feature.PostgreSql:
                 return _configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental;

@@ -388,7 +388,7 @@ namespace Raven.Server.Config.Categories
         [Description("Search engine for static indexes")]
         [DefaultValue(SearchEngineType.Lucene)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.Static.SearchEngineType", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry(Constants.Configuration.Indexes.IndexingStaticSearchEngineType, ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public SearchEngineType StaticIndexingEngineType { get; protected set; }
         
         public Lazy<AnalyzerFactory> DefaultAnalyzerType { get; private set; }

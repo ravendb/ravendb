@@ -132,6 +132,12 @@ namespace Raven.Client.Documents.Indexes
         public IndexLockMode? LockMode { get; set; }
 
         public IndexDeploymentMode? DeploymentMode { get; set; }
+        
+        /// <summary>
+        ///  Set search engine for index.
+        ///<para>Default value: null means that the configuration from the database will be used.</para>
+        /// </summary>
+        public SearchEngineType? SearchEngineType { get; set; }
 
         /// <summary>
         /// Index state
@@ -219,6 +225,11 @@ namespace Raven.Client.Documents.Indexes
 
                 if (DeploymentMode.HasValue)
                     indexDefinition.DeploymentMode = DeploymentMode.Value;
+
+                if (SearchEngineType.HasValue)
+                {
+                    indexDefinition.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = SearchEngineType.Value.ToString();
+                }
 
                 return store.Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexDefinition), token);
             }

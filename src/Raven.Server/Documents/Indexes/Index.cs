@@ -20,6 +20,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Handlers.Admin;
@@ -817,6 +818,7 @@ namespace Raven.Server.Documents.Indexes
                     SearchEngineType = SearchEngineType.Lucene;
                     break;
                 case SearchEngineType.Corax:
+                    RavenConfiguration.AssertCanUseCoraxFeature(DocumentDatabase.ServerStore.Configuration);
                     IndexPersistence = new CoraxIndexPersistence(this);
                     SearchEngineType = SearchEngineType.Corax;
                     break;

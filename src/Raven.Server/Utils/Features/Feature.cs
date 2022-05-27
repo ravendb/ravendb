@@ -8,5 +8,8 @@ public enum Feature
     GraphApi,
 
     [Description("PostgreSQL")]
-    PostgreSql
+    PostgreSql,
+    
+    [Description("Corax")]
+    Corax
 }
