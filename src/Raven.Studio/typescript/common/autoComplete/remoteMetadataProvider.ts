@@ -18,7 +18,7 @@ class remoteMetadataProvider implements queryCompleterProviders {
     }
 
     indexFields(indexName: string, callback: (fields: string[]) => void): void {
-        new getIndexEntriesFieldsCommand(indexName, this.db, false)
+        new getIndexEntriesFieldsCommand(indexName, this.db, this.db.getLocations()[0], false)
             .execute()
             .done(result => {
                 callback(result.Static);

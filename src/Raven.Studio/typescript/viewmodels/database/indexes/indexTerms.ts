@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
@@ -42,18 +41,45 @@ class indexTerms extends shardViewModelBase {
         this.bindToCurrentInstance("navigateToQuery");
     }
 
-    activate(indexName: string): JQueryPromise<getIndexEntriesFieldsCommandResult> {
+    activate(indexName: string): JQueryPromise<void> {
         super.activate(indexName);
 
         this.indexName = indexName;
         this.indexPageUrl = this.appUrls.editIndex(this.indexName);
-        return this.fetchIndexEntriesFields(indexName);
+
+        const deferred = $.Deferred<void>();
+        this.loadData(indexName)
+            .then(deferred.resolve)
+            .catch(deferred.resolve)
+        
+        return deferred;
+    }
+    
+    private async loadData(indexName: string) {
+        const locations = this.db.getLocations();
+        const tasks = locations.map(location => this.fetchIndexEntriesFields(indexName, location));
+
+        const perNodeFields = await Promise.all(tasks);
+        
+        const dynamicFields = new Set<string>();
+        const staticFields = new Set<string>();
+        
+        perNodeFields.forEach(fields => {
+            fields.Dynamic.forEach(d => dynamicFields.add(d));
+            fields.Static.forEach(d => staticFields.add(d));
+        });
+        
+        const joinedResult: getIndexEntriesFieldsCommandResult = {
+            Dynamic: Array.from(dynamicFields),
+            Static: Array.from(staticFields)
+        }
+        
+        this.processFields(joinedResult);
     }
 
-    fetchIndexEntriesFields(indexName: string) {
-        return new getIndexEntriesFieldsCommand(indexName, this.db)
-            .execute()
-            .done((fields) => this.processFields(fields));
+    async fetchIndexEntriesFields(indexName: string, location: databaseLocationSpecifier) {
+        return new getIndexEntriesFieldsCommand(indexName, this.db, location)
+            .execute();
     }
 
     navigateToQuery(fieldName: string, term: string) {
