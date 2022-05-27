@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -52,7 +53,6 @@ namespace Raven.Server.Commercial
 
         public static async Task<IOperationResult> SetupUnsecuredTask(Action<IOperationProgress> onProgress, UnsecuredSetupInfo unsecuredSetupInfo, ServerStore serverStore, CancellationToken token)
         {
-            List<Exception> exceptions = new();
             var progress = new SetupProgressAndResult(tuple =>
             {
                 if (Logger is {IsInfoEnabled: true})
@@ -74,9 +74,9 @@ namespace Raven.Server.Commercial
                         UnsecuredSetupInfo = unsecuredSetupInfo
                     });
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
-                    throw new AggregateException(ex);
+                    throw new AggregateException(e);
                 }
              
                 await ValidateUnsecuredServerCanRunWithSuppliedSettings(unsecuredSetupInfo, serverStore, token);
@@ -88,12 +88,12 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    foreach (var node in unsecuredSetupInfo.NodeSetupInfos.Values)
-                    {
-                        node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddress(ip, node.Port)));
-                    }
-                    
-                    var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZipUnsecuredSetup(onProgress, progress, SetupMode.Unsecured, unsecuredSetupInfo, serverStore, token);
+                    var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZipUnsecuredSetup(onProgress,
+                        progress,
+                        SetupMode.Unsecured,
+                        unsecuredSetupInfo,
+                        serverStore,
+                        token);
 
                     progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFileUnsecuredSetup(new GetSetupZipFileParameters
                     {
@@ -108,7 +108,12 @@ namespace Raven.Server.Commercial
                         OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
                         {
                             var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
-                                new ServerWideStudioConfiguration {Disabled = false, Environment = studioEnvironment}, RaftIdGenerator.DontCareId));
+                                new ServerWideStudioConfiguration
+                                {
+                                    Disabled = false,
+                                    Environment = studioEnvironment
+                                },
+                                RaftIdGenerator.DontCareId));
                             await serverStore.Cluster.WaitForIndexNotification(res.Index);
                         }
                     });
@@ -120,12 +125,12 @@ namespace Raven.Server.Commercial
 
                 progress.Processed++;
                 progress.AddInfo("Configuration settings created.");
-                progress.AddInfo("Setting up RavenDB in 'Secured Mode' finished successfully.");
+                progress.AddInfo("Setting up RavenDB in 'Unsecured Mode' finished successfully.");
                 onProgress(progress);
             }
             catch (Exception e)
             {
-                LogErrorAndThrow(onProgress, progress, "Setting up RavenDB in 'Secured Mode' failed.", e);
+                LogErrorAndThrow(onProgress, progress, "Setting up RavenDB in 'Unsecured Mode' failed.", e);
             }
 
             return progress;
@@ -305,14 +310,15 @@ namespace Raven.Server.Commercial
                     try
                     {
                         settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes,
-                            continueSetupInfo.NodeTag,
-                            context,
-                            out _,
-                            out _,
-                            out _,
-                            out firstNodeTag,
-                            out otherNodesUrls,
-                            out license);
+                            currentNodeTag: continueSetupInfo.NodeTag,
+                            context: context,
+                            certBytes: out _,
+                            serverCert: out _,
+                            clientCert: out _,
+                            firstNodeTag: out firstNodeTag,
+                            otherNodesUrls: out otherNodesUrls,
+                            license: out license,
+                            isSecured: false);
                     }
                     catch (Exception e)
                     {
@@ -325,7 +331,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        //await LetsEncryptValidationHelper.ValidateServerCanRunOnThisNode(settingsJsonObject, serverCert, serverStore, continueSetupInfo.NodeTag, token);
+                        await LetsEncryptValidationHelper.ValidateServerCanRunOnThisNode(settingsJsonObject, null, serverStore, continueSetupInfo.NodeTag, token);
                     }
                     catch (Exception e)
                     {
@@ -407,8 +413,16 @@ namespace Raven.Server.Commercial
                     X509Certificate2 serverCert;
                     try
                     {
-                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out serverCertBytes,
-                            out serverCert, out clientCert, out firstNodeTag, out otherNodesUrls, out license);
+                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(
+                            zipBytes: zipBytes, 
+                            currentNodeTag: continueSetupInfo.NodeTag,
+                            context: context,
+                            certBytes: out serverCertBytes, 
+                            serverCert: out serverCert,
+                            clientCert: out clientCert,
+                            firstNodeTag: out firstNodeTag,
+                            otherNodesUrls: out otherNodesUrls,
+                            license: out license);
                     }
                     catch (Exception e)
                     {
@@ -495,11 +509,11 @@ namespace Raven.Server.Commercial
         }
         internal static Task ValidateUnsecuredServerCanRunWithSuppliedSettings(UnsecuredSetupInfo unsecuredSetupInfo, ServerStore serverStore, CancellationToken token)
         {
+            List<Exception> exceptions = new();
             var localServerIp = unsecuredSetupInfo.NodeSetupInfos.Values.First();
             var nodes = unsecuredSetupInfo.NodeSetupInfos.Values.Where(x => x != localServerIp);
             try
             {
-                List<Exception> exceptions = new();
                 // Evaluate current system tcp connections. This is the same information provided
                 // by the netstat command line application, just in .Net strongly-typed object
                 // form.  We will look through the list, and if our port we would like to use
@@ -513,16 +527,21 @@ namespace Raven.Server.Commercial
                     {
                         if (tcpi.LocalEndPoint.Port == node.Port)
                         {
-                            exceptions.Add( new Exception($"The given port:{node.Port} is already in use"));
+                            throw new PortInUseException($"Port: {node.Port} is already in use");
                         }
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerIp, e);
+                exceptions.Add(exception);
             }
 
+            if (exceptions.Count > 0)
+            {
+                throw new AggregateException("Failed to simulate running the server with the supplied settings using: " + localServerIp, exceptions);
+            }
+            
             return Task.CompletedTask;
         }
 
@@ -909,7 +928,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeText(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextForUnsecured(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
             }
             catch (Exception e)
             {
@@ -1013,7 +1032,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeText(continueSetupInfo.NodeTag, serverUrl, true, false);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextForUnsecured(continueSetupInfo.NodeTag, serverUrl, true, false);
             }
             catch (Exception e)
             {
@@ -1068,7 +1087,8 @@ namespace Raven.Server.Commercial
                 {
                     try
                     {
-                        await serverStore.AddNodeToClusterAsync(unsecuredSetupInfo.NodeSetupInfos[nodeTag].PublicServerUrl, nodeTag, validateNotInTopology: false, token: token);
+                        var publicServerUrl = unsecuredSetupInfo.NodeSetupInfos[nodeTag].PublicServerUrl;
+                        await serverStore.AddNodeToClusterAsync(publicServerUrl, nodeTag, validateNotInTopology: false, token: token);
                     }
                     catch (Exception e)
                     {
@@ -1204,9 +1224,11 @@ namespace Raven.Server.Commercial
 
         public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string currentNodeTag, JsonOperationContext context,
             out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out string firstNodeTag,
-            out Dictionary<string, string> otherNodesUrls, out License license)
+            out Dictionary<string, string> otherNodesUrls, out License license, bool isSecured = true)
         {
             certBytes = null;
+            serverCert = null;
+            clientCert = null;
             byte[] clientCertBytes = null;
             BlittableJsonReaderObject currentNodeSettingsJson = null;
             license = null;
@@ -1264,6 +1286,7 @@ namespace Raven.Server.Commercial
                         using (var settingsJson = context.Sync.ReadForMemory(entry.Open(), "settings-json-from-zip"))
                         {
                             settingsJson.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
+                            settingsJson.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
 
                             if (entry.FullName.StartsWith($"{currentNodeTag}/"))
                             {
@@ -1273,29 +1296,31 @@ namespace Raven.Server.Commercial
                             // This is for the case where we take the zip file and use it to setup the first node as well.
                             // If this is the first node, we must collect the urls of the other nodes so that
                             // we will be able to add them to the cluster when we bootstrap the cluster.
-                            if (entry.FullName.StartsWith(firstNodeTag + "/") == false && publicServerUrl != null)
+                            if (entry.FullName.StartsWith(firstNodeTag + "/") == false)
                             {
                                 var tag = entry.FullName.Substring(0, entry.FullName.Length - "/settings.json".Length);
-                                otherNodesUrls.Add(tag, publicServerUrl);
+                                otherNodesUrls.Add(tag, publicServerUrl ?? serverUrl);
                             }
                         }
                     }
                 }
             }
 
-            if (certBytes == null)
+            if (certBytes == null && isSecured)
                 throw new InvalidOperationException($"Could not extract the server certificate of node '{currentNodeTag}'. Are you using the correct zip file?");
-            if (clientCertBytes == null)
+            if (clientCertBytes == null && isSecured)
                 throw new InvalidOperationException("Could not extract the client certificate. Are you using the correct zip file?");
             if (currentNodeSettingsJson == null)
                 throw new InvalidOperationException($"Could not extract settings.json of node '{currentNodeTag}'. Are you using the correct zip file?");
 
             try
             {
-                currentNodeSettingsJson.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
-
-                serverCert = new X509Certificate2(certBytes, certPassword,
-                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                if (isSecured)
+                {
+                    currentNodeSettingsJson.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
+                    serverCert = new X509Certificate2(certBytes, certPassword, 
+                        X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);   
+                }
             }
             catch (Exception e)
             {
@@ -1304,8 +1329,11 @@ namespace Raven.Server.Commercial
 
             try
             {
-                clientCert = new X509Certificate2(clientCertBytes, (string)null,
-                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                if (isSecured)
+                {
+                    clientCert = new X509Certificate2(clientCertBytes, (string)null,
+                        X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                }
             }
             catch (Exception e)
             {

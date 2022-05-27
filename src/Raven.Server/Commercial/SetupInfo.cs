@@ -50,8 +50,6 @@ namespace Raven.Server.Commercial
         public string Email { get; set; }
         public string Domain { get; set; }
         public string RootDomain { get; set; }
-        //public bool ModifyLocalServer { get; set; }
-        //public string LocalNodeTag { get; set; }
         public string Certificate { get; set; }
         public string Password { get; set; }
 
@@ -67,19 +65,6 @@ namespace Raven.Server.Commercial
             json[nameof(Certificate)] = Certificate;
             json[nameof(Password)] = Password;
             return json;
-            
-            // return new DynamicJsonValue
-            // {
-            //     [nameof(License)] = License.ToJson(),
-            //     [nameof(Email)] = Email,
-            //     [nameof(Domain)] = Domain,
-            //     [nameof(RootDomain)] = RootDomain,
-            //     //[nameof(ModifyLocalServer)] = ModifyLocalServer,
-            //     [nameof(RegisterClientCert)] = RegisterClientCert,
-            //     [nameof(ClientCertNotAfter)] = ClientCertNotAfter,
-            //     [nameof(Certificate)] = Certificate,
-            //     [nameof(Password)] = Password,
-            // };
         }
 
         public override void InfoValidation(CreateSetupPackageParameters parameters)
@@ -175,11 +160,6 @@ namespace Raven.Server.Commercial
 
     public class UnsecuredSetupInfo : SetupInfoBase
     {
-        //public List<string> Addresses { get; set; }
-        //public int Port { get; set; }
-        //public int TcpPort { get; set; }
-        //public string LocalNodeTag { get; set; }
-
         public override void InfoValidation(CreateSetupPackageParameters _)
         {
             List<Exception> exceptions = new ();
@@ -218,21 +198,6 @@ namespace Raven.Server.Commercial
         public override async Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters)
         {
             return await UnsecuredSetupUtils.Setup(parameters.UnsecuredSetupInfo, parameters.Progress, parameters.CancellationToken);
-        }
-
-        public override DynamicJsonValue ToJson()
-        {
-            return base.ToJson();
-            
-            return new DynamicJsonValue
-            {
-                // [nameof(Addresses)] = new DynamicJsonArray(Addresses),
-                // [nameof(Port)] = Port,
-                // [nameof(TcpPort)] = TcpPort,
-                // [nameof(EnableExperimentalFeatures)] = EnableExperimentalFeatures,
-                // [nameof(Environment)] = Environment,
-                // [nameof(LocalNodeTag)] = LocalNodeTag
-            };
         }
     }
 
