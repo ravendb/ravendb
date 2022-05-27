@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Operations.ETL.Queue;
 
-public enum QueueProvider
+public enum QueueBroker
 {
     Kafka,
     RabbitMq
