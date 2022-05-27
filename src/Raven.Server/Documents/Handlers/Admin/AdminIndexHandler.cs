@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Security;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -18,6 +19,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -82,6 +84,14 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     indexDefinition.Type = indexDefinition.DetectStaticIndexType();
 
+                    if (indexDefinition.Configuration.TryGetValue(Constants.Configuration.Indexes.IndexingStaticSearchEngineType, out var searchEngine))
+                    {
+                        if (searchEngine.Equals(SearchEngineType.Corax.ToString(), StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            RavenConfiguration.AssertCanUseCoraxFeature(Server.Configuration);
+                        }
+                    }
+                    
                     // C# index using a non-admin endpoint
                     if (indexDefinition.Type.IsJavaScript() == false && validatedAsAdmin == false)
                     {

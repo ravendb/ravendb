@@ -28,7 +28,7 @@ namespace FastTests.Issues
         }
         
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void Test(Options options)
         {
             using (var store = GetDocumentStore(options))
