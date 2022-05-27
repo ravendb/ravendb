@@ -39,7 +39,7 @@ namespace Sparrow.Json
                 return;
 
             var size = FreeAllPooledMemory();
-            if (_log.IsInfoEnabled)
+            if (_log.IsInfoEnabled && size > 0)
                 _log.Info($"{_debugTag}: HandleLowMemory freed {new Size(size, SizeUnit.Bytes)} in {_debugTag}");
         }
 
