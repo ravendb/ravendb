@@ -60,7 +60,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             }
         };
 
-        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
+        Assert.True(setupInfo.ZipOnly == false, nameof(setupInfo.ZipOnly) + " != false");
 
         var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
         {
@@ -233,7 +233,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             }
         };
 
-        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
+        Assert.True(setupInfo.ZipOnly == false, nameof(setupInfo.ZipOnly) + " != false");
 
 
         var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
@@ -338,7 +338,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             }
         };
 
-        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
+        Assert.True(setupInfo.ZipOnly == false, nameof(setupInfo.ZipOnly) + " != false");
 
         var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
             {
@@ -472,7 +472,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {"C", new NodeInfo {Port = 446, TcpPort = 38888, Addresses = new List<string> {"127.0.0.1"}}}
             }
         };
-        Assert.True(setupInfo.ModifyLocalServer == false, nameof(setupInfo.ModifyLocalServer) + " != false");
+        Assert.True(setupInfo.ZipOnly == false, nameof(setupInfo.ZipOnly) + " != false");
 
         var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
             {

@@ -60,6 +60,7 @@ namespace Raven.Server.Commercial
             json[nameof(Email)] = Email;
             json[nameof(Domain)] = Domain;
             json[nameof(RootDomain)] = RootDomain;
+            json[nameof(ZipOnly)] = ZipOnly;
             json[nameof(RegisterClientCert)] = RegisterClientCert;
             json[nameof(ClientCertNotAfter)] = ClientCertNotAfter;
             json[nameof(Certificate)] = Certificate;
@@ -216,6 +217,7 @@ namespace Raven.Server.Commercial
         {
             return await UnsecuredSetupUtils.Setup(parameters.UnsecuredSetupInfo, parameters.Progress, parameters.CancellationToken);
         }
+
     }
 
     public class ContinueSetupInfo

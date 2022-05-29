@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -127,7 +128,7 @@ public static class SettingsZipFileHelper
                 
                 string certPath = parameters.OnGetCertificatePath?.Invoke(certificateFileName);
 
-                if (parameters.SetupInfo.ModifyLocalServer)
+                if (parameters.SetupInfo.ZipOnly)
                 {
                     await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                     {
@@ -175,7 +176,7 @@ public static class SettingsZipFileHelper
                     var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
                     var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-                    if (node.Key == parameters.SetupInfo.LocalNodeTag && parameters.SetupInfo.ModifyLocalServer)
+                    if (node.Key == parameters.SetupInfo.LocalNodeTag && parameters.SetupInfo.ZipOnly)
                     {
                         try
                         {
@@ -220,16 +221,14 @@ public static class SettingsZipFileHelper
                 parameters.Progress?.AddInfo("Adding readme file to zip archive.");
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
-                string readmeString = CreateReadmeText(parameters.SetupInfo.LocalNodeTag,
+                string readmeString = CreateReadmeTextSecured(parameters.SetupInfo.LocalNodeTag,
                     parameters.CompleteClusterConfigurationResult.PublicServerUrl,
                     parameters.SetupInfo.NodeSetupInfos.Count > 1,
                     parameters.SetupInfo.RegisterClientCert,
-                    parameters.SetupInfo.ModifyLocalServer);
+                    parameters.SetupInfo.ZipOnly);
 
                 if (parameters.Progress != null)
-                {
                     parameters.Progress.Readme = readmeString;
-                }
 
                 try
                 {
@@ -318,7 +317,7 @@ public static class SettingsZipFileHelper
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                 }
 
-                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.ModifyLocalServer)
+                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.ZipOnly)
                 {
                     if (parameters.OnPutServerWideStudioConfigurationValues != null)
                         await parameters.OnPutServerWideStudioConfigurationValues(parameters.UnsecuredSetupInfo.Environment);
@@ -378,10 +377,10 @@ public static class SettingsZipFileHelper
                 parameters.Progress?.AddInfo("Adding readme file to zip archive.");
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
-                string readmeString = CreateReadmeTextForUnsecured(parameters.UnsecuredSetupInfo.LocalNodeTag,
+                string readmeString = CreateReadmeTextUnsecured(parameters.UnsecuredSetupInfo.LocalNodeTag,
                     parameters.CompleteClusterConfigurationResult.PublicServerUrl,
                     parameters.UnsecuredSetupInfo.NodeSetupInfos.Count > 1,
-                    false);
+                    parameters.ZipOnly);
 
                 if (parameters.Progress != null)
                 {
@@ -467,82 +466,76 @@ public static class SettingsZipFileHelper
         }
     }
 
-    public static string CreateReadmeTextForUnsecured(string nodeTag, string serverUrl, bool isCluster, bool zipOnly = false)
+    public static string CreateReadmeTextUnsecured(string nodeTag, string serverUrl, bool isCluster, bool zipOnly)
     {
-        var str =
-            string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
-            "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
-            "Your cluster settings configuration, are contained in the downloaded zip file."
-            + Environment.NewLine;
-
-        str += Environment.NewLine +
-               $"The new server is available at: {serverUrl}"
-               + Environment.NewLine;
-
-        if (zipOnly)
-        {
-            str += "You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.";
-            return str;
-        }
+        var sb = new StringBuilder();
         
-        str += $"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
-               Environment.NewLine;
+        sb.Append(string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
+                  "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
+                  "Your cluster settings configuration, are contained in the downloaded zip file."
+                  + Environment.NewLine);
+            
+        sb.Append("You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.");
+        if (zipOnly == false)
+            return sb.ToString();
 
-        if (isCluster)
-        {
-            str +=
-                Environment.NewLine +
-                "You are setting up a cluster. The cluster topology and node addresses have already been configured." +
-                Environment.NewLine +
-                "The next step is to download a new RavenDB server for each of the other nodes." +
-                Environment.NewLine +
-                Environment.NewLine +
-                "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
-                Environment.NewLine +
-                "Do not try to start a new setup process again in this new node, it is not supported." +
-                Environment.NewLine +
-                "You will be asked to upload the zip file which was just downloaded." +
-                Environment.NewLine +
-                "The new server node will join the already existing cluster." +
-                Environment.NewLine +
-                Environment.NewLine +
-                "When the wizard is done and the new node was restarted, the cluster will automatically detect it. " +
-                Environment.NewLine +
-                "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
-                Environment.NewLine +
-                "observe the topology being updated." +
-                Environment.NewLine;
-        }
 
-        return str;
+        sb.Append(Environment.NewLine +
+                  $"The new server is available at: {serverUrl}"
+                  + Environment.NewLine);
+
+        sb.Append($"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
+               Environment.NewLine);
+
+        sb.Append(
+            Environment.NewLine +
+            "You are setting up a cluster. The cluster topology and node addresses have already been configured." +
+            Environment.NewLine +
+            "The next step is to download a new RavenDB server for each of the other nodes." +
+            Environment.NewLine +
+            Environment.NewLine +
+            "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
+            Environment.NewLine +
+            "Do not try to start a new setup process again in this new node, it is not supported." +
+            Environment.NewLine +
+            "You will be asked to upload the zip file which was just downloaded." +
+            Environment.NewLine +
+            "The new server node will join the already existing cluster." +
+            Environment.NewLine +
+            Environment.NewLine +
+            "When the wizard is done and the new node was restarted, the cluster will automatically detect it. " +
+            Environment.NewLine +
+            "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
+            Environment.NewLine +
+            "observe the topology being updated." +
+            Environment.NewLine);
         
+        return sb.ToString();
     }
 
-    public static string CreateReadmeText(string nodeTag, string publicServerUrl, bool isCluster, bool registerClientCert, bool zipOnly = false)
+    public static string CreateReadmeTextSecured(string nodeTag, string publicServerUrl, bool isCluster, bool registerClientCert, bool zipOnly = false)
     {
-        var str =
-            string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
-            "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
-            "Your cluster settings configuration, and the certificate (if in Secure Mode), are contained in the downloaded zip file."
-            + Environment.NewLine;
-
-        str += Environment.NewLine +
-               $"The new server is available at: {publicServerUrl}"
-               + Environment.NewLine;
-
-        if (zipOnly)
-        {
-            str += "You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.";
-            return str;
-        }
+        var sb = new StringBuilder();
         
-        str += $"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
-               Environment.NewLine;
+        sb.Append( string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
+                   "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
+                   "Your cluster settings configuration, and the certificate (if in Secure Mode), are contained in the downloaded zip file."
+                   + Environment.NewLine);
+            
+        sb.Append("You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.");
+        if (zipOnly)
+            return sb.ToString();
+        
+        sb.Append(Environment.NewLine +
+               $"The new server is available at: {publicServerUrl}"
+               + Environment.NewLine);
 
-        str += Environment.NewLine;
+        sb.Append($"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
+               Environment.NewLine);
+
         if (registerClientCert && PlatformDetails.RunningOnPosix == false)
         {
-            str +=
+           sb.Append(
                 $"An administrator client certificate has been installed on this machine ({Environment.MachineName})." +
                 Environment.NewLine +
                 $"You can now restart the server and access the studio at {publicServerUrl}." +
@@ -550,42 +543,42 @@ public static class SettingsZipFileHelper
                 "Chrome will let you select this certificate automatically. " +
                 Environment.NewLine +
                 "If it doesn't, you will get an authentication error. Please restart all instances of Chrome to make sure nothing is cached." +
-                Environment.NewLine;
+                Environment.NewLine);
         }
         else
         {
-            str +=
+            sb.Append(
                 "An administrator client certificate has been generated and is located in the zip file." +
                 Environment.NewLine +
                 $"However, the certificate was not installed on this machine ({Environment.MachineName}), this can be done manually." +
-                Environment.NewLine;
+                Environment.NewLine);
         }
 
-        str +=
+        sb.Append(
             "If you are using Firefox (or Chrome under Linux), the certificate must be imported manually to the browser." +
             Environment.NewLine +
             "You can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
-            Environment.NewLine;
+            Environment.NewLine);
 
         if (PlatformDetails.RunningOnPosix)
-            str +=
+            sb.Append(
                 "In Linux, importing the client certificate to the browser might fail for 'Unknown Reasons'." +
                 Environment.NewLine +
                 "If you encounter this bug, use the RavenCli command 'generateClientCert' to create a new certificate with a password." +
                 Environment.NewLine +
                 "For more information on this workaround, read the security documentation in 'ravendb.net'." +
-                Environment.NewLine;
+                Environment.NewLine);
 
-        str +=
+        sb.Append(
             Environment.NewLine +
             "It is recommended to generate additional certificates with reduced access rights for applications and users." +
             Environment.NewLine +
             "This can be done using the RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
-            Environment.NewLine;
+            Environment.NewLine);
 
         if (isCluster)
         {
-            str +=
+            sb.Append(
                 Environment.NewLine +
                 "You are setting up a cluster. The cluster topology and node addresses have already been configured." +
                 Environment.NewLine +
@@ -606,10 +599,10 @@ public static class SettingsZipFileHelper
                 "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
                 Environment.NewLine +
                 "observe the topology being updated." +
-                Environment.NewLine;
+                Environment.NewLine);
         }
 
-        return str;
+        return sb.ToString();
     }
     
     internal static string IpAddress(string address, int port)
