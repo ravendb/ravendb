@@ -6,11 +6,13 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.Sharding.Operations;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,6 +22,26 @@ namespace SlowTests.Client.Operations
     {
         public StudioOperationsTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task DeleteStudioCollection(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.TimeSeries | DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
+
+                await store.Maintenance.SendAsync(new DeleteStudioCollectionOperation(null, "Orders", null));
+                await Task.Delay(1000);
+
+                await AssertWaitForTrueAsync(async () =>
+                {
+                    var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                    
+                    return stats != null && stats.Collections["Orders"] == 0;
+                });
+            }
         }
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
