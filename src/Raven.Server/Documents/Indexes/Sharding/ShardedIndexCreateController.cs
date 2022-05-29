@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
@@ -40,7 +39,7 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
 
     protected override async ValueTask<long> GetCollectionCountAsync(string collection)
     {
-        var op = new ShardedCollectionHandler.ShardedCollectionStatisticsOperation();
+        var op = new ShardedCollectionStatisticsOperation();
 
         var stats = await _context.ShardExecutor.ExecuteParallelForAllAsync(op);
 

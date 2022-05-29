@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
@@ -21,28 +22,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/collections/stats", "GET")]
         public async Task GetCollectionStats()
         {
-            var op = new ShardedCollectionStatisticsOperation(HttpContext);
-
-            var stats = await ShardExecutor.ExecuteParallelForAllAsync(op);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, stats.ToJson());
-            }
+            using (var processor = new ShardedCollectionsHandlerProcessorForGetCollectionStats(this, detailed: false))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/collections/stats/detailed", "GET")]
         public async Task GetDetailedCollectionStats()
         {
-            var op = new ShardedDetailedCollectionStatisticsOperation(HttpContext);
-            var stats = await ShardExecutor.ExecuteParallelForAllAsync(op);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, stats.ToJson());
-            }
+            using (var processor = new ShardedCollectionsHandlerProcessorForGetCollectionStats(this, detailed: true))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/collections/docs", "GET")]
@@ -134,83 +122,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 return new CombinedStreamResult {Results = results};
             }
-        }
-
-        internal readonly struct ShardedCollectionStatisticsOperation : IShardedOperation<CollectionStatistics>
-        {
-            private readonly HttpContext _httpContext;
-
-            public ShardedCollectionStatisticsOperation(HttpContext httpContext)
-            {
-                _httpContext = httpContext;
-            }
-
-            public HttpRequest HttpRequest => _httpContext.Request;
-
-            public CollectionStatistics Combine(Memory<CollectionStatistics> results)
-            {
-                var stats = new CollectionStatistics();
-                var span = results.Span;
-                for (int i = 0; i < span.Length; i++)
-                {
-                    var result = span[i];
-                    stats.CountOfDocuments += result.CountOfDocuments;
-                    stats.CountOfConflicts += result.CountOfConflicts;
-                    foreach (var collectionInfo in result.Collections)
-                    {
-                        stats.Collections[collectionInfo.Key] = stats.Collections.ContainsKey(collectionInfo.Key)
-                            ? stats.Collections[collectionInfo.Key] + collectionInfo.Value
-                            : collectionInfo.Value;
-                    }
-                }
-
-                return stats;
-            }
-
-            public RavenCommand<CollectionStatistics> CreateCommandForShard(int shardNumber) => new GetCollectionStatisticsOperation.GetCollectionStatisticsCommand();
-        }
-
-        private readonly struct ShardedDetailedCollectionStatisticsOperation : IShardedOperation<DetailedCollectionStatistics>
-        {
-            private readonly HttpContext _httpContext;
-
-            public ShardedDetailedCollectionStatisticsOperation(HttpContext httpContext)
-            {
-                _httpContext = httpContext;
-            }
-
-            public HttpRequest HttpRequest => _httpContext.Request;
-
-            public DetailedCollectionStatistics Combine(Memory<DetailedCollectionStatistics> results)
-            {
-                var stats = new DetailedCollectionStatistics();
-                var span = results.Span;
-                for (int i = 0; i < span.Length; i++)
-                {
-                    var result = span[i];
-                    stats.CountOfDocuments += result.CountOfDocuments;
-                    stats.CountOfConflicts += result.CountOfConflicts;
-                    foreach (var collectionInfo in result.Collections)
-                    {
-                        if (stats.Collections.ContainsKey(collectionInfo.Key))
-                        {
-                            stats.Collections[collectionInfo.Key].CountOfDocuments += collectionInfo.Value.CountOfDocuments;
-                            stats.Collections[collectionInfo.Key].DocumentsSize.SizeInBytes += collectionInfo.Value.DocumentsSize.SizeInBytes;
-                            stats.Collections[collectionInfo.Key].RevisionsSize.SizeInBytes += collectionInfo.Value.RevisionsSize.SizeInBytes;
-                            stats.Collections[collectionInfo.Key].TombstonesSize.SizeInBytes += collectionInfo.Value.TombstonesSize.SizeInBytes;
-                        }
-                        else
-                        {
-                            stats.Collections[collectionInfo.Key] = collectionInfo.Value;
-                        }
-                    }
-                }
-
-                return stats;
-            }
-
-            public RavenCommand<DetailedCollectionStatistics> CreateCommandForShard(int shardNumber) =>
-                new GetDetailedCollectionStatisticsOperation.GetDetailedCollectionStatisticsCommand();
         }
     }
 }
