@@ -21,7 +21,6 @@ namespace SlowTests.Issues
                 var baseline = DateTime.UtcNow.EnsureMilliseconds();
                 using (var session = store.OpenSession())
                 {
-
                     session.Store(new User(), "karmel");
                     var ts = session.TimeSeriesFor("karmel", "heartrate");
                     for (int i = 0; i < 10; i++)

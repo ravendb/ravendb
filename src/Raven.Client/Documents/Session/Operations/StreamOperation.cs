@@ -58,17 +58,17 @@ namespace Raven.Client.Documents.Session.Operations
         {
             var sb = new StringBuilder("streams/timeseries?");
 
-            sb.Append("docId=").Append(Uri.EscapeDataString(_docId)).Append("&");
-            sb.Append("name=").Append(Uri.EscapeDataString(_name)).Append("&");
+            sb.Append("docId=").Append(Uri.EscapeDataString(_docId)).Append('&');
+            sb.Append("name=").Append(Uri.EscapeDataString(_name)).Append('&');
 
             if (_from.HasValue)
-                sb.Append("from=").Append(_from.Value.GetDefaultRavenFormat()).Append("&");
+                sb.Append("from=").Append(_from.Value.EnsureUtc().GetDefaultRavenFormat()).Append('&');
 
             if (_to.HasValue)
-                sb.Append("to=").Append(_to.Value.GetDefaultRavenFormat()).Append("&");
+                sb.Append("to=").Append(_to.Value.EnsureUtc().GetDefaultRavenFormat()).Append('&');
 
             if (_offset.HasValue)
-                sb.Append("offset=").Append(_offset).Append("&");
+                sb.Append("offset=").Append(_offset).Append('&');
 
             return new StreamCommand(sb.ToString());
         }
