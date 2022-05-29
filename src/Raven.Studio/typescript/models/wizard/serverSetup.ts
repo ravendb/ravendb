@@ -133,7 +133,7 @@ class serverSetup {
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             LocalNodeTag: !this.startNodeAsPassive() ? this.localNodeTag() : null,
             Environment: !this.startNodeAsPassive() ? this.environment() : null,
-            ModifyLocalServer: !this.onlyCreateZipFile(),
+            ZipOnly: this.onlyCreateZipFile(),
             NodeSetupInfos: nodesInfo
         }
     }
@@ -156,7 +156,7 @@ class serverSetup {
             Certificate: this.certificate().certificate(),
             Password: this.certificate().certificatePassword(),
             ClientCertNotAfter: this.certificate().expirationDateFormatted(),
-            ModifyLocalServer: !this.onlyCreateZipFile(),
+            ZipOnly: this.onlyCreateZipFile(),
             NodeSetupInfos: nodesInfo
         };
     }

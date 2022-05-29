@@ -5,7 +5,6 @@ import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
 import router = require("plugins/router");
 import app = require("durandal/app");
-import saveUnsecuredSetupCommand = require("commands/wizard/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 import continueClusterConfigurationCommand = require("commands/wizard/continueClusterConfigurationCommand");
 import secureInstructions = require("viewmodels/wizard/secureInstructions");
@@ -57,7 +56,7 @@ class finish extends setupStep {
 
         this.isRestartServerNeeded = ko.pureComputed(() => !this.spinners.finishing() &&
                                                             this.completedWithSuccess() &&
-                                                           ((this.model.mode() === 'Unsecured' && this.model.nodes().length === 1) || !this.model.onlyCreateZipFile()));
+                                                           !this.model.onlyCreateZipFile());
         
         this.showSetupPackageInfo = ko.pureComputed(() => !this.spinners.finishing() &&
                                                            this.model.mode() === 'Unsecured' &&
@@ -112,7 +111,7 @@ class finish extends setupStep {
                 this.continueClusterConfiguration(this.model.toContinueSetupDto());
                 break;
             case "Unsecured":
-                this.saveUnsecuredConfiguration();
+                this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupUnsecuredPackage, this.model.toUnsecuredDto());
                 break;
             case "LetsEncrypt":
                 this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupLetsencrypt, this.model.toSecuredDto());
@@ -155,21 +154,7 @@ class finish extends setupStep {
                     new continueClusterConfigurationUnsecureCommand(operationId, dto)
                         .execute();
                 }
-               
             });
-    }
-    
-    private saveUnsecuredConfiguration() {
-        if (this.model.nodes().length === 1) {
-            new saveUnsecuredSetupCommand(this.model.toUnsecuredDto())
-                .execute()
-                .done(() => {
-                    this.configurationTask.resolve();
-                })
-                .fail(() => this.configurationTask.reject());
-        } else {
-            this.saveConfigurationAndCreatePackage(endpoints.global.setup.setupUnsecuredPackage, this.model.toUnsecuredDto())
-        }
     }
 
     private saveConfigurationAndCreatePackage(url: string, dto: Raven.Server.Commercial.SetupInfoBase) {
