@@ -519,15 +519,15 @@ namespace Raven.Server.Commercial
                 // form.  We will look through the list, and if our port we would like to use
                 // in our TcpClient is occupied, we will set throw exception accordingly.
                 IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
-                TcpConnectionInformation[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpConnections();
+                IPEndPoint[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpListeners();
 
                 foreach (var node in nodes)
                 {
-                    foreach (TcpConnectionInformation tcpi in tcpConnInfoArray)
+                    foreach (IPEndPoint endpoint in tcpConnInfoArray)
                     {
-                        if (tcpi.LocalEndPoint.Port == node.Port)
+                        if (endpoint.Port == node.Port)
                         {
-                            throw new PortInUseException($"Port: {node.Port} is already in use");
+                            throw new PortInUseException(endpoint.Port, endpoint.Address.ToString() ,"Port is already in use");
                         }
                     }
                 }
@@ -539,7 +539,7 @@ namespace Raven.Server.Commercial
 
             if (exceptions.Count > 0)
             {
-                throw new AggregateException("Failed to simulate running the server with the supplied settings using: " + localServerIp, exceptions);
+                throw new AggregateException("Failed to simulate running the server with the supplied settings: ", exceptions);
             }
             
             return Task.CompletedTask;

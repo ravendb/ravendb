@@ -1,10 +1,11 @@
 using System;
+using System.Text;
+using Sparrow.Json;
 
 namespace Raven.Client.Exceptions.Commercial;
 
 public class PortInUseException : RavenException
 {
-    public int Port { get; }
 
     public PortInUseException()
     {
@@ -15,14 +16,21 @@ public class PortInUseException : RavenException
     {
     }
 
-    public PortInUseException(int port, string message)
-        : base(message)
+    public PortInUseException(int port, string address, string message, Exception e = null)
+        : base(BuildMessage(message, port, address),e)
     {
-        Port = port;
     }
 
-    public PortInUseException(string message, Exception e)
-        : base(message, e)
+    private static string BuildMessage(string message, int port, string address)
     {
+        var result = new StringBuilder(message?.Length ?? 0);
+
+        result.Append(message)
+            .Append("Port: ")
+            .Append(port)
+            .Append("Address: ")
+            .Append(address);
+
+        return result.ToString();
     }
 }
