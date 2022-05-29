@@ -179,7 +179,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         }
 
         if (args[0].IsNull || args[0].IsUndefined)
-            return EngineHandle.Null;
+            return EngineHandle.ImplicitNull;
 
         if (args[0].IsStringEx == false ||
             args[1].IsStringEx == false)
@@ -191,7 +191,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         if (!(doc is DynamicNullObject) && JsIndexUtils.GetValue(doc, out var itemHandle))
             return itemHandle;
 
-        return EngineHandle.Null;
+        return EngineHandle.ImplicitNull;
     }
 
     private T LoadCompareExchangeValue(T self, T[] args)
@@ -201,7 +201,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
 
         var keyArgument = args[0];
         if (keyArgument.IsNull || keyArgument.IsUndefined)
-            return EngineHandle.Null;
+            return EngineHandle.ImplicitNull;
 
         if (keyArgument.IsStringEx)
         {
@@ -212,7 +212,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         {
             int arrayLength = keyArgument.ArrayLength;
             if (arrayLength == 0)
-                return EngineHandle.Null;
+                return EngineHandle.ImplicitNull;
 
             var jsItems = new T[arrayLength];
             for (int i = 0; i < arrayLength; i++)
@@ -250,7 +250,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
         var value = args[0];
 
         if (value.IsNull || value.IsUndefined)
-            return EngineHandle.Null;
+            return EngineHandle.ImplicitNull;
 
         if (value.IsNumber)
             return value;
@@ -264,7 +264,7 @@ public abstract class AbstractJavaScriptIndex<T> : AbstractJavaScriptIndexBase
             }
         }
 
-        return EngineHandle.Null;
+        return EngineHandle.ImplicitNull;
     }
 
     private T Recurse(T self, T[] args)

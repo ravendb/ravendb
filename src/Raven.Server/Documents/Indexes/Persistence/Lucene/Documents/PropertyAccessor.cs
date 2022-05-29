@@ -24,17 +24,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public static IPropertyAccessor Create(Type type, object instance, JavaScriptEngineType? engineType)
         {
-            //TODO: egor cehck this
-            if (typeof(IObjectInstance<>).IsAssignableFrom(type))
+            if (instance is JsHandleJint jint)
             {
-                switch (engineType)
+                var tt = jint.Item.GetType();
+                if (tt == typeof(ObjectInstance) || tt.IsSubclassOf(typeof(ObjectInstance)))
                 {
-                    case JavaScriptEngineType.Jint:
-                return new JsPropertyAccessorJint(groupByFields: null);
-                    case JavaScriptEngineType.V8:
-                return new JsPropertyAccessorV8(groupByFields: null);
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(engineType), engineType, null);
+                    return new JsPropertyAccessorJint(null);
+                }
+            }
+            else if (instance is JsHandleV8)
+            {
+                //TODO: egor cehck this
+                if (typeof(IObjectInstance<>).IsAssignableFrom(type))
+                {
+                    return new JsPropertyAccessorV8(null);
                 }
             }
 

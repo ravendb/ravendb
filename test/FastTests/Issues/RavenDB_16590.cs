@@ -77,7 +77,7 @@ namespace FastTests.Issues
             };
 
             var sortedStudioList = propertiesDeclaredInStudio.OrderBy(x => x).ToList();
-
+            var z = perIndexSettings.Except(sortedStudioList).ToList();
             Assert.Equal(perIndexSettings, sortedStudioList);
         }
     }

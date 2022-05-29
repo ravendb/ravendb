@@ -29,9 +29,9 @@ namespace SlowTests.Issues
             var initialMaxDurationForScript = new TimeSetting(20, TimeUnit.Milliseconds);
             options.ModifyDatabaseRecord +=record =>
             {
-                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsStrictMode)] = initialStrictModeForScript.ToString();
-                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxSteps)] = initialMaxStepsForScript.ToString();
-                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxDuration)] = initialMaxDurationForScript.GetValue(TimeUnit.Milliseconds).ToString();
+                //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsStrictMode)] = initialStrictModeForScript.ToString();
+                //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxSteps)] = initialMaxStepsForScript.ToString();
+                //record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxDuration)] = initialMaxDurationForScript.GetValue(TimeUnit.Milliseconds).ToString();
             }
             ;
             using (var store = GetDocumentStore(options))
@@ -114,13 +114,13 @@ map('Companies', (company) => {
                 {
                     mapCode
                 };
-
-                if (strictModeForScript.HasValue)
-                    Configuration[RavenConfiguration.GetKey(x => x.Indexing.JsStrictMode)] = strictModeForScript.ToString();
+                //TODO: egor
+                //if (strictModeForScript.HasValue)
+                //    Configuration[RavenConfiguration.GetKey(x => x.Indexing.JsStrictMode)] = strictModeForScript.ToString();
                 if (maxStepsForScript.HasValue)
-                    Configuration[RavenConfiguration.GetKey(x => x.Indexing.JsMaxSteps)] = maxStepsForScript.ToString();
-                if (maxDurationForScript.HasValue)
-                    Configuration[RavenConfiguration.GetKey(x => x.Indexing.JsMaxDuration)] = maxDurationForScript?.GetValue(TimeUnit.Milliseconds).ToString();
+                    Configuration[RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)] = maxStepsForScript.ToString();
+                //if (maxDurationForScript.HasValue)
+                //    Configuration[RavenConfiguration.GetKey(x => x.Indexing.JsMaxDuration)] = maxDurationForScript?.GetValue(TimeUnit.Milliseconds).ToString();
             }
         }
     }

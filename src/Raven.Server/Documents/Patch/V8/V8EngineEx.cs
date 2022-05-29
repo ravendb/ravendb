@@ -114,36 +114,36 @@ public class V8EngineEx : IJsEngineHandle<JsHandleV8>, IDisposable
             return _jsonStringify;
         }
 
-        private InternalHandle _implicitNullV8 = InternalHandle.Empty;
-        private InternalHandle _explicitNullV8 = InternalHandle.Empty;
+        //private InternalHandle _implicitNullV8 = InternalHandle.Empty;
+        //private InternalHandle _explicitNullV8 = InternalHandle.Empty;
 
-        private JsHandleV8 _implicitNull = JsHandleV8.Empty;
-        private JsHandleV8 _explicitNull = JsHandleV8.Empty;
+        //private JsHandleV8 _implicitNull = JsHandleV8.Empty;
+        //private JsHandleV8 _explicitNull = JsHandleV8.Empty;
 
-        public JsHandleV8 ImplicitNull()
-        {
-            if (_implicitNull.IsEmpty)
-            {
-                var nullVal = Engine.CreateNullValue();
-                _implicitNullV8 = nullVal;
-                _implicitNull = new JsHandleV8() { Item = nullVal };
-                Engine.AddToLastMemorySnapshotBefore(nullVal);
-            }
-            return _implicitNull;
-        }
+        //public JsHandleV8 ImplicitNull()
+        //{
+        //    if (_implicitNull.IsEmpty)
+        //    {
+        //        var nullVal = Engine.CreateNullValue();
+        //        _implicitNullV8 = nullVal;
+        //        _implicitNull = new JsHandleV8() { Item = nullVal };
+        //        Engine.AddToLastMemorySnapshotBefore(nullVal);
+        //    }
+        //    return _implicitNull;
+        //}
 
-        public JsHandleV8 ExplicitNull()
-        {
-            if (_explicitNull.IsEmpty)
-            {
-                //TODO: egor why?
-                var nullVal = Engine.CreateNullValue();
-                _explicitNullV8 = nullVal;
-                _explicitNull = new JsHandleV8() { Item = nullVal };
-                Engine.AddToLastMemorySnapshotBefore(nullVal);
-            }
-            return _explicitNull;
-        }
+        //public JsHandleV8 ExplicitNull()
+        //{
+        //    if (_explicitNull.IsEmpty)
+        //    {
+        //        //TODO: egor why?
+        //        var nullVal = Engine.CreateNullValue();
+        //        _explicitNullV8 = nullVal;
+        //        _explicitNull = new JsHandleV8() { Item = nullVal };
+        //        Engine.AddToLastMemorySnapshotBefore(nullVal);
+        //    }
+        //    return _explicitNull;
+        //}
 
 
         private TypeBinder? _typeBinderTask;
@@ -447,8 +447,12 @@ var process = {
     public JsHandleV8 True { get; set; }
     public JsHandleV8 False { get; set; }
 
-    public JsHandleV8 ImplicitNull() => Context.ImplicitNull();
-    public JsHandleV8 ExplicitNull() => Context.ExplicitNull();
+    // TODO: egor need to handle those like in DynamicJsNullJint?
+    public JsHandleV8 ImplicitNull { get; set; } = JsHandleV8.Empty;
+    public JsHandleV8 ExplicitNull { get; set; } = JsHandleV8.Empty;
+
+    //public JsHandleV8 ImplicitNull() => Context.ImplicitNull();
+    //public JsHandleV8 ExplicitNull() => Context.ExplicitNull();
 
     public JsHandleV8 JsonStringify() => Context.JsonStringify();
 

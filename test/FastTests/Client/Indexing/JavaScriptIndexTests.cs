@@ -527,6 +527,7 @@ namespace FastTests.Client.Indexing
                     session.Store(new Product { Name = "Röd Kaviar", Category = "categories/2-A", PricePerUnit = 18 });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
+                    WaitForUserToContinueTheTest(store);
                     var res = session.Query<Products_ByCategory.Result>("Products/ByCategory")
                         .ToList();
                     var res2 = session.Query<CategoryCount>()

@@ -114,10 +114,10 @@ public abstract class AbstractJavaScriptIndexV8 : AbstractJavaScriptIndex<JsHand
         switch (value)
         {
             case null:
-                return EngineEx.ImplicitNull();
+                return EngineEx.ImplicitNull;
 
             case DynamicNullObject dno:
-                return dno.IsExplicitNull ? EngineEx.ExplicitNull() : EngineEx.ImplicitNull();
+                return dno.IsExplicitNull ? EngineEx.ExplicitNull : EngineEx.ImplicitNull;
 
             case DynamicBlittableJson dbj:
                 var jintBoi = new BlittableObjectInstanceV8((JavaScriptUtilsV8)JsUtils, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);

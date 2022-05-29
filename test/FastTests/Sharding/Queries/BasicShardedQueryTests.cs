@@ -464,6 +464,7 @@ order by o.Freight as {sortType}
                         .ToList();
 
                     Assert.Equal(4, queryResult.Count);
+                  //  WaitForUserToContinueTheTest(store);
                     Assert.Equal(0.3m, queryResult[0].Discount);
                     Assert.Equal(0.5m, queryResult[1].Discount);
                     Assert.Equal(0.2m, queryResult[2].Discount);

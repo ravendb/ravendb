@@ -32,12 +32,10 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DatabaseSmugglerOptions _options;
         private readonly ScriptRunnerCache _cache;
-        protected IJavaScriptOptions _jsOptions;
         private ISingleRun _run;
 
         protected SmugglerPatcher(DatabaseSmugglerOptions options, ScriptRunnerCache cache)
         {
-            _jsOptions = new JavaScriptOptions(options.OptionsForTransformScript);
             if (string.IsNullOrWhiteSpace(options.TransformScript))
                 throw new InvalidOperationException("Cannot create a patcher with empty transform script.");
             _options = options;

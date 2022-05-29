@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Patch.V8
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
             var handle = (V8EngineEx)EngineHandle;
             if (args[0].IsNull)
-                return handle.ImplicitNull();
+                return handle.ImplicitNull;
 
             if (args[0].IsObject == false)
                 ThrowInvalidFirstParameter();
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Patch.V8
 
             var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
             if (attachment is DynamicNullObject)
-                return handle.ImplicitNull();
+                return handle.ImplicitNull;
 
             var aoi = new AttachmentObjectInstanceV8(handle, (DynamicAttachment)attachment);
             var obj = aoi.CreateObjectBinder(keepAlive: true);
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Patch.V8
 
             var handle = (V8EngineEx)EngineHandle;
             if (args[0].IsNull)
-                return handle.ImplicitNull();
+                return handle.ImplicitNull;
 
             if (!(args[0].AsObject() is BlittableObjectInstanceV8 doc))
                 ThrowInvalidParameter();

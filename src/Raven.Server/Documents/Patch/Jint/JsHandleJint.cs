@@ -13,6 +13,7 @@ using Jint.Native.RegExp;
 using Jint.Native.String;
 using Jint.Native.Symbol;
 using Jint.Runtime.Interop;
+using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
 using Raven.Server.Extensions.Jint;
 using V8.Net;
 using JintTypes = Jint.Runtime.Types;
@@ -57,6 +58,8 @@ public struct JsHandleJint : IJsHandle<JsHandleJint>
     public static JsHandleJint Undefined = new JsHandleJint() { Item = JsValue.Undefined };
     public static JsHandleJint True = new JsHandleJint() { Item = true };
     public static JsHandleJint False = new JsHandleJint() { Item = false };
+    public static JsHandleJint ImplicitNull = new JsHandleJint() { Item = DynamicJsNullJint.ImplicitNullJint };
+    public static JsHandleJint ExplicitNull = new JsHandleJint() { Item = DynamicJsNullJint.ImplicitNullJint };
 
     private JsValue _item;
     private ObjectInstance _obj;

@@ -49,10 +49,8 @@ public interface IJsEngineHandle<T> : /*IJavaScriptEngineForParsing<T>,*/ IScrip
     T Undefined { get; set; }
     T True { get; set; }
     T False { get; set; }
-
-    T ImplicitNull();
-
-    T ExplicitNull();
+    T ImplicitNull { get; set; }
+    T ExplicitNull { get; set; }
 
     T JsonStringify();
 

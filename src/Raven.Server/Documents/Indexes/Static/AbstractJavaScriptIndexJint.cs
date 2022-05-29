@@ -123,18 +123,19 @@ public abstract class AbstractJavaScriptIndexJint : AbstractJavaScriptIndex<JsHa
             HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
         };
     }
+
     public override JsHandleJint ConvertToJsHandle(object value)
     {
         switch (value)
         {
             case null:
-                return EngineEx.ImplicitNull();
+                return EngineEx.ImplicitNull;
 
             case DynamicNullObject dno:
-                return dno.IsExplicitNull ? EngineEx.ExplicitNull() : EngineEx.ImplicitNull();
+                return dno.IsExplicitNull ? EngineEx.ExplicitNull : EngineEx.ImplicitNull;
 
             case DynamicBlittableJson dbj:
-                var jintBoi = new BlittableObjectInstanceJint(Engine, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
+                var jintBoi = new BlittableObjectInstanceJint(EngineEx, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
                 return EngineEx.FromObjectGen(jintBoi);
 
             default:

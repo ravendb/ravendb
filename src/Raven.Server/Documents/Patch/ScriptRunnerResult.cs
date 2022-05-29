@@ -100,7 +100,7 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
             {
                 using (var jsItem = jsValue.GetProperty(i))
                 {
-                    list.Add(TranslateRawJsValueInternal(jsItem, context, modifier, usageMode, isRoot));
+                    list.Add(TranslateRawJsValueInternal(jsItem, context, modifier, usageMode, isRoot: false));
                 }
             }
 
@@ -112,7 +112,7 @@ public abstract class ScriptRunnerResult<T> : IScriptRunnerResult
             if (jsValue.IsNull)
                 return null;
 
-            return _parent.JsBlittableBridge.Translate(context, Instance, modifier, usageMode);
+            return _parent.JsBlittableBridge.Translate(context, jsValue, modifier, usageMode, isRoot);
         }
 
         if (jsValue.IsNumberOrIntEx)

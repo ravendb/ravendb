@@ -179,48 +179,50 @@ public abstract class JsBlittableBridge<T>
         }
     }
 
-    private void WriteNestedObject(T jsObj, bool filterProperties)
-    {
-        if (_recursive == null)
-            _recursive = new HashSet<object>();
+    protected abstract void WriteNestedObject(T jsObj, bool filterProperties);
 
-        var target = jsObj.AsObject();
-        if (target != null)
-        {
-            if (target is IDictionary || target is IBlittableObjectInstance blittableJsObject)
-            {
-                WriteValueInternal(target, jsObj, filterProperties);
-            }
-            else if (target is IEnumerable enumerable)
-            {
-                _writer.StartWriteArray();
-                int i = 0;
-                foreach (var item in enumerable)
-                {
+    //private void WriteNestedObject(T jsObj, bool filterProperties)
+    //{
+    //    if (_recursive == null)
+    //        _recursive = new HashSet<object>();
+
+    //    var target = jsObj.AsObject();
+    //    if (target != null)
+    //    {
+    //        if (target is IDictionary || target is IBlittableObjectInstance blittableJsObject)
+    //        {
+    //            WriteValueInternal(target, jsObj, filterProperties);
+    //        }
+    //        else if (target is IEnumerable enumerable)
+    //        {
+    //            _writer.StartWriteArray();
+    //            int i = 0;
+    //            foreach (var item in enumerable)
+    //            {
                         
-                    using (var jsItem = _scriptEngine.FromObjectGen(item))
-                    {
-                        WriteJsonValue(jsItem, false, filterProperties, i.ToString(), jsItem);
-                    }
-                    i++;
-                }
-                _writer.WriteArrayEnd();
-            }
-            else
-                WriteObjectType(target);
-        }
-        else if (jsObj.IsFunction)
-            _writer.WriteValueNull();
-        else
-        {
-            // TODO: egor   WriteValueInternal(jsObj.HandleID, jsObj, filterProperties);
-            WriteValueInternal(jsObj, jsObj, filterProperties);
-        }
+    //                using (var jsItem = _scriptEngine.FromObjectGen(item))
+    //                {
+    //                    WriteJsonValue(jsItem, false, filterProperties, i.ToString(), jsItem);
+    //                }
+    //                i++;
+    //            }
+    //            _writer.WriteArrayEnd();
+    //        }
+    //        else
+    //            WriteObjectType(target);
+    //    }
+    //    else if (jsObj.IsFunction)
+    //        _writer.WriteValueNull();
+    //    else
+    //    {
+    //        // TODO: egor   WriteValueInternal(jsObj.HandleID, jsObj, filterProperties);
+    //        WriteValueInternal(jsObj, jsObj, filterProperties);
+    //    }
 
-    }
+    //}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void WriteObjectType(object target)
+    protected void WriteObjectType(object target)
     {
         _writer.WriteValue('[' + target.GetType().Name + ']');
     }

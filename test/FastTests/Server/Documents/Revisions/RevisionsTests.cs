@@ -1790,12 +1790,11 @@ namespace FastTests.Server.Documents.Revisions
 
         //TODO: egor
         [Theory]
-        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
-        [InlineData(false)]
-        [InlineData(true)] // TODO [shlomo] to switch on after fix
-        public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
+        [RavenData(false, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        [RavenData(true, JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
+        public async Task DeleteRevisionsBeforeFromConsole(Options options, bool useConsole)
         {
-            using (var store = GetDocumentStore(/*options*/))
+            using (var store = GetDocumentStore(options))
             {
                 await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 

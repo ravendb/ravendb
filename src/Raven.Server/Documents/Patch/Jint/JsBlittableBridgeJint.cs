@@ -1,6 +1,11 @@
+using System.Collections;
 using System.Collections.Generic;
 using Jint;
 using Jint.Native;
+using Jint.Native.Array;
+using Jint.Native.Function;
+using Jint.Runtime;
+using Jint.Runtime.Interop;
 using Raven.Client;
 using Sparrow.Json;
 
@@ -10,6 +15,43 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
 {
     public JsBlittableBridgeJint(IJsEngineHandle<JsHandleJint> scriptEngine) : base(scriptEngine)
     {
+    }
+
+    protected override void WriteNestedObject(JsHandleJint jsObj, bool filterProperties)
+    {
+        if (_recursive == null)
+            _recursive = new HashSet<object>();
+
+        var obj = jsObj.Item;
+        if (obj is ObjectWrapper objectWrapper)
+        {
+            var target = objectWrapper.Target;
+
+            if (target is IDictionary)
+            {
+                WriteValueInternal(target, jsObj, filterProperties);
+            }
+            else if (target is IEnumerable enumerable)
+            {
+                _writer.StartWriteArray();
+                int i = 0;
+                foreach (var item in enumerable)
+                {
+                    using (var jsItem = _scriptEngine.FromObjectGen(item))
+                    {
+                        WriteJsonValue(jsItem, false, filterProperties, i.ToString(), jsItem);
+                    }
+                    i++;
+                }
+                _writer.WriteArrayEnd();
+            }
+            else
+                WriteObjectType(target);
+        }
+        else if (obj is FunctionInstance)
+            _writer.WriteValueNull();
+        else
+            WriteValueInternal(jsObj, jsObj, filterProperties);
     }
 
     public override void WriteValueInternal(object target, JsHandleJint jsObj, bool filterProperties)

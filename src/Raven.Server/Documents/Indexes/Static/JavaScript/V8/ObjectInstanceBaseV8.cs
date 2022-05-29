@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
             }
 
             if (jsValue.IsEmpty)
-                return IsImplicitNull ? EngineEx.Context.ImplicitNull().Clone().Item : jsValue;
+                return IsImplicitNull ? EngineEx.ImplicitNull.Item : jsValue; //TODO: egor do we need to clone?
 
             return jsValue.Clone();
         }

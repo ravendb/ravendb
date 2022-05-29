@@ -2162,7 +2162,9 @@ namespace Raven.Server.Json
             {
                 for (var i = 0; i < buffers.Size; i++)
                 {
-                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
+      
+
+                document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     if (metadataField.Equals(prop.Name))
                     {
                         metadata = (BlittableJsonReaderObject)prop.Value;

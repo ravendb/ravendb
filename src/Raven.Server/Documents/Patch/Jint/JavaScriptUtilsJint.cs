@@ -264,14 +264,14 @@ namespace Raven.Server.Documents.Patch.Jint
         public override IBlittableObjectInstance CreateBlittableObjectInstanceFromScratch(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
             string id, DateTime? lastModified, string changeVector)
         {
-            return new BlittableObjectInstanceJint(Engine, (BlittableObjectInstanceJint)parent, blittable, id, lastModified,
+            return new BlittableObjectInstanceJint(EngineEx, (BlittableObjectInstanceJint)parent, blittable, id, lastModified,
                 changeVector);
         }
 
         public override IBlittableObjectInstance CreateBlittableObjectInstanceFromDoc(IBlittableObjectInstance parent, BlittableJsonReaderObject blittable,
             Document doc)
         {
-            return new BlittableObjectInstanceJint(Engine, (BlittableObjectInstanceJint)parent, blittable, doc);
+            return new BlittableObjectInstanceJint(EngineEx, (BlittableObjectInstanceJint)parent, blittable, doc);
         }
 
         public override IObjectInstance<JsHandleJint> CreateTimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment)
@@ -298,12 +298,13 @@ namespace Raven.Server.Documents.Patch.Jint
                     [nameof(TimeSeriesAggregationResult.Count)] = results.Count,
                     [nameof(TimeSeriesAggregationResult.Results)] = results
                 };
-                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null));
+
+                return new JsHandleJint(new BlittableObjectInstanceJint(EngineEx, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null));
             }
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
-                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(d.Data, context), d)
+                return new JsHandleJint(new BlittableObjectInstanceJint(EngineEx, null, Clone(d.Data, context), d)
                 {
                     LuceneDocument = t.Item2,
                     LuceneState = t.Item3,
@@ -314,22 +315,22 @@ namespace Raven.Server.Documents.Patch.Jint
             }
             if (o is Document doc)
             {
-                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(doc.Data, context), doc));
+                return new JsHandleJint(new BlittableObjectInstanceJint(EngineEx, null, Clone(doc.Data, context), doc));
             }
             if (o is DocumentConflict dc)
             {
-                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector));
+                return new JsHandleJint(new BlittableObjectInstanceJint(EngineEx, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector));
             }
 
             if (o is BlittableJsonReaderObject json)
             {
-                return new JsHandleJint(new BlittableObjectInstanceJint(Engine, null, Clone(json, context), null, null, null));
+                return new JsHandleJint(new BlittableObjectInstanceJint(EngineEx, null, Clone(json, context), null, null, null));
             }
 
             if (o == null)
                 return new JsHandleJint(Undefined.Instance);
             if (o is long lng)
-                return new JsHandleJint(new JsBigInt(lng));
+                return new JsHandleJint(lng);
             if (o is BlittableJsonReaderArray bjra)
             {
                 var jsArray = Engine.Realm.Intrinsics.Array.Construct(Array.Empty<JsValue>());
@@ -358,7 +359,7 @@ namespace Raven.Server.Documents.Patch.Jint
                 var args = new JsValue[1];
                 for (var i = 0; i < docList.Count; i++)
                 {
-                    args[0] = new BlittableObjectInstanceJint(Engine, null, Clone(docList[i].Data, context), docList[i]);
+                    args[0] = new BlittableObjectInstanceJint(EngineEx, null, Clone(docList[i].Data, context), docList[i]);
                     Engine.Realm.Intrinsics.Array.PrototypeObject.Push(jsArray, args);
                 }
                 return new JsHandleJint(jsArray);

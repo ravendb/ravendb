@@ -37,8 +37,8 @@ var process = {
         public DynamicJsNullJint ExplicitNullJint;
 
 
-        public JsHandleJint ImplicitNull() => new(ImplicitNullJint);
-        public JsHandleJint ExplicitNull() => new(ExplicitNullJint);
+        //public JsHandleJint ImplicitNull() => new(ImplicitNullJint);
+        //public JsHandleJint ExplicitNull() => new(ExplicitNullJint);
 
         private readonly JsHandleJint _jsonStringify;
         public JsHandleJint JsonStringify() => _jsonStringify;
@@ -52,6 +52,8 @@ var process = {
         public JsHandleJint Undefined { get; set; } = JsHandleJint.Undefined;
         public JsHandleJint True { get; set; } = JsHandleJint.True;
         public JsHandleJint False { get; set; } = JsHandleJint.False;
+        public JsHandleJint ImplicitNull { get; set; } = JsHandleJint.ImplicitNull;
+        public JsHandleJint ExplicitNull { get; set; } = JsHandleJint.ExplicitNull;
 
         public readonly Engine Engine;
 

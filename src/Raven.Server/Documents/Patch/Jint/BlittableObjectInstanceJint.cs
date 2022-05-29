@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.Patch.Jint
 
                             default:
                                 blittable.NoCache = true;
-                                return new BlittableObjectInstanceJint(owner._engine,
+                                return new BlittableObjectInstanceJint(owner._engineEx,
                                     owner,
                                     blittable, null, null, null);
                         }
@@ -448,15 +448,14 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
-        public BlittableObjectInstanceJint(Engine engine,
+        public BlittableObjectInstanceJint(JintEngineEx engineEx,
             BlittableObjectInstanceJint parent,
             BlittableJsonReaderObject blittable,
             string id,
             DateTime? lastModified,
-            string changeVector) : base(engine)
+            string changeVector) : base(engineEx.Engine)
         {
-            //_engine = engine;
-          //  _engineEx = (JintEngineEx)engine;
+            _engineEx = engineEx;
             _parent = parent;
             blittable.NoCache = true;
             _lastModified = lastModified;
@@ -464,13 +463,13 @@ namespace Raven.Server.Documents.Patch.Jint
             _blittable = blittable;
             _documentId = id;
 
-            SetPrototypeOf(engine.Realm.Intrinsics.Object.PrototypeObject);
+            SetPrototypeOf(engineEx.Engine.Realm.Intrinsics.Object.PrototypeObject);
         }
 
-        public BlittableObjectInstanceJint(Engine engine,
+        public BlittableObjectInstanceJint(JintEngineEx engineEx,
             BlittableObjectInstanceJint parent,
             BlittableJsonReaderObject blittable,
-            Document doc) : this(engine, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
+            Document doc) : this(engineEx, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
         {
             _doc = doc;
         }

@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Raven.Client;
 using Sparrow.Json;
@@ -14,6 +15,45 @@ namespace Raven.Server.Documents.Patch.V8
 
         public JsBlittableBridgeV8(IJsEngineHandle<JsHandleV8> scriptEngine) : base(scriptEngine)
         {
+        }
+
+        protected override void WriteNestedObject(JsHandleV8 jsObj, bool filterProperties)
+        {
+            if (_recursive == null)
+                _recursive = new HashSet<object>();
+
+            var target = jsObj.AsObject();
+            if (target != null)
+            {
+                if (target is IDictionary || target is IBlittableObjectInstance blittableJsObject)
+                {
+                    WriteValueInternal(target, jsObj, filterProperties);
+                }
+                else if (target is IEnumerable enumerable)
+                {
+                    _writer.StartWriteArray();
+                    int i = 0;
+                    foreach (var item in enumerable)
+                    {
+
+                        using (var jsItem = _scriptEngine.FromObjectGen(item))
+                        {
+                            WriteJsonValue(jsItem, false, filterProperties, i.ToString(), jsItem);
+                        }
+                        i++;
+                    }
+                    _writer.WriteArrayEnd();
+                }
+                else
+                    WriteObjectType(target);
+            }
+            else if (jsObj.IsFunction)
+                _writer.WriteValueNull();
+            else
+            {
+                // TODO: egor   WriteValueInternal(jsObj.HandleID, jsObj, filterProperties);
+                WriteValueInternal(jsObj, jsObj, filterProperties);
+            }
         }
 
         public override void WriteValueInternal(object target, JsHandleV8 jsObj, bool filterProperties)
