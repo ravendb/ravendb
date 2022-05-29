@@ -1,6 +1,6 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
-using Sparrow;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
@@ -19,6 +19,6 @@ public class DatabaseStorageDiskWriteThroughput : DatabaseScalarObjectBase<Gauge
             return Empty;
             
         var result = database.ServerStore.Server.DiskStatsGetter.Get(database.DocumentsStorage.Environment.Options.DriveInfoByPath?.Value.BasePath.DriveName);
-        return result == null ? Empty : new Gauge32(result.WriteThroughput.GetValue(SizeUnit.Kilobytes));
+        return result == null ? Empty : new Gauge32(result.WriteThroughput.GetThroughputInKilobytes());
     }
 }
