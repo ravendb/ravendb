@@ -246,6 +246,8 @@ namespace Sparrow.Server.Utils
                 : new DiskStatsGetter(minInterval);
         }
         
+        internal static long GetThroughputInKilobytes(this Size value) => value.GetValue(SizeUnit.Kilobytes);
+        
         private const uint FILE_READ_EA = 0x0008;
         private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x2000000;
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);

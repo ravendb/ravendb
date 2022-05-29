@@ -144,10 +144,10 @@ namespace Raven.Server.Utils.Monitoring
         public long SystemStoreTotalDataFileSizeInMb { get; set; }
         public long TotalFreeSpaceInMb { get; set; }
         public int RemainingStorageSpacePercentage { get; set; }
-        public double IoReadOperations { get; set; }
-        public double IoWriteOperations { get; set; }
-        public long ReadThroughputInKb { get; set; }
-        public long WriteThroughputInKb { get; set; }
+        public double? IoReadOperations { get; set; }
+        public double? IoWriteOperations { get; set; }
+        public long? ReadThroughputInKb { get; set; }
+        public long? WriteThroughputInKb { get; set; }
         public long? QueueLength { get; set; }
 
         public DynamicJsonValue ToJson()

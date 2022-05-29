@@ -519,8 +519,8 @@ namespace Raven.Server.Dashboard
                     {
                         IoReadOperations = diskStatsResult.IoReadOperations,
                         IoWriteOperations = diskStatsResult.IoWriteOperations,
-                        ReadThroughputInKb = diskStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
-                        WriteThroughputInKb = diskStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
+                        ReadThroughputInKb = diskStatsResult.ReadThroughput.GetThroughputInKilobytes(),
+                        WriteThroughputInKb = diskStatsResult.WriteThroughput.GetThroughputInKilobytes(),
                         QueueLength = diskStatsResult.QueueLength,
                     };
                 }
