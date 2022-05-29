@@ -329,6 +329,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexingSpeed));
             scripter.AddType(typeof(MachineResources));
             scripter.AddType(typeof(DrivesUsage));
+            scripter.AddType(typeof(RachisState));
             
             // cluster dashboard
             scripter.AddType(typeof(WidgetRequest));
@@ -344,6 +345,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseTrafficWatchPayload));
             scripter.AddType(typeof(DatabaseOverviewPayload));
             scripter.AddType(typeof(OngoingTasksPayload));
+            scripter.AddType(typeof(ClusterOverviewPayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="StorageWidget.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="StorageUsageNotificationSender.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------

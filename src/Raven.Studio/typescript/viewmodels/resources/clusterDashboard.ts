@@ -18,6 +18,7 @@ import databaseStorageWidget = require("viewmodels/resources/widgets/databaseSto
 import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
 import databaseOverviewWidget = require("viewmodels/resources/widgets/databaseOverviewWidget");
 import ongoingTasksWidget = require("viewmodels/resources/widgets/ongoingTasksWidget");
+import clusterOverviewWidget = require("viewmodels/resources/widgets/clusterOverviewWidget");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import Packery = require("packery");
 import Draggabilly = require("draggabilly");
@@ -250,6 +251,7 @@ class clusterDashboard extends viewModelBase {
             this.addWidget(new welcomeWidget(this));
             this.addWidget(new databaseOverviewWidget(this));
             this.addWidget(new ongoingTasksWidget(this));
+            this.addWidget(new clusterOverviewWidget(this));
             
             const initialWidgets = this.widgets();
             
@@ -426,6 +428,9 @@ class clusterDashboard extends viewModelBase {
                 break;
             case "OngoingTasks":
                 widget = new ongoingTasksWidget(this);
+                break;
+            case "ClusterOverview":
+                widget = new clusterOverviewWidget(this);
                 break;
             default:
                 throw new Error("Unsupported widget type = " + type);

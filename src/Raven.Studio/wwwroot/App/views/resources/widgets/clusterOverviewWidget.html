@@ -1,6 +1,6 @@
-<div>
+<div class="cluster-overview-widget">
     <div class="cluster-dashboard-item-header">
-        <h3> <i class="icon-database"></i> <span>Traffic per database</span></h3>
+        <h3> <i class="icon-cluster"></i> <span>Cluster Overview</span></h3>
         <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
@@ -11,14 +11,13 @@
     </div>
     <div class="databases-list" style="position: relative;">
         <div class="list-container">
-            <div class="no-data-area" data-bind="visible: $root.noDatabases() && !$root.spinners.loading()">
-                <div><i class="icon-empty-set"></i><span>No data</span></div>
-                <button data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase">Create Database</button>
-            </div>
             <div class="list absolute-fill">
-                <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true, disableStripes: true"></virtual-grid>
-                <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
+                <virtual-grid class="resizable no-margin cluster-overview-grid" params="controller: gridController, condensed: true, disableStripes: true"></virtual-grid>
             </div>
         </div>
     </div>
 </div>
+<div class="tooltip js-preview" style="opacity: 0">
+    <pre><code></code></pre>
+</div>
+
