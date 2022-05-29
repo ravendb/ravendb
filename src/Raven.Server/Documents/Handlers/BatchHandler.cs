@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +12,7 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
@@ -440,6 +440,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var index in database.IndexStore.GetIndexes())
                 {
+                    if (index.State is IndexState.Disabled or IndexState.Error)
+                        continue;
+
                     if (index.Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection) ||
                         index.WorksOnAnyCollection(modifiedCollections))
                     {
