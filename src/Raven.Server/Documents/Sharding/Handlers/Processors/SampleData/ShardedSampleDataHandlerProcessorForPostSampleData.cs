@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.Handlers.Processors.SampleData;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
 
         protected override async ValueTask<bool> IsDatabaseEmptyAsync()
         {
-            var op = new ShardedCollectionHandler.ShardedCollectionStatisticsOperation(HttpContext);
+            var op = new ShardedCollectionStatisticsOperation(HttpContext);
             var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
 
             return stats.Collections.Count == 0;

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
@@ -17,53 +18,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetCollectionStats()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                DynamicJsonValue result = GetCollectionStats(context, false);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, result);
-            }
+            using (var processor = new CollectionsHandlerProcessorForGetCollectionStats(this, detailed: false))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/collections/stats/detailed", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDetailedCollectionStats()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                DynamicJsonValue result = GetCollectionStats(context, true);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    context.Write(writer, result);
-            }
-        }
-
-        private DynamicJsonValue GetCollectionStats(DocumentsOperationContext context, bool detailed = false)
-        {
-            DynamicJsonValue collections = new DynamicJsonValue();
-
-            DynamicJsonValue stats = new DynamicJsonValue()
-            {
-                [nameof(CollectionStatistics.CountOfDocuments)] = Database.DocumentsStorage.GetNumberOfDocuments(context),
-                [nameof(CollectionStatistics.CountOfConflicts)] = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                [nameof(CollectionStatistics.Collections)] = collections
-            };
-
-            foreach (var collection in Database.DocumentsStorage.GetCollections(context))
-            {
-                if (detailed)
-                {
-                    collections[collection.Name] = Database.DocumentsStorage.GetCollectionDetails(context, collection.Name);
-                }
-                else
-                {
-                    collections[collection.Name] = collection.Count;
-                }
-            }
-
-            return stats;
+            using (var processor = new CollectionsHandlerProcessorForGetCollectionStats(this, detailed: true))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/collections/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
