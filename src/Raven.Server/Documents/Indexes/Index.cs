@@ -1442,6 +1442,8 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
+                        _forTestingPurposes?.BeforeStartingNewBatch?.Invoke();
+
                         lock (_disablingIndexLock)
                         {
                             if (_indexDisabled)
@@ -5055,6 +5057,7 @@ namespace Raven.Server.Documents.Indexes
         internal class TestingStuff
         {
             internal Action ActionToCallInFinallyOfExecuteIndexing;
+            internal Action BeforeStartingNewBatch;
 
             internal IDisposable CallDuringFinallyOfExecuteIndexing(Action action)
             {
