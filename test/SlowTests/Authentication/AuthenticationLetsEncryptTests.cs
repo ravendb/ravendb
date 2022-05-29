@@ -82,7 +82,7 @@ namespace SlowTests.Authentication
             {
                 Domain = domain,
                 RootDomain = rootDomain,
-                ModifyLocalServer = false, // N/A here
+                ZipOnly = false, // N/A here
                 RegisterClientCert = false, // N/A here
                 Password = null,
                 Certificate = null,

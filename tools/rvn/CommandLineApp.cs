@@ -26,7 +26,7 @@ namespace rvn
 
         internal const string OwnCertificate = "own-certificate";
         internal const string LetsEncrypt = "lets-encrypt";
-        private const string Unsecured = "unsecured";
+        internal const string Unsecured = "unsecured";
 
         public static int Run(string[] args)
         {
@@ -97,6 +97,7 @@ namespace rvn
             {
                 case LetsEncrypt:
                 case OwnCertificate:
+                case Unsecured:
                     break;
                 default:
                     ExitWithError($"Unknown setup mode {modeValue}.", app);
@@ -537,7 +538,7 @@ namespace rvn
 
         private static CommandOption ConfigureModeOptionForInitSetupParams(CommandLineApplication cmd)
         {
-            var opt = cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt' or 'own-certificate'", CommandOptionType.SingleValue);
+            var opt = cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt', 'own-certificate' or 'unsecured'", CommandOptionType.SingleValue);
             opt.DefaultValue = "lets-encrypt";
             return opt;
         }

@@ -101,7 +101,7 @@ public static class SetupWizardUtils
 
                 Debug.Assert(selfSignedCertificate != null);
 
-                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ModifyLocalServer)
+                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ZipOnly)
                     await parameters.PutCertificateInCluster(selfSignedCertificate, certificateDefinition);
 
                 clientCert = new X509Certificate2(certBytes, (string)null,
@@ -147,7 +147,7 @@ public static class SetupWizardUtils
                 if (parameters.OnBeforeAddingNodesToCluster != null)
                     await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
                 
-                if (parameters.UnsecuredSetupInfo.ModifyLocalServer)
+                if (parameters.UnsecuredSetupInfo.ZipOnly)
                 {
                     foreach (var node in parameters.UnsecuredSetupInfo.NodeSetupInfos)
                     {

@@ -431,7 +431,7 @@ namespace Raven.Server.Commercial
 
                     progress.Processed++;
                     progress.AddInfo("Starting validation.");
-                    onProgress(progress);
+                    onProgress(progress);     
 
                     try
                     {
@@ -719,7 +719,7 @@ namespace Raven.Server.Commercial
                     OnSettingsPath = () => serverStore.Configuration.ConfigPath,
                     SetupInfo = setupInfo,
                     SetupMode = SetupMode.LetsEncrypt,
-                    ModifyLocalServer = true,
+                    ZipOnly = true,
                     OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
                     OnGetCertificatePath = certificateFileName =>
                     {
@@ -928,7 +928,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeTextForUnsecured(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextUnsecured(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
             }
             catch (Exception e)
             {
@@ -1032,7 +1032,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeTextForUnsecured(continueSetupInfo.NodeTag, serverUrl, true, false);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextUnsecured(continueSetupInfo.NodeTag, serverUrl, true, false);
             }
             catch (Exception e)
             {

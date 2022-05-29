@@ -11,7 +11,7 @@ public abstract class SetupInfoBase
     public StudioConfiguration.StudioEnvironment Environment { get; set; }
     public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
     public string LocalNodeTag { get; set; }
-    public bool ModifyLocalServer { get; set; } = true;
+    public bool ZipOnly { get; set; }
     
     public abstract Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters);
     public abstract void InfoValidation(CreateSetupPackageParameters parameters);
@@ -24,7 +24,6 @@ public abstract class SetupInfoBase
             [nameof(Environment)] = Environment,
             [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos),
             [nameof(LocalNodeTag)] = LocalNodeTag,
-            [nameof(ModifyLocalServer)] = ModifyLocalServer
         };
     }
 }
