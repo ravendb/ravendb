@@ -252,22 +252,14 @@ namespace Sparrow.Json
         {
             AssertContextNotDisposed();
 
-            try
-            {
-                var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
-                var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
+            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
+            var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
-                // Get the relative "In Document" position of the property Name
-                var propRelativePos = _propNames - propertyNameOffset - _mem;
+            // Get the relative "In Document" position of the property Name
+            var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-                var propertyName = ReadStringLazily((int)propRelativePos);
-                return propertyName;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            var propertyName = ReadStringLazily((int)propRelativePos);
+            return propertyName;
         }
 
         public object this[string name]
