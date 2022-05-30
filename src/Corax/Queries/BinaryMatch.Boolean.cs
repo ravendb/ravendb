@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using Corax.Utils;
 
 namespace Corax.Queries
 {
@@ -48,28 +46,7 @@ namespace Corax.Queries
                     // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
                     if (iterations > 1)
                     {
-                        // We need to sort and remove duplicates.
-                        var bufferBasePtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-
-                        MemoryExtensions.Sort(matches.Slice(0, totalResults));
-
-                        // We need to fill in the gaps left by removing deduplication process.
-                        // If there are no duplicated the writes at the architecture level will execute
-                        // way faster than if there are.
-
-                        var outputBufferPtr = bufferBasePtr;
-
-                        var bufferPtr = bufferBasePtr;
-                        var bufferEndPtr = bufferBasePtr + totalResults - 1;
-                        while (bufferPtr < bufferEndPtr)
-                        {
-                            outputBufferPtr += bufferPtr[1] != bufferPtr[0] ? 1 : 0;
-                            *outputBufferPtr = bufferPtr[1];
-
-                            bufferPtr++;
-                        }
-
-                        totalResults = (int)(outputBufferPtr - bufferBasePtr + 1);
+                        totalResults = Sorting.SortAndRemoveDuplicates(matches[0..totalResults]);
                     }
 
                     if (totalResults == 0)

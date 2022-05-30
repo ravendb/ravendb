@@ -344,14 +344,25 @@ namespace FastTests.Corax
                 match = searcher.OrderByScore(match);
                 
                 Span<long> ids = stackalloc long[amount];
+
                 var read = match.Fill(ids);
-                Assert.Equal(longList.Count, read);
                 List<string> result = new();
                 for (int i = 0; i < read; ++i)
-                {
                     result.Add(searcher.GetIdentityFor(ids[i]));
-                }
 
+                Assert.NotEqual(0, read);
+
+                int count = read;                
+                do
+                {
+                    read = match.Fill(ids);
+                    for (int i = 0; i < read; ++i)
+                        result.Add(searcher.GetIdentityFor(ids[i]));
+                    count += read;
+                } 
+                while (read > 0);
+        
+                Assert.Equal(longList.Count, count);
                 Assert.Equal(result.Count, result.Distinct().Count());
 
                 var localResults = longList.Where(x => x.Content1.ToString().StartsWith((mod - 1).ToString())).Select(y => y.Id).ToArray();
