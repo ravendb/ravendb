@@ -106,7 +106,7 @@ namespace Corax.Queries
                         break;
                 }
             }
-            
+
             // The scalar version. This shouldnt cost much either way. 
             while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
             {
@@ -263,13 +263,13 @@ namespace Corax.Queries
             }
 
             long values = 0;
-            if (leftPtr != leftEndPtr)
+            if (leftPtr < leftEndPtr)
             {
                 // We have items still available in the left arm                
                 values = leftEndPtr - leftPtr;
                 Unsafe.CopyBlockUnaligned(dstPtr, leftPtr, (uint)values * sizeof(long));
             }
-            else if (rightPtr != rightEndPtr)
+            else if (rightPtr < rightEndPtr)
             {
                 // We have items still available in the left arm
                 values = rightEndPtr - rightPtr;
@@ -320,13 +320,13 @@ namespace Corax.Queries
             }
 
             long values = 0;
-            if (leftPtr != leftEndPtr)
+            if (leftPtr < leftEndPtr)
             {
                 // We have items still available in the left arm                
                 values = leftEndPtr - leftPtr;
                 Unsafe.CopyBlockUnaligned(dstPtr, leftPtr, (uint)values * sizeof(long));                
             }
-            else if (rightPtr != rightEndPtr)
+            else if (rightPtr < rightEndPtr)
             {
                 // We have items still available in the left arm
                 values = rightEndPtr - rightPtr;

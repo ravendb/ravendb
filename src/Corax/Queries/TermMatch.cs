@@ -291,17 +291,16 @@ namespace Corax.Queries
                 Debug.Assert(Vector256<long>.Count == 4);
 
                 term._set.MaybeSeek(buffer[0] - 1);
-
+                
                 // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
                 long* inputStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
                 long* inputEndPtr = inputStartPtr + matches;
-                
+
                 // The size of this array is fixed to improve cache locality.
                 var bufferHolder = QueryContext.MatchesRawPool.Rent(sizeof(long) * BlockSize);
-                var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, BlockSize);
-                Debug.Assert(blockMatches.Length == BlockSize);
-                
+                var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, BlockSize);                              
                 long* blockStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(blockMatches));
+                Debug.Assert(blockMatches.Length == BlockSize);
                 
                 long* inputPtr = inputStartPtr;
                 long* dstPtr = inputStartPtr;
@@ -316,103 +315,105 @@ namespace Corax.Queries
 
                     long* smallerPtr, largerPtr;
                     long* smallerEndPtr, largerEndPtr;
-                    
-                    if (read < matches)
+
+                    bool applyVectorization;
+
+                    // See: MergeHelper.AndVectorized
+                    // read => leftLength
+                    // matches => rightLength
+                    bool isSmallerInput;
+                    if (read < (inputEndPtr - inputPtr))
                     {
                         smallerPtr = blockStartPtr;
                         smallerEndPtr = blockStartPtr + read;
+                        isSmallerInput = false;
                         largerPtr = inputPtr;
-                        largerEndPtr = inputEndPtr;                       
+                        largerEndPtr = inputEndPtr;
+                        applyVectorization = matches > N && read > 0;
                     }
                     else
                     {
                         smallerPtr = inputPtr;
                         smallerEndPtr = inputEndPtr;
+                        isSmallerInput = true;
                         largerPtr = blockStartPtr;
                         largerEndPtr = blockStartPtr + read;
+                        applyVectorization = read > N && matches > 0;
                     }
                     
                     Debug.Assert( (ulong) (smallerEndPtr - smallerPtr) <= (ulong) (largerEndPtr - largerPtr));
 
-                    while (true)
+                    if (applyVectorization)
                     {
-                        // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
-                        //       multiple checks at once and find the right amount of skipping using a table. 
-
-                        // If we dont have a whole block get out of the loop. 
-                        if (largerPtr + N - 1 >= largerEndPtr)
-                            break;
-                        
-                        // If the value to compare is bigger than the biggest element in the block, we advance the block. 
-                        if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
-                        {
-                            largerPtr += N;
-                            continue;
-                        }
-                    
-                        // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
-                        if ((ulong)*smallerPtr < (ulong)*largerPtr)
-                        {
-                            smallerPtr++;
-                            if (smallerPtr >= smallerEndPtr)
-                                break;
-                    
-                            continue;
-                        }
-                    
-                        Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
-                        Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
-                    
-                        // We are going to select which direction we are going to be moving forward. 
-                        if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
-                        {
-                            // We found the value, therefore we need to store this value in the destination.
-                            *dstPtr = *smallerPtr;
-                            dstPtr++;
-                        }
-                    
-                        smallerPtr++;
-                        if (smallerPtr >= smallerEndPtr)
-                            break;
-                    }
-
-                    if (largerPtr < largerEndPtr && smallerPtr < smallerEndPtr)
-                    {
-                        // The scalar version. This shouldn't cost much either way. 
                         while (true)
                         {
-                            ulong leftValue = (ulong)*smallerPtr;
-                            ulong rightValue = (ulong)*largerPtr;
+                            // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
+                            //       multiple checks at once and find the right amount of skipping using a table. 
 
-                            if (leftValue > rightValue)
+                            // If the value to compare is bigger than the biggest element in the block, we advance the block. 
+                            if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
                             {
-                                largerPtr++;
-                                if (largerPtr >= largerEndPtr)
+                                if (largerPtr + N >= largerEndPtr)
                                     break;
+
+                                largerPtr += N;
+                                continue;
                             }
-                            else if (leftValue < rightValue)
+
+                            // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
+                            if ((ulong)*smallerPtr < (ulong)*largerPtr)
                             {
                                 smallerPtr++;
                                 if (smallerPtr >= smallerEndPtr)
                                     break;
-                            }
-                            else
-                            {
-                                *dstPtr = (long)leftValue;
-                                dstPtr++;
-                                smallerPtr++;
-                                largerPtr++;
 
-                                if (largerPtr >= largerEndPtr || smallerPtr >= smallerEndPtr)
-                                    break;
+                                continue;
                             }
+
+                            Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
+                            Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
+
+                            // We are going to select which direction we are going to be moving forward. 
+                            if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
+                            {
+                                // We found the value, therefore we need to store this value in the destination.
+                                *dstPtr = *smallerPtr;
+                                dstPtr++;
+                            }
+
+                            smallerPtr++;
+                            if (smallerPtr >= smallerEndPtr)
+                                break;
                         }
                     }
 
-                    inputPtr = read < matches ? largerPtr : smallerPtr;
+                    // The scalar version. This shouldnt cost much either way. 
+                    while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
+                    {
+                        ulong leftValue = (ulong)*smallerPtr;
+                        ulong rightValue = (ulong)*largerPtr;
+
+                        if (leftValue > rightValue)
+                        {
+                            largerPtr++;
+                        }
+                        else if (leftValue < rightValue)
+                        {
+                            smallerPtr++;
+                        }
+                        else
+                        {
+                            *dstPtr = (long)leftValue;
+                            dstPtr++;
+                            smallerPtr++;
+                            largerPtr++;
+                        }
+                    }
+
+                    inputPtr = isSmallerInput ? smallerPtr : largerPtr;
 
                     Debug.Assert(inputPtr >= dstPtr);
-                    Debug.Assert((read >= matches ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
+                    Debug.Assert((isSmallerInput ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
                 }
 
                 return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);

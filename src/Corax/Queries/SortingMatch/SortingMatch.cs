@@ -152,8 +152,6 @@ namespace Corax.Queries
             var matchesScores = allScoresValues[..matches.Length];
             var bScores = allScoresValues[^matches.Length..];           
 
-            TotalResults += totalMatches;
-
             // TODO: Analyze if it makes sense to have an alternative version aimed at handling smalls sets where we gather
             //       all the matches and then do the score work instead of doing it batch by batch. 
 
@@ -171,7 +169,6 @@ namespace Corax.Queries
             {
                 // We get a new batch
                 int bTotalMatches = _inner.Fill(bValues);
-                TotalResults += bTotalMatches;
 
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
@@ -191,7 +188,10 @@ namespace Corax.Queries
                     if (lastElement >= bScores[bIdx])
                         bScores[kIdx++] = bScores[bIdx];
                 }
+
                 bTotalMatches = kIdx;
+                if (bTotalMatches == 0)
+                    continue;
 
                 // We sort the new batch
                 sorter.Sort(bScores[0..bTotalMatches], bValues);
@@ -264,6 +264,7 @@ namespace Corax.Queries
             }
 
             QueryContext.MatchesRawPool.Return(bufferHolder);
+            TotalResults += totalMatches;
             return totalMatches;
         }
 
