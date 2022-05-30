@@ -411,10 +411,6 @@ namespace Raven.Server.Documents.Handlers
                                 return;
 
                             ThrowTimeoutException(indexesToWait, i, sp, context, cutoffEtag);
-
-                            throw new TimeoutException(
-                                $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                                $"indexes has caught up with the changes as of etag: {cutoffEtag}");
                         }
                     }
                 }
