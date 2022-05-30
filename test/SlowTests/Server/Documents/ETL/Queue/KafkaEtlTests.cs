@@ -378,7 +378,7 @@ output('test output')"
         }
         catch (Exception e)
         {
-            throw new InvalidOperationException($"Failed to cleanup topics: {topics}. Check inner exceptions for details", e);
+            
         }
     }
 
