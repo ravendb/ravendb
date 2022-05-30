@@ -1,9 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Collections
 {
@@ -13,18 +16,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
         {
         }
 
-        protected override ValueTask<IAsyncEnumerable<Document>> GetCollectionDocumentsAsync(DocumentsOperationContext context, string name, int start, int pageSize)
+        protected override async ValueTask GetCollectionDocumentsAndWriteAsync(DocumentsOperationContext context, string name, int start, int pageSize, CancellationToken token)
         {
             using (context.OpenReadTransaction())
             {
-                return ValueTask.FromResult(RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, name, start, pageSize).ToAsyncEnumerable());
-            }
-        }
+                var sw = Stopwatch.StartNew();
+                var documents = RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, name, start, pageSize).ToAsyncEnumerable();
 
-        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
-            long totalDocumentsSizeInBytes)
-        {
-            RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
+                long numberOfResults;
+                long totalDocumentsSizeInBytes;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+                    (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly: false, token);
+                    writer.WriteEndObject();
+                }
+                RequestHandler.AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+            }
         }
     }
 }
