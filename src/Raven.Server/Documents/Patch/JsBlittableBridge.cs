@@ -22,8 +22,8 @@ public abstract class JsBlittableBridge<T>
     protected static HashSet<object> _recursive;
 
 
-    private static readonly double MaxJsDateMs = (DateTime.MaxValue - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
-    private static readonly double MinJsDateMs = -(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc) - DateTime.MinValue).TotalMilliseconds;
+    protected static readonly double MaxJsDateMs = (DateTime.MaxValue - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+    protected static readonly double MinJsDateMs = -(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc) - DateTime.MinValue).TotalMilliseconds;
 
     static JsBlittableBridge()
     {
@@ -63,6 +63,8 @@ public abstract class JsBlittableBridge<T>
         _writer.WriteObjectEnd();
     }
 
+    protected abstract string GetDateValue(T jsValue, string propertyName);
+
     protected void WriteJsonValue(T jsParent, bool isRoot, bool filterProperties, string propertyName, T jsValue)
     {
         jsValue.ThrowOnError();
@@ -74,18 +76,7 @@ public abstract class JsBlittableBridge<T>
         else if (jsValue.IsStringEx)
             _writer.WriteValue(jsValue.AsString);
         else if (jsValue.IsDate)
-        {
-            var primitiveValue = jsValue.AsDouble;
-            if (double.IsNaN(primitiveValue) ||
-                primitiveValue > MaxJsDateMs ||
-                primitiveValue < MinJsDateMs)
-                // not a valid Date. 'ToDateTime()' will throw
-                throw new InvalidOperationException($"Invalid 'DateInstance' on property '{propertyName}'. Date value : '{primitiveValue}'. " +
-                                                    "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
-
-            var date = jsValue.AsDate;
-            _writer.WriteValue(date.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
-        }
+            _writer.WriteValue(GetDateValue(jsValue, propertyName));
         else if (jsValue.IsInt32)
             WriteNumber(jsParent.AsObject(), propertyName, jsValue.AsInt32);
         else if (jsValue.IsNumberEx)

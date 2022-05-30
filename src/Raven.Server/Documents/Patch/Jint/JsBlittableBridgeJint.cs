@@ -1,12 +1,15 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch.Jint;
@@ -15,6 +18,19 @@ public class JsBlittableBridgeJint : JsBlittableBridge<JsHandleJint>
 {
     public JsBlittableBridgeJint(IJsEngineHandle<JsHandleJint> scriptEngine) : base(scriptEngine)
     {
+    }
+
+    protected override string GetDateValue(JsHandleJint jsValue, string propertyName)
+    {
+        var jsDate = jsValue.Item.AsDate();
+        if (double.IsNaN(jsDate.PrimitiveValue) ||
+            jsDate.PrimitiveValue > MaxJsDateMs ||
+            jsDate.PrimitiveValue < MinJsDateMs)
+            // not a valid Date. 'ToDateTime()' will throw
+            throw new InvalidOperationException($"Invalid '{nameof(DateInstance)}' on property '{propertyName}'. Date value : '{jsDate.PrimitiveValue}'. " +
+                                                "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
+
+        return jsDate.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
     }
 
     protected override void WriteNestedObject(JsHandleJint jsObj, bool filterProperties)

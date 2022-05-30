@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Raven.Client;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch.V8
@@ -15,6 +16,20 @@ namespace Raven.Server.Documents.Patch.V8
 
         public JsBlittableBridgeV8(IJsEngineHandle<JsHandleV8> scriptEngine) : base(scriptEngine)
         {
+        }
+
+        protected override string GetDateValue(JsHandleV8 jsValue, string propertyName)
+        {
+            var primitiveValue = jsValue.AsDouble;
+            if (double.IsNaN(primitiveValue) ||
+                primitiveValue > MaxJsDateMs ||
+                primitiveValue < MinJsDateMs)
+                // not a valid Date. 'ToDateTime()' will throw
+                throw new InvalidOperationException($"Invalid 'DateInstance' on property '{propertyName}'. Date value : '{primitiveValue}'. " +
+                                                    "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
+
+            var date = jsValue.AsDate;
+            return date.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
         }
 
         protected override void WriteNestedObject(JsHandleV8 jsObj, bool filterProperties)
