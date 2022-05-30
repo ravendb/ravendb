@@ -121,7 +121,6 @@ namespace Raven.Server.Documents.Queries
         public static object ThrowMethodNotSupported(MethodType methodType, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Method '{methodType}' is not supported.", queryText, parameters);
-            return null; //used for type-relaxation
         }
 
         public static class TimeSeries

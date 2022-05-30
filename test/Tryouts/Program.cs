@@ -18,7 +18,6 @@ public static class Program
 
     public static async Task Main(string[] args)
     {
-        var thread = new List<Task>();
         Console.WriteLine(Process.GetCurrentProcess().Id);
         for (int i = 0; i < 100; i++)
         {
@@ -27,15 +26,8 @@ public static class Program
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
                     //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                using (var test = new SubscriptionsBasic(testOutputHelper))
+                await using (var test = new SubscriptionsBasic(testOutputHelper))
                 {
-                    //await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                    thread.Add(
-                        Task.Factory.StartNew(() => {
-                        using var test = new SlowTests.Tests.Spatial.SpatialSearch(testOutputHelper);
-                        test.Can_do_spatial_search_with_client_api_addorder(RavenTestBase.Options.ForSearchEngine(RavenSearchEngineMode.Corax));
-                    })
-                            );
                 }
             }
             catch (Exception e)
@@ -45,7 +37,5 @@ public static class Program
                 Console.ForegroundColor = ConsoleColor.White;
             }
         }
-
-        Task.WaitAll(thread.ToArray());
     }
 }

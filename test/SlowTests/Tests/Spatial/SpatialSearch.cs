@@ -78,8 +78,9 @@ namespace SlowTests.Tests.Spatial
             CultureInfoTest.Invariant => CultureInfo.InvariantCulture,
             CultureInfoTest.CurrentCulture => CultureInfo.CurrentCulture,
             CultureInfoTest.Netherlands => new CultureInfo("NL"),
-            CultureInfoTest.Turkey => new CultureInfo("tr-TR") 
-    };
+            CultureInfoTest.Turkey => new CultureInfo("tr-TR"),
+            _ => throw new ArgumentOutOfRangeException(nameof(culture), culture, null)
+        };
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(CultureInfoTest.Invariant, SearchEngineMode = RavenSearchEngineMode.All)]
