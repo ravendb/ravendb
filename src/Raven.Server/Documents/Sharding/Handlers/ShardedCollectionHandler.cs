@@ -26,5 +26,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedCollectionsHandlerProcessorForGetCollectionDocuments(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/collections/last-change-vector", "GET")]
+        public async Task GetLastDocumentChangeVectorForCollection()
+        {
+            using (var processor = new ShardedCollectionsHandlerProcessorForGetLastChangeVector(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

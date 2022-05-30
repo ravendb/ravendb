@@ -42,7 +42,7 @@ public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedO
 
     public RavenCommand<LastChangeVectorForCollectionResult> CreateCommandForShard(int shardNumber) => new LastChangeVectorForCollectionCommand(_collection);
 
-    private class LastChangeVectorForCollectionCommand : RavenCommand<LastChangeVectorForCollectionResult>
+    public class LastChangeVectorForCollectionCommand : RavenCommand<LastChangeVectorForCollectionResult>
     {
         private readonly string _collection;
 
