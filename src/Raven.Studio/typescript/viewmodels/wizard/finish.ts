@@ -47,12 +47,7 @@ class finish extends setupStep {
     }
     
     private initObservables() {
-        this.showConfigurationLogToggle = ko.pureComputed(() => {
-            const isAnySecureOption = this.model.mode() !== "Unsecured";
-            const completed = this.completedWithSuccess();
-            
-            return isAnySecureOption && completed;
-        });
+        this.showConfigurationLogToggle = ko.pureComputed(() => this.completedWithSuccess());
 
         this.isRestartServerNeeded = ko.pureComputed(() => !this.spinners.finishing() &&
                                                             this.completedWithSuccess() &&
