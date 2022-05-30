@@ -13,7 +13,10 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
     {
         public AbstractOngoingTasksHandlerProcessorForPostSubscriptionTasksState([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
+            RequireAdmin = false;
         }
+
+        protected override bool RequireAdmin { get; }
 
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, object _, string raftRequestId)
         {
