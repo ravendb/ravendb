@@ -4,7 +4,6 @@ import getSetupLocalNodeIpsCommand = require("commands/wizard/getSetupLocalNodeI
 import getSetupParametersCommand = require("commands/wizard/getSetupParametersCommand");
 import genUtils = require("common/generalUtils");
 import detectBrowser = require("viewmodels/common/detectBrowser");
-import popoverUtils = require("common/popoverUtils");
 
 class welcome extends setupStep {
     
@@ -37,12 +36,6 @@ class welcome extends setupStep {
         super.compositionComplete();
         
         this.setupDisableReasons();
-
-        popoverUtils.longWithHover($(".toggle-zip-only"), {
-            content: "<small><strong>Toggle ON</strong>: Wizard will only create a setup zip package for external setup. Current server will NOT be modified.<br />" +
-                     "<strong>Toggle OFF</strong>: Wizared will create a setup zip package AND set up the current server.</small>",
-            html: true
-        })
     }
 
     private fetchLocalNodeIps() {
