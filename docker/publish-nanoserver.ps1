@@ -41,11 +41,11 @@ function PushImages($imageTags) {
     }
 }
 function GetImageTags($repo, $version) {
-        return @(
-            "$($repo):windows-latest",
-            "$($repo):5.4-windows-latest",
-            "$($repo):$($version)-windows"
-        )
+    return @(
+        "$($repo):windows-latest-lts",
+        "$($repo):5.4-windows-latest",
+        "$($repo):$($version)-windows"
+    )
 }
 
 $version = GetVersionFromArtifactName

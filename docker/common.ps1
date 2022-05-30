@@ -35,8 +35,8 @@ function GetUbuntuImageTags($repo, $version, $arch) {
     switch ($arch) {
         "x64" { 
             return @(
-                "$($repo):latest",
-                "$($repo):ubuntu-latest",
+                "$($repo):latest-lts",
+                "$($repo):ubuntu-latest-lts",
                 "$($repo):5.4-ubuntu-latest",
                 "$($repo):$($version)-ubuntu.20.04-x64"
             )
@@ -44,7 +44,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         }
         "arm32v7" {
             return @(
-                "$($repo):ubuntu-arm32v7-latest",
+                "$($repo):ubuntu-arm32v7-latest-lts",
                 "$($repo):5.4-ubuntu-arm32v7-latest",
                 "$($repo):$($version)-ubuntu.20.04-arm32v7"
             )
@@ -52,7 +52,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         }
         "arm64v8" {
             return @(
-                "$($repo):ubuntu-arm64v8-latest",
+                "$($repo):ubuntu-arm64v8-latest-lts",
                 "$($repo):5.4-ubuntu-arm64v8-latest",
                 "$($repo):$($version)-ubuntu.20.04-arm64v8"
                 )
