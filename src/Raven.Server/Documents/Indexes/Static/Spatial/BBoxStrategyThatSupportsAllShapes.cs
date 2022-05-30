@@ -2,8 +2,8 @@
 using Lucene.Net.Search;
 using Lucene.Net.Spatial.BBox;
 using Lucene.Net.Spatial.Queries;
-using Spatial4n.Core.Context;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Context;
+using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {

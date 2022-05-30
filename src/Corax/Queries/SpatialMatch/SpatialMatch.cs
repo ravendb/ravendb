@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
-using Spatial4n.Core.Context;
-using Spatial4n.Core.Shapes;
-using Spatial4n.Core.Shapes.Impl;
+using Spatial4n.Context;
+using Spatial4n.Shapes;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Debugging;
-using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
+using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Queries;
 
@@ -28,7 +27,6 @@ public class SpatialMatch : IQueryMatch
     private readonly Utils.Spatial.SpatialRelation _spatialRelation;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
-    private Slice _startsWith;
     private HashSet<long> _alreadyReturned;
 
     public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, string fieldName, IShape shape,
@@ -145,10 +143,10 @@ public class SpatialMatch : IQueryMatch
     
     public bool IsTrue(SpatialRelation answer) => answer switch
     {
-        SpatialRelation.WITHIN or SpatialRelation.CONTAINS => _spatialRelation is Utils.Spatial.SpatialRelation.Within
+        SpatialRelation.Within or SpatialRelation.Contains => _spatialRelation is Utils.Spatial.SpatialRelation.Within
             or Utils.Spatial.SpatialRelation.Contains,
-        SpatialRelation.DISJOINT => _spatialRelation is Utils.Spatial.SpatialRelation.Disjoint,
-        SpatialRelation.INTERSECTS => _spatialRelation is Utils.Spatial.SpatialRelation.Intersects,
+        SpatialRelation.Disjoint => _spatialRelation is Utils.Spatial.SpatialRelation.Disjoint,
+        SpatialRelation.Intersects => _spatialRelation is Utils.Spatial.SpatialRelation.Intersects,
         _ => throw new NotSupportedException()
     };
 

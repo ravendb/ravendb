@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Spatial
 {

@@ -4,10 +4,10 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Corax.Queries;
 using Sparrow.Server;
-using Spatial4n.Core.Context;
-using Spatial4n.Core.Distance;
-using Spatial4n.Core.Shapes;
-using Spatial4n.Core.Util;
+using Spatial4n.Context;
+using Spatial4n.Distance;
+using Spatial4n.Shapes;
+using Spatial4n.Util;
 using Voron;
 using Voron.Data.CompactTrees;
 
@@ -87,10 +87,10 @@ public class SpatialUtils
         }
         else
         {
-            var radlat1 = DistanceUtils.DEGREES_TO_RADIANS * lat1;
-            var radlat2 = DistanceUtils.DEGREES_TO_RADIANS * lat2;
+            var radlat1 = DistanceUtils.DegreesToRadians * lat1;
+            var radlat2 = DistanceUtils.DegreesToRadians * lat2;
             var theta = lng1 - lng2;
-            var radtheta = DistanceUtils.DEGREES_TO_RADIANS * theta;
+            var radtheta = DistanceUtils.DegreesToRadians * theta;
             var dist = Math.Sin(radlat1) * Math.Sin(radlat2) + Math.Cos(radlat1) * Math.Cos(radlat2)
                                                                                  * Math.Cos(radtheta);
             if (dist > 1)
@@ -99,7 +99,7 @@ public class SpatialUtils
             }
 
             dist = Math.Acos(dist);
-            dist = dist * DistanceUtils.RADIANS_TO_DEGREES;
+            dist = dist * DistanceUtils.RadiansToDegrees;
 
             const double NauticalMilePerDegree = 60;
             return dist * NauticalMilePerDegree;
@@ -128,7 +128,7 @@ public class SpatialUtils
 
                 switch (shape.Relate(boundary))
                 {
-                    case Spatial4n.Core.Shapes.SpatialRelation.DISJOINT:
+                    case Spatial4n.Shapes.SpatialRelation.Disjoint:
                         //Our termatch
                         using (var _ = Slice.From(allocator, geohashToCheck, out var term))
                         {
@@ -143,11 +143,11 @@ public class SpatialUtils
                         }
 
                         break;
-                    case Spatial4n.Core.Shapes.SpatialRelation.WITHIN:
-                    case Spatial4n.Core.Shapes.SpatialRelation.CONTAINS:
+                    case Spatial4n.Shapes.SpatialRelation.Within:
+                    case Spatial4n.Shapes.SpatialRelation.Contains:
                         //Inside figure, we can denied this geohash.
                         break;
-                    case Spatial4n.Core.Shapes.SpatialRelation.INTERSECTS:
+                    case Spatial4n.Shapes.SpatialRelation.Intersects:
                         using (var _ = Slice.From(allocator, geohashToCheck, out var term))
                         {
                             var amount = searcher.TermAmount(tree, term);
@@ -215,12 +215,12 @@ public class SpatialUtils
 
                 switch (shape.Relate(boundary))
                 {
-                    case Spatial4n.Core.Shapes.SpatialRelation.CONTAINS:
+                    case Spatial4n.Shapes.SpatialRelation.Contains:
                         //This is termmatch.
                         yield return (geohashToCheck, true);
                         break;
-                    case Spatial4n.Core.Shapes.SpatialRelation.WITHIN:
-                    case Spatial4n.Core.Shapes.SpatialRelation.INTERSECTS:
+                    case Spatial4n.Shapes.SpatialRelation.Within:
+                    case Spatial4n.Shapes.SpatialRelation.Intersects:
                         using (var _ = Slice.From(allocator, geohashToCheck, out var term))
                         {
                             var amount = searcher.TermAmount(tree, term);

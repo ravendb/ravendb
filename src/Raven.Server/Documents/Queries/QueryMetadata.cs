@@ -34,9 +34,10 @@ using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
-using Spatial4n.Core.Shapes;
-using Spatial4n.Core.Shapes.Nts;
+using Spatial4n.Shapes;
+using Spatial4n.Shapes.Nts;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
+using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
 
 namespace Raven.Server.Documents.Queries
 {
