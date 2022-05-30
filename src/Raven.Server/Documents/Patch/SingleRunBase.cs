@@ -236,7 +236,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
             if (args[0].IsArray)
             {
-                var results = ScriptEngineHandle.CreateEmptyArray();
+                var results = new List<T>();
                 var jsArray = args[0];
                 int arrayLength = jsArray.ArrayLength;
                 for (int i = 0; i < arrayLength; ++i)
@@ -244,18 +244,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                     using (var jsItem = jsArray.GetProperty(i))
                     {
                         if (jsItem.IsStringEx == false)
-                            throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " +
-                                                                jsItem.ToString());
+                            throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " + jsItem);
 
-                        var result = LoadDocumentInternal(jsItem.AsString);
-
-                        //TODO: egor implement PushToArray() in each derived class ? or try make generic one
-                        using (var jsResPush = results.Call("push", ScriptEngineHandle.Empty, result))
-                            jsResPush.ThrowOnError(); // TODO check if is needed here
+                        results.Add(LoadDocumentInternal(jsItem.AsString));
                     }
                 }
-
-                return results;
+                
+                return ScriptEngineHandle.CreateArray(results);
             }
 
             if (args[0].IsStringEx == false)
@@ -518,16 +513,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             return counterValue;
         }
 
-        var val = _database.DocumentsStorage.CountersStorage.GetCounterPartialValues(_docsCtx, id, name).ToList();
-        return ScriptEngineHandle.FromObjectGen(val);
-        //TODO: egor check if above works
-        //var rawValues = new ObjectInstance(ScriptEngineJint);
-        //foreach (var partialValue in _database.DocumentsStorage.CountersStorage.GetCounterPartialValues(_docsCtx, id, name))
-        //{
-        //    rawValues.FastAddProperty(partialValue.ChangeVector, partialValue.PartialValue, true, false, false);
-        //}
+        var obj = ScriptEngineHandle.CreateObject();
+        foreach (var partialValue in _database.DocumentsStorage.CountersStorage.GetCounterPartialValues(_docsCtx, id, name))
+        {
+            obj.FastAddProperty(partialValue.ChangeVector, ScriptEngineHandle.CreateValue(partialValue.PartialValue), writable: true, enumerable: false, configurable: false);
+        }
 
-        //return rawValues;
+        return obj;
     }
 
     public T IncrementCounter(T self, T[] args)
@@ -1020,7 +1012,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     {
         if (obj.IsStringEx)
         {
-            var debugValue = obj.ToString();
+            var debugValue = obj.AsString;
             return recursive ? '"' + debugValue + '"' : debugValue;
         }
         if (obj.IsArray)
@@ -1283,8 +1275,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
         var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
 
-        var entries = ScriptEngineHandle.CreateArray(Array.Empty<T>());
-        var noEntries = true;
+        var entries = new List<T>();
         foreach (var singleResult in reader.AllValues())
         {
             Span<double> valuesSpan = singleResult.Values.Span;
@@ -1294,18 +1285,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 jsSpanItems[i] = ScriptEngineHandle.CreateValue(valuesSpan[i]);
             }
 
-            using (var entry = ScriptEngineHandle.CreateObject())
-            {
-                entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), ScriptEngineHandle.CreateValue(singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true)));
-                entry.SetProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag == null ? ScriptEngineHandle.Null : ScriptEngineHandle.CreateValue(singleResult.Tag.ToString()));
-                entry.SetProperty(nameof(TimeSeriesEntry.Values), ScriptEngineHandle.CreateArray(jsSpanItems));
-                entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), ScriptEngineHandle.CreateValue(singleResult.Type == SingleResultType.RolledUp));
+            var entry = ScriptEngineHandle.CreateObject();
+            entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), ScriptEngineHandle.CreateValue(singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true)));
+            entry.SetProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag == null ? ScriptEngineHandle.Null : ScriptEngineHandle.CreateValue(singleResult.Tag.ToString()));
+            entry.SetProperty(nameof(TimeSeriesEntry.Values), ScriptEngineHandle.CreateArray(jsSpanItems));
+            entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), ScriptEngineHandle.CreateValue(singleResult.Type == SingleResultType.RolledUp));
 
-                using (var jsResPush = entries.StaticCall("push", entry))
-                    jsResPush.ThrowOnError();
-                if (noEntries)
-                    noEntries = false;
-            }
+            entries.Add(entry);
 
             if (DebugMode)
             {
@@ -1321,15 +1307,19 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             }
         }
 
-        if (DebugMode && noEntries)
+        if (DebugMode)
         {
             DebugActions.GetTimeSeries.Add(new DynamicJsonValue
             {
                 ["Name"] = timeSeries,
-                ["Exists"] = false
+                ["Exists"] = entries.Count != 0
             });
         }
-        return entries;
+
+        if (entries.Count == 0)
+            return ScriptEngineHandle.CreateEmptyArray();
+
+        return ScriptEngineHandle.CreateArray(entries);
     }
 
     private string GetIdFromArg(T docArg, string signature)
