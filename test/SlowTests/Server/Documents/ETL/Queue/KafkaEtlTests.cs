@@ -20,6 +20,8 @@ namespace SlowTests.Server.Documents.ETL.Queue;
 
 public class KafkaEtlTests : EtlTestBase
 {
+    private HashSet<string> _definedTopics = new HashSet<string>();
+
     public KafkaEtlTests(ITestOutputHelper output) : base(output)
     {
         TopicSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
@@ -152,7 +154,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
         Assert.Equal(ordersList.Count, 10);
 
-        for (int i = 0; i <= ordersList.Count; i++)
+        for (int i = 0; i < ordersList.Count; i++)
         {
             var order = ordersList.FirstOrDefault(x => x.Id == $"orders/{i}");
             Assert.NotNull(order);
@@ -329,11 +331,19 @@ output('test output')"
     {
         var connectionStringName = $"{store.Database}@{store.Urls.First()} to Queue";
 
+        List<EtlQueue> topics = queues.ToList();
+
+
+        foreach (var topic in topics)
+        {
+            _definedTopics.Add(topic.Name);
+        }
+
         var config = new QueueEtlConfiguration
         {
             Name = configurationName ?? connectionStringName,
             ConnectionStringName = connectionStringName,
-            EtlQueues = queues.ToList(),
+            EtlQueues = topics,
             Transforms =
             {
                 new Transformation
@@ -367,25 +377,28 @@ output('test output')"
         }
     }
 
-    private void CleanupTopic(IEnumerable<string> topics)
+    private void CleanupTopic()
     {
+        if (_definedTopics.Count == 0)
+            return;
+
         var config = new AdminClientConfig() { BootstrapServers = DefaultKafkaUrl };
         var adminClient = new AdminClientBuilder(config).Build();
 
         try
         {
-            adminClient.DeleteTopicsAsync(topics).Wait();
+            adminClient.DeleteTopicsAsync(_definedTopics).Wait();
         }
         catch (Exception e)
         {
-            
+            throw new InvalidOperationException($"Failed to cleanup topics: {string.Join(", ", _definedTopics)}. Check inner exceptions for details", e);
         }
     }
 
     public override void Dispose()
     {
         base.Dispose();
-        CleanupTopic(DefaultTopics.Select(x => x.Name));
+        CleanupTopic();
     }
 
     private class Order
