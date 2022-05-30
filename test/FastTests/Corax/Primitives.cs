@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Intrinsics.X86;
 using Corax.Queries;
 using Tests.Infrastructure;
 using Xunit;
@@ -17,6 +18,10 @@ namespace FastTests.Corax
         [RavenFact(RavenTestCategory.Corax)]
         public void SmallForVectorized()
         {
+            // This method can only be run on platforms where the AVX2 instruction set is supported.
+            if (!Avx2.IsSupported)
+                return;
+            
             long* aS = stackalloc long[256];
             long* bS = stackalloc long[256];
             long* dS = stackalloc long[256];
@@ -100,6 +105,10 @@ namespace FastTests.Corax
         [InlineData(125, 24, 1, 1)]
         public void OutputCompatibilityForVectorizedSingleRun(int seed, int ai, int bi, int ss )
         {
+            // This method can only be run on platforms where the AVX2 instruction set is supported.
+            if (!Avx2.IsSupported)
+                return;
+
             Span<long> aS = stackalloc long[256];
             Span<long> bS = stackalloc long[256];
             Span<long> dS = stackalloc long[256];
@@ -142,8 +151,8 @@ namespace FastTests.Corax
 
             int rS = MergeHelper.AndScalar(dS, currentAS, currentBS);
             int rv = MergeHelper.AndVectorized(dV, currentAV, currentBV);
-
             Assert.Equal(rS, rv);
+
             for (int i = 0; i < rS; i++)
                 Assert.Equal(dS[i], dV[i]);
 
@@ -159,6 +168,10 @@ namespace FastTests.Corax
         [InlineData(1337)]
         public void OutputCompatibilityForVectorizedExhaustive(int seed)
         {
+            // This method can only be run on platforms where the AVX2 instruction set is supported.
+            if (!Avx2.IsSupported)
+                return;
+
             Span<long> aS = stackalloc long[256];
             Span<long> bS = stackalloc long[256];
             Span<long> dS = stackalloc long[256];
@@ -212,8 +225,8 @@ namespace FastTests.Corax
 
                         int rS = MergeHelper.AndScalar(dS, currentAS, currentBS);
                         int rv = MergeHelper.AndVectorized(dV, currentAV, currentBV);
-
                         Assert.Equal(rS, rv);
+
                         for (int i = 0; i < rS; i++)
                             Assert.Equal(dS[i], dV[i]);
 
