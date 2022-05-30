@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Corax.Queries;
 using Corax.Utils;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Shapes;
 
 namespace Corax;
 

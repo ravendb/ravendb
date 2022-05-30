@@ -34,7 +34,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Shapes;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
 

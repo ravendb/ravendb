@@ -1,23 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Corax.Utils;
 using GeoAPI;
 using Lucene.Net.Documents;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix.Tree;
-using Microsoft.Extensions.Azure;
 using NetTopologySuite;
-using NetTopologySuite.Geometries;
 using Raven.Client;
 using Raven.Client.Exceptions.Corax;
-using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Spatial;
 using Sparrow.Json;
-using Spatial4n.Core.Context.Nts;
-using Spatial4n.Core.Distance;
-using Spatial4n.Core.Shapes;
-using Spatial4n.Util;
+using Spatial4n.Context.Nts;
+using Spatial4n.Distance;
+using Spatial4n.Shapes;
 using SpatialFieldType = Raven.Client.Documents.Indexes.Spatial.SpatialFieldType;
 using SpatialOptions = Raven.Client.Documents.Indexes.Spatial.SpatialOptions;
 using SpatialSearchStrategy = Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
@@ -40,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         static SpatialField()
         {
             GeometryServiceProvider.Instance = new NtsGeometryServices();
-            GeoContext = new NtsSpatialContext(new NtsSpatialContextFactory { geo = true });
+            GeoContext = new NtsSpatialContext(new NtsSpatialContextFactory { IsGeo = true });
         }
 
         public SpatialField(string fieldName, SpatialOptions options)
@@ -55,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         {
             if (options.Type == SpatialFieldType.Cartesian)
             {
-                var nts = new NtsSpatialContext(new NtsSpatialContextFactory { geo = false, distCalc = new CartesianDistCalc(), worldBounds = null });
+                var nts = new NtsSpatialContext(new NtsSpatialContextFactory { IsGeo = false, DistanceCalculator = new CartesianDistanceCalculator(), WorldBounds = null });
                 nts.WorldBounds.Reset(options.MinX, options.MaxX, options.MinY, options.MaxY);
                 return nts;
             }
@@ -105,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 if (shape is not IPoint)
                     throw new NotSupportedInCoraxException($"{nameof(Corax)} does not support indexing objects that are not points on a world map.");
                
-                var geohashRaw = Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(shape.Center.Y ,shape.Center.X, _options?.MaxTreeLevel ?? SpatialOptions.DefaultGeohashLevel);
+                var geohashRaw = Spatial4n.Util.GeohashUtils.EncodeLatLon(shape.Center.Y ,shape.Center.X, _options?.MaxTreeLevel ?? SpatialOptions.DefaultGeohashLevel);
 
                 return new []
                 {

@@ -9,7 +9,7 @@ using GeoAPI;
 using NetTopologySuite;
 using Sparrow;
 using Sparrow.Server;
-using Spatial4n.Core.Context.Nts;
+using Spatial4n.Context.Nts;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -25,7 +25,7 @@ public class SpatialTests : StorageTest
     static SpatialTests()
     {
         GeometryServiceProvider.Instance = new NtsGeometryServices();
-        GeoContext = new NtsSpatialContext(new NtsSpatialContextFactory { geo = true });
+        GeoContext = new NtsSpatialContext(new NtsSpatialContextFactory { IsGeo = true });
     }
     
     
@@ -108,7 +108,7 @@ public class SpatialTests : StorageTest
         entryBuilder.Write(IdIndex, Encodings.Utf8.GetBytes("item/1"));
         Span<CoraxSpatialPointEntry> _points = new CoraxSpatialPointEntry[size];
         for (int i = 0; i < size; ++i)
-            _points[i] = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
+            _points[i] = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
         entryBuilder.WriteSpatial(CoordinatesIndex, _points);
 
         entryBuilder.Finish(out buffer);
@@ -129,7 +129,7 @@ public class SpatialTests : StorageTest
 
         for (int i = 0; i < size; ++i)
         {
-            var entry = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Core.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
+            var entry = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
 
             var entryFromBuilder = entriesInIndex.Single(p => p.Geohash == entry.Geohash);
             Assert.Equal(entry.Latitude, entryFromBuilder.Latitude);

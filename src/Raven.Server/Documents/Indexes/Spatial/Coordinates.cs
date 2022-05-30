@@ -1,5 +1,5 @@
 ﻿using System;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Spatial
 {

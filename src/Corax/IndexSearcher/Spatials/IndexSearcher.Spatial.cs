@@ -1,8 +1,8 @@
 ﻿using System;
 using Corax.Queries;
 using Corax.Utils;
-using Spatial4n.Core.Shapes;
-using SpatialContext = Spatial4n.Core.Context.SpatialContext;
+using Spatial4n.Shapes;
+using SpatialContext = Spatial4n.Context.SpatialContext;
 
 namespace Corax;
 

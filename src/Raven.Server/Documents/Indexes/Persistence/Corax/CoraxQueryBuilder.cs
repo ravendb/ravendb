@@ -14,12 +14,12 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Shapes;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.IndexSearcher;
 using Query = Raven.Server.Documents.Queries.AST.Query;
 using CoraxConstants = Corax.Constants;
-using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
+using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 
 

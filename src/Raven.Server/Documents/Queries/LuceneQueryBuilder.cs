@@ -22,7 +22,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Shapes;
 using FuzzyQuery = Lucene.Net.Search.FuzzyQuery;
 using Index = Raven.Server.Documents.Indexes.Index;
 using KeywordAnalyzer = Lucene.Net.Analysis.KeywordAnalyzer;
