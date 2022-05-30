@@ -19,6 +19,10 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected abstract long GetNextOperationId();
 
+        protected virtual void AssertCanExecute(BackupConfiguration backupConfiguration)
+        {
+        }
+
         public override async ValueTask ExecuteAsync()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -26,6 +30,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "database-backup");
                 var backupConfiguration = JsonDeserializationServer.BackupConfiguration(json);
                 var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
+
+                AssertCanExecute(backupConfiguration);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {

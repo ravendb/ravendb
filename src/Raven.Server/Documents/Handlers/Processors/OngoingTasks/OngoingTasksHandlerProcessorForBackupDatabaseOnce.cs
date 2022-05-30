@@ -19,18 +19,17 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
     internal class OngoingTasksHandlerProcessorForBackupDatabaseOnce : AbstractOngoingTasksHandlerProcessorForBackupDatabaseOnce<DatabaseRequestHandler, DocumentsOperationContext>
     {
         private static int OneTimeBackupCounter;
+        private readonly string _backupName;
 
         public OngoingTasksHandlerProcessorForBackupDatabaseOnce([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
+            _backupName = $"One Time Backup #{Interlocked.Increment(ref OneTimeBackupCounter)}";
         }
 
         protected override ValueTask ExecuteBackup(TransactionOperationContext context, BackupConfiguration backupConfiguration, long operationId)
         {
-            var backupName = $"One Time Backup #{Interlocked.Increment(ref OneTimeBackupCounter)}";
-            AssertCanExecute(backupName, backupConfiguration);
-
             var sw = Stopwatch.StartNew();
-            ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
+            ServerStore.ConcurrentBackupsCounter.StartBackup(_backupName, Logger);
             try
             {
                 var cancelToken = RequestHandler.CreateOperationToken();
@@ -44,11 +43,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                     IsFullBackup = true,
                     TempBackupPath = (RequestHandler.Database.Configuration.Storage.TempPath ?? RequestHandler.Database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp"),
-                    Name = backupName
+                    Name = _backupName
                 };
 
                 var backupTask = new BackupTask(RequestHandler.Database, backupParameters, backupConfiguration, Logger);
-                var threadName = $"Backup thread {backupName} for database '{RequestHandler.DatabaseName}'";
+                var threadName = $"Backup thread {_backupName} for database '{RequestHandler.DatabaseName}'";
 
                 var t = RequestHandler.Database.Operations.AddLocalOperation(
                     operationId,
@@ -80,13 +79,13 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             catch (Exception e)
                             {
                                 if (Logger.IsOperationsEnabled)
-                                    Logger.Operations($"Failed to run the backup thread: '{backupName}'", e);
+                                    Logger.Operations($"Failed to run the backup thread: '{_backupName}'", e);
 
                                 tcs.SetException(e);
                             }
                             finally
                             {
-                                ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
+                                ServerStore.ConcurrentBackupsCounter.FinishBackup(_backupName, backupStatus: null, sw.Elapsed, Logger);
                             }
                         }, null, threadName);
                         return tcs.Task;
@@ -97,9 +96,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             }
             catch (Exception e)
             {
-                ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
+                ServerStore.ConcurrentBackupsCounter.FinishBackup(_backupName, backupStatus: null, sw.Elapsed, Logger);
 
-                var message = $"Failed to run backup: '{backupName}'";
+                var message = $"Failed to run backup: '{_backupName}'";
 
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(message, e);
@@ -121,9 +120,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             return ServerStore.Operations.GetNextOperationId();
         }
 
-        private void AssertCanExecute(string backupName, BackupConfiguration backupConfiguration)
+        protected override void AssertCanExecute(BackupConfiguration backupConfiguration)
         {
-            BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
+            BackupUtils.CheckServerHealthBeforeBackup(ServerStore, _backupName);
             ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
             BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
             BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
