@@ -55,6 +55,7 @@ import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
+import shard from "models/resources/shard";
 
 class shell extends viewModelBase {
 
@@ -97,6 +98,7 @@ class shell extends viewModelBase {
     cloudClusterAdmin: KnockoutObservable<boolean>;
     colorCustomizationDisabled = ko.observable<boolean>(false);
     applyColorCustomization: KnockoutObservable<boolean>;
+    singleShardActive: KnockoutObservable<boolean>;
     
     clientCertificate = clientCertificateModel.certificateInfo;
 
@@ -167,7 +169,16 @@ class shell extends viewModelBase {
             const disableColors = this.colorCustomizationDisabled();
             
             return !disableColors && cloudClusterAdmin;
-        })
+        });
+        
+        this.singleShardActive = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return false;
+            }
+            
+            return db instanceof shard;
+        });
 
         this.bindToCurrentInstance("toggleMenu");
     }

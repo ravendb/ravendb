@@ -75,8 +75,10 @@ export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPa
     const [upToDateStats, upToDateProgress] = IndexesStubs.getUpToDateIndex();
     const [upToDateStatsWithErrors, upToDateProgressWithErrors] = IndexesStubs.getUpToDateIndexWithErrors();
     const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
-    const [disabledStats, disabledProgress] = IndexesStubs.getDisabledIndex();
-    const [pausedStats, pausedProgress] = IndexesStubs.getPausedIndex();
+    const [disabledStats1, disabledProgress1] = IndexesStubs.getDisabledIndexWithProgress();
+    const [pausedStats1, pausedProgress1] = IndexesStubs.getPausedIndexWithProgress();
+    const [disabledStats2, disabledProgress2] = IndexesStubs.getDisabledIndexWithOutProgress();
+    const [pausedStats2, pausedProgress2] = IndexesStubs.getPausedIndexWithOutProgress();
     const [faultyStats, faultyProgress] = IndexesStubs.getFaultyIndex();
     const [erroredStats, erroredProgress] = IndexesStubs.getErroredIndex();
 
@@ -85,8 +87,10 @@ export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPa
             upToDateStats,
             upToDateStatsWithErrors,
             staleStats,
-            disabledStats,
-            pausedStats,
+            disabledStats1,
+            pausedStats1,
+            disabledStats2,
+            pausedStats2,
             faultyStats,
             erroredStats,
         ].filter((x) => x)
@@ -96,8 +100,10 @@ export const DifferentIndexNodeStatesSingleNode: ComponentStory<typeof IndexesPa
             upToDateProgress,
             upToDateProgressWithErrors,
             staleProgress,
-            disabledProgress,
-            pausedProgress,
+            disabledProgress1,
+            pausedProgress1,
+            disabledProgress2,
+            pausedProgress2,
             faultyProgress,
             erroredProgress,
         ].filter((x) => x)
@@ -117,8 +123,10 @@ export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage>
     const [upToDateStats, upToDateProgress] = IndexesStubs.getUpToDateIndex();
     const [upToDateStatsWithErrors, upToDateProgressWithErrors] = IndexesStubs.getUpToDateIndexWithErrors();
     const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
-    const [disabledStats, disabledProgress] = IndexesStubs.getDisabledIndex();
-    const [pausedStats, pausedProgress] = IndexesStubs.getPausedIndex();
+    const [disabledStats1, disabledProgress1] = IndexesStubs.getDisabledIndexWithProgress();
+    const [pausedStats1, pausedProgress1] = IndexesStubs.getPausedIndexWithProgress();
+    const [disabledStats2, disabledProgress2] = IndexesStubs.getDisabledIndexWithOutProgress();
+    const [pausedStats2, pausedProgress2] = IndexesStubs.getPausedIndexWithOutProgress();
     const [faultyStats, faultyProgress] = IndexesStubs.getFaultyIndex();
     const [erroredStats, erroredProgress] = IndexesStubs.getErroredIndex();
 
@@ -127,8 +135,10 @@ export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage>
             upToDateStats,
             upToDateStatsWithErrors,
             staleStats,
-            disabledStats,
-            pausedStats,
+            disabledStats1,
+            pausedStats1,
+            disabledStats2,
+            pausedStats2,
             faultyStats,
             erroredStats,
         ].filter((x) => x)
@@ -138,8 +148,10 @@ export const DifferentIndexNodeStatesSharded: ComponentStory<typeof IndexesPage>
             upToDateProgress,
             upToDateProgressWithErrors,
             staleProgress,
-            disabledProgress,
-            pausedProgress,
+            disabledProgress1,
+            pausedProgress1,
+            disabledProgress2,
+            pausedProgress2,
             faultyProgress,
             erroredProgress,
         ].filter((x) => x)

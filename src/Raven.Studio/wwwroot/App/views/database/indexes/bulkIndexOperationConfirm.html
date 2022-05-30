@@ -15,8 +15,10 @@
                 </li>
             </ul>
 
-            <p>Select context:</p>
-            <div data-bind="react: locationSelectorOptions"></div>
+            <div data-bind="visible: showContextSelector, if: showContextSelector">
+                <p>Select context:</p>
+                <div data-bind="react: locationSelectorOptions"></div>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
