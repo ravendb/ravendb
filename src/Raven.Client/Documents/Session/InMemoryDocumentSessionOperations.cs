@@ -1183,6 +1183,11 @@ more responsive application.
             return changes;
         }
 
+        public IDictionary<string, TrackedEntity> GetTrackedEntities()
+        {
+            return DocumentsById.GetTrackedEntities();
+        }
+
         /// <summary>
         /// Gets a value indicating whether any of the entities tracked by the session has changes.
         /// </summary>

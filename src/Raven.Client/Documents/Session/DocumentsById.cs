@@ -38,6 +38,25 @@ namespace Raven.Client.Documents.Session
 
         public int Count => _inner.Count;
 
+        public Dictionary<string, TrackedEntity> GetTrackedEntities()
+        {
+            var result = new Dictionary<string, TrackedEntity>();
+
+            foreach (var keyValue in _inner)
+            {
+                var entity = keyValue.Value.Entity;
+                if (entity == null)
+                    continue;
+
+                result.Add(keyValue.Key, new TrackedEntity
+                {
+                    Entity = entity
+                });
+            }
+
+            return result;
+        }
+
         public IEnumerator<KeyValuePair<string, DocumentInfo>> GetEnumerator()
         {
             return _inner.GetEnumerator();
@@ -47,5 +66,10 @@ namespace Raven.Client.Documents.Session
         {
             return GetEnumerator();
         }
+    }
+
+    public class TrackedEntity
+    {
+        public object Entity { get; set; }
     }
 }
