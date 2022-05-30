@@ -207,7 +207,7 @@ function GetAssemblyInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCon
     $result = $assemblyVersionPattern.Replace($result, "[assembly: AssemblyVersion(""$newVersion"")]")
 
     $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]'
-    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.53"")]")
+    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.54"")]")
 
     $assemblyInfoVersionPattern = [regex]'\[assembly: AssemblyInformationalVersion\(".*"\)\]';
     $result = $assemblyInfoVersionPattern.Replace($result, "[assembly: AssemblyInformationalVersion(""$newVersion"")]")
@@ -224,13 +224,13 @@ function GetVersionInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCont
 
     $result = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($srcFileContent))
 
-    $pattern = [regex]'\[assembly: RavenVersion\(Build = "53", CommitHash = "([^"]*)", Version = "5.4", FullVersion = "[^"]*", ReleaseDateString = "[^"]*"\)\]'
+    $pattern = [regex]'\[assembly: RavenVersion\(Build = "54", CommitHash = "([^"]*)", Version = "5.4", FullVersion = "[^"]*", ReleaseDateString = "[^"]*"\)\]'
     $m = $pattern.Match($result)
     $commit = $m.Groups[1]
     $releaseDate = $(Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
     $result = $pattern.Replace(
         $result,
-        "[assembly: RavenVersion(Build = ""53"", CommitHash = ""$commit"", Version = ""5.4"", FullVersion = ""$newVersion-custom-54"", ReleaseDateString = ""$releaseDate"")]")
+        "[assembly: RavenVersion(Build = ""54"", CommitHash = ""$commit"", Version = ""5.4"", FullVersion = ""$newVersion-custom-54"", ReleaseDateString = ""$releaseDate"")]")
 
     if (!$result) {
         throw "Could not get VersionInfo.cs file contents with bumped version."
