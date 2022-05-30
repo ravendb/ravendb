@@ -54,7 +54,8 @@ namespace SlowTests.Issues
 
                     var error = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.StartsWith("System.TimeoutException", error.Message);
-                    Assert.Contains("could not verify that 1 indexes has caught up with the changes as of etag", error.Message);
+                    Assert.Contains("could not verify that all indexes has caught up with the changes as of etag", error.Message);
+                    Assert.DoesNotContain("total errored indexes", error.Message);
                 }
             }
         }

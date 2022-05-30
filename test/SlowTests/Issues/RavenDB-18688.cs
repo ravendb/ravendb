@@ -47,7 +47,8 @@ namespace SlowTests.Issues
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), indexes: new[] { index.IndexName });
                     var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
                     Assert.StartsWith("System.TimeoutException", error.Message);
-                    Assert.Contains("could not verify that 1 indexes has caught up with the changes as of etag", error.Message);
+                    Assert.Contains("could not verify that all indexes has caught up with the changes as of etag", error.Message);
+                    Assert.Contains("Total relevant indexes: 1, total stale indexes: 1", error.Message);
                 }
             }
         }
@@ -86,7 +87,9 @@ namespace SlowTests.Issues
                             Count = 0
                         });
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5));
-                    await session.SaveChangesAsync();
+                    var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                    Assert.StartsWith("System.TimeoutException", error.Message);
+                    Assert.Contains($"Total relevant indexes: 1, total stale indexes: 1, total errored indexes: 1 ({index.IndexName})", error.Message);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -99,7 +102,22 @@ namespace SlowTests.Issues
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), indexes: new[] { index.IndexName });
                     var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
                     Assert.StartsWith("System.TimeoutException", error.Message);
-                    Assert.Contains("could not verify that 1 indexes has caught up with the changes as of etag", error.Message);
+                    Assert.Contains($"Total relevant indexes: 1, total stale indexes: 1, total errored indexes: 1 ({index.IndexName})", error.Message);
+                }
+
+                await new Index().ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(
+                        new User
+                        {
+                            Count = 0
+                        });
+                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5));
+                    var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                    Assert.StartsWith("System.TimeoutException", error.Message);
+                    Assert.Contains($"Total relevant indexes: 2, total stale indexes: 1, total errored indexes: 1 ({index.IndexName})", error.Message);
                 }
             }
         }
