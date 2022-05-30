@@ -525,7 +525,7 @@ namespace Raven.Server.Commercial
                     {
                         if (endpoint.Port == node.Port)
                         {
-                            throw new PortInUseException(endpoint.Port, endpoint.Address.ToString() ,"Port is already in use");
+                            throw new PortInUseException(endpoint.Port, endpoint.Address.ToString() ," Port is already in use");
                         }
                     }
                 }
@@ -921,7 +921,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeTextUnsecured(continueSetupInfo.NodeTag, publicServerUrl, continueSetupInfo.RegisterClientCert);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextSecured(continueSetupInfo.NodeTag, publicServerUrl, false, continueSetupInfo.RegisterClientCert, false, true);
             }
             catch (Exception e)
             {
@@ -1025,7 +1025,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeTextSecured(continueSetupInfo.NodeTag, serverUrl, true, false);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextUnsecured(continueSetupInfo.NodeTag, serverUrl, otherNodesUrls.Count > 0, false, true);
             }
             catch (Exception e)
             {
@@ -1071,7 +1071,9 @@ namespace Raven.Server.Commercial
                         throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                     }
 
-                    await serverStore.EnsureNotPassiveAsync(publicServerUrl, unsecuredSetupInfo.LocalNodeTag);
+                    if (unsecuredSetupInfo.LocalNodeTag != null)
+                        await serverStore.EnsureNotPassiveAsync(publicServerUrl, unsecuredSetupInfo.LocalNodeTag);
+                   
                     await DeleteAllExistingCertificates(serverStore);
 
                     serverStore.HasFixedPort = unsecuredSetupInfo.NodeSetupInfos[localNodeTag].Port != 0;

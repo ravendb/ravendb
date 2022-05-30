@@ -524,34 +524,50 @@ namespace Raven.Server.Web.System
                 }
 
                 var unsecuredSetupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
-                
-                if (unsecuredSetupInfo.NodeSetupInfos.Count == 1) // toggle doesn't matter in this scenario
-                {
-                        await ServerStore.Operations.AddOperation(
-                        null,
-                        "Setting up RavenDB in unsecured mode.",
-                        Documents.Operations.Operations.OperationType.Setup,
-                        progress => CreatePassiveOrSingleNodeCluster(progress, ServerStore, unsecuredSetupInfo, context,operationCancelToken.Token), operationId.Value, token: operationCancelToken);
-                        NoContentStatus();
-                }
-                else
-                {
-                    var operationResult = await ServerStore.Operations.AddOperation(
-                        null,
-                        "Setting up RavenDB in unsecured mode.",
-                        Documents.Operations.Operations.OperationType.Setup,
-                        progress => SetupManager.SetupUnsecuredTask(progress, unsecuredSetupInfo, ServerStore, operationCancelToken.Token), operationId.Value, token: operationCancelToken);
 
-                    var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
+                var operationResult = await ServerStore.Operations.AddOperation(
+                    null,
+                    "Setting up RavenDB in unsecured mode.",
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => SetupManager.SetupUnsecuredTask(progress, unsecuredSetupInfo, ServerStore, operationCancelToken.Token), operationId.Value,
+                    token: operationCancelToken);
+
+                var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
+
+                var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                var contentDisposition = $"attachment; filename={fileName}";
+
+                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                HttpContext.Response.ContentType = "application/octet-stream";
+
+                await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
                 
-                    var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
-                    var contentDisposition = $"attachment; filename={fileName}";
-                
-                    HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                    HttpContext.Response.ContentType = "application/octet-stream";
-        
-                    await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
-                }
+                // if (unsecuredSetupInfo.NodeSetupInfos.Count == 1) // toggle doesn't matter in this scenario
+                // {
+                //         await ServerStore.Operations.AddOperation(
+                //         null,
+                //         "Setting up RavenDB in unsecured mode.",
+                //         Documents.Operations.Operations.OperationType.Setup,
+                //         progress => CreatePassiveOrSingleNodeCluster(progress, ServerStore, unsecuredSetupInfo, context,operationCancelToken.Token), operationId.Value, token: operationCancelToken);
+                // }
+                // else
+                // {
+                //     var operationResult = await ServerStore.Operations.AddOperation(
+                //         null,
+                //         "Setting up RavenDB in unsecured mode.",
+                //         Documents.Operations.Operations.OperationType.Setup,
+                //         progress => SetupManager.SetupUnsecuredTask(progress, unsecuredSetupInfo, ServerStore, operationCancelToken.Token), operationId.Value, token: operationCancelToken);
+                //
+                //     var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
+                //
+                //     var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                //     var contentDisposition = $"attachment; filename={fileName}";
+                //
+                //     HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                //     HttpContext.Response.ContentType = "application/octet-stream";
+                //
+                //     await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
+                // }
             }
         }
 
@@ -567,6 +583,9 @@ namespace Raven.Server.Web.System
             progress.AddInfo("Starting validation.");
             onProgress(progress);
             await SetupManager.ValidateUnsecuredServerCanRunWithSuppliedSettings(unsecuredSetupInfo, serverStore, token);
+            
+            progress.AddInfo("Validation is successful.");
+            onProgress(progress);
             
             BlittableJsonReaderObject settingsJson;
             await using (var fs = new FileStream(serverStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
@@ -620,7 +639,6 @@ namespace Raven.Server.Web.System
             progress.AddInfo("Modified settings.json file.");
             onProgress(progress);
 
-            SettingsZipFileHelper.CreateReadmeTextUnsecured(nodeTag, publicServerUrl, false);
             return progress;
         }
 
