@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/subscription-tasks/state", "POST")]
         public async Task ToggleSubscriptionTaskState()
         {
-            using (var processor = new ShardedOngoingTasksHandlerProcessorForToggleTaskState(this, requireAdmin: false))
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForPostSubscriptionTasksState(this))
                 await processor.ExecuteAsync();
         }
 
