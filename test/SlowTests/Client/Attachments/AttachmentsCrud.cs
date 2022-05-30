@@ -280,7 +280,6 @@ namespace SlowTests.Client.Attachments
                 }
             }
         }
-
         [Fact]
         public async Task DeleteAttachments()
         {
