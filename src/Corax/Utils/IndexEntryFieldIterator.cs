@@ -1,13 +1,13 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Server.Compression;
 
-namespace Corax;
-
-public ref struct IndexEntryFieldIterator
+namespace Corax
+{
+    public ref struct IndexEntryFieldIterator
     {
         public readonly IndexEntryFieldType Type;
         public readonly bool IsValid;
@@ -20,8 +20,6 @@ public ref struct IndexEntryFieldIterator
         private int _nullTableOffset;
         private int _longOffset;
         private int _doubleOffset;
-        private readonly bool IsTuple => _doubleOffset != 0;
-
 
         internal IndexEntryFieldIterator(IndexEntryFieldType type)
         {
@@ -30,13 +28,14 @@ public ref struct IndexEntryFieldIterator
             Count = 0;
             _buffer = ReadOnlySpan<byte>.Empty;
             IsValid = false;
+            _currentIdx = -1;
 
-            Unsafe.SkipInit(out _currentIdx);
-            Unsafe.SkipInit(out _spanTableOffset);
-            Unsafe.SkipInit(out _nullTableOffset);
-            Unsafe.SkipInit(out _spanOffset);
-            Unsafe.SkipInit(out _longOffset);
-            Unsafe.SkipInit(out _doubleOffset);            
+            _spanOffset = 0;
+            _nullTableOffset = 0;
+            _spanTableOffset = 0;
+            _spanOffset = 0;
+            _longOffset = 0;
+            _doubleOffset = 0;
         }
 
         public IndexEntryFieldIterator(ReadOnlySpan<byte> buffer, int offset)
@@ -49,13 +48,15 @@ public ref struct IndexEntryFieldIterator
             if (!Type.HasFlag(IndexEntryFieldType.List))
             {
                 IsValid = false;
-                Unsafe.SkipInit(out _currentIdx);
-                Unsafe.SkipInit(out _spanTableOffset);
-                Unsafe.SkipInit(out _nullTableOffset);
-                Unsafe.SkipInit(out _spanOffset);
-                Unsafe.SkipInit(out _longOffset);
-                Unsafe.SkipInit(out _doubleOffset);
-                Unsafe.SkipInit(out Count);
+                Count = 0;
+                _currentIdx = -1;
+
+                _spanOffset = 0;
+                _nullTableOffset = 0;
+                _spanTableOffset = 0;
+                _spanOffset = 0;
+                _longOffset = 0;
+                _doubleOffset = 0;
                 return;
             }
 
@@ -82,7 +83,7 @@ public ref struct IndexEntryFieldIterator
             }
             else
             {
-                _doubleOffset = 0;                
+                _doubleOffset = 0;
                 _longOffset = 0;
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNulls))
@@ -106,6 +107,9 @@ public ref struct IndexEntryFieldIterator
         {
             get
             {
+                if (!IsValid)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsNull)} on an invalid iterator.");
+
                 if (!Type.HasFlag(IndexEntryFieldType.HasNulls))
                     return false;
 
@@ -123,6 +127,9 @@ public ref struct IndexEntryFieldIterator
         {
             get
             {
+                if (!IsValid)
+                    throw new InvalidOperationException($"Cannot call {nameof(Sequence)} on an invalid iterator.");
+
                 if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
 
@@ -135,7 +142,10 @@ public ref struct IndexEntryFieldIterator
         {
             get
             {
-                if (!IsTuple)
+                if (!IsValid)
+                    throw new InvalidOperationException($"Cannot call {nameof(Long)} on an invalid iterator.");
+                
+                if (!Type.HasFlag(IndexEntryFieldType.Tuple))
                     throw new InvalidOperationException();
                 if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
@@ -148,12 +158,15 @@ public ref struct IndexEntryFieldIterator
         {
             get
             {
-                if (!IsTuple)
-                    throw new InvalidOperationException();
+                if (!IsValid)
+                    throw new InvalidOperationException($"Cannot call {nameof(Double)} on an invalid iterator.");
 
+                if (!Type.HasFlag(IndexEntryFieldType.Tuple))
+                    throw new InvalidOperationException();
+                
                 if (Count == 0 || _currentIdx >= Count)
                     throw new IndexOutOfRangeException();
-            
+
                 return Unsafe.ReadUnaligned<double>(ref MemoryMarshal.GetReference(_buffer[_doubleOffset..]));
             }
         }
@@ -170,7 +183,7 @@ public ref struct IndexEntryFieldIterator
                 _spanOffset += VariableSizeEncoding.Read<int>(_buffer, out var length, _spanTableOffset);
                 _spanTableOffset += length;
 
-                if (IsTuple)
+                if (Type.HasFlag(IndexEntryFieldType.Tuple))
                 {
                     // This is a tuple, so we update these too.
                     _doubleOffset += sizeof(double);
@@ -184,3 +197,4 @@ public ref struct IndexEntryFieldIterator
             return true;
         }
     }
+}
