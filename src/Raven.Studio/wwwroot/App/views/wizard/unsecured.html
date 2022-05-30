@@ -39,7 +39,7 @@
             </div>
             <div class="col-md-6" data-bind="with: editedNode">
                 <div class="panel padding padding-lg">
-                    <div class="margin-left-sm margin-bottom-lg" data-bind="visible: $parent.model.nodes().length === 1">
+                    <div class="margin-left-sm margin-bottom-lg" data-bind="visible: $parent.model.nodes().length === 1 && !$parent.model.onlyCreateZipFile()">
                         <div class="toggle">
                             <input id="startAsPassive" class="styled" type="checkbox" data-bind="checked: $parent.model.startNodeAsPassive" />
                             <label for="startAsPassive">

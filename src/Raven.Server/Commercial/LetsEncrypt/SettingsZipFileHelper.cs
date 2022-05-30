@@ -497,7 +497,7 @@ public static class SettingsZipFileHelper
             {
                 sb.Append(string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
                           "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
-                          "Your cluster settings configuration are contained in the downloaded zip file."
+                          "Your cluster settings configuration is contained in the downloaded zip file."
                           + Environment.NewLine);
 
                 sb.Append("You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.");

@@ -78,7 +78,7 @@ class serverSetup {
         });
 
         this.nodesValidationGroup = ko.validatedObservable({
-            nodes: this.nodes,
+            nodes: this.nodes
         });
     }
     
