@@ -89,9 +89,9 @@ export class IndexesStubs {
         };
     }
 
-    static getDisabledIndex(): [IndexStats, IndexProgress] {
+    static getDisabledIndexWithProgress(): [IndexStats, IndexProgress] {
         const stats = IndexesStubs.getGenericStats();
-        stats.Name = "DisabledIndex";
+        stats.Name = "DisabledIndexWithProgress";
         stats.IsStale = true;
         stats.State = "Disabled";
         stats.Status = "Disabled";
@@ -103,9 +103,16 @@ export class IndexesStubs {
         return [stats, progress];
     }
 
-    static getPausedIndex(): [IndexStats, IndexProgress] {
+    static getDisabledIndexWithOutProgress(): [IndexStats, IndexProgress] {
+        const [stats] = IndexesStubs.getDisabledIndexWithProgress();
+        stats.Name = "DisabledIndexWithoutProgress";
+
+        return [stats, null];
+    }
+
+    static getPausedIndexWithProgress(): [IndexStats, IndexProgress] {
         const stats = IndexesStubs.getGenericStats();
-        stats.Name = "PausedIndex";
+        stats.Name = "PausedIndexWithProgress";
         stats.IsStale = true;
         stats.State = "Normal";
         stats.Status = "Paused";
@@ -115,6 +122,13 @@ export class IndexesStubs {
         progress.Name = stats.Name;
         progress.Collections = IndexesStubs.collectionStats();
         return [stats, progress];
+    }
+
+    static getPausedIndexWithOutProgress(): [IndexStats, IndexProgress] {
+        const [stats] = this.getPausedIndexWithProgress();
+        stats.Name = "PausedIndexWithoutProgress";
+
+        return [stats, null];
     }
 
     static getFaultyIndex(): [IndexStats, IndexProgress] {

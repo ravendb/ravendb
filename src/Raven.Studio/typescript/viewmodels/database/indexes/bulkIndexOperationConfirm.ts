@@ -11,6 +11,7 @@ class bulkIndexOperationConfirm extends confirmViewModelBase<bulkIndexOperationC
     view = require("views/database/indexes/bulkIndexOperationConfirm.html");
 
     readonly locations: databaseLocationSpecifier[];
+    readonly showContextSelector: boolean;
     
     selectedLocations = ko.observableArray<databaseLocationSpecifier>([]);
     
@@ -44,6 +45,7 @@ class bulkIndexOperationConfirm extends confirmViewModelBase<bulkIndexOperationC
 
         this.locations = locations;
         
+        this.showContextSelector = locations.length > 1;
         this.selectedLocations(locations);
         
         this.title = infinitive + " " + this.pluralize(indexes.length, "index", "indexes", true) + "?";

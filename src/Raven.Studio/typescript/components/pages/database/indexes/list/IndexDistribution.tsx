@@ -160,6 +160,27 @@ export function IndexState(props: IndexStateProps) {
          */
     }
 
+    if (nodeInfo.details.status === "Paused") {
+        return (
+            <div className="state running">
+                <div className="state-desc">Paused</div>
+                <div className="state-indicator">
+                    <i className="icon-pause" />
+                </div>
+            </div>
+        );
+    }
+    if (nodeInfo.details.status === "Disabled") {
+        return (
+            <div className="state running">
+                <div className="state-desc">Disabled</div>
+                <div className="state-indicator">
+                    <i className="icon-stop" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="state up-to-date">
             <div className="state-desc">up to date</div>

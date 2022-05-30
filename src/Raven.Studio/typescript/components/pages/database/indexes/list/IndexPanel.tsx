@@ -1,4 +1,4 @@
-﻿import React, { ForwardedRef, forwardRef, memo, MouseEvent, useCallback, useMemo, useRef, useState } from "react";
+﻿import React, { ForwardedRef, forwardRef, MouseEvent, useState } from "react";
 import classNames from "classnames";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { IndexSharedInfo } from "../../../../models/indexes";
@@ -318,21 +318,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     </button>
                                     <ul className="dropdown-menu">
                                         <li data-bind="visible: canBeEnabled()">
-                                            <a
-                                                href="#"
-                                                onClick={enableIndexing}
-                                                title="Enable indexing on ALL cluster nodes"
-                                            >
+                                            <a href="#" onClick={enableIndexing} title="Enable indexing">
                                                 <i className="icon-play" />
                                                 <span>Enable indexing</span>
                                             </a>
                                         </li>
                                         <li data-bind="visible: canBeDisabled()">
-                                            <a
-                                                href="#"
-                                                onClick={disableIndexing}
-                                                title="Disable indexing on ALL cluster nodes"
-                                            >
+                                            <a href="#" onClick={disableIndexing} title="Disable indexing">
                                                 <i className="icon-cancel" />
                                                 <span>Disable indexing</span>
                                             </a>

@@ -29,7 +29,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     }
 
     return (
-        <PopoverWithHover rounded target={target} placement="right" delay={100}>
+        <PopoverWithHover rounded target={target} placement="top" delay={100}>
             <div className="index-tooltip">
                 <div className="index-location">
                     {nodeInfo.location.shardNumber != null && (
