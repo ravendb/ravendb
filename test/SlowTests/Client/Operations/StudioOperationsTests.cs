@@ -12,7 +12,6 @@ using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.Sharding.Operations;
 using Sparrow.Json;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,6 +40,60 @@ namespace SlowTests.Client.Operations
                     
                     return stats != null && stats.Collections["Orders"] == 0;
                 });
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Studio)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task GetLastChangeVector(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var shard1 = await Sharding.GetShardNumber(store, "user/A-1");
+                var shard2 = await Sharding.GetShardNumber(store, "user/B-2");
+                var shard3 = await Sharding.GetShardNumber(store, "user/E-3");
+
+                Assert.NotEqual(shard1, shard2);
+                Assert.NotEqual(shard1, shard3);
+                Assert.NotEqual(shard2, shard3);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "user/A-1");
+                    await session.StoreAsync(new User(), "user/B-2");
+                    await session.StoreAsync(new User(), "user/E-3");
+                    await session.SaveChangesAsync();
+                    
+                    var user1 = await session.LoadAsync<User>("user/A-1");
+                    var user2 = await session.LoadAsync<User>("user/B-2");
+                    var user3 = await session.LoadAsync<User>("user/E-3");
+
+                    var cv1 = session.Advanced.GetMetadataFor(user1)[Constants.Documents.Metadata.ChangeVector].ToString();
+                    var cv2 = session.Advanced.GetMetadataFor(user2)[Constants.Documents.Metadata.ChangeVector].ToString();
+                    var cv3 = session.Advanced.GetMetadataFor(user3)[Constants.Documents.Metadata.ChangeVector].ToString();
+
+                    var res1 = await store.Maintenance.ForShard(shard1).SendAsync(new GetLastChangeVectorOperation("Users"));
+                    var res2 = await store.Maintenance.ForShard(shard2).SendAsync(new GetLastChangeVectorOperation("Users"));
+                    var res3 = await store.Maintenance.ForShard(shard3).SendAsync(new GetLastChangeVectorOperation("Users"));
+
+                    Assert.Equal(cv1, res1.LastChangeVector);
+                    Assert.Equal(cv2, res2.LastChangeVector);
+                    Assert.Equal(cv3, res3.LastChangeVector);
+                }
+            }
+        }
+
+        internal class GetLastChangeVectorOperation : IMaintenanceOperation<LastChangeVectorForCollectionResult>
+        {
+            private readonly string _collection;
+
+            public GetLastChangeVectorOperation(string collection)
+            {
+                _collection = collection;
+            }
+            public RavenCommand<LastChangeVectorForCollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new ShardedLastChangeVectorForCollectionOperation.LastChangeVectorForCollectionCommand(_collection);
             }
         }
 
