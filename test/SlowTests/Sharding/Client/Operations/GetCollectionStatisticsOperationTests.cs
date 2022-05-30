@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -81,7 +82,7 @@ namespace SlowTests.Sharding.Client.Operations
             }
         }
 
-        private class GetCollectionOperation : IMaintenanceOperation<ShardedCollectionHandler.CollectionResult>
+        private class GetCollectionOperation : IMaintenanceOperation<CollectionResult>
         {
             private readonly string _continuation;
             private readonly int? _start;
@@ -98,12 +99,12 @@ namespace SlowTests.Sharding.Client.Operations
                 _continuation = continuation;
             }
 
-            public RavenCommand<ShardedCollectionHandler.CollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            public RavenCommand<CollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
                 return new GetCollectionCommand(_start, _pageSize, _continuation);
             }
 
-            private class GetCollectionCommand : RavenCommand<ShardedCollectionHandler.CollectionResult>
+            private class GetCollectionCommand : RavenCommand<CollectionResult>
             {
                 private readonly string _continuation;
                 private readonly int? _start;
@@ -140,7 +141,7 @@ namespace SlowTests.Sharding.Client.Operations
                     if (response == null)
                         ThrowInvalidResponse();
 
-                    Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ShardedCollectionHandler.CollectionResult>(response);
+                    Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<CollectionResult>(response);
                 }
             }
         }

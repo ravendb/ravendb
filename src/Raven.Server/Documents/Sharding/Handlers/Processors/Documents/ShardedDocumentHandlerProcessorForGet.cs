@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -110,16 +111,16 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         if (etag != null)
             throw new NotSupportedException("Passing etag to a sharded database is not supported");
 
-        ShardedCollectionHandler.ShardedStreamDocumentsOperation op;
+        ShardedStreamDocumentsOperation op;
         
         if (startsWith != null)
         {
-            op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(HttpContext, changeVector, startsWith.IdPrefix, startsWith.Matches, startsWith.Exclude,
+            op = new ShardedStreamDocumentsOperation(HttpContext, changeVector, startsWith.IdPrefix, startsWith.Matches, startsWith.Exclude,
                 startsWith.StartAfterId, token);
         }
         else // recent docs
         {
-            op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(HttpContext, changeVector, token);
+            op = new ShardedStreamDocumentsOperation(HttpContext, changeVector, token);
         }
 
         var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, CancellationToken);
