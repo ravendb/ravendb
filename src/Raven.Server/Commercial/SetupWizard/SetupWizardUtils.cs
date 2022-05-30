@@ -143,11 +143,10 @@ public static class SetupWizardUtils
 
         try
         {
-
                 if (parameters.OnBeforeAddingNodesToCluster != null)
                     await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
                 
-                if (parameters.UnsecuredSetupInfo.ZipOnly)
+                if (parameters.UnsecuredSetupInfo.ZipOnly == false)
                 {
                     foreach (var node in parameters.UnsecuredSetupInfo.NodeSetupInfos)
                     {
@@ -169,7 +168,7 @@ public static class SetupWizardUtils
 
         return new CompleteClusterConfigurationResult
         {
-            PublicServerUrl = nodeInfo.PublicServerUrl,
+            PublicServerUrl = nodeInfo.PublicServerUrl
         };
     }
 

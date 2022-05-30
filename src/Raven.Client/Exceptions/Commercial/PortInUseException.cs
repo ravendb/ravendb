@@ -25,11 +25,11 @@ public class PortInUseException : RavenException
     {
         var result = new StringBuilder(message?.Length ?? 0);
 
-        result.Append(message)
-            .Append("Port: ")
+        result.Append("Port: ")
             .Append(port)
             .Append("Address: ")
-            .Append(address);
+            .Append(address)
+            .Append(message);
 
         return result.ToString();
     }

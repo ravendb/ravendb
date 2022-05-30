@@ -317,7 +317,7 @@ public static class SettingsZipFileHelper
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                 }
 
-                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.ZipOnly)
+                if (parameters.UnsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None && parameters.ZipOnly == false)
                 {
                     if (parameters.OnPutServerWideStudioConfigurationValues != null)
                         await parameters.OnPutServerWideStudioConfigurationValues(parameters.UnsecuredSetupInfo.Environment);
@@ -379,8 +379,7 @@ public static class SettingsZipFileHelper
 
                 string readmeString = CreateReadmeTextUnsecured(parameters.UnsecuredSetupInfo.LocalNodeTag,
                     parameters.CompleteClusterConfigurationResult.PublicServerUrl,
-                    parameters.UnsecuredSetupInfo.NodeSetupInfos.Count > 1,
-                    parameters.ZipOnly);
+                    parameters.UnsecuredSetupInfo.NodeSetupInfos.Count > 1);
 
                 if (parameters.Progress != null)
                 {
@@ -466,7 +465,7 @@ public static class SettingsZipFileHelper
         }
     }
 
-    public static string CreateReadmeTextUnsecured(string nodeTag, string serverUrl, bool isCluster, bool zipOnly)
+    public static string CreateReadmeTextUnsecured(string nodeTag, string serverUrl, bool zipOnly)
     {
         var sb = new StringBuilder();
         
@@ -476,7 +475,7 @@ public static class SettingsZipFileHelper
                   + Environment.NewLine);
             
         sb.Append("You can use this file to configure your RavenDB cluster in the Cloud or any other environment of your choice other than this machine.");
-        if (zipOnly == false)
+        if (zipOnly)
             return sb.ToString();
 
 
