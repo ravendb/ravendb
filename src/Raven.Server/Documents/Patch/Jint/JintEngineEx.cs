@@ -48,7 +48,7 @@ var process = {
 
         public bool IsMemoryChecksOn => false;
         public JsHandleJint Empty { get; set; } = JsHandleJint.Empty;
-        public JsHandleJint Null { get; set; } = JsHandleJint.Empty;
+        public JsHandleJint Null { get; set; } = JsHandleJint.Null;
         public JsHandleJint Undefined { get; set; } = JsHandleJint.Undefined;
         public JsHandleJint True { get; set; } = JsHandleJint.True;
         public JsHandleJint False { get; set; } = JsHandleJint.False;

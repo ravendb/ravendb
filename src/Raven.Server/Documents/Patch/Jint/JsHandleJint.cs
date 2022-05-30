@@ -55,6 +55,7 @@ public static class JsHandleJintExtensions
 public struct JsHandleJint : IJsHandle<JsHandleJint>
 {
     public static JsHandleJint Empty = new JsHandleJint() { Item = null };
+    public static JsHandleJint Null = new JsHandleJint() { Item = JsValue.Null };
     public static JsHandleJint Undefined = new JsHandleJint() { Item = JsValue.Undefined };
     public static JsHandleJint True = new JsHandleJint() { Item = true };
     public static JsHandleJint False = new JsHandleJint() { Item = false };
