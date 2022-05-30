@@ -27,6 +27,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.Jint
             return "null";
         }
 
+        // TODO: egor this may be used for v8 as well
+        // TODO: egor need to check how nulls are resolved in indexing with v8
+        // TODO: egor for jint it is: JintNullPropagationReferenceResolver
         public override bool Equals(JsValue other)
         {
             if (ReferenceEquals(this, other))

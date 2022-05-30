@@ -42,10 +42,13 @@ namespace Raven.Server.Documents.Patch.Jint
                 return true;
             }
 
-            if (value is DynamicJsNullJint dn && dn.IsExplicitNull)
+            if (value is DynamicJsNullJint)
             {
-                value = DynamicJsNullJint.ImplicitNullJint;
-                return true;
+           //     if (dn.IsExplicitNull)
+             //   {
+                    value = DynamicJsNullJint.ImplicitNullJint;
+                    return true;
+              //  }
             }
 
             return value.IsNull() || value.IsUndefined();

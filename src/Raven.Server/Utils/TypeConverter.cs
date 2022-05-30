@@ -27,6 +27,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
 using Raven.Server.Extensions.Jint;
 using V8.Net;
 
@@ -394,8 +395,15 @@ namespace Raven.Server.Utils
             var js = value;
             if (js.IsNull)
             {
-                //if (forIndexing && js is DynamicJsNull dynamicJsNull)
-                //    return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+                //TODO: egor this is works only for jint atm
+                if (forIndexing)
+                {
+                    // TODO: egor handle casting
+                    if (js is JsHandleJint jsHandleJint && jsHandleJint.Item is DynamicJsNullJint dynamicJsNull)
+                    {
+                        return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+                    }
+                }
 
                 return null;
             }

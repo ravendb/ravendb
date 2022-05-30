@@ -725,7 +725,7 @@ namespace FastTests
                             record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = JavaScriptEngineType.Jint.ToString();
                         };
                         options.AddToDescription($"{nameof(RavenDataAttribute.JavascriptEngineMode)} = {nameof(JavaScriptEngineType.Jint)}");
-
+                        options.JavascriptEngineMode = RavenJavascriptEngineMode.Jint;
                         return options;
 
                     case RavenJavascriptEngineMode.V8:
@@ -735,6 +735,7 @@ namespace FastTests
                             record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = JavaScriptEngineType.V8.ToString();
                         };
                         options.AddToDescription($"{nameof(RavenDataAttribute.JavascriptEngineMode)} = {nameof(JavaScriptEngineType.V8)}");
+                        options.JavascriptEngineMode = RavenJavascriptEngineMode.V8;
                         return options;
                     case RavenJavascriptEngineMode.All:
                     default:
