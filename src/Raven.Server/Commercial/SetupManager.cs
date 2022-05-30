@@ -19,11 +19,13 @@ using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -34,7 +36,7 @@ namespace Raven.Server.Commercial
 {
     public static class SetupManager
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         
         private static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
         {
@@ -69,16 +71,13 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    unsecuredSetupInfo.InfoValidation(new CreateSetupPackageParameters
-                    {
-                        UnsecuredSetupInfo = unsecuredSetupInfo
-                    });
+                    unsecuredSetupInfo.InfoValidation(new CreateSetupPackageParameters {UnsecuredSetupInfo = unsecuredSetupInfo});
                 }
                 catch (Exception e)
                 {
                     throw new AggregateException(e);
                 }
-             
+
                 await ValidateUnsecuredServerCanRunWithSuppliedSettings(unsecuredSetupInfo, serverStore, token);
 
                 progress.Processed++;
@@ -94,7 +93,7 @@ namespace Raven.Server.Commercial
                         unsecuredSetupInfo,
                         serverStore,
                         token);
-
+        
                     progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFileUnsecuredSetup(new GetSetupZipFileParameters
                     {
                         CompleteClusterConfigurationResult = completeClusterConfigurationResult,
@@ -509,7 +508,6 @@ namespace Raven.Server.Commercial
         }
         internal static Task ValidateUnsecuredServerCanRunWithSuppliedSettings(UnsecuredSetupInfo unsecuredSetupInfo, ServerStore serverStore, CancellationToken token)
         {
-            List<Exception> exceptions = new();
             var localServerIp = unsecuredSetupInfo.NodeSetupInfos.Values.First();
             var nodes = unsecuredSetupInfo.NodeSetupInfos.Values.Where(x => x != localServerIp);
             try
@@ -532,16 +530,11 @@ namespace Raven.Server.Commercial
                     }
                 }
             }
-            catch (Exception exception)
+            catch (Exception ex)
             {
-                exceptions.Add(exception);
+                throw new InvalidOperationException("Failed to validate running the server with the supplied settings: ",ex);
             }
 
-            if (exceptions.Count > 0)
-            {
-                throw new AggregateException("Failed to simulate running the server with the supplied settings: ", exceptions);
-            }
-            
             return Task.CompletedTask;
         }
 
@@ -928,7 +921,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeTextUnsecured(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextUnsecured(continueSetupInfo.NodeTag, publicServerUrl, continueSetupInfo.RegisterClientCert);
             }
             catch (Exception e)
             {
@@ -1032,7 +1025,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = SettingsZipFileHelper.CreateReadmeTextUnsecured(continueSetupInfo.NodeTag, serverUrl, true, false);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeTextSecured(continueSetupInfo.NodeTag, serverUrl, true, false);
             }
             catch (Exception e)
             {
