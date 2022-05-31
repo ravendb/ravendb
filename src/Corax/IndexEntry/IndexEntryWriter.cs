@@ -80,19 +80,22 @@ public unsafe ref partial struct IndexEntryWriter
         Debug.Assert(field < _knownFields.Count);
         Debug.Assert(_knownFieldsLocations[field] == Invalid);
 
-        if (value.Length == 0)
-            return;
-
         // Write known field.
         _knownFieldsLocations[field] = _dataIndex;
 
         int length = VariableSizeEncoding.Write(_buffer, value.Length, _dataIndex);
+        if (value.Length == 0)
+        {
+            _dataIndex += length;
+        }
+        else
+        {
+            ref var src = ref Unsafe.AsRef(value[0]);
+            ref var dest = ref _buffer[_dataIndex + length];
+            Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
 
-        ref var src = ref Unsafe.AsRef(value[0]);
-        ref var dest = ref _buffer[_dataIndex + length];
-        Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
-
-        _dataIndex += length + value.Length;
+            _dataIndex += length + value.Length;
+        }
     }
 
     /// <summary>
@@ -105,20 +108,26 @@ public unsafe ref partial struct IndexEntryWriter
         Debug.Assert(field < _knownFields.Count);
         Debug.Assert(_knownFieldsLocations[field] == Invalid);
 
-        if (binaryValue.Length == 0)
-            return;
-
         int dataLocation = _dataIndex;
         // Write known field.
         _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
-        Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Raw);
+        int indexEntryFieldLocation = dataLocation;
+        Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.Raw);
         dataLocation += sizeof(IndexEntryFieldType);
 
-        dataLocation += VariableSizeEncoding.Write(_buffer, binaryValue.Length, dataLocation);
+        if (binaryValue.Length == 0)
+        {
+            // Signal that we will have to deal with the empties.
+            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
+        }
+        else
+        {
+            dataLocation += VariableSizeEncoding.Write(_buffer, binaryValue.Length, dataLocation);
 
-        binaryValue.CopyTo(_buffer.Slice(dataLocation));
-        dataLocation += binaryValue.Length;
+            binaryValue.CopyTo(_buffer.Slice(dataLocation));
+            dataLocation += binaryValue.Length;
+        }
 
         _dataIndex = dataLocation;
     }
@@ -220,7 +229,8 @@ public unsafe ref partial struct IndexEntryWriter
         _knownFieldsLocations[field] = dataLocation | Constants.IndexWriter.IntKnownFieldMask;
 
         // Write the tuple information. 
-        Unsafe.WriteUnaligned(ref _buffer[dataLocation], IndexEntryFieldType.Tuple);
+        int indexEntryFieldLocation = dataLocation;
+        Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], IndexEntryFieldType.Tuple);
         dataLocation += sizeof(IndexEntryFieldType);
 
         dataLocation += VariableSizeEncoding.Write(_buffer, longValue, dataLocation);
@@ -234,6 +244,11 @@ public unsafe ref partial struct IndexEntryWriter
             ref var src = ref Unsafe.AsRef(value[0]);
             ref var dest = ref _buffer[dataLocation];
             Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
+        }
+        else
+        {
+            // Signal that we will have to deal with the empties.
+            Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation], Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
         }
 
         _dataIndex = dataLocation + value.Length;
@@ -267,7 +282,7 @@ public unsafe ref partial struct IndexEntryWriter
             MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
             _dataIndex = dataLocation;
 
-            // Signal that we will have to deal with the nulls.
+            // Signal that we will have to deal with the empties.
             Unsafe.WriteUnaligned(ref _buffer[indexEntryFieldLocation],
                 Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[indexEntryFieldLocation]) | IndexEntryFieldType.Empty);
             return;

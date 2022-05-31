@@ -226,7 +226,7 @@ namespace Corax
             var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
             if (fieldType == IndexEntryFieldType.Null || fieldType.HasFlag(IndexEntryFieldType.Empty))
             {
-                var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyValueSlice;
+                var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                 if (field.TryGetValue(fieldName, out var term) == false)
                     field[fieldName] = term = new List<long>();
 
@@ -257,7 +257,7 @@ namespace Corax
                         // If null, we just add it and be done with it. 
                         if (iterator.IsNull || iterator.IsEmpty)
                         {
-                            var fieldName = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyValueSlice;
+                            var fieldName = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                             if (field.TryGetValue(fieldName, out var term) == false)
                                 field[fieldName] = term = new List<long>();
 
@@ -271,15 +271,25 @@ namespace Corax
             }
             else
             {                
-                entryReader.Read(binding.FieldId, out Span<byte> valueInEntry);
-                if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
-                {
-                    for (int i = 1; i <= valueInEntry.Length; ++i)
-                        ProcessTerm(valueInEntry.Slice(0, i));
-                }
-                else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
-                {
-                    ProcessTerm(valueInEntry);
+                if (entryReader.Read(binding.FieldId, out Span<byte> valueInEntry))
+                {                   
+                    if (valueInEntry.Length == 0)
+                    {
+                        var fieldName = Constants.EmptyStringSlice;
+                        if (field.TryGetValue(fieldName, out var term) == false)
+                            field[fieldName] = term = new List<long>();
+
+                        AddMaybeAvoidDuplicate(term, entryId);
+                    }
+                    else if (fieldType.HasFlag(IndexEntryFieldType.SpatialPoint))
+                    {
+                        for (int i = 1; i <= valueInEntry.Length; ++i)
+                            ProcessTerm(valueInEntry.Slice(0, i));
+                    }
+                    else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
+                    {
+                        ProcessTerm(valueInEntry);
+                    }
                 }
             }
 
@@ -383,7 +393,7 @@ namespace Corax
 
             void InsertNullOrEmpty(Dictionary<Slice, List<long>> field, long entryId, IndexEntryFieldType fieldType)
             {
-                var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyValueSlice;
+                var fieldName = fieldType == IndexEntryFieldType.Null ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                 if (field.TryGetValue(fieldName, out var term) == false)
                     field[fieldName] = term = new List<long>();
 
