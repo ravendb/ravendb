@@ -31,7 +31,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
-internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<OngoingTasksResult, TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {

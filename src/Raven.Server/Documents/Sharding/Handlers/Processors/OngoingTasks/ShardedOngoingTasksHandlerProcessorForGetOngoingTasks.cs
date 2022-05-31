@@ -1,6 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Sparrow.Json;
+using Raven.Server.ServerWide;
+using Raven.Server.Web.Http;
+using Raven.Server.Web.System;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 {
@@ -10,15 +13,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        public override async ValueTask ExecuteAsync()
-        {
-            var result = GetOngoingTasksInternal();
+        protected override ValueTask HandleCurrentNodeAsync() => throw new NotImplementedException();
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                context.Write(writer, result.ToJson());
-            }
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token)
+        {
+            var shardNumber = GetShardNumber();
+
+            return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
         }
+
+        protected override bool SupportsCurrentNode => false;
     }
 }

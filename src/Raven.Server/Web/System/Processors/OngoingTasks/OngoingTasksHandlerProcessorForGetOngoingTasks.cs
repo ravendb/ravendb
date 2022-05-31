@@ -1,7 +1,10 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
+using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks
 {
@@ -11,7 +14,7 @@ namespace Raven.Server.Web.System.Processors.OngoingTasks
         {
         }
 
-        public override async ValueTask ExecuteAsync()
+        protected override async ValueTask HandleCurrentNodeAsync()
         {
             var result = GetOngoingTasksInternal();
 
@@ -21,5 +24,9 @@ namespace Raven.Server.Web.System.Processors.OngoingTasks
                 context.Write(writer, result.ToJson());
             }
         }
+
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<OngoingTasksResult> command, OperationCancelToken token) => throw new NotImplementedException();
+        
+        protected override bool SupportsCurrentNode => true;
     }
 }
