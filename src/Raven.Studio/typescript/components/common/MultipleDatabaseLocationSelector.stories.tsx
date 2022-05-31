@@ -1,6 +1,7 @@
 import { ComponentMeta } from "@storybook/react";
 import React, { useState } from "react";
 import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
+import { boundCopy } from "../utils/common";
 
 export default {
     title: "Bits/Database location selector - multiple",
@@ -19,7 +20,7 @@ const Template = (args: { locations: databaseLocationSpecifier[] }) => {
     );
 };
 
-export const ShardedDatabase = Template.bind({});
+export const ShardedDatabase = boundCopy(Template);
 ShardedDatabase.args = {
     locations: [
         {
@@ -33,7 +34,7 @@ ShardedDatabase.args = {
     ],
 };
 
-export const NonShardedDatabase = Template.bind({});
+export const NonShardedDatabase = boundCopy(Template);
 NonShardedDatabase.args = {
     locations: [
         {

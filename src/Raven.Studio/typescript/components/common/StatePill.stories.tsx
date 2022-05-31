@@ -1,6 +1,7 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import React, { useState } from "react";
 import { StatePill } from "./StatePill";
+import { boundCopy } from "../utils/common";
 
 export default {
     title: "Bits/State Pills",
@@ -17,4 +18,4 @@ const Template = () => {
     );
 };
 
-export const Pills = Template.bind({});
+export const Pills = boundCopy(Template);
