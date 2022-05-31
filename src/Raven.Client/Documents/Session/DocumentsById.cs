@@ -38,20 +38,17 @@ namespace Raven.Client.Documents.Session
 
         public int Count => _inner.Count;
 
-        public Dictionary<string, EntityInfo> GetTrackedEntities()
+        public Dictionary<string, EntityInfo> GetTrackedEntities(InMemoryDocumentSessionOperations session)
         {
-            var result = new Dictionary<string, EntityInfo>();
+            var result = new Dictionary<string, EntityInfo>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var keyValue in _inner)
             {
-                var entity = keyValue.Value.Entity;
-                if (entity == null)
-                    continue;
-
                 result.Add(keyValue.Key, new EntityInfo
                 {
                     Id = keyValue.Key,
-                    Entity = entity
+                    Entity = keyValue.Value.Entity,
+                    IsDeleted = session.IsDeleted(keyValue.Key)
                 });
             }
 
@@ -73,5 +70,6 @@ namespace Raven.Client.Documents.Session
     {
         public string Id { get; set; }
         public object Entity { get; set; }
+        public bool IsDeleted { get; set; }
     }
 }

@@ -119,6 +119,17 @@ namespace FastTests.Client
                     session.Delete(userId);
                     session.Delete(companyId);
 
+                    var tracked = session.Advanced.GetTrackedEntities();
+                    Assert.Equal(2, tracked.Count);
+                    Assert.True(tracked[userId].IsDeleted);
+                    Assert.True(tracked[companyId].IsDeleted);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(userId);
+                    session.Delete(companyId);
+
                     var usersLazy = session.Advanced.Lazily.LoadStartingWith<User>("u");
                     var users = usersLazy.Value;
                     Assert.Null(users.First().Value);
@@ -127,7 +138,39 @@ namespace FastTests.Client
                     Assert.Null(company);
 
                     var tracked = session.Advanced.GetTrackedEntities();
-                    Assert.Equal(0, tracked.Count);
+                    Assert.Equal(2, tracked.Count);
+                    Assert.True( tracked[userId].IsDeleted);
+                    Assert.True( tracked[companyId].IsDeleted);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(userId);
+                    session.Delete(user.Id);
+                    var tracked = session.Advanced.GetTrackedEntities();
+                    Assert.Equal(1, tracked.Count);
+                    Assert.Equal(userId, tracked.First().Key);
+                    Assert.True(tracked.First().Value.IsDeleted);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(userId);
+                    session.Delete(user.Id.ToUpper());
+                    var tracked = session.Advanced.GetTrackedEntities();
+                    Assert.Equal(1, tracked.Count);
+                    Assert.Equal(userId, tracked.First().Key, StringComparer.OrdinalIgnoreCase);
+                    Assert.True(tracked.First().Value.IsDeleted);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(userId);
+                    session.Delete(user);
+                    var tracked = session.Advanced.GetTrackedEntities();
+                    Assert.Equal(1, tracked.Count);
+                    Assert.Equal(userId, tracked.First().Key);
+                    Assert.True(tracked.First().Value.IsDeleted);
                 }
             }
         }
