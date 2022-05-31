@@ -31,6 +31,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
+using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
 {
@@ -53,8 +54,11 @@ namespace Raven.Server.Commercial
             return acmeClient.GetTermsOfServiceUri();
         }
 
-        public static async Task<IOperationResult> SetupUnsecuredTask(Action<IOperationProgress> onProgress, UnsecuredSetupInfo unsecuredSetupInfo, ServerStore serverStore, CancellationToken token)
+        public static async Task<IOperationResult> SetupUnsecuredTask(Action<IOperationProgress> onProgress, UnsecuredSetupInfo unsecuredSetupInfo,
+            ServerStore serverStore, ClusterOperationContext context, CancellationToken token)
         {
+            var isSingleNode = unsecuredSetupInfo.NodeSetupInfos.Count == 1;
+            var zipOnly = unsecuredSetupInfo.ZipOnly;
             var progress = new SetupProgressAndResult(tuple =>
             {
                 if (Logger is {IsInfoEnabled: true})
@@ -87,17 +91,25 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    var completeClusterConfigurationResult = await CompleteClusterConfigurationAndGetSettingsZipUnsecuredSetup(onProgress,
+
+                    if (isSingleNode && zipOnly == false)
+                    {
+                        await CreateConfigurationForSingleNode(unsecuredSetupInfo, serverStore, onProgress, progress, context);
+                        return progress;
+                    }
+                    
+                    var completeClusterConfigurationResult = await CompleteClusterConfigurationUnsecuredSetup(onProgress,
                         progress,
                         SetupMode.Unsecured,
                         unsecuredSetupInfo,
                         serverStore,
                         token);
-        
+
                     progress.SettingsZipFile = await SettingsZipFileHelper.GetSetupZipFileUnsecuredSetup(new GetSetupZipFileParameters
                     {
                         CompleteClusterConfigurationResult = completeClusterConfigurationResult,
                         Progress = progress,
+                        ZipOnly = zipOnly,
                         OnProgress = onProgress,
                         OnSettingsPath = () => serverStore.Configuration.ConfigPath,
                         UnsecuredSetupInfo = unsecuredSetupInfo,
@@ -134,6 +146,63 @@ namespace Raven.Server.Commercial
 
             return progress;
         }
+
+        private static async Task CreateConfigurationForSingleNode(UnsecuredSetupInfo unsecuredSetupInfo,
+            ServerStore serverStore,
+            Action<IOperationProgress> onProgress,
+            SetupProgressAndResult progress,
+            JsonOperationContext context)
+        {
+            BlittableJsonReaderObject settingsJson;
+            await using (var fs = new FileStream(serverStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
+            {
+                settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
+            }
+            
+            settingsJson.Modifications = new DynamicJsonValue(settingsJson)
+            {
+                [RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true,
+                [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured),
+                [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork),
+            };
+            
+            var nodeInfo = unsecuredSetupInfo.NodeSetupInfos.Values.First();
+            settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] =
+                string.Join(";", nodeInfo.Addresses.Select(ip => SettingsZipFileHelper.IpAddressToUrl(ip, nodeInfo.Port)));
+            settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] =
+                string.Join(";", nodeInfo.Addresses.Select(ip => SettingsZipFileHelper.IpAddressToUrl(ip, nodeInfo.TcpPort, "tcp")));
+
+            if (unsecuredSetupInfo.EnableExperimentalFeatures)
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+
+            if (string.IsNullOrEmpty(unsecuredSetupInfo.LocalNodeTag) == false)
+            {
+                await serverStore.EnsureNotPassiveAsync(nodeTag: unsecuredSetupInfo.LocalNodeTag);
+                
+                progress.AddInfo("Ensured not passive.");
+                onProgress(progress);
+            }
+
+            if (unsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+            {
+                var res = await serverStore.PutValueInClusterAsync(
+                    new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration {Disabled = false, Environment = unsecuredSetupInfo.Environment},
+                        RaftIdGenerator.DontCareId));
+                await serverStore.Cluster.WaitForIndexNotification(res.Index);
+            
+                progress.AddInfo("Put value in cluster completed.");
+                onProgress(progress);
+            }
+
+            var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
+
+            var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
+            SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
+           
+            progress.AddInfo("JSON modification is completed.");
+            onProgress(progress);
+        }
+
         public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult(tuple =>
@@ -1033,7 +1102,7 @@ namespace Raven.Server.Commercial
             }
         }
           
-        private static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationAndGetSettingsZipUnsecuredSetup(
+        private static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationUnsecuredSetup(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
             SetupMode setupMode,
