@@ -119,7 +119,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
     {
         int count = 0;
 
-        using (var jsonSerializer = new BlittableEventBinaryFormatter(context))
+        using (var formatter = new BlittableEventBinaryFormatter(context))
         {
             var events = new List<KafkaMessageEvent>();
 
@@ -133,7 +133,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
                     events.Add(new KafkaMessageEvent
                     {
-                        Topic = topicName, Message = eventMessage.ToKafkaMessage(ContentMode.Binary, jsonSerializer)
+                        Topic = topicName, Message = eventMessage.ToKafkaMessage(ContentMode.Binary, formatter)
                     });
                 }
             }
@@ -193,7 +193,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
     {
         int count = 0;
 
-        using (var jsonSerializer = new BlittableEventBinaryFormatter(context))
+        using (var formatter = new BlittableEventBinaryFormatter(context))
         {
             var events = new List<RabbitMqMessageEvent>();
 
@@ -207,7 +207,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
                     events.Add(new RabbitMqMessageEvent
                     {
-                        Topic = topicName, Message = eventMessage.ToAmqpMessage(ContentMode.Binary, jsonSerializer)
+                        Topic = topicName, Message = eventMessage.ToAmqpMessage(ContentMode.Binary, formatter)
                     });
                 }
             }

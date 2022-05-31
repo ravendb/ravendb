@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.ETL.Queue;
 
 public class KafkaEtlTests : EtlTestBase
 {
-    private HashSet<string> _definedTopics = new HashSet<string>();
+    private readonly HashSet<string> _definedTopics = new HashSet<string>();
 
     public KafkaEtlTests(ITestOutputHelper output) : base(output)
     {
@@ -139,17 +139,10 @@ loadToOrders" + TopicSuffix + @"(orderData);
         var ordersList = new List<OrderData>();
         while (ordersList.Count < numberOfOrders)
         {
-            try
-            {
-                var consumeResult = consumer.Consume();
-                var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
-                var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
-                ordersList.Add(order);
-            }
-            catch (ConsumeException e)
-            {
-                Console.WriteLine($"Consume error: {e.Error.Reason}");
-            }
+            var consumeResult = consumer.Consume();
+            var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
+            var order = JsonConvert.DeserializeObject<OrderData>(bytesAsString);
+            ordersList.Add(order);
         }
 
         Assert.Equal(ordersList.Count, 10);
