@@ -424,14 +424,21 @@ namespace Raven.Server.Documents.Handlers
         {
             var staleIndexesCount = 0;
             var erroredIndexes = new List<string>();
+            var pausedIndexes = new List<string>();
 
             for (var j = i; j < indexesToWait.Count; j++)
             {
                 var index = indexesToWait[j].Index;
-                
+
                 if (index.State == IndexState.Error)
+                {
                     erroredIndexes.Add(index.Name);
-                
+                }
+                else if (index.Status == IndexRunningStatus.Paused)
+                {
+                    pausedIndexes.Add(index.Name);
+                }
+
                 if (index.IsStale(context, cutoffEtag))
                     staleIndexesCount++;
             }
@@ -442,6 +449,11 @@ namespace Raven.Server.Documents.Handlers
             if (erroredIndexes.Count > 0)
             {
                 errorMessage += $", total errored indexes: {erroredIndexes.Count} ({string.Join(", ", erroredIndexes)})";
+            }
+
+            if (pausedIndexes.Count > 0)
+            {
+                errorMessage += $", total paused indexes: {pausedIndexes.Count} ({string.Join(", ", pausedIndexes)})";
             }
 
             throw new TimeoutException(errorMessage);
