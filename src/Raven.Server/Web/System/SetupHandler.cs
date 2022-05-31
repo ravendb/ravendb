@@ -529,119 +529,28 @@ namespace Raven.Server.Web.System
                     null,
                     "Setting up RavenDB in unsecured mode.",
                     Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupUnsecuredTask(progress, unsecuredSetupInfo, ServerStore, operationCancelToken.Token), operationId.Value,
+                    progress => SetupManager.SetupUnsecuredTask(progress,
+                        unsecuredSetupInfo,
+                        ServerStore,
+                        context,
+                        operationCancelToken.Token),
+                    operationId.Value,
                     token: operationCancelToken);
 
-                var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
+                if (unsecuredSetupInfo.ZipOnly)
+                {
+                    var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
-                var contentDisposition = $"attachment; filename={fileName}";
+                    var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
+                    var contentDisposition = $"attachment; filename={fileName}";
 
-                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                HttpContext.Response.ContentType = "application/octet-stream";
+                    HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+                    HttpContext.Response.ContentType = "application/octet-stream";
 
-                await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
-                
-                // if (unsecuredSetupInfo.NodeSetupInfos.Count == 1) // toggle doesn't matter in this scenario
-                // {
-                //         await ServerStore.Operations.AddOperation(
-                //         null,
-                //         "Setting up RavenDB in unsecured mode.",
-                //         Documents.Operations.Operations.OperationType.Setup,
-                //         progress => CreatePassiveOrSingleNodeCluster(progress, ServerStore, unsecuredSetupInfo, context,operationCancelToken.Token), operationId.Value, token: operationCancelToken);
-                // }
-                // else
-                // {
-                //     var operationResult = await ServerStore.Operations.AddOperation(
-                //         null,
-                //         "Setting up RavenDB in unsecured mode.",
-                //         Documents.Operations.Operations.OperationType.Setup,
-                //         progress => SetupManager.SetupUnsecuredTask(progress, unsecuredSetupInfo, ServerStore, operationCancelToken.Token), operationId.Value, token: operationCancelToken);
-                //
-                //     var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
-                //
-                //     var fileName = $"Unsecure.Cluster.Settings {DateTime.UtcNow:yyyy-MM-dd HH-mm}.zip ";
-                //     var contentDisposition = $"attachment; filename={fileName}";
-                //
-                //     HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                //     HttpContext.Response.ContentType = "application/octet-stream";
-                //
-                //     await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
-                // }
+                    await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);   
+                }
             }
         }
-
-        private static async Task<IOperationResult> CreatePassiveOrSingleNodeCluster(Action<IOperationProgress> onProgress, ServerStore serverStore, UnsecuredSetupInfo unsecuredSetupInfo, JsonOperationContext context, CancellationToken token)
-        {
-            var progress = new SetupProgressAndResult(tuple =>
-            {
-                if (SetupManager.Logger is {IsInfoEnabled: true})
-                    SetupManager.Logger.Info(tuple.Message, tuple.Exception);
-            });
-            
-            progress.AddInfo("Setting up RavenDB in 'Unsecured Mode'.");
-            progress.AddInfo("Starting validation.");
-            onProgress(progress);
-            await SetupManager.ValidateUnsecuredServerCanRunWithSuppliedSettings(unsecuredSetupInfo, serverStore, token);
-            
-            progress.AddInfo("Validation is successful.");
-            onProgress(progress);
-            
-            BlittableJsonReaderObject settingsJson;
-            await using (var fs = new FileStream(serverStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
-            {
-                settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
-            }
-            
-            settingsJson.Modifications = new DynamicJsonValue(settingsJson)
-            {
-                [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured),
-                [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
-            };
-
-            (string nodeTag, NodeInfo nodeInfo) = unsecuredSetupInfo.NodeSetupInfos.First();
-            if (nodeInfo.Port == Constants.Network.ZeroValue)
-                nodeInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
-
-            if (nodeInfo.TcpPort == Constants.Network.ZeroValue)
-                nodeInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
-
-            var publicServerUrl = IpAddressToUrl(nodeInfo.Addresses.First(), nodeInfo.Port);
-            settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = publicServerUrl;
-            settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = IpAddressToUrl(nodeInfo.Addresses.First(), nodeInfo.TcpPort, "tcp");
-
-            if (unsecuredSetupInfo.EnableExperimentalFeatures)
-            {
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
-            }
-
-            if (!string.IsNullOrEmpty(unsecuredSetupInfo.LocalNodeTag))
-            {
-                await serverStore.EnsureNotPassiveAsync(nodeTag: unsecuredSetupInfo.LocalNodeTag);
-            }
-
-            if (unsecuredSetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
-            {
-                var res = await serverStore.PutValueInClusterAsync(
-                    new PutServerWideStudioConfigurationCommand(
-                        new ServerWideStudioConfiguration {Disabled = false, Environment = unsecuredSetupInfo.Environment},
-                        RaftIdGenerator.DontCareId));
-                await serverStore.Cluster.WaitForIndexNotification(res.Index);
-
-                progress.AddInfo($"Updated studio configuration to:{unsecuredSetupInfo.Environment}.");
-                onProgress(progress);
-            }
-
-            var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
-            var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-            SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
-            
-            progress.AddInfo("Modified settings.json file.");
-            onProgress(progress);
-
-            return progress;
-        }
-
 
         [RavenAction("/setup/secured", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupSecured()

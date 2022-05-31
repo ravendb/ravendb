@@ -136,29 +136,32 @@ public static class SetupWizardUtils
 
     public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfigurationUnsecuredSetup(CompleteClusterConfigurationParameters parameters)
     {
+        var zipOnly = parameters.UnsecuredSetupInfo.ZipOnly;
+        var nodeSetupInfos = parameters.UnsecuredSetupInfo.NodeSetupInfos;
+
         parameters.Progress?.AddInfo("Completing cluster configuration.");
         parameters.OnProgress?.Invoke(parameters.Progress);
 
         foreach ((_, NodeInfo node) in parameters.UnsecuredSetupInfo.NodeSetupInfos)
             node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddress(ip, node.Port)));
         
-        (string localNodeTag, NodeInfo nodeInfo) = parameters.UnsecuredSetupInfo.NodeSetupInfos.First();
+        (string localNodeTag, NodeInfo nodeInfo) = nodeSetupInfos.First();
 
         try
         {
-                if (parameters.OnBeforeAddingNodesToCluster != null && parameters.UnsecuredSetupInfo.ZipOnly == false )
+                if (parameters.OnBeforeAddingNodesToCluster != null && zipOnly == false )
                     await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
                 
-                if (parameters.UnsecuredSetupInfo.ZipOnly == false)
+                if (zipOnly == false)
                 {
-                    foreach (var node in parameters.UnsecuredSetupInfo.NodeSetupInfos)
+                    foreach (var node in nodeSetupInfos)
                     {
-                        if (node.Key == parameters.UnsecuredSetupInfo.LocalNodeTag)
+                        if (node.Key == localNodeTag)
                             continue;
 
                         parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
-
+                        
                         if (parameters.AddNodeToCluster != null)
                             await parameters.AddNodeToCluster(node.Key);
                     }
