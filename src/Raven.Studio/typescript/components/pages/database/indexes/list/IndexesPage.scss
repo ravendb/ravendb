@@ -252,6 +252,11 @@
                         font-weight: bold;
                         color: colors.$white;
                     }
+
+                    .progress-circle .state-indicator {
+                        margin-top: -3px;
+                        margin-bottom: -3px;
+                    }
                 }
             }
         }
