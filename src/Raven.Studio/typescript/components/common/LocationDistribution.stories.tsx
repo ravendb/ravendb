@@ -1,4 +1,4 @@
-﻿import { ComponentMeta } from "@storybook/react";
+﻿import { ComponentMeta, Story, StoryFn } from "@storybook/react";
 import React from "react";
 import {
     DistributionItem,
@@ -7,6 +7,7 @@ import {
     LocationDistribution,
 } from "./LocationDistribution";
 import { ProgressCircle } from "./ProgressCircle";
+import { boundCopy } from "../utils/common";
 
 export default {
     title: "Bits/Location Distribution",
@@ -70,21 +71,21 @@ const Template = (args: { withSummary: boolean; withLegend: boolean }) => {
     );
 };
 
-export const WithSummary = Template.bind({});
+export const WithSummary = boundCopy(Template);
 
 WithSummary.args = {
     withSummary: true,
     withLegend: true,
 };
 
-export const WithOutSummary = Template.bind({});
+export const WithOutSummary = boundCopy(Template);
 
 WithOutSummary.args = {
     withSummary: false,
     withLegend: true,
 };
 
-export const TableOnly = Template.bind({});
+export const TableOnly = boundCopy(Template);
 
 TableOnly.args = {
     withSummary: false,

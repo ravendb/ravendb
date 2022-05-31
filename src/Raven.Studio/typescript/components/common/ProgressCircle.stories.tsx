@@ -1,6 +1,7 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import React from "react";
 import { ProgressCircle } from "./ProgressCircle";
+import { boundCopy } from "../utils/common";
 
 export default {
     title: "Bits/Progress circle",
@@ -55,4 +56,4 @@ const Template = () => {
     );
 };
 
-export const States = Template.bind({});
+export const States = boundCopy(Template);
