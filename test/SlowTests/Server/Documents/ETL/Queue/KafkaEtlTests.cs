@@ -2,61 +2,33 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Newtonsoft.Json;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
-public class KafkaEtlTests : EtlTestBase
+public class KafkaEtlTests : KafkaEtlTestBase
 {
-    private readonly HashSet<string> _definedTopics = new HashSet<string>();
-
     public KafkaEtlTests(ITestOutputHelper output) : base(output)
     {
-        TopicSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
     }
 
-    private string TopicSuffix { get; }
-
-    private string OrdersTopicName => $"Orders{TopicSuffix}";
-
-    private readonly string[] DefaultCollections = { "Orders" };
-    
-    private List<EtlQueue> DefaultTopics => new() { new EtlQueue { Name = OrdersTopicName } };
-
-    private string DefaultKafkaUrl = "localhost:29092";
-
-    private string DefaultScript => @"
-var orderData = {
-    Id: id(this),
-    OrderLinesCount: this.OrderLines.length,
-    TotalCost: 0
-};
-
-for (var i = 0; i < this.OrderLines.length; i++) {
-    var line = this.OrderLines[i];
-    orderData.TotalCost += line.Cost*line.Quantity;    
-}
-loadToOrders" + TopicSuffix + @"(orderData);
-";
-
-    [Fact]
+    [RequiresKafkaFact]
     public void SimpleScript()
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtl(store, DefaultScript, DefaultTopics, DefaultCollections, url: DefaultKafkaUrl);
+            var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultTopics, DefaultCollections);
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
@@ -91,23 +63,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
         }
     }
 
-    private IConsumer<string, byte[]> CreateKafkaConsumer(IEnumerable<string> topics)
-    {
-        var consumerConfig = new ConsumerConfig()
-        {
-            BootstrapServers = DefaultKafkaUrl,
-            GroupId = "test",
-            IsolationLevel = IsolationLevel.ReadCommitted,
-            EnablePartitionEof = true,
-            AutoOffsetReset = AutoOffsetReset.Earliest
-        };
-
-        var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig).Build();
-        consumer.Subscribe(topics);
-        return consumer;
-    }
-
-    [Fact]
+    [RequiresKafkaFact()]
     public void SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
@@ -115,7 +71,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
         var numberOfOrders = 10;
         var numberOfLinesPerOrder = 2;
 
-        var config = SetupQueueEtl(store, DefaultScript, DefaultTopics, DefaultCollections, url: DefaultKafkaUrl);
+        var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultTopics, DefaultCollections);
         var etlDone = WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
         for (int i = 0; i < numberOfOrders; i++)
@@ -159,14 +115,14 @@ loadToOrders" + TopicSuffix + @"(orderData);
         }
     }
 
-    [Fact]
+    [RequiresKafkaFact()]
     public void Docs_from_two_collections_loaded_to_single_one()
     {
         using var store = GetDocumentStore();
 
-        var config = SetupQueueEtl(store,
+        var config = SetupQueueEtlToKafka(store,
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + TopicSuffix + @"(userData)",
-            new List<EtlQueue> { new() { Name = $"Users{TopicSuffix}" } }, new[] { "Users", "People" }, url: DefaultKafkaUrl);
+            new List<EtlQueue> { new() { Name = $"Users{TopicSuffix}" } }, new[] { "Users", "People" });
         var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
         using (var session = store.OpenSession())
@@ -183,17 +139,10 @@ loadToOrders" + TopicSuffix + @"(orderData);
         var usersList = new List<UserData>();
         while (usersList.Count < 2)
         {
-            try
-            {
-                var consumeResult = consumer.Consume();
-                var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
-                var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
-                usersList.Add(user);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Consume error: {e.Message}");
-            }
+            var consumeResult = consumer.Consume();
+            var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
+            var user = JsonConvert.DeserializeObject<UserData>(bytesAsString);
+            usersList.Add(user);
         }
 
         Assert.Equal(usersList.Count, 2);
@@ -204,44 +153,26 @@ loadToOrders" + TopicSuffix + @"(orderData);
     [Fact]
     public void Error_if_script_does_not_contain_any_loadTo_method()
     {
-        using (var store = GetDocumentStore())
+        var config = new QueueEtlConfiguration
         {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Order
-                {
-                    OrderLines = new List<OrderLine>
-                    {
-                        new OrderLine { Cost = 3, Product = "Cheese", Quantity = 3 },
-                        new OrderLine { Cost = 4, Product = "Bear", Quantity = 2 },
-                    }
-                });
-                session.SaveChanges();
-            }
+            Name = "test",
+            ConnectionStringName = "test",
+            Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"this.TotalCost = 10;" } }
+        };
 
-            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+        config.Initialize(new QueueConnectionString
+        {
+            Name = "Foo",
+            BrokerType = QueueBroker.Kafka,
+            KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, Url = "localhost:29092"}
+        });
 
-            var config = new QueueEtlConfiguration
-            {
-                Name = "test",
-                ConnectionStringName = "test",
-                Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"this.TotalCost = 10;" } }
-            };
+        List<string> errors;
+        config.Validate(out errors);
 
-            config.Initialize(new QueueConnectionString
-            {
-                Name = "Foo",
-                BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, Url = DefaultKafkaUrl }
-            });
+        Assert.Equal(1, errors.Count);
 
-            List<string> errors;
-            config.Validate(out errors);
-
-            Assert.Equal(1, errors.Count);
-
-            Assert.Equal("No `loadTo<QueueName>()` method call found in 'test' script", errors[0]);
-        }
+        Assert.Equal("No `loadTo<QueueName>()` method call found in 'test' script", errors[0]);
     }
 
     [Fact]
@@ -264,7 +195,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
             var result1 = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
             {
-                Name = "simulate", BrokerType = QueueBroker.Kafka, KafkaConnectionSettings = new KafkaConnectionSettings() { Url = DefaultKafkaUrl }
+                Name = "simulate", BrokerType = QueueBroker.Kafka, KafkaConnectionSettings = new KafkaConnectionSettings() { Url = "localhost:29092" }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
@@ -320,12 +251,12 @@ output('test output')"
         }
     }
 
-    [Fact]
-    public void CanPassOptionsToLoadToMethod(string script)
+    [RequiresKafkaFact]
+    public void CanPassOptionsToLoadToMethod()
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtl(store, 
+            var config = SetupQueueEtlToKafka(store, 
                 @$"loadToUsers{TopicSuffix}(this, {{
                                                             Id: id(this),
                                                             PartitionKey: id(this),
@@ -337,7 +268,7 @@ output('test output')"
                 {
                     Name = $"Users{TopicSuffix}"
                 }
-            }, new [] { "Users"}, url: DefaultKafkaUrl);
+            }, new [] { "Users"});
 
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -375,83 +306,6 @@ output('test output')"
 
             consumer.Close();
         }
-    }
-
-    private QueueEtlConfiguration SetupQueueEtl(DocumentStore store, string script, IEnumerable<EtlQueue> queues,
-        IEnumerable<string> collections, bool applyToAllDocuments = false, string configurationName = null,
-        string transformationName = null,
-        Dictionary<string, string> configuration = null, string url = null)
-    {
-        var connectionStringName = $"{store.Database}@{store.Urls.First()} to Queue";
-
-        List<EtlQueue> topics = queues.ToList();
-
-
-        foreach (var topic in topics)
-        {
-            _definedTopics.Add(topic.Name);
-        }
-
-        var config = new QueueEtlConfiguration
-        {
-            Name = configurationName ?? connectionStringName,
-            ConnectionStringName = connectionStringName,
-            EtlQueues = topics,
-            Transforms =
-            {
-                new Transformation
-                {
-                    Name = transformationName ?? $"ETL : {connectionStringName}",
-                    Collections = new List<string>(collections),
-                    Script = script,
-                    ApplyToAllDocuments = applyToAllDocuments
-                }
-            }
-        };
-
-        AddEtl(store, config,
-            new QueueConnectionString
-            {
-                Name = connectionStringName,
-                BrokerType = QueueBroker.Kafka,
-                KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = configuration, Url = url }
-            });
-        return config;
-    }
-
-    private void AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, QueueEtlConfiguration config)
-    {
-        if (etlDone.Wait(timeout) == false)
-        {
-            TryGetLoadError(databaseName, config, out var loadError);
-            TryGetTransformationError(databaseName, config, out var transformationError);
-
-            Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
-        }
-    }
-
-    private void CleanupTopic()
-    {
-        if (_definedTopics.Count == 0)
-            return;
-
-        var config = new AdminClientConfig() { BootstrapServers = DefaultKafkaUrl };
-        var adminClient = new AdminClientBuilder(config).Build();
-
-        try
-        {
-            adminClient.DeleteTopicsAsync(_definedTopics).Wait();
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException($"Failed to cleanup topics: {string.Join(", ", _definedTopics)}. Check inner exceptions for details", e);
-        }
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-        CleanupTopic();
     }
 
     private class Order
