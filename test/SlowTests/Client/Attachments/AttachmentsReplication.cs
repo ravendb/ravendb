@@ -1560,7 +1560,11 @@ namespace SlowTests.Client.Attachments
                     EnsureNoReplicationLoop(cluster.Nodes[2], databaseName)
                 };
 
-                tasks.ForEach(t => Assert.True(t.Wait(TimeSpan.FromMinutes(1))));
+                await Task.WhenAll(tasks);
+                foreach (var task in tasks)
+                {
+                    await task;
+                }
 
                 var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: toRemove, timeToWaitForConfirmation: TimeSpan.FromSeconds(60)));
                 await mainServer.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex + 1);
@@ -1585,7 +1589,11 @@ namespace SlowTests.Client.Attachments
                     EnsureNoReplicationLoop(cluster.Nodes[2], databaseName)
                 };
 
-                tasks.ForEach(t => Assert.True(t.Wait(TimeSpan.FromMinutes(1))));
+                await Task.WhenAll(tasks);
+                foreach (var task in tasks)
+                {
+                    await task;
+                }
             }
         }
 
