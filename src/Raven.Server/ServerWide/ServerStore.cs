@@ -3279,13 +3279,12 @@ namespace Raven.Server.ServerWide
             if (fullPath == null)
                 yield break;
 
-            var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
-            
             var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
             var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
             if (diskSpaceResult == null)
                 yield break;
 
+            var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
             var usage = new Client.ServerWide.Operations.MountPointUsage
             {
                 Name = environment.Name,
