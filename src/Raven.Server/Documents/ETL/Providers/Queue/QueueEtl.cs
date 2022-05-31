@@ -129,7 +129,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
                 foreach (var insertItem in queueItem.Inserts)
                 {
-                    CloudEvent eventMessage = CreateEventMessage(insertItem, queueItem);
+                    CloudEvent eventMessage = CreateEventMessage(insertItem);
 
                     events.Add(new KafkaMessageEvent
                     {
@@ -203,7 +203,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
 
                 foreach (var insertItem in queueItem.Inserts)
                 {
-                    CloudEvent eventMessage = CreateEventMessage(insertItem, queueItem);
+                    CloudEvent eventMessage = CreateEventMessage(insertItem);
 
                     events.Add(new RabbitMqMessageEvent
                     {
@@ -231,18 +231,19 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
         return count;
     }
 
-    private CloudEvent CreateEventMessage(QueueItem insertItem, QueueWithEvents queueItem)
+    private CloudEvent CreateEventMessage(QueueItem item)
     {
         var eventMessage = new CloudEvent
         {
-            Id = insertItem.ChangeVector,
+            Id = item.Options?.Id ?? item.ChangeVector,
             DataContentType = "application/json",
-            Type = DefaultType,
-            Source = new Uri(DefaultSource),
-            Data = insertItem.TransformationResult
+            Type = item.Options?.Type ?? DefaultType,
+            Source = new Uri(item.Options?.Source ?? DefaultSource, UriKind.RelativeOrAbsolute),
+            Data = item.TransformationResult
         };
 
-        eventMessage.SetPartitionKey(insertItem.ChangeVector);
+        eventMessage.SetPartitionKey(item.Options?.PartitionKey ?? item.ChangeVector);
+
         return eventMessage;
     }
 

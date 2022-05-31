@@ -27,10 +27,14 @@ public class KafkaEtlTests : EtlTestBase
         TopicSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
     }
 
-    private string TopicSuffix { get; set; }
+    private string TopicSuffix { get; }
+
     private string OrdersTopicName => $"Orders{TopicSuffix}";
-    private string[] DefaultCollections = { "Orders" };
+
+    private readonly string[] DefaultCollections = { "Orders" };
+    
     private List<EtlQueue> DefaultTopics => new() { new EtlQueue { Name = OrdersTopicName } };
+
     private string DefaultKafkaUrl = "localhost:29092";
 
     private string DefaultScript => @"
@@ -68,8 +72,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
                 });
                 session.SaveChanges();
             }
-
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
@@ -314,6 +317,63 @@ output('test output')"
                     Assert.Equal("test output", result.DebugOutput[0]);
                 }
             }
+        }
+    }
+
+    [Fact]
+    public void CanPassOptionsToLoadToMethod(string script)
+    {
+        using (var store = GetDocumentStore())
+        {
+            var config = SetupQueueEtl(store, 
+                @$"loadToUsers{TopicSuffix}(this, {{
+                                                            Id: id(this),
+                                                            PartitionKey: id(this),
+                                                            Type: 'com.github.users',
+                                                            Source: '/registrations/direct-signup'
+                                                     }})", new List<EtlQueue>()
+            {
+                new()
+                {
+                    Name = $"Users{TopicSuffix}"
+                }
+            }, new [] { "Users"}, url: DefaultKafkaUrl);
+
+            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User()
+                {
+                    Name = "Arek"
+                });
+                session.SaveChanges();
+            }
+            
+            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+            using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new[] { $"Users{TopicSuffix}" });
+
+            var consumeResult = consumer.Consume();
+            var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
+
+            var user = JsonConvert.DeserializeObject<User>(bytesAsString);
+
+            Assert.NotNull(user);
+            Assert.Equal(user.Name, "Arek");
+
+            // validate headers
+
+            consumeResult.Message.Headers.TryGetLastBytes("ce_id", out var headerIdBytes);
+            Assert.Equal("users/1-A", Encoding.UTF8.GetString(headerIdBytes));
+
+            consumeResult.Message.Headers.TryGetLastBytes("ce_type", out var headerTypeBytes);
+            Assert.Equal("com.github.users", Encoding.UTF8.GetString(headerTypeBytes));
+
+            consumeResult.Message.Headers.TryGetLastBytes("ce_source", out var headerSourceBytes);
+            Assert.Equal("/registrations/direct-signup", Encoding.UTF8.GetString(headerSourceBytes));
+
+            consumer.Close();
         }
     }
 
