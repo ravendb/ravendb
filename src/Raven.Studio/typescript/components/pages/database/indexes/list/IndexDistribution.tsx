@@ -4,6 +4,14 @@ import classNames from "classnames";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IndexUtils from "../../../../utils/IndexUtils";
+import {
+    DistributionItem,
+    DistributionLegend,
+    DistributionSummary,
+    LocationDistribution,
+} from "../../../../common/LocationDistribution";
+import assertUnreachable from "../../../../utils/assertUnreachable";
+import { ProgressCircle } from "../../../../common/ProgressCircle";
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -23,39 +31,8 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
     const sharded = IndexUtils.isSharded(index);
 
-    return (
-        <div className="index-distribution">
-            <div className="distribution-legend">
-                <div className="top"></div>
-                {sharded && (
-                    <div className="node">
-                        <i className="icon-node" /> Node
-                    </div>
-                )}
-                <div>
-                    <i className="icon-list" /> Entries
-                </div>
-                <div>
-                    <i className="icon-warning" /> Errors
-                </div>
-                <div>
-                    <i />
-                    Status
-                </div>
-            </div>
-            {index.nodesInfo.length > 1 && (
-                <div className="distribution-summary">
-                    <div className="top">Total</div>
-                    {sharded && <div> </div>}
-                    <div>
-                        {estimatedEntries.estimated && estimatedEntries.entries != null ? "~" : ""}
-                        {estimatedEntries.entries?.toLocaleString() ?? "-"}
-                    </div>
-                    <div>{totalErrors}</div>
-                    <div></div>
-                </div>
-            )}
-
+    const items = (
+        <>
             {index.nodesInfo.map((nodeInfo) => {
                 const shard = (
                     <div className="top shard">
@@ -72,11 +49,9 @@ export function IndexDistribution(props: IndexDistributionProps) {
                 const id = indexId + key;
 
                 return (
-                    <div
+                    <DistributionItem
+                        loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"}
                         id={id}
-                        className={classNames("distribution-item", {
-                            loading: nodeInfo.status === "loading" || nodeInfo.status === "notLoaded",
-                        })}
                         key={key}
                     >
                         {sharded && shard}
@@ -87,7 +62,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
                         </div>
                         <div className="entries">{nodeInfo.details?.entriesCount ?? ""}</div>
                         <div className="errors">{nodeInfo.details?.errorCount ?? ""}</div>
-                        <IndexState nodeInfo={nodeInfo} />
+                        <IndexProgress nodeInfo={nodeInfo} />
 
                         <IndexProgressTooltip
                             target={id}
@@ -96,98 +71,118 @@ export function IndexDistribution(props: IndexDistributionProps) {
                             globalIndexingStatus={globalIndexingStatus}
                             showStaleReason={showStaleReason}
                         />
-                    </div>
+                    </DistributionItem>
                 );
             })}
-        </div>
+        </>
+    );
+
+    return (
+        <LocationDistribution>
+            <DistributionLegend>
+                <div className="top"></div>
+                {sharded && (
+                    <div className="node">
+                        <i className="icon-node" /> Node
+                    </div>
+                )}
+                <div>
+                    <i className="icon-list" /> Entries
+                </div>
+                <div>
+                    <i className="icon-warning" /> Errors
+                </div>
+                <div>
+                    <i />
+                    Status
+                </div>
+            </DistributionLegend>
+            <DistributionSummary>
+                <div className="top">Total</div>
+                {sharded && <div> </div>}
+                <div>
+                    {estimatedEntries.estimated && estimatedEntries.entries != null ? "~" : ""}
+                    {estimatedEntries.entries?.toLocaleString() ?? "-"}
+                </div>
+                <div>{totalErrors}</div>
+                <div></div>
+            </DistributionSummary>
+            {items}
+        </LocationDistribution>
     );
 }
 
-interface IndexStateProps {
+interface IndexProgressProps {
     nodeInfo: IndexNodeInfo;
+    inline?: boolean;
 }
 
-const stateIndicatorProgressRadius = 13;
+function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
+    switch (status) {
+        case "Disabled":
+            return "icon-stop";
+        case "Paused":
+            return "icon-pause";
+        case "Pending":
+            return "icon-waiting";
+        case "Running":
+            return "icon-check";
+        default:
+            assertUnreachable(status);
+    }
+}
 
-export function IndexState(props: IndexStateProps) {
-    const { nodeInfo } = props;
+export function IndexProgress(props: IndexProgressProps) {
+    const { nodeInfo, inline } = props;
     if (!nodeInfo.details) {
         return null;
     }
 
     if (nodeInfo.details.state === "Error") {
         return (
-            <div className="state failed">
-                <div className="state-desc">error</div>
-                <div className="state-indicator">
-                    <i className="icon-cancel" />
-                </div>
-            </div>
+            <ProgressCircle inline={inline} state="failed" icon="icon-cancel">
+                Error
+            </ProgressCircle>
         );
     }
 
+    const icon = iconForState(nodeInfo.details.status);
+
     if (nodeInfo.progress) {
-        const circumference = 2 * Math.PI * stateIndicatorProgressRadius;
         const progress = nodeInfo.progress.global.total
             ? nodeInfo.progress.global.processed / nodeInfo.progress.global.total
             : 1;
 
         if (nodeInfo.details.stale) {
             return (
-                <div className="state running">
-                    <div className="state-desc">
-                        <strong>{(100 * progress).toFixed(0)}%</strong>
-                        {nodeInfo.details.status === "Paused" && <>Paused</>}
-                        {nodeInfo.details.status === "Disabled" && <>Disabled</>}
-                        {nodeInfo.details.status === "Running" && <>Running</>}
-                        {nodeInfo.details.status === "Pending" && <>Pending</>}
-                    </div>
-                    <div className="state-indicator">
-                        {nodeInfo.details.status === "Paused" && <i className="icon-pause" />}
-                        {nodeInfo.details.status === "Disabled" && <i className="icon-stop" />}
-                        <svg className="progress-ring">
-                            <circle strokeDashoffset={circumference * (1.0 - progress)} />
-                        </svg>
-                    </div>
-                </div>
+                <ProgressCircle
+                    inline={inline}
+                    state="running"
+                    icon={nodeInfo.details.status === "Running" ? null : icon}
+                    progress={progress}
+                >
+                    {nodeInfo.details.status}
+                </ProgressCircle>
             );
         }
-        /* TODO pending
-        <div className="state pending">
-            <div className='state-desc'>pending</div>
-            <div className="state-indicator"><i className="icon-waiting" /></div>
-        </div>
-         */
     }
 
-    if (nodeInfo.details.status === "Paused") {
+    if (
+        nodeInfo.details.status === "Paused" ||
+        nodeInfo.details.status === "Disabled" ||
+        nodeInfo.details.status === "Pending"
+    ) {
         return (
-            <div className="state running">
-                <div className="state-desc">Paused</div>
-                <div className="state-indicator">
-                    <i className="icon-pause" />
-                </div>
-            </div>
-        );
-    }
-    if (nodeInfo.details.status === "Disabled") {
-        return (
-            <div className="state running">
-                <div className="state-desc">Disabled</div>
-                <div className="state-indicator">
-                    <i className="icon-stop" />
-                </div>
-            </div>
+            <ProgressCircle inline={inline} state="running" icon={icon}>
+                {nodeInfo.details.status}
+            </ProgressCircle>
         );
     }
 
     return (
-        <div className="state up-to-date">
-            <div className="state-desc">up to date</div>
-            <div className="state-indicator">
-                <i className="icon-check" />
-            </div>
-        </div>
+        <ProgressCircle inline={inline} state="success" icon={icon}>
+            up to date
+        </ProgressCircle>
     );
 }
 

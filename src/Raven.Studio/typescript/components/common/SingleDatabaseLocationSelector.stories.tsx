@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { SingleDatabaseLocationSelector } from "./SingleDatabaseLocationSelector";
 
 export default {
-    title: "Database location selector - single",
+    title: "Bits/Database location selector - single",
     component: SingleDatabaseLocationSelector,
 } as ComponentMeta<typeof SingleDatabaseLocationSelector>;
 

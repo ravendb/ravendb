@@ -12,6 +12,7 @@ import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IndexUtils from "../../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
 import { withPreventDefault } from "../../../../utils/common";
+import { StatePill, StatePillColor } from "../../../../common/StatePill";
 
 interface IndexProgressTooltipProps {
     target: string;
@@ -45,14 +46,9 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                 </div>
                 <div className="index-details">
                     <div className="details-item state">
-                        <div
-                            className={classNames(
-                                "state-pill",
-                                pillClass(index, nodeInfo.details, globalIndexingStatus)
-                            )}
-                        >
+                        <StatePill color={pillColor(index, nodeInfo.details, globalIndexingStatus)}>
                             {pillText(index, nodeInfo.details, globalIndexingStatus)}
-                        </div>
+                        </StatePill>
                     </div>
                     <div className="details-item entries">
                         <i className="icon-list" /> {nodeInfo.details.entriesCount} entries
@@ -132,32 +128,36 @@ function formatPercentage(input: number) {
     return num.toString() + "%";
 }
 
-function pillClass(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {
+function pillColor(
+    index: IndexSharedInfo,
+    details: IndexNodeInfoDetails,
+    globalIndexingStatus: IndexRunningStatus
+): StatePillColor {
     if (IndexUtils.isFaulty(index)) {
-        return "state-pill-danger";
+        return "danger";
     }
 
     if (IndexUtils.isErrorState(details)) {
-        return "state-pill-danger";
+        return "danger";
     }
 
     if (IndexUtils.isPausedState(details, globalIndexingStatus)) {
-        return "state-pill-warning";
+        return "warning";
     }
 
     if (IndexUtils.isDisabledState(details, globalIndexingStatus)) {
-        return "state-pill-warning";
+        return "warning";
     }
 
     if (IndexUtils.isIdleState(details, globalIndexingStatus)) {
-        return "state-pill-warning";
+        return "warning";
     }
 
     if (IndexUtils.isErrorState(details)) {
-        return "state-pill-danger";
+        return "danger";
     }
 
-    return "state-pill-success";
+    return "success";
 }
 
 function pillText(index: IndexSharedInfo, details: IndexNodeInfoDetails, globalIndexingStatus: IndexRunningStatus) {

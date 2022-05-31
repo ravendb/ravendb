@@ -1,0 +1,20 @@
+﻿import { ComponentMeta } from "@storybook/react";
+import React, { useState } from "react";
+import { StatePill } from "./StatePill";
+
+export default {
+    title: "Bits/State Pills",
+    component: StatePill,
+} as ComponentMeta<typeof StatePill>;
+
+const Template = () => {
+    return (
+        <div>
+            <StatePill color="success">⭐ Success!</StatePill>
+            <StatePill color="warning">‼️ Warning</StatePill>
+            <StatePill color="danger">⚡ Danger </StatePill>
+        </div>
+    );
+};
+
+export const Pills = Template.bind({});

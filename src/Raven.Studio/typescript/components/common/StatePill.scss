@@ -1,0 +1,26 @@
+﻿@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.state-pill {
+    display: inline-block;
+    
+    padding: (sizes.$gutter-xxs + 2px) sizes.$gutter-sm sizes.$gutter-xxs;
+    background-color: colors.$gray;
+    border-radius: 20px;
+    line-height: 1em;
+    text-transform: uppercase;
+    color: colors.$gray-900;
+    letter-spacing: .15em;
+    font-size: 10px;
+    font-weight: bold;
+
+    &.state-pill-success {
+        background-color: colors.$brand-success;
+    }
+    &.state-pill-danger {
+        background-color: colors.$brand-danger;
+    }
+    &.state-pill-warning {
+        background-color: colors.$brand-warning;
+    }
+}
