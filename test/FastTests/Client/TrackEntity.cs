@@ -96,16 +96,19 @@ namespace FastTests.Client
 
                     var tracked = session.Advanced.GetTrackedEntities();
 
-                    tracked.TryGetValue(userId, out TrackedEntity value);
+                    tracked.TryGetValue(userId, out EntityInfo value);
                     Assert.NotNull(value);
+                    Assert.Equal(userId, value.Id);
                     Assert.True(value.Entity is User);
 
                     tracked.TryGetValue(company.Id, out value);
                     Assert.NotNull(value);
+                    Assert.Equal(companyId, value.Id);
                     Assert.True(value.Entity is Company);
 
                     tracked.TryGetValue(order.Id, out value);
                     Assert.NotNull(value);
+                    Assert.Equal(order.Id, value.Id);
                     Assert.True(value.Entity is Order);
 
                     session.SaveChanges();

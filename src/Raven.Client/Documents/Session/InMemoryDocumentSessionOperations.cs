@@ -1183,7 +1183,7 @@ more responsive application.
             return changes;
         }
 
-        public IDictionary<string, TrackedEntity> GetTrackedEntities()
+        public IDictionary<string, EntityInfo> GetTrackedEntities()
         {
             return DocumentsById.GetTrackedEntities();
         }
