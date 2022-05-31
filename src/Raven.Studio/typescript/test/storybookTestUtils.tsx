@@ -1,6 +1,8 @@
 import { mockServices } from "./mocks/MockServices";
 import React from "react";
 import { ServiceProvider } from "../components/hooks/useServices";
+import { ChangesContextProvider } from "hooks/useChangesContext";
+import { mockChangesContext } from "./mocks/MockChangesContext";
 
 export function storybookContainerPublicContainer(storyFn: any) {
     return (
@@ -13,7 +15,9 @@ export function storybookContainerPublicContainer(storyFn: any) {
 export function withStorybookContexts(storyFn: any) {
     return (
         <div style={{ margin: "50px" }}>
-            <ServiceProvider services={mockServices.context}>{storyFn()}</ServiceProvider>
+            <ServiceProvider services={mockServices.context}>
+                <ChangesContextProvider context={mockChangesContext.context}>{storyFn()}</ChangesContextProvider>
+            </ServiceProvider>
         </div>
     );
 }

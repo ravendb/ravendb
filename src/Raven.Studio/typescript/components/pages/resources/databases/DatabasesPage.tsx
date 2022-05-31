@@ -8,6 +8,7 @@ import { DatabasesCounter } from "./DatabasesCounter";
 import { NoDatabases } from "./NoDatabases";
 import changesContext from "common/changesContext";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
+import { useChangesContext } from "hooks/useChangesContext";
 
 interface DatabasesPageProps {}
 
@@ -25,6 +26,8 @@ export function DatabasesPage(props: DatabasesPageProps) {
     const [filter, setFilter] = useState<DatabaseFilterCriteria>(() => ({
         searchText: "",
     }));
+
+    const { serverNotifications } = useChangesContext();
 
     const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
 
@@ -82,10 +85,10 @@ export function DatabasesPage(props: DatabasesPageProps) {
     }, []);
 
     useEffect(() => {
-        const sub = changesContext.default.serverNotifications().watchAllDatabaseChanges(() => fetchDatabases());
+        const sub = serverNotifications.watchAllDatabaseChanges(() => fetchDatabases());
 
         return () => sub.off();
-    }, []);
+    }, [serverNotifications]);
 
     return (
         <div>

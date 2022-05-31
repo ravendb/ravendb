@@ -25,7 +25,7 @@ export const StatsSingleNode: ComponentStory<typeof StatisticsPage> = () => {
     databasesService.withDetailedStats();
 
     return (
-        <div className="content-margin absolute-fill stats">
+        <div className="content-margin absolute-fill stats" style={{ height: "100vh", overflow: "auto" }}>
             <StatisticsPage database={db} />
         </div>
     );
@@ -43,7 +43,7 @@ export const StatsSharded: ComponentStory<typeof StatisticsPage> = () => {
     databasesService.withDetailedStats();
 
     return (
-        <div className="content-margin absolute-fill stats">
+        <div className="content-margin absolute-fill stats" style={{ height: "100vh", overflow: "auto" }}>
             <StatisticsPage database={db} />
         </div>
     );
