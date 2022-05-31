@@ -74,7 +74,7 @@ namespace SlowTests.Issues
 
                 var state = await WaitForValueAsync(async () =>
                 {
-                    var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                    var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
                     return indexStats.State;
                 }, IndexState.Error);
 
@@ -131,10 +131,10 @@ namespace SlowTests.Issues
             public Index()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name
-                    };
+                               select new
+                               {
+                                   user.Name
+                               };
             }
         }
 
@@ -143,10 +143,10 @@ namespace SlowTests.Issues
             public ErroredIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        Count = 3 / user.Count
-                    };
+                               select new
+                               {
+                                   Count = 3 / user.Count
+                               };
             }
         }
     }
