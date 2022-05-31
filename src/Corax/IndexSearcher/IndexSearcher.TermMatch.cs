@@ -21,7 +21,14 @@ public unsafe partial class IndexSearcher
             return TermMatch.CreateEmpty();
         }
 
-        var termSlice = term != Constants.NullValue ? EncodeAndApplyAnalyzer(term, fieldId) : Constants.NullValueSlice;
+        Slice termSlice;
+        if (term == Constants.NullValue)
+            termSlice = Constants.NullValueSlice;
+        else if (term == Constants.EmptyString)
+            termSlice = Constants.EmptyStringSlice;
+        else
+            termSlice = EncodeAndApplyAnalyzer(term, fieldId);
+
         return TermQuery(terms, termSlice, fieldId);
     }
 
