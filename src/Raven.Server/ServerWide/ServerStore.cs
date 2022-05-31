@@ -3370,8 +3370,8 @@ namespace Raven.Server.ServerWide
             {
                 IoReadOperations = ioStatsResult.IoReadOperations, 
                 IoWriteOperations = ioStatsResult.IoWriteOperations,
-                ReadThroughputInKb = ioStatsResult.ReadThroughput.GetThroughputInKilobytes(),
-                WriteThroughputInKb = ioStatsResult.WriteThroughput.GetThroughputInKilobytes(),
+                ReadThroughputInKb = ioStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
+                WriteThroughputInKb = ioStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
                 QueueLength = ioStatsResult.QueueLength,
             };
         }
