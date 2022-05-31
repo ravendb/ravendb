@@ -12,7 +12,7 @@ import app from "durandal/app";
 import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
-import { IndexDistribution, IndexState } from "./IndexDistribution";
+import { IndexDistribution, IndexProgress } from "./IndexDistribution";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 
@@ -556,7 +556,7 @@ function InlineDetails(props: InlineDetailsProps) {
                 <div className="value">{nodeInfo.details.errorCount.toLocaleString()}</div>
             </div>
             <div className="index-detail-item" id={indexId}>
-                <IndexState nodeInfo={nodeInfo} />
+                <IndexProgress inline nodeInfo={nodeInfo} />
             </div>
             <IndexProgressTooltip
                 target={indexId}

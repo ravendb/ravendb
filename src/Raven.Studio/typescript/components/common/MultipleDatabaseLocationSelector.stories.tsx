@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
 
 export default {
-    title: "Database location selector - multiple",
+    title: "Bits/Database location selector - multiple",
     component: MultipleDatabaseLocationSelector,
 } as ComponentMeta<typeof MultipleDatabaseLocationSelector>;
 

@@ -17,7 +17,7 @@ function indexesHolder(storyFn: any) {
 }
 
 export default {
-    title: "Indexes page",
+    title: "Pages/Indexes page",
     component: IndexesPage,
     decorators: [withStorybookContexts, indexesHolder],
 } as ComponentMeta<typeof IndexesPage>;

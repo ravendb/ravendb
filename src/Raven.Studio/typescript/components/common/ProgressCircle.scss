@@ -1,0 +1,129 @@
+﻿@use 'sass:math';
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.progress-circle {
+    flex-direction: column;
+    padding-bottom: sizes.$gutter-sm;
+
+    $state-indicator-size: 30px;
+    $state-indicator-progress-radius: 13px;
+
+
+    &.inline {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        padding: 0;
+
+        .state-desc {
+            margin-bottom: 0;
+        }
+
+        .state-indicator {
+            margin-right: sizes.$gutter-xs;
+            order: -1;
+            margin-top: -7px;
+            margin-bottom: -7px;
+        }
+    }                        
+
+    
+    .state-desc {
+        font-size: 9px;
+        color: colors.$gray-300;
+        text-transform: uppercase;
+        font-weight: bold;
+        margin-bottom: sizes.$gutter-xxs;
+        letter-spacing: .15em;
+        height: 25px;
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .state-indicator {
+        display: block;
+        height: $state-indicator-size;
+        width: $state-indicator-size;
+        border-radius: $state-indicator-size;
+        color: colors.$black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: colors.$gray-300;
+        position: relative;
+
+        i {
+            font-size: 22px;
+            position: absolute;
+            z-index: 10;
+        }
+
+        .progress-ring {
+            display: none;
+        }
+    }
+
+    &.success {
+        .state-desc {
+            color: colors.$gray-500;
+        }
+
+        .state-indicator {
+            background-color: colors.$brand-success;
+        }
+    }
+
+    &.failed {
+        .state-desc {
+            color: colors.$gray-500;
+        }
+
+        .state-indicator {
+            background-color: colors.$brand-danger;
+        }
+    }
+
+    &.running {
+        .state-desc {
+            color: colors.$gray-300;
+            display: flex;
+            align-items: flex-end;
+
+            strong {
+                font-size: 14px;
+                color: colors.$gray-100;
+                margin-right: sizes.$gutter-xxs;
+            }
+        }
+
+        .state-indicator {
+            background-color: colors.$black;
+
+            i {
+                color: colors.$progress-color;
+            }
+        }
+
+        .progress-ring {
+            width: 100%;
+            height: 100%;
+            display: block;
+
+            circle {
+                cx: math.div($state-indicator-size, 2);
+                cy: math.div($state-indicator-size, 2);
+                r: $state-indicator-progress-radius;
+                transition: stroke-dashoffset 0.35s;
+                transform: rotate(-90deg);
+                transform-origin: math.div($state-indicator-size, 2) math.div($state-indicator-size, 2);
+                stroke-linecap: round;
+                stroke-width: 4;
+                fill: transparent;
+                stroke: colors.$progress-color;
+                stroke-dasharray: 81.68 81.68; // 2 * pi * r / r = 13
+                //stroke-dashoffset: 30; // offset = circumference - percent / 100 * circumference
+            }
+        }
+    }
+}

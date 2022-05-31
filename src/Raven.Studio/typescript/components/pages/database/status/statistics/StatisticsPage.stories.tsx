@@ -8,7 +8,7 @@ import { mockServices } from "../../../../../test/mocks/MockServices";
 import React from "react";
 
 export default {
-    title: "Statistics page",
+    title: "Pages/Statistics page",
     component: StatisticsPage,
     decorators: [withStorybookContexts],
 } as ComponentMeta<typeof StatisticsPage>;

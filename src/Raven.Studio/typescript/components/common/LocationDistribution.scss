@@ -1,0 +1,134 @@
+﻿@use 'sass:math';
+@use "Content/scss/variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+
+
+.location-distribution {
+    padding: sizes.$gutter-sm;
+    padding-left: sizes.$gutter-md;
+    display: grid;
+    grid-template-columns: 100px repeat(auto-fill, minmax(130px, max-content));
+    margin: sizes.$gutter-xs/-2;
+
+    
+    
+    .distribution-legend, .distribution-summary, .distribution-item {
+        font-size: 12px;
+        margin: sizes.$gutter-xs/2;
+
+        .top {
+            font-size: 18px;
+            font-weight: bold;
+
+            i {
+                margin-right: sizes.$gutter-xxs;
+            }
+        }
+
+        & > div {
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            & + div {
+                border-top: 2px solid colors.$black;
+            }
+
+            &:first-of-type {
+                height: 50px;
+            }
+
+            &:last-of-type {
+                height: auto;
+            }
+        }
+    }
+
+    .distribution-legend > div {
+        justify-content: flex-start;
+
+        i {
+            width: sizes.$gutter;
+            text-align: center;
+        }
+    }
+
+    .distribution-summary {
+        grid-column: 2;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .distribution-summary, .distribution-legend {
+        grid-row-end: span 50;
+    }
+
+    .distribution-item {
+        background-color: colors.$gray-800;
+        border-radius: sizes.$gutter-xs;
+        border: 1px solid transparent;
+        transition: background-color .2s;
+
+        & > div {
+            padding-left: sizes.$gutter-xs;
+            padding-right: sizes.$gutter-xs;
+            line-height: 1em;
+            transition: opacity .2s ease-in;
+        }
+
+        .shard {
+            --icon-color: #{colors.$sharding-color};
+        }
+
+        .node {
+            --icon-color: #{colors.$node-color};
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .top {
+            color: colors.$white;
+
+            i {
+                color: var(--icon-color);
+            }
+        }
+
+        @keyframes loadingAnimation {
+            0% {
+                background-position: 150% 0
+            }
+
+            100% {
+                background-position: -150% 0
+            }
+        }
+
+        $loading-animation-duration: 2s;
+        $delay-steps: 10;
+
+        &.loading {
+            border-color: colors.$gray-800;
+            background: linear-gradient(45deg, colors.$gray-900 40%, colors.$gray-800 50%, colors.$gray-900 60%);
+            background-repeat: no-repeat;
+            background-size: 350% 100%;
+            animation: loadingAnimation $loading-animation-duration linear infinite;
+
+            .entries, .errors, .state {
+                opacity: 0;
+            }
+        }
+
+
+
+        @for $i from 0 through ($delay-steps - 1) {
+
+            &:nth-of-type(#{$delay-steps - 1}n - #{$i}) {
+                animation-delay: -$loading-animation-duration/($delay-steps - 1) * $i;
+            }
+        }
+    }
+}
