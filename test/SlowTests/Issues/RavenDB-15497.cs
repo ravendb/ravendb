@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -38,8 +38,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                var database = await GetDatabase(store.Database);
-                database.IndexStore.StopIndex(index.IndexName);
+                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
 
                 using (var session = store.OpenSession())
                 {
