@@ -1185,7 +1185,21 @@ more responsive application.
 
         public IDictionary<string, EntityInfo> GetTrackedEntities()
         {
-            return DocumentsById.GetTrackedEntities();
+            var tracked = DocumentsById.GetTrackedEntities(this);
+
+            foreach (var id in _knownMissingIds)
+            {
+                if (tracked.ContainsKey(id))
+                    continue;
+
+                tracked.Add(id, new EntityInfo
+                {
+                    Id = id,
+                    IsDeleted = true
+                });
+            }
+
+            return tracked;
         }
 
         /// <summary>
