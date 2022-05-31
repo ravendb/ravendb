@@ -38,11 +38,8 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                const int timeoutInMs = 2_000;
-                (await GetDatabase(store.Database)).IndexStore.GetIndex(index.IndexName).ForTestingPurposesOnly().BeforeStartingNewBatch = () =>
-                {
-                    Thread.Sleep(timeoutInMs + 100);
-                };
+                var database = await GetDatabase(store.Database);
+                database.IndexStore.StopIndex(index.IndexName);
 
                 using (var session = store.OpenSession())
                 {
@@ -50,11 +47,12 @@ namespace SlowTests.Issues
                     {
                         Name = "user1"
                     });
-                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromMilliseconds(timeoutInMs), throwOnTimeout: true);
+                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(3), throwOnTimeout: true);
 
                     var error = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.StartsWith("System.TimeoutException", error.Message);
                     Assert.Contains("could not verify that all indexes has caught up with the changes as of etag", error.Message);
+                    Assert.Contains("total paused indexes: 1", error.Message);
                     Assert.DoesNotContain("total errored indexes", error.Message);
                 }
             }
