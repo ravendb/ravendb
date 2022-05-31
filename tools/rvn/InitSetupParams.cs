@@ -39,41 +39,23 @@ public class InitSetupParams
 
     private static SetupInfo GenerateSetupInfoForOwnCert()
     {
-        return new SetupInfo()
-        {
-            Domain = "subdomain",
-            RootDomain = "example.com",
-            License = new License() { Id = Guid.Empty, Keys = new List<string>() { string.Empty }, Name = string.Empty },
-            NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
-            {
-                {
-                    "A",
-                    new SetupInfo.NodeInfo()
-                    {
-                        Addresses = new List<string>() { "https://0.0.0.0:0" },
-                        Port = 443,
-                        TcpPort = 38888,
-                        PublicServerUrl = "https://subdomain.example.com",
-                        PublicTcpServerUrl = "tcp://subdomain.example.com:38888"
-                    }
-                }
-            }
-        };
+        return GenerateTemplateSetupInfo("subdomain", "example.com");
     }
 
     private static SetupInfo GenerateSetupInfoForLetsEncrypt()
     {
+        var setupInfo = GenerateTemplateSetupInfo("your-domain", "development.run");
+        setupInfo.Email = string.Empty;
+        return setupInfo;
+    }
+
+    private static SetupInfo GenerateTemplateSetupInfo(string domain, string rootDomain)
+    {
         return new SetupInfo()
         {
-            Domain = "your-domain",
-            RootDomain = "development.run",
-            Email = string.Empty,
-            License = new License()
-            {
-                Id = new Guid(), 
-                Keys = new List<string>() { string.Empty }, 
-                Name = string.Empty
-            },
+            Domain = domain,
+            RootDomain = rootDomain,
+            License = new License() { Id = new Guid(), Keys = new List<string>() { string.Empty }, Name = string.Empty },
             NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
             {
                 {
@@ -83,8 +65,8 @@ public class InitSetupParams
                         Addresses = new List<string>() { "https://0.0.0.0:0" },
                         Port = 443,
                         TcpPort = 38888,
-                        PublicServerUrl = "https://your-domain.development.run",
-                        PublicTcpServerUrl = "tcp://your-domain.development.run:38888"
+                        PublicServerUrl = $"https://{domain}.{rootDomain}",
+                        PublicTcpServerUrl = $"tcp://{domain}.{rootDomain}:38888"
                     }
                 }
             }
