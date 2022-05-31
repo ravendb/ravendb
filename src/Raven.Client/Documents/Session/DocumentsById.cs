@@ -38,9 +38,9 @@ namespace Raven.Client.Documents.Session
 
         public int Count => _inner.Count;
 
-        public Dictionary<string, TrackedEntity> GetTrackedEntities()
+        public Dictionary<string, EntityInfo> GetTrackedEntities()
         {
-            var result = new Dictionary<string, TrackedEntity>();
+            var result = new Dictionary<string, EntityInfo>();
 
             foreach (var keyValue in _inner)
             {
@@ -48,8 +48,9 @@ namespace Raven.Client.Documents.Session
                 if (entity == null)
                     continue;
 
-                result.Add(keyValue.Key, new TrackedEntity
+                result.Add(keyValue.Key, new EntityInfo
                 {
+                    Id = keyValue.Key,
                     Entity = entity
                 });
             }
@@ -68,8 +69,9 @@ namespace Raven.Client.Documents.Session
         }
     }
 
-    public class TrackedEntity
+    public class EntityInfo
     {
+        public string Id { get; set; }
         public object Entity { get; set; }
     }
 }

@@ -181,7 +181,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all the tracked entities in this session.
         /// </summary>
-        IDictionary<string, TrackedEntity> GetTrackedEntities();
+        IDictionary<string, EntityInfo> GetTrackedEntities();
 
         /// <summary>
         /// SaveChanges will wait for the changes made to be replicates to `replicas` nodes
