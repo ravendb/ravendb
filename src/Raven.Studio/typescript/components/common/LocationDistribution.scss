@@ -9,11 +9,11 @@
     padding: sizes.$gutter-sm;
     padding-left: sizes.$gutter-md;
     display: grid;
-    grid-template-columns: 100px repeat(auto-fill, minmax(130px, max-content));
+    grid-template-columns: repeat(auto-fill, minmax(130px, max-content));
     margin: sizes.$gutter-xs/-2;
 
-    
-    
+
+
     .distribution-legend, .distribution-summary, .distribution-item {
         font-size: 12px;
         margin: sizes.$gutter-xs/2;
@@ -112,7 +112,7 @@
 
         &.loading {
             border-color: colors.$gray-800;
-            background: linear-gradient(45deg, colors.$gray-900 40%, colors.$gray-800 50%, colors.$gray-900 60%);
+            background: linear-gradient(45deg, colors.$gray-900 40%, colors.$gray-800 50%, colors.$gray-900 60%), colors.$gray-900;
             background-repeat: no-repeat;
             background-size: 350% 100%;
             animation: loadingAnimation $loading-animation-duration linear infinite;
