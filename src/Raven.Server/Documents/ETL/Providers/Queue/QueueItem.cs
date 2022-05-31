@@ -23,5 +23,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue
         }
 
         public BlittableJsonReaderObject TransformationResult { get; set; }
+
+        public QueueLoadOptions Options { get; set; }
     }
 }
