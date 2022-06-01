@@ -8,8 +8,10 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -64,6 +66,59 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal("Company Name", companiesRevisions[0].Name);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
                     Assert.Equal("Company Name", companiesRevisions[2].Name);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task RevertRevisionsSharded(Options options)
+        {
+            var company1 = new Company { Name = "Company Name" };
+            var company2 = new Company { Name = "Company Name2" };
+            using (var store = GetDocumentStore(options))
+            {
+                Assert.NotEqual(Sharding.GetShardNumber(store, "Companies/1"), Sharding.GetShardNumber(store, "Companies/2"));
+                DateTime last = default;
+                await RevisionsHelper.SetupRevisionsAsync(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company1, "Companies/1");
+                    await session.StoreAsync(company2, "Companies/2");
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company1.Name = "Hibernating Rhinos";
+                    company2.Name = "Hibernating Rhinos2";
+                    await session.StoreAsync(company1);
+                    await session.StoreAsync(company2);
+                    await session.SaveChangesAsync();
+                }
+
+                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60));
+                var res = (RevertResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
+                
+                Assert.Equal(2, res.ScannedDocuments);
+                Assert.Equal(2, res.RevertedDocuments);
+                Assert.Equal(4, res.ScannedRevisions);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companies1Revisions = await session.Advanced.Revisions.GetForAsync<Company>(company1.Id);
+                    var companies2Revisions = await session.Advanced.Revisions.GetForAsync<Company>(company2.Id);
+
+                    Assert.Equal(3, companies1Revisions.Count);
+                    Assert.Equal("Company Name", companies1Revisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companies1Revisions[1].Name);
+                    Assert.Equal("Company Name", companies1Revisions[2].Name);
+
+                    Assert.Equal(3, companies2Revisions.Count);
+                    Assert.Equal("Company Name2", companies2Revisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos2", companies2Revisions[1].Name);
+                    Assert.Equal("Company Name2", companies2Revisions[2].Name);
                 }
             }
         }

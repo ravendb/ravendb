@@ -26,23 +26,51 @@ namespace Raven.Client.Documents.Operations.Revisions
             };
         }
 
-        IOperationProgress IOperationProgress.Clone()
+        public virtual IOperationProgress Clone()
         {
             throw new System.NotImplementedException();
         }
 
-        bool IOperationProgress.CanMerge => false;
-
-        void IOperationProgress.MergeWith(IOperationProgress progress)
+        public virtual void MergeWith(IOperationProgress progress)
         {
-            throw new System.NotImplementedException();
+            if (progress is not OperationResult r)
+                return;
+            
+            ScannedDocuments += r.ScannedDocuments;
+            ScannedRevisions += r.ScannedRevisions;
+            foreach (var warning in r.Warnings)
+            {
+                try
+                {
+                    Warnings.Add(warning.Key, warning.Value);
+                }
+                catch
+                {
+                    //
+                }
+            }
         }
 
-        bool IOperationResult.CanMerge => false;
+        public virtual bool CanMerge => false;
 
-        void IOperationResult.MergeWith(IOperationResult result)
+        public virtual void MergeWith(IOperationResult result)
         {
-            throw new System.NotImplementedException();
+            if (result is not OperationResult r)
+                return;
+
+            ScannedDocuments += r.ScannedDocuments;
+            ScannedRevisions += r.ScannedRevisions;
+            foreach (var warning in r.Warnings)
+            {
+                try
+                {
+                    Warnings.Add(warning.Key, warning.Value);
+                }
+                catch
+                {
+                    //
+                }
+            }
         }
 
         public bool ShouldPersist => false;
@@ -63,6 +91,39 @@ namespace Raven.Client.Documents.Operations.Revisions
     public class RevertResult : OperationResult
     {
         public int RevertedDocuments { get; set; }
+
+        public override bool CanMerge => true;
+
+        public override void MergeWith(IOperationResult result)
+        {
+            if (result is not RevertResult r)
+                return;
+
+            RevertedDocuments += r.RevertedDocuments;
+
+            base.MergeWith(result);
+        }
+
+        public override void MergeWith(IOperationProgress progress)
+        {
+            if (progress is not RevertResult r)
+                return;
+
+            RevertedDocuments += r.RevertedDocuments;
+
+            base.MergeWith(progress);
+        }
+
+        public override IOperationProgress Clone()
+        {
+            return new RevertResult()
+            {
+                RevertedDocuments = RevertedDocuments,
+                ScannedDocuments = ScannedDocuments,
+                ScannedRevisions = ScannedRevisions,
+                Warnings = Warnings
+            };
+        }
 
         public override DynamicJsonValue ToJson()
         {
