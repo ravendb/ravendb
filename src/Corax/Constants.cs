@@ -18,7 +18,8 @@ namespace Corax
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
             }
         }
-
+        
+        
         public static class Boosting
         {
             public static float ScoreEpsilon = 1e-8F;
@@ -33,6 +34,8 @@ namespace Corax
 
         public static class IndexWriter
         {
+            public const long Version = 54_000;
+            
             public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
