@@ -16,11 +16,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
         {
         }
 
-        protected override async ValueTask GetCollectionDocumentsAndWriteAsync(DocumentsOperationContext context, string name, int start, int pageSize, CancellationToken token)
+        protected override async ValueTask<(long numberOfResults, long totalDocumentsSizeInBytes)> GetCollectionDocumentsAndWriteAsync(DocumentsOperationContext context, string name, int start, int pageSize, CancellationToken token)
         {
             using (context.OpenReadTransaction())
             {
-                var sw = Stopwatch.StartNew();
                 var documents = RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, name, start, pageSize).ToAsyncEnumerable();
 
                 long numberOfResults;
@@ -33,8 +32,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
                     (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly: false, token);
                     writer.WriteEndObject();
                 }
-                RequestHandler.AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+
+                return (numberOfResults, totalDocumentsSizeInBytes);
             }
+        }
+
+        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+            long totalDocumentsSizeInBytes)
+        {
+            RequestHandler.AddPagingPerformanceHint(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }
 }

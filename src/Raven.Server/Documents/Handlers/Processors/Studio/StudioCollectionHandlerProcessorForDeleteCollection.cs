@@ -16,10 +16,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
         {
         }
 
-        protected override async ValueTask DeleteCollectionAsync(DocumentsOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds, long operationId)
+        protected override ValueTask DeleteCollectionAsync(DocumentsOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds, long operationId)
         {
-            await ExecuteCollectionOperationAsync((runner, collectionNameParam, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionNameParam, 0, long.MaxValue, options, onProgress, token)),
+            ExecuteCollectionOperation((runner, collectionNameParam, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionNameParam, 0, long.MaxValue, options, onProgress, token)),
                 context, returnContextToPool, OperationType.DeleteByCollection, collectionName, operationId, excludeIds);
+            return ValueTask.CompletedTask;
         }
 
         protected override long GetNextOperationId()
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
 
-        private async Task ExecuteCollectionOperationAsync(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext docsContext, IDisposable returnContextToPool, OperationType operationType, string collectionName, long operationId, HashSet<string> excludeIds)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext docsContext, IDisposable returnContextToPool, OperationType operationType, string collectionName, long operationId, HashSet<string> excludeIds)
         {
             var token = RequestHandler.CreateTimeLimitedCollectionOperationToken();
 

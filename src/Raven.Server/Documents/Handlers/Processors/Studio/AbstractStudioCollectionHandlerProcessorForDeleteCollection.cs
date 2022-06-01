@@ -24,8 +24,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             var returnContextToPool = ContextPool.AllocateOperationContext(out TOperationContext context);
 
             var collectionName = RequestHandler.GetStringQueryString("name");
-            var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? -GetNextOperationId();
-            var excludeIds = new HashSet<string>();
+            var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
+            var excludeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var reader = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ExcludeIds");
             if (reader.TryGet("ExcludeIds", out BlittableJsonReaderArray ids))
