@@ -14,7 +14,7 @@
                 <div class="row">
                     <div class="col-sm-6" data-bind="attr: { 'data-original-title': model.disableLetsEncrypt() ? 'Not available on Mac OS' : '' }">
                         <div class="has-disable-reason">
-                            <button class="btn btn-icon btn-default" title="Click to generate a Let's Encrypt certificate"
+                            <button class="btn btn-icon btn-default" title="Generate a Let's Encrypt certificate"
                                     data-bind="click: clickGenerate, enable: !model.disableLetsEncrypt(), css: { 'btn-selected-success' : model.mode() === 'LetsEncrypt' }">
                                 <i class="icon-lets-encrypt icon-xl"></i>
                                 <p class="lead">Generate Let's Encrypt Certificate</p>
@@ -22,7 +22,7 @@
                         </div>
                         <div class="padding">
                             <ul class="list">
-                                <li><i class="icon-plus"></i><span>Secured communication via SSL/TLS 1.2</span></li>
+                                <li><i class="icon-plus"></i><span>Secured communication via TLS</span></li>
                                 <li><i class="icon-plus"></i><span>Authentication via X509 client certificates</span></li>
                                 <li><i class="icon-plus"></i><span>Automatic certificate generation and renewal</span></li>
                                 <li><i class="icon-plus"></i><span>Hassle free and automatic</span></li>
@@ -35,14 +35,14 @@
                         </div>
                     </div>
                     <div class="col-sm-6">
-                        <button class="btn btn-icon btn-default" title="Click to provide your own certificate"
+                        <button class="btn btn-icon btn-default" title="Provide your own certificate"
                                 data-bind="click: clickSecured, css: { 'btn-selected-success' : model.mode() === 'Secured' }">
                             <i class="icon-certificate icon-xl"></i>
                             <p class="lead">Provide Your Own Certificate</p>
                         </button>
                         <div class="padding">
                             <ul class="list">
-                                <li><i class="icon-plus"></i><span>Secured communication via SSL/TLS 1.2</span></li>
+                                <li><i class="icon-plus"></i><span>Secured communication via TLS</span></li>
                                 <li><i class="icon-plus"></i><span>Authentication via X509 client certificates</span></li>
                                 <li><i class="icon-plus"></i><span>Does not require access to the public Internet</span></li>
                                 <li><i class="icon-minus"></i><span>Manual certificate generation and renewal</span></li>
@@ -62,10 +62,10 @@
         <div class="panel flex-vertical flex-grow margin-none">
             <div class="padding padding-lg flex-grow">
                 <h2 class="text-center margin-bottom margin-lg text-warning">UNSECURE</h2>
-                <button class="btn btn-icon btn-default" title="Click setup an Unsecure server"
+                <button class="btn btn-icon btn-default" title="Setup an Unsecure server"
                         data-bind="click: clickUnsecured, css: { 'btn-selected-warning' : model.mode() === 'Unsecured' }">
                     <i class="icon-unsecure icon-xl"></i>
-                    <p class="lead">Unsecured</p>
+                    <p class="lead">Unsecure</p>
                 </button>
                 <div class="padding">
                     <ul class="list">
@@ -86,13 +86,33 @@
 <div class="panel padding margin-top">
     <div class="row">
         <div class="col-sm-7">
-            <div class="toggle margin-left-lg toggle-zip-only">
+            <div class="toggle margin-left-lg">
                 <input id="zipOnly" class="styled" type="checkbox" data-bind="checked: model.onlyCreateZipFile">
                 <label for="zipOnly">
-                    Use this wizard only to create a package for external setup
+                    Use this Setup Wizard only to create a package for external setup
                 </label>
             </div>
         </div>
+    </div>
+    <div class="text-info bg-info padding padding-sm margin-left-lg margin-top-sm">
+        <i class="icon-info margin-right-xs"></i>
+        <span data-bind="if: model.onlyCreateZipFile">Setup Wizard will only create a Setup Package for external setup. Current server will NOT be modified.</span>
+        <span data-bind="if: !model.onlyCreateZipFile()">Setup Wizard will create a Setup Package AND set up the current server.</span>
+    </div>
+</div>
+
+<div class="bg-experimental padding flex-horizontal margin-top-sm">
+    <div class="margin-right">
+        <i class="icon-experimental icon-lg"></i>
+    </div>
+    <div class="margin-left">
+        <div class="checkbox">
+            <input id="features" type="checkbox" data-bind="checked: model.useExperimentalFeatures">
+            <label for="features">Enable the following experimental features:</label>
+        </div>
+        <ul class="margin-left">
+            <li>Graph API</li>
+        </ul>
     </div>
 </div>
 <div class="navigation padding padding-lg flex-horizontal">

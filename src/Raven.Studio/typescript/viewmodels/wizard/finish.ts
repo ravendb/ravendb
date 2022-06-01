@@ -52,11 +52,6 @@ class finish extends setupStep {
         this.isRestartServerNeeded = ko.pureComputed(() => !this.spinners.finishing() &&
                                                             this.completedWithSuccess() &&
                                                            !this.model.onlyCreateZipFile());
-        
-        this.showSetupPackageInfo = ko.pureComputed(() => !this.spinners.finishing() &&
-                                                           this.model.mode() === 'Unsecured' &&
-                                                           this.model.onlyCreateZipFile() &&
-                                                           this.model.nodes().length > 1);
     }
     
     canActivate(): JQueryPromise<canActivateResultDto> {

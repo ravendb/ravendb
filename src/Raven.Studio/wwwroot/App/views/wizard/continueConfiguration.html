@@ -1,16 +1,16 @@
 <h2 class="margin-bottom margin-top">
-    <strong class="margin-right">2.</strong> Complete Existing Cluster Setup
+    <strong class="margin-right">2.</strong> Complete Cluster Setup
 </h2>
 <form class="flex-form" data-bind="with: model.continueSetup, submit: save">
     <div class="panel padding padding-lg">
         <div class="margin-bottom">
             <div class="form-group" data-bind="validationElement: importedFileName">
-                <label for="importedFileName" class="control-label">Configuration package<i class="required"></i></label>
+                <label for="importedFileName" class="control-label">Setup package<i class="required"></i></label>
                 <div class="flex-grow input-group file-input" data-bind="validationElement: importedFileName">
                     <input type="file" tabindex="-1" name="importFile" id="importedFileName" accept=""
                            data-bind="event: { change: _.partial(fileSelected, $element) }">
                     <span class="static-name form-control"
-                          data-bind="text: importedFileName() || 'Select configuration file (*.zip)'"></span>                          
+                          data-bind="text: importedFileName() || 'Select Setup Package file (*.zip)'"></span>                          
                     <span class="input-group-btn">
                         <label for="importedFileName" class="btn btn-default">
                             <i class="icon-document"></i>

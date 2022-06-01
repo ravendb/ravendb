@@ -41,7 +41,8 @@ class ipEntry {
        
        this.isLocalNetwork = ko.pureComputed(() => {
            const ip = this.ip();
-           if (!ip) {
+           
+           if (!ip || !this.validationGroup.isValid()) {
                return false;
            }
            

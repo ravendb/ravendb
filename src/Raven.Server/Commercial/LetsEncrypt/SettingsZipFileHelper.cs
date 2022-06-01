@@ -500,7 +500,7 @@ public static class SettingsZipFileHelper
             case true when isCluster:
             {
                str += string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
-                          "RavenDB Setup package has been downloaded successfully." + Environment.NewLine +
+                          "RavenDB Setup Package has been downloaded successfully." + Environment.NewLine +
                           "Your cluster settings configuration is contained in the downloaded zip file."
                           + Environment.NewLine;
 
@@ -513,7 +513,7 @@ public static class SettingsZipFileHelper
                     "The next step is to download a new RavenDB server for each of the other nodes." +
                     Environment.NewLine +
                     Environment.NewLine +
-                    "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
+                    "When you enter the Setup Wizard on a new node, please choose 'Use Setup Package'." +
                     Environment.NewLine +
                     "Do not try to start a new setup process again in this new node, it is not supported." +
                     Environment.NewLine +
@@ -522,7 +522,7 @@ public static class SettingsZipFileHelper
                     "The new server node will join the already existing cluster." +
                     Environment.NewLine +
                     Environment.NewLine +
-                    "When the wizard is done and the new node was restarted, the cluster will automatically detect it. " +
+                    "When the Setup Wizard is done and the new node was restarted, the cluster will automatically detect it. " +
                     Environment.NewLine +
                     "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
                     Environment.NewLine +
@@ -546,7 +546,7 @@ public static class SettingsZipFileHelper
                     "The next step is to download a new RavenDB server for each of the other nodes." +
                     Environment.NewLine +
                     Environment.NewLine +
-                    "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
+                    "When you enter the Setup Wizard on a new node, please choose 'Use Setup Package'." +
                     Environment.NewLine +
                     "Do not try to start a new setup process again in this new node, it is not supported." +
                     Environment.NewLine +
@@ -555,7 +555,7 @@ public static class SettingsZipFileHelper
                     "The new server node will join the already existing cluster." +
                     Environment.NewLine +
                     Environment.NewLine +
-                    "When the wizard is done and the new node was restarted, the cluster will automatically detect it. " +
+                    "When the Setup Wizard is done and the new node was restarted, the cluster will automatically detect it. " +
                     Environment.NewLine +
                     "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
                     Environment.NewLine +
@@ -604,7 +604,7 @@ public static class SettingsZipFileHelper
             "The next step is to download a new RavenDB server for each of the other nodes." +
             Environment.NewLine +
             Environment.NewLine +
-            "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
+            "When you enter the Setup Wizard on a new node, please choose 'Use Setup Package'." +
             Environment.NewLine +
             "Do not try to start a new setup process again in this new node, it is not supported." +
             Environment.NewLine +
@@ -613,7 +613,7 @@ public static class SettingsZipFileHelper
             "The new server node will join the already existing cluster." +
             Environment.NewLine +
             Environment.NewLine +
-            "When the wizard is done and the new node was restarted, the cluster will automatically detect it. " +
+            "When the Setup Wizard is done and the new node was restarted, the cluster will automatically detect it. " +
             Environment.NewLine +
             "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
             Environment.NewLine +

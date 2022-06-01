@@ -8,9 +8,6 @@ import detectBrowser = require("viewmodels/common/detectBrowser");
 class welcome extends setupStep {
     
     browserAlert = new detectBrowser(false);
-
-    newFlowSelected = ko.observable<boolean>(true);
-    continueFlowSelected = ko.observable<boolean>(false);
     
     activate(args: any) {
         super.activate(args, { shell: true });
@@ -48,21 +45,18 @@ class welcome extends setupStep {
             .execute();
     }
     
-    clickNewFlow() {
-        this.newFlowSelected(true);
-        this.continueFlowSelected(false);
+    setupNewClusterFlow() {
+        this.model.mode(this.model.mode() === "Continue" ? "LetsEncrypt" : this.model.mode());
     }
 
-    clickContinueFlow() {
-        this.newFlowSelected(false);
-        this.continueFlowSelected(true);
+    useSetupPackageFlow() {
+        this.model.mode("Continue")
     }
 
     goToNextView() {
-        if (this.newFlowSelected()) {
+        if (this.model.mode() !== "Continue") {
             router.navigate("#security");
         } else {
-            this.model.mode("Continue");
             router.navigate("#continue");
         }
     }
