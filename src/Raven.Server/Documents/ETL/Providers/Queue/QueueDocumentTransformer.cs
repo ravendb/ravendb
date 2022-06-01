@@ -169,6 +169,10 @@ internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithMes
             Current = item;
             DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
         }
+        else
+        {
+            throw new NotSupportedException("Processing of document tombstones is not currently supported");
+        }
     }
 
     private QueueWithMessages GetOrAdd(string queueName)
