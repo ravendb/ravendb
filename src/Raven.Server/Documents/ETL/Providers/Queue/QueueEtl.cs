@@ -42,11 +42,19 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
 
     private string DefaultSource =>
         $"{Database.Configuration.Core.PublicServerUrl?.UriValue ?? Database.ServerStore.Server.WebUrl}/{Database.Name}/{Name}";
+
     public override EtlType EtlType => EtlType.Queue;
+
     public override bool ShouldTrackCounters() => false;
+
     public override bool ShouldTrackTimeSeries() => false;
+
     protected override bool ShouldTrackAttachmentTombstones() => false;
+
+    public override bool ShouldTrackDocumentTombstones() => false;
+
     protected override bool ShouldFilterOutHiLoDocument() => true;
+
     private IProducer<string, byte[]> _kafkaProducer;
     private IModel _rabbitMqProducer;
 
@@ -59,8 +67,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfigu
     protected override IEnumerator<QueueItem> ConvertTombstonesEnumerator(DocumentsOperationContext context,
         IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
-        //todo djordje: ignore tombstones
-        return new TombstonesToQueueItems(tombstones, collection);
+        throw new NotSupportedException("Tombstones aren't processed by Queue ETL currently");
     }
 
     protected override IEnumerator<QueueItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context,
