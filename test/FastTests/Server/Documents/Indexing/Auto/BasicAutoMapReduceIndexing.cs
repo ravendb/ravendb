@@ -246,7 +246,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Id = 1,
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    Aggregation = AggregationOperation.Count
+                    Aggregation = AggregationOperation.Count,
+                    HasQuotedName = true
                 };
 
                 var location = new AutoIndexField
@@ -255,7 +256,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Name = "Location",
                     Storage = FieldStorage.Yes,
                     Indexing = AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default,
-                    GroupByArrayBehavior = GroupByArrayBehavior.ByContent
+                    GroupByArrayBehavior = GroupByArrayBehavior.ByContent,
+                    HasQuotedName = true
                 };
 
                 Assert.NotNull(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location }), Guid.NewGuid().ToString()));
@@ -295,6 +297,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[0].Definition.MapFields["Count"].Name);
+                Assert.True(((AutoIndexField)indexes[0].Definition.MapFields["Count"]).HasQuotedName);
+
                 Assert.Equal(AggregationOperation.Count, indexes[0].Definition.MapFields["Count"].As<AutoIndexField>().Aggregation);
 
                 var definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
@@ -303,6 +307,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(1, definition.GroupByFields.Count);
                 Assert.Equal("Location", definition.GroupByFields["Location"].Name);
+                Assert.True(definition.GroupByFields["Location"].HasQuotedName);
                 Assert.Equal(AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default, definition.GroupByFields["Location"].Indexing);
                 Assert.Equal(GroupByArrayBehavior.ByContent, definition.GroupByFields["Location"].GroupByArrayBehavior);
 

@@ -169,7 +169,7 @@ namespace Raven.Server.Indexing
         private void ThrowDiskFullException()
         {
             var folderPath = _fileCache.FullPath;
-            var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(folderPath);
+            var driveInfo = DiskUtils.GetDiskSpaceInfo(folderPath);
             var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
             throw new DiskFullException($"There isn't enough space to flush the buffer in: {folderPath}. " +
                                         $"Currently available space: {freeSpace}");

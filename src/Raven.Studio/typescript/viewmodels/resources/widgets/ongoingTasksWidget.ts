@@ -62,6 +62,7 @@ class ongoingTaskItem {
             case "RavenEtlCount": return "RavenDB ETL";
             case "OlapEtlCount": return "OLAP ETL";
             case "SqlEtlCount": return "SQL ETL";
+            case "ElasticSearchEtlCount": return "Elasticsearch ETL";
             case "PeriodicBackupCount": return "Backup";
             case "SubscriptionCount": return "Subscription";
         }
@@ -95,6 +96,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             new ongoingTaskItem("RavenEtlCount", 0, "ravendb-etl", "icon-ravendb-etl"),
             new ongoingTaskItem("OlapEtlCount", 0, "olap-etl", "icon-olap-etl"),
             new ongoingTaskItem("SqlEtlCount", 0, "sql-etl", "icon-sql-etl"),
+            new ongoingTaskItem("ElasticSearchEtlCount", 0, "elastic-etl", "icon-elastic-search-etl"),
             new ongoingTaskItem("PeriodicBackupCount", 0, "periodic-backup", "icon-backups"),
             new ongoingTaskItem("SubscriptionCount", 0, "subscription", "icon-subscription")
         ]);

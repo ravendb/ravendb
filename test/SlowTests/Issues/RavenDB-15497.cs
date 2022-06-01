@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -17,27 +18,27 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void WaitForIndexesAfterSaveChangesCanExitWhenThrowOnTimeoutIsFalse()
+        public async Task WaitForIndexesAfterSaveChangesCanExitWhenThrowOnTimeoutIsFalse()
         {
             using (var store = GetDocumentStore())
             {
                 var index = new Index();
-                index.Execute(store);
-                store.Maintenance.Send(new DisableIndexOperation(index.IndexName));
-
-                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
-                Assert.Equal(IndexState.Disabled, indexStats.State);
-                Assert.Equal(IndexRunningStatus.Disabled, indexStats.Status);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User
                     {
-                        Name = "user1"
+                        Name = "user1",
+                        Count = 3
                     });
                     session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(3), throwOnTimeout: false);
                     session.SaveChanges();
                 }
+
+                Indexes.WaitForIndexing(store);
+
+                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
 
                 using (var session = store.OpenSession())
                 {
@@ -49,7 +50,9 @@ namespace SlowTests.Issues
 
                     var error = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.StartsWith("System.TimeoutException", error.Message);
-                    Assert.Contains("could not verify that 1 indexes has caught up with the changes as of etag", error.Message);
+                    Assert.Contains("could not verify that all indexes has caught up with the changes as of etag", error.Message);
+                    Assert.Contains("total paused indexes: 1", error.Message);
+                    Assert.DoesNotContain("total errored indexes", error.Message);
                 }
             }
         }

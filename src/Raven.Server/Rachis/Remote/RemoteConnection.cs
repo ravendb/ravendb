@@ -62,9 +62,14 @@ namespace Raven.Server.Rachis.Remote
             public string Destination;
             public int Number;
             public long Term;
+
+            public DateTime LastSent;
+            public DateTime LastReceived;
         }
 
         private RemoteConnectionInfo _info;
+        public RemoteConnectionInfo Info => _info;
+
         private static int _connectionNumber = 0;
         public static ConcurrentSet<RemoteConnectionInfo> RemoteConnectionsList = new ConcurrentSet<RemoteConnectionInfo>();
 
@@ -102,6 +107,7 @@ namespace Raven.Server.Rachis.Remote
             using (var writer = new RachisBlittableJsonTextWriter(context, _stream, afterFlush))
             {
                 context.Write(writer, msg);
+                _info.LastSent = DateTime.UtcNow;
             }
         }
 
@@ -306,6 +312,8 @@ namespace Raven.Server.Rachis.Remote
             {
                 json.BlittableValidation();
                 ValidateMessage(typeof(T).Name, json);
+                
+                _info.LastReceived = DateTime.UtcNow;
                 return JsonDeserializationRachis<T>.Deserialize(json);
             }
         }
