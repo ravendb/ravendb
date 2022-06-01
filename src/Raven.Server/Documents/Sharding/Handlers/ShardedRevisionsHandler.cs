@@ -51,5 +51,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedRevisionsHandlerProcessorForGetRevisionsConflictsConfiguration(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/revisions/revert", "POST")]
+        public async Task Revert()
+        {
+            using (var processor = new ShardedRevisionsHandlerProcessorForRevertRevisions(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
