@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Collections
@@ -14,19 +15,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
         {
         }
 
-        protected abstract ValueTask GetCollectionDocumentsAndWriteAsync(TOperationContext context, string name, int start, int pageSize, CancellationToken token);
-        
+        protected abstract ValueTask<(long numberOfResults, long totalDocumentsSizeInBytes)> GetCollectionDocumentsAndWriteAsync(TOperationContext context, string name, int start, int pageSize, CancellationToken token);
+
+        protected abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+            long totalDocumentsSizeInBytes);
+
         public override async ValueTask ExecuteAsync()
         {
+            var pageSize = RequestHandler.GetPageSize();
+            var name = RequestHandler.GetStringQueryString("name");
+            var start = RequestHandler.GetStart();
+
+            var sw = Stopwatch.StartNew();
+            long numberOfResults, totalDocumentsSizeInBytes;
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             using (var token = RequestHandler.CreateOperationToken())
             {
-                var pageSize = RequestHandler.GetPageSize();
-                var name = RequestHandler.GetStringQueryString("name");
-                var start = RequestHandler.GetStart();
-
-                await GetCollectionDocumentsAndWriteAsync(context, name, start, pageSize, token.Token);
+                (numberOfResults, totalDocumentsSizeInBytes) = await GetCollectionDocumentsAndWriteAsync(context, name, start, pageSize, token.Token);
             }
+            AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
     }
 }

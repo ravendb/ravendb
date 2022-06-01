@@ -13,6 +13,7 @@ using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
         {
         }
 
-        protected override async ValueTask GetCollectionDocumentsAndWriteAsync(TransactionOperationContext context, string name, int _, int __, CancellationToken token)
+        protected override async ValueTask<(long numberOfResults, long totalDocumentsSizeInBytes)> GetCollectionDocumentsAndWriteAsync(TransactionOperationContext context, string name, int _, int __, CancellationToken token)
         {
             throw new NotSupportedInShardingException($"Fetching documents by collection not supported in sharding.");
 
@@ -59,16 +60,21 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
                 writer.WriteEndObject();
             }
 
-            //AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle sharded AddPagingPerformanceHint");
+            return (numberOfResults, totalDocumentsSizeInBytes);
         }
-        
+
         public async IAsyncEnumerable<Document> GetDocuments(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation)
         {
             await foreach (var result in RequestHandler.DatabaseContext.Streaming.PagedShardedDocumentsByLastModified(documents, nameof(CollectionResult.Results), pagingContinuation))
             {
                 yield return result.Item;
             }
+        }
+
+        protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+            long totalDocumentsSizeInBytes)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle sharded AddPagingPerformanceHint");
         }
     }
 
