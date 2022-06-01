@@ -162,6 +162,9 @@
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.2.0" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.2.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.1.1" />
+    <PackageReference Include="CloudNative.CloudEvents" Version="2.3.0" />    
+    <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.3.0" />
+    <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.3.0" />
     <PackageReference Include="CsvHelper" Version="27.2.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2022.1.0">

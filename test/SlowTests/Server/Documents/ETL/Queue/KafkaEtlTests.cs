@@ -28,7 +28,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultTopics, DefaultCollections);
+            var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
@@ -44,7 +44,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
                 });
                 session.SaveChanges();
             }
-            
+
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(DefaultTopics.Select(x => x.Name));
@@ -57,13 +57,13 @@ public class KafkaEtlTests : KafkaEtlTestBase
             Assert.Equal(order.Id, "orders/1-A");
             Assert.Equal(order.OrderLinesCount, 2);
             Assert.Equal(order.TotalCost, 10);
-            
+
             consumer.Close();
             etlDone.Reset();
         }
     }
 
-    [RequiresKafkaFact()]
+    [RequiresKafkaFact]
     public void SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
@@ -71,7 +71,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         var numberOfOrders = 10;
         var numberOfLinesPerOrder = 2;
 
-        var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultTopics, DefaultCollections);
+        var config = SetupQueueEtlToKafka(store, DefaultScript, DefaultCollections);
         var etlDone = WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
         for (int i = 0; i < numberOfOrders; i++)
@@ -121,8 +121,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         using var store = GetDocumentStore();
 
         var config = SetupQueueEtlToKafka(store,
-            @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + TopicSuffix + @"(userData)",
-            new List<EtlQueue> { new() { Name = $"Users{TopicSuffix}" } }, new[] { "Users", "People" });
+            @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + TopicSuffix + @"(userData)", new[] { "Users", "People" });
         var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
         using (var session = store.OpenSession())
@@ -164,7 +163,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         {
             Name = "Foo",
             BrokerType = QueueBroker.Kafka,
-            KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, Url = "localhost:29092"}
+            KafkaConnectionSettings = new KafkaConnectionSettings() { ConnectionOptions = new Dictionary<string, string> { }, Url = "localhost:29092" }
         });
 
         List<string> errors;
@@ -195,7 +194,9 @@ public class KafkaEtlTests : KafkaEtlTestBase
 
             var result1 = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
             {
-                Name = "simulate", BrokerType = QueueBroker.Kafka, KafkaConnectionSettings = new KafkaConnectionSettings() { Url = "localhost:29092" }
+                Name = "simulate",
+                BrokerType = QueueBroker.Kafka,
+                KafkaConnectionSettings = new KafkaConnectionSettings() { Url = "localhost:29092" }
             }));
             Assert.NotNull(result1.RaftCommandIndex);
 
@@ -211,7 +212,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
                                {
                                    Name = "simulate",
                                    ConnectionStringName = "simulate",
-                                   EtlQueues = { new EtlQueue() { Name = "Orders" } },
+                                   Queues = { new EtlQueue() { Name = "Orders" } },
                                    Transforms =
                                    {
                                        new Transformation
@@ -256,31 +257,25 @@ output('test output')"
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtlToKafka(store, 
+            var config = SetupQueueEtlToKafka(store,
                 @$"loadToUsers{TopicSuffix}(this, {{
                                                             Id: id(this),
                                                             PartitionKey: id(this),
                                                             Type: 'com.github.users',
                                                             Source: '/registrations/direct-signup'
-                                                     }})", new List<EtlQueue>()
-            {
-                new()
-                {
-                    Name = $"Users{TopicSuffix}"
-                }
-            }, new [] { "Users"});
+                                                     }})", new[] { "Users" });
 
             var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store.OpenSession())
             {
-                session.Store(new User()
+                session.Store(new User
                 {
                     Name = "Arek"
                 });
                 session.SaveChanges();
             }
-            
+
             AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new[] { $"Users{TopicSuffix}" });
@@ -305,6 +300,54 @@ output('test output')"
             Assert.Equal("/registrations/direct-signup", Encoding.UTF8.GetString(headerSourceBytes));
 
             consumer.Close();
+        }
+    }
+
+    [RequiresKafkaFact]
+    public void ShouldDeleteDocumentsAfterProcessing()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var config = SetupQueueEtlToKafka(store,
+                @$"loadToUsers{TopicSuffix}(this)", new[] { "Users" }, new[]{
+                    new EtlQueue
+                    {
+                        Name = $"Users{TopicSuffix}",
+                        DeleteProcessedDocuments = true
+                    }
+                });
+
+            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User
+                {
+                    Id = "users/1",
+                    Name = "Arek"
+                });
+                session.SaveChanges();
+            }
+
+            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+            using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new[] { $"Users{TopicSuffix}" });
+
+            var consumeResult = consumer.Consume();
+            var bytesAsString = Encoding.UTF8.GetString(consumeResult.Message.Value);
+
+            var user = JsonConvert.DeserializeObject<User>(bytesAsString);
+
+            Assert.NotNull(user);
+            Assert.Equal(user.Name, "Arek");
+
+            consumer.Close();
+
+            using (var session = store.OpenSession())
+            {
+                var entity = session.Load<User>("users/1");
+                Assert.Null(entity);
+            }
         }
     }
 

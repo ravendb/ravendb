@@ -8,10 +8,10 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
     {
         public QueueEtlConfiguration()
         {
-            EtlQueues = new List<EtlQueue>();
+            Queues = new List<EtlQueue>();
         }
 
-        public List<EtlQueue> EtlQueues { get; set; }
+        public List<EtlQueue> Queues { get; set; }
 
         public QueueBroker BrokerType { get; set; }
 
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
             var validationResult = base.Validate(out errors, validateName, validateConnection);
             if (Connection != null && BrokerType != Connection.BrokerType)
             {
-                errors.Add("Provider must be the same in the ETL configuration and in Connection string.");
+                errors.Add("Broker type must be the same in the ETL configuration and in Connection string.");
                 return false;
             }
             return validationResult;
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         {
             var json = base.ToJson();
 
-            json[nameof(EtlQueues)] = new DynamicJsonArray(EtlQueues.Select(x => x.ToJson()));
+            json[nameof(Queues)] = new DynamicJsonArray(Queues.Select(x => x.ToJson()));
 
             return json;
         }
@@ -59,14 +59,14 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
     {
         public string Name { get; set; }
 
-        public bool DeleteAfterProcess { get; set; }
+        public bool DeleteProcessedDocuments { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(DeleteAfterProcess)] = DeleteAfterProcess
+                [nameof(DeleteProcessedDocuments)] = DeleteProcessedDocuments
             };
         }
     }

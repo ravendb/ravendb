@@ -19,13 +19,14 @@ using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfiguration, QueueConnectionString, EtlStatsScope,
+public class QueueEtl : EtlProcess<QueueItem, QueueWithMessages, QueueEtlConfiguration, QueueConnectionString, EtlStatsScope,
     EtlPerformanceOperation>
 {
     public QueueEtl(Transformation transformation, QueueEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
@@ -86,24 +87,60 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
         throw new NotSupportedException("Time series aren't supported by Queue ETL");
     }
 
-    protected override EtlTransformer<QueueItem, QueueWithEvents, EtlStatsScope, EtlPerformanceOperation> GetTransformer(
+    protected override EtlTransformer<QueueItem, QueueWithMessages, EtlStatsScope, EtlPerformanceOperation> GetTransformer(
         DocumentsOperationContext context)
     {
         return new QueueDocumentTransformer(Transformation, Database, context, Configuration);
     }
 
-    protected override int LoadInternal(IEnumerable<QueueWithEvents> items, DocumentsOperationContext context, EtlStatsScope scope)
+    protected override int LoadInternal(IEnumerable<QueueWithMessages> items, DocumentsOperationContext context, EtlStatsScope scope)
     {
         int count = 0;
 
-        switch (Configuration.Connection.BrokerType)
+        var idsToDelete = new List<string>();
+
+        using (var formatter = new BlittableJsonEventBinaryFormatter(context))
         {
-            case QueueBroker.Kafka:
-                count = ProcessKafka(items, Configuration, context);
-                break;
-            case QueueBroker.RabbitMq:
-                ProcessRabbitMq(items, context);
-                break;
+            var messages = new List<QueueMessage>();
+
+            foreach (QueueWithMessages queueItem in items)
+            {
+                var queueName = queueItem.Name;
+
+                foreach (var message in queueItem.Messages)
+                {
+                    CloudEvent eventMessage = CreateEventMessage(message);
+
+                    messages.Add(new QueueMessage { QueueName = queueName, Message = eventMessage});
+
+                    if (queueItem.DeleteProcessedDocuments)
+                        idsToDelete.Add(message.DocumentId);
+                }
+            }
+
+            switch (Configuration.Connection.BrokerType)
+            {
+                case QueueBroker.Kafka:
+                    count = ProcessKafka(messages, formatter);
+                    break;
+                case QueueBroker.RabbitMq:
+                    count = ProcessRabbitMq(messages, formatter);
+                    break;
+            }
+        }
+
+        if (idsToDelete.Count > 0)
+        {
+            var enqueue = Database.TxMerger.Enqueue(new DeleteDocumentsCommand(idsToDelete, Database));
+
+            try
+            {
+                enqueue.GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                throw new QueueLoadException("Failed to delete processed documents", e);
+            }
         }
 
         return count;
@@ -114,118 +151,83 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
         return new EtlStatsScope(stats);
     }
 
-    private int ProcessKafka(IEnumerable<QueueWithEvents> items, QueueEtlConfiguration queueEtlConfiguration,
-        DocumentsOperationContext context)
+    private int ProcessKafka(List<QueueMessage> messages, BlittableJsonEventBinaryFormatter formatter)
     {
         int count = 0;
 
-        using (var formatter = new BlittableEventBinaryFormatter(context))
+        if (messages.Count == 0)
+            return count;
+
+        if (_kafkaProducer == null)
         {
-            var events = new List<KafkaMessageEvent>();
+            _kafkaProducer = QueueHelper.CreateKafkaClient(Configuration.Connection, TransactionalId, Logger,
+                Database.ServerStore.Server.Certificate.Certificate);
+            _kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
+        }
 
-            foreach (QueueWithEvents queueItem in items)
+        void ReportHandler(DeliveryReport<string?, byte[]> report)
+        {
+            if (report.Error.IsError == false)
             {
-                var topicName = queueItem.Name;
+                count++;
+            }
+            else
+            {
+                Logger.Info($"Failed to deliver message: {report.Error.Reason}");
+                _kafkaProducer.AbortTransaction();
+            }
+        }
 
-                foreach (var insertItem in queueItem.Inserts)
-                {
-                    CloudEvent eventMessage = CreateEventMessage(insertItem);
+        _kafkaProducer.BeginTransaction();
 
-                    events.Add(new KafkaMessageEvent
-                    {
-                        Topic = topicName, Message = eventMessage.ToKafkaMessage(ContentMode.Binary, formatter)
-                    });
-                }
+        try
+        {
+            foreach (var @event in messages)
+            {
+                var kafkaMessage = @event.Message.ToKafkaMessage(ContentMode.Binary, formatter);
+
+                _kafkaProducer.Produce(@event.QueueName, kafkaMessage, ReportHandler);
             }
 
-            if (events.Count == 0) return count;
-
-            if (_kafkaProducer == null)
-            {
-                _kafkaProducer = QueueHelper.CreateKafkaClient(Configuration.Connection, TransactionalId, Logger,
-                    Database.ServerStore.Server.Certificate.Certificate);
-                _kafkaProducer.InitTransactions(TimeSpan.FromSeconds(60));
-            }
-
-            void ReportHandler(DeliveryReport<string?, byte[]> report)
-            {
-                if (report.Error.IsError == false)
-                {
-                    count++;
-                }
-                else
-                {
-                    Logger.Info($"Failed to deliver message: {report.Error.Reason}");
-                    _kafkaProducer.AbortTransaction();
-                }
-            }
-
-            _kafkaProducer.BeginTransaction();
-            
+            _kafkaProducer.CommitTransaction();
+        }
+        catch (Exception ex)
+        {
             try
             {
-                foreach (var @event in events)
-                {
-                    _kafkaProducer.Produce(@event.Topic, @event.Message, ReportHandler);
-                }
-
-                _kafkaProducer.CommitTransaction();
+                _kafkaProducer.AbortTransaction();
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                try
-                {
-                    _kafkaProducer.AbortTransaction();
-                }
-                catch (Exception e)
-                {
-                    Logger.Info("Aborting kafka transaction failed.", e);
-                }
-                
-                throw new QueueLoadException(ex.Message, ex);
+                Logger.Info("Aborting kafka transaction failed.", e);
             }
+
+            throw new QueueLoadException(ex.Message, ex);
         }
 
         return count;
     }
 
-    private int ProcessRabbitMq(IEnumerable<QueueWithEvents> items, DocumentsOperationContext context)
+    private int ProcessRabbitMq(List<QueueMessage> messages, BlittableJsonEventBinaryFormatter formatter)
     {
         int count = 0;
 
-        using (var formatter = new BlittableEventBinaryFormatter(context))
+        if (messages.Count == 0)
+            return count;
+
+        if (_rabbitMqProducer == null)
         {
-            var events = new List<RabbitMqMessageEvent>();
+            _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId,
+                Database.ServerStore.Server.Certificate.Certificate);
+        }
 
-            foreach (QueueWithEvents queueItem in items)
-            {
-                var topicName = queueItem.Name;
+        foreach (var @event in messages)
+        {
+            var ampqMessage = @event.Message.ToAmqpMessage(ContentMode.Binary, formatter);
 
-                foreach (var insertItem in queueItem.Inserts)
-                {
-                    CloudEvent eventMessage = CreateEventMessage(insertItem);
-
-                    events.Add(new RabbitMqMessageEvent
-                    {
-                        Topic = topicName, Message = eventMessage.ToAmqpMessage(ContentMode.Binary, formatter)
-                    });
-                }
-            }
-
-            if (events.Count == 0) return count;
-
-            if (_rabbitMqProducer == null)
-            {
-                _rabbitMqProducer = QueueHelper.CreateRabbitMqClient(Configuration.Connection, TransactionalId,
-                    Database.ServerStore.Server.Certificate.Certificate);
-            }
-
-            foreach (var @event in events)
-            {
-                //loadToOrders
-                //_rabbitMqProducer.QueueDeclare(@event.Topic, durable: false, exclusive: false, autoDelete: false, arguments: null);
-                _rabbitMqProducer.BasicPublish("Test-topic", "", null, @event.Message.Encode().Buffer);
-            }
+            //loadToOrders
+            //_rabbitMqProducer.QueueDeclare(@event.Topic, durable: false, exclusive: false, autoDelete: false, arguments: null);
+            _rabbitMqProducer.BasicPublish("Test-topic", "", null, ampqMessage.Encode().Buffer);
         }
 
         return count;
@@ -247,7 +249,7 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
         return eventMessage;
     }
 
-    public QueueEtlTestScriptResult RunTest(IEnumerable<QueueWithEvents> records, DocumentsOperationContext context)
+    public QueueEtlTestScriptResult RunTest(IEnumerable<QueueWithMessages> records, DocumentsOperationContext context)
     {
         var simulatedWriter = new QueueWriterSimulator();
         var summaries = new List<TopicSummary>();
@@ -269,5 +271,12 @@ public class QueueEtl : EtlProcess<QueueItem, QueueWithEvents, QueueEtlConfigura
     {
         base.Dispose();
         _kafkaProducer?.Dispose();
+    }
+
+    private class QueueMessage
+    {
+        public string QueueName { get; set; }
+
+        public CloudEvent Message { get; set; }
     }
 }
