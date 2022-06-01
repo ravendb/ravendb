@@ -53,9 +53,9 @@ namespace SlowTests.Server.Documents.ETL
                 
                 var queueConnectionString = new QueueConnectionString
                 {
-                    Name = "ElasticSearchConnectionString",
+                    Name = "QueueEtlConnectionString-Kafka",
                     BrokerType = QueueBroker.Kafka,
-                    KafkaConnectionSettings = new KafkaConnectionSettings(){Url = "http://127.0.0.1:8080" }
+                    KafkaConnectionSettings = new KafkaConnectionSettings(){Url = "localhost:9092" }
                 };
 
                 var resultQueue = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(queueConnectionString));
@@ -81,9 +81,9 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.Equal(elasticSearchConnectionString.Name , record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Name);
                 Assert.Equal(elasticSearchConnectionString.Nodes, record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Nodes);
                 
-                Assert.True(record.QueueConnectionStrings.ContainsKey("QueueConnectionString"));
-                Assert.Equal(queueConnectionString.Name , record.QueueConnectionStrings["QueueConnectionString"].Name);
-                Assert.Equal(queueConnectionString.KafkaConnectionSettings.Url, record.QueueConnectionStrings["QueueConnectionString"].KafkaConnectionSettings.Url);
+                Assert.True(record.QueueConnectionStrings.ContainsKey("QueueEtlConnectionString-Kafka"));
+                Assert.Equal(queueConnectionString.Name , record.QueueConnectionStrings["QueueEtlConnectionString-Kafka"].Name);
+                Assert.Equal(queueConnectionString.KafkaConnectionSettings.Url, record.QueueConnectionStrings["QueueEtlConnectionString-Kafka"].KafkaConnectionSettings.Url);
 
                 var result3 = store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
                 Assert.NotNull(result3.RaftCommandIndex);
@@ -103,7 +103,7 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.False(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
                 Assert.False(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
                 Assert.False(record.ElasticSearchConnectionStrings.ContainsKey("ElasticSearchConnectionString"));
-                Assert.False(record.QueueConnectionStrings.ContainsKey("QueueConnectionString"));
+                Assert.False(record.QueueConnectionStrings.ContainsKey("QueueEtlConnectionString-Kafka"));
 
             }
         }
