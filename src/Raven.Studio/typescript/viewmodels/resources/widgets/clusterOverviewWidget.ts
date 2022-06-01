@@ -28,12 +28,14 @@ class nodeStatsItem {
 
     disconnected = ko.observable<boolean>(true);
     noData: boolean = true;
-    
-    even: boolean = false;
 
     constructor(tag: string) {
         this.nodeTag = tag;
 
+        this.initObservables();
+    }
+
+    initObservables() {
         this.formattedStartTime = ko.pureComputed(() => {
             const start = this.startTime();
             return start ? generalUtils.formatUtcDateAsLocal(start) : "";
@@ -67,7 +69,7 @@ class nodeStatsItem {
             this.formattedUpTime("a few seconds");
         }
         
-        return generalUtils.formatDurationByDate(moment(startTime));
+        return generalUtils.formatDurationByDate(moment.utc(startTime));
     }
 }
 
@@ -100,11 +102,9 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        this.gridController().customRowClassProvider(item => item.even ? ["even"] : []);
-
         grid.init(() => this.prepareGridData(), () => this.prepareColumns());
 
-        this.columnPreview.install(".cluster-overview-grid", ".js-preview",
+        this.columnPreview.install(".cluster-overview-grid", ".js-cluster-overview-preview",
             (nodeItem: nodeStatsItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column instanceof textColumn && column.header === "Start time") {
                     onValue(moment.utc(nodeItem.startTime()), nodeItem.startTime());
@@ -113,17 +113,13 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         
         this.enableSyncUpdates();
 
-        for (let ws of this.controller.getConnectedLiveClients()) {
+        for (const ws of this.controller.getConnectedLiveClients()) {
             this.onClientConnected(ws);
         }
-
-        this.initTooltips();
     }
 
     private prepareGridData(): JQueryPromise<pagedResult<nodeStatsItem>> {
         let items = this.nodeStats();
-
-        this.applyPerDatabaseStripes(items);
         
         return $.when({
             totalResultCount: items.length,
@@ -141,11 +137,11 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
 
             new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeState() ? this.nodeStateDataForHtml(item.nodeState()) : "", "State", "15%"),
 
-            new textColumn<nodeStatsItem>(grid, item => item.formattedUpTime() || "", "Up time", "15%"),
+            new textColumn<nodeStatsItem>(grid, item => item.formattedUpTime() ?? "", "Up time", "15%"),
 
-            new textColumn<nodeStatsItem>(grid, item => item.formattedStartTime() || "", "Start time", "20%"),
+            new textColumn<nodeStatsItem>(grid, item => item.formattedStartTime() ?? "", "Start time", "20%"),
             
-            new actionColumn<nodeStatsItem>(grid, item => router.navigate(item.nodeUrl()), "URL", item => item.nodeUrl() || "" , "20px",
+            new actionColumn<nodeStatsItem>(grid, item => router.navigate(item.nodeUrl()), "URL", item => item.nodeUrl() ?? "" , "20px",
                 {
                     title: () => 'Go to URL'
                 }),
@@ -156,21 +152,22 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         let iconClass;
         
         switch (type) {
-            case "Member": iconClass = "icon-cluster-member";
-            break;
-            case "Promotable": iconClass = "icon-cluster-promotable";
-            break;
-            case "Watcher": iconClass= "icon-cluster-watcher";
-            break;
+            case "Member":
+                iconClass = "icon-cluster-member";
+                break;
+            case "Promotable":
+                iconClass = "icon-cluster-promotable";
+                break;
+            case "Watcher":
+                iconClass = "icon-cluster-watcher";
+                break;
             default:
                 console.warn("Invalid node type: " + type);
-            break;
+                break;
         }
         return [{
-            title: "",
             text: type,
-            iconClass: iconClass,
-            textClass: ""
+            iconClass: iconClass
         }];
     }
 
@@ -195,10 +192,8 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         }
 
         return [{
-            title: "",
             text: state,
-            iconClass: iconClass,
-            textClass: ""
+            iconClass: iconClass
         }];
     }
 
@@ -229,15 +224,11 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         } else {
             return {
                 url: appUrl.toExternalUrl(targetNode.serverUrl(), link),
-                noData: false, // todo ???
+                noData: false,
                 openInNewTab: true,
                 targetDescription: targetDescription
             }
         }
-    }
-    
-    private initTooltips() {
-        $('[data-toggle="tooltip"]', this.container).tooltip();
     }
 
     onData(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.ClusterOverviewPayload) {
@@ -248,17 +239,13 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
     onClientConnected(ws: clusterDashboardWebSocketClient) {
         super.onClientConnected(ws);
         
-        this.withStats(ws.nodeTag, x => x.disconnected(false)); // ??? todo
+        this.withStats(ws.nodeTag, x => x.disconnected(false));
     }
 
     onClientDisconnected(ws: clusterDashboardWebSocketClient) {
         super.onClientDisconnected(ws);
-        
-        this.withStats(ws.nodeTag, (x) => {
-            x.disconnected(true);
-        })
 
-        this.gridController().reset(false);
+        this.withStats(ws.nodeTag, x => x.disconnected(true));
     }
 
     private withStats(nodeTag: string, action: (stats: nodeStatsItem) => void) {
@@ -270,18 +257,6 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
 
     protected afterSyncUpdate(updatesCount: number) {
         this.gridController().reset(false);
-        
-        this.initTooltips();
-    }
-
-    protected applyPerDatabaseStripes(items: nodeStatsItem[]) {
-        let even = true;
-
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            even = !even;
-            item.even = even;
-        }
     }
 }
 
