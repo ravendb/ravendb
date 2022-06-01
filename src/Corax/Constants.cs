@@ -33,10 +33,10 @@ namespace Corax
 
         public static class IndexWriter
         {
-            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice;
+            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
-            public const short ByteKnownFieldMask = unchecked((byte)0x80);
+            public const byte ByteKnownFieldMask = unchecked((byte)0x80);
 
             static IndexWriter()
             {
@@ -47,6 +47,7 @@ namespace Corax
                     Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
                     Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
                     Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
+                    Slice.From(ctx, "IndexVersion", ByteStringType.Immutable, out IndexVersionSlice);
                 }
             }
         }
