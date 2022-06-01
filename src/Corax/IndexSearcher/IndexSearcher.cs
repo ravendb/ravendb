@@ -47,15 +47,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
-        try
-        {
-            IndexVersionGuardian.AssertIndex(Transaction);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
     }
 
     public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null)
@@ -63,7 +54,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _ownsTransaction = false;
         _transaction = tx;
         _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
-        IndexVersionGuardian.AssertIndex(Transaction);
     }
 
     public UnmanagedSpan GetIndexEntryPointer(long id)

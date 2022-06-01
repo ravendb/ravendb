@@ -18,7 +18,6 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
-    private bool _initialized;
 
     public CoraxIndexPersistence(Index index) : base(index)
     {
@@ -100,22 +99,23 @@ public class CoraxIndexPersistence : IndexPersistenceBase
     {
         using (var tx = environment.WriteTransaction())
         {
-            try
+            var version = tx.LowLevelTransaction.RootObjects.ReadInt64(global::Corax.Constants.IndexWriter.IndexVersionSlice);
+            if (version.HasValue)
             {
-                IndexVersionGuardian.AssertIndex(tx);
+                var currentCoraxVersion = global::Corax.Constants.IndexWriter.Version;
+                if (version.Value != currentCoraxVersion)
+                {
+                    
+                    throw new CoraxInvalidIndexVersionException(
+                        $"Index was built on Corax version {version.ToString()}. The current version {currentCoraxVersion} uses different structures than its predecessors. To use Corax, please restart the entire index.");
+                }
             }
-            catch (CoraxIndexVersionNotFound)
+            else
             {
-                IndexVersionGuardian.WriteCurrentIndexVersion(tx);
+                tx.LowLevelTransaction.RootObjects.Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.Version);
+                tx.Commit();
             }
-            catch (CoraxInvalidIndexVersionException)
-            {
-                throw;
-            }
-            tx.Commit();
         }
-
-        _initialized = true;    
     }
 
     public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
