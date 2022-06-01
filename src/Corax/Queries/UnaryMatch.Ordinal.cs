@@ -1,13 +1,15 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
+using Corax.Utils;
 using Sparrow;
 using Voron;
 
 namespace Corax.Queries
 {
-
     unsafe partial struct UnaryMatch<TInner, TValueType>
     {
         public interface IUnaryMatchComparer
@@ -32,7 +34,6 @@ namespace Corax.Queries
             QueryContext.MatchesRawPool.Return(bufferHolder);
             return result;
         }
-
 
 
         [SkipLocalsInit]
@@ -68,7 +69,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     // If we get a null, we just skip it. It will not match.
                     if (type == IndexEntryFieldType.Null)
                     {
@@ -77,7 +78,7 @@ namespace Corax.Queries
                             // Found a null, item is not elegible.
                             continue;
                         }
-                    }                        
+                    }
                     else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
                         var iterator = reader.ReadMany(match._fieldId);
@@ -95,7 +96,7 @@ namespace Corax.Queries
                             }
 
                             var analyzedTerm = match._searcher.ApplyAnalyzer(iterator.Sequence, match._fieldId);
-                            
+
                             // If there is any match, then it is a match
                             if (comparer.Compare(currentType, analyzedTerm))
                             {
@@ -103,6 +104,7 @@ namespace Corax.Queries
                                 break;
                             }
                         }
+
                         if (!isMatch)
                             continue; // No match, item is not elegible.
                     }
@@ -132,6 +134,122 @@ namespace Corax.Queries
             } while (results >= totalResults + maxUnusedMatchesSlots);
 
             return storeIdx;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        private static int BinarySearch(TermQueryItem[] item, ReadOnlySpan<byte> value)
+        {
+            int l = 0;
+            int r = item.Length - 1;
+            while (l <= r)
+            {
+                var pivot = (l + r) >> 1;
+                switch (item[pivot].Item.Span.SequenceCompareTo(value))
+                {
+                    case 0:
+                        return pivot;
+                    case < 0:
+                        l = pivot + 1;
+                        break;
+                    default:
+                        r = pivot - 1;
+                        break;
+                }
+            }
+
+            return -1;
+        }
+
+        [SkipLocalsInit]
+        private static int FillFuncSequenceAllIn(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        {
+            var value = ((TermQueryItem[])(object)match._value);
+            using var bitset = new BitSet(value.Length);
+            var searcher = match._searcher;
+            var fieldId = match._fieldId;
+            var currentMatches = matches;
+            int totalResults = 0;
+            int storeIdx = 0;
+            int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+
+            int results;
+            do
+            {
+                var freeMemory = currentMatches.Slice(storeIdx);
+                results = match._inner.Fill(freeMemory);
+
+                if (results == 0)
+                    return totalResults;
+
+                for (int i = 0; i < results; i++)
+                {
+                    var reader = searcher.GetReaderFor(freeMemory[i]);
+                    var type = reader.GetFieldType(match._fieldId, out var _);
+                    if (type == IndexEntryFieldType.Invalid)
+                        continue;
+
+                    bitset.Clear();
+                    if (type == IndexEntryFieldType.Null)
+                    {
+                        if (match._operation != UnaryMatchOperation.NotEquals)
+                        {
+                            if (value.Length != 1)
+                                continue;
+                            CheckAndSet(ReadOnlySpan<byte>.Empty, true);
+                        }
+                    }
+                    else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
+                    {
+                        var iterator = reader.ReadMany(match._fieldId);
+                        while (iterator.ReadNext())
+                        {
+                            if (iterator.IsNull)
+                                CheckAndSet(ReadOnlySpan<byte>.Empty, iterator.IsNull);
+                            else
+                                CheckAndSet(iterator.Sequence);
+                        }
+                    }
+                    else if (type.HasFlag(IndexEntryFieldType.Tuple) || type.HasFlag(IndexEntryFieldType.Simple))
+                    {
+                        if (value.Length != 1)
+                            continue;
+
+                        if (reader.Read(match._fieldId, out var readType, out var resultX) == false)
+                            continue;
+                        
+                        if (readType == IndexEntryFieldType.Null)
+                            CheckAndSet(ReadOnlySpan<byte>.Empty, true);
+                        else
+                            CheckAndSet(resultX);
+                    }
+
+                    if (bitset.IsAllSet() == false)
+                        continue;
+
+                    currentMatches[storeIdx] = freeMemory[i];
+                    storeIdx++;
+                    totalResults++;
+                }
+            } while (results >= totalResults + maxUnusedMatchesSlots);
+
+            return storeIdx;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void CheckAndSet(ReadOnlySpan<byte> readFromEntry, bool isNull = false)
+            {
+                int index;
+                if (isNull)
+                {
+                    index = BinarySearch(value, Constants.NullValueSlice.AsSpan());
+                }
+                else
+                {
+                    var analyzedTerm = searcher.ApplyAnalyzer(readFromEntry, fieldId);
+                    index = BinarySearch(value, analyzedTerm);
+                }
+                if (index >= 0)
+                    bitset.Set(index);
+            }
         }
 
         [SkipLocalsInit]
@@ -168,7 +286,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     // If we get a null, we just skip it. It will not match.
 
                     if (type == IndexEntryFieldType.Null)
@@ -178,7 +296,7 @@ namespace Corax.Queries
                             // Found a null, item is not elegible.
                             continue;
                         }
-                    }                        
+                    }
                     else if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
                         var iterator = reader.ReadMany(match._fieldId);
@@ -199,6 +317,7 @@ namespace Corax.Queries
                                 break;
                             }
                         }
+
                         if (isNotMatch)
                             continue; // Has nulls or not a match, item is not elegible.
                     }
@@ -257,7 +376,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     if (type == IndexEntryFieldType.Null)
                         continue; // It is null, item is not elegible.
 
@@ -277,6 +396,7 @@ namespace Corax.Queries
                                     break;
                                 }
                             }
+
                             if (isNotMatch)
                                 continue;
                         }
@@ -330,10 +450,10 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     if (type == IndexEntryFieldType.Null)
                         continue; // It is null, item is not elegible.
-                    
+
                     if (type.HasFlag(IndexEntryFieldType.List) || type.HasFlag(IndexEntryFieldType.TupleList))
                     {
                         if (type.HasFlag(IndexEntryFieldType.HasNulls) && !type.HasFlag(IndexEntryFieldType.Empty))
@@ -350,6 +470,7 @@ namespace Corax.Queries
                                     break;
                                 }
                             }
+
                             if (!isMatch)
                                 continue; // It is not a match, item is not elegible.
                         }
@@ -362,7 +483,7 @@ namespace Corax.Queries
                         if (readType == IndexEntryFieldType.Null)
                             continue; // It is null, item is not elegible.
                     }
-                    
+
                     currentMatches[storeIdx] = freeMemory[i];
                     storeIdx++;
                     totalResults++;
@@ -371,7 +492,6 @@ namespace Corax.Queries
 
             return storeIdx;
         }
-
 
 
         [SkipLocalsInit]
@@ -402,7 +522,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     // If it is not a null, then we need to check lots of things.
                     if (type != IndexEntryFieldType.Null)
                     {
@@ -438,7 +558,7 @@ namespace Corax.Queries
                         }
                         else
                             continue;
-                    }                        
+                    }
 
                     currentMatches[storeIdx] = freeMemory[i];
                     storeIdx++;
@@ -477,7 +597,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out var _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     // If it is not a null, then we need to check lots of things.
                     if (type != IndexEntryFieldType.Null)
                     {
@@ -496,6 +616,7 @@ namespace Corax.Queries
                                         break;
                                     }
                                 }
+
                                 if (!isMatch)
                                     continue; // It is not a match, item is not elegible.
                             }
@@ -530,7 +651,7 @@ namespace Corax.Queries
             var currentMatches = matches;
             int totalResults = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
-            int storeIdx = 0;            
+            int storeIdx = 0;
 
             int results;
             do
@@ -546,7 +667,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     if (TypesHelper.IsInteger<TValueType>())
                     {
                         long currentType = CoherseValueTypeToLong(match._value);
@@ -574,6 +695,7 @@ namespace Corax.Queries
                                     break;
                                 }
                             }
+
                             if (!isMatch)
                                 continue; // Not a match, item is not elegible.
                         }
@@ -593,7 +715,7 @@ namespace Corax.Queries
                     else if (TypesHelper.IsFloatingPoint<TValueType>())
                     {
                         double currentType = CoherseValueTypeToDouble(match._value);
-                        
+
                         if (type == IndexEntryFieldType.Null)
                         {
                             if (match._operation != UnaryMatchOperation.NotEquals)
@@ -618,6 +740,7 @@ namespace Corax.Queries
                                     break;
                                 }
                             }
+
                             if (!isMatch)
                                 continue; // Not a match, item is not elegible.
                         }
@@ -672,7 +795,7 @@ namespace Corax.Queries
                     var type = reader.GetFieldType(match._fieldId, out _);
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
-                    
+
                     if (type == IndexEntryFieldType.Null)
                     {
                         if (match._operation != UnaryMatchOperation.NotEquals)
@@ -703,6 +826,7 @@ namespace Corax.Queries
                                     break;
                                 }
                             }
+
                             if (isNotMatch)
                                 continue; // It is not a match, item is not elegible.
                         }
@@ -711,7 +835,7 @@ namespace Corax.Queries
                             var read = reader.Read<long>(match._fieldId, out var readType, out var resultX);
                             if (!read || readType == IndexEntryFieldType.Null)
                                 continue; // It is null, item is not elegible.
-                                          // 
+                            // 
                             if (!comparer.Compare(currentType, resultX))
                                 continue; // It is null or not a match, item is not elegible.   
                         }
@@ -740,6 +864,7 @@ namespace Corax.Queries
                                     break;
                                 }
                             }
+
                             if (isNotMatch)
                                 continue; // It is not a match, item is not elegible.
                         }
@@ -748,7 +873,7 @@ namespace Corax.Queries
                             var read = reader.Read<double>(match._fieldId, out var readType, out var resultX);
                             if (!read || readType == IndexEntryFieldType.Null)
                                 continue; // It is null, item is not elegible.
-                                          // 
+                            // 
                             if (!comparer.Compare(currentType, resultX))
                                 continue; // It is null or not a match, item is not elegible.   
                         }
@@ -768,7 +893,8 @@ namespace Corax.Queries
             return totalResults;
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldIsNull(in TInner inner, IndexSearcher searcher, int fieldId, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldIsNull(in TInner inner, IndexSearcher searcher, int fieldId,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             return new UnaryMatch<TInner, TValueType>(
                 in inner, UnaryMatchOperation.Equals,
@@ -777,7 +903,8 @@ namespace Corax.Queries
                 inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldIsNotNull(in TInner inner, IndexSearcher searcher, int fieldId, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
+        public static UnaryMatch<TInner, TValueType> YieldIsNotNull(in TInner inner, IndexSearcher searcher, int fieldId,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
         {
             return new UnaryMatch<TInner, TValueType>(
                 in inner, UnaryMatchOperation.NotEquals,
@@ -786,11 +913,12 @@ namespace Corax.Queries
                 inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
+        public static UnaryMatch<TInner, TValueType> YieldGreaterThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
-            {                
+            {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThan,
                     searcher, fieldId, value,
@@ -815,7 +943,8 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThanOrEqual,
                     searcher, fieldId, value,
-                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<GreaterThanOrEqualMatchComparer> : &FillFuncSequenceAll<GreaterThanOrEqualMatchComparer>, &AndWith,
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<GreaterThanOrEqualMatchComparer> : &FillFuncSequenceAll<GreaterThanOrEqualMatchComparer>,
+                    &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
@@ -823,12 +952,14 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.GreaterThanOrEqual,
                     searcher, fieldId, value,
-                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumericalAny<GreaterThanOrEqualMatchComparer> : &FillFuncNumericalAny<GreaterThanOrEqualMatchComparer>, &AndWith,
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumericalAny<GreaterThanOrEqualMatchComparer> : &FillFuncNumericalAny<GreaterThanOrEqualMatchComparer>,
+                    &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
 
-        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
+        public static UnaryMatch<TInner, TValueType> YieldLessThan(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any,
             int take = -1)
         {
             if (typeof(TValueType) == typeof(Slice))
@@ -857,7 +988,8 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.LessThanOrEqual,
                     searcher, fieldId, value,
-                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<LessThanOrEqualMatchComparer> : &FillFuncSequenceAll<LessThanOrEqualMatchComparer>, &AndWith,
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncSequenceAny<LessThanOrEqualMatchComparer> : &FillFuncSequenceAll<LessThanOrEqualMatchComparer>,
+                    &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
@@ -865,7 +997,8 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.LessThanOrEqual,
                     searcher, fieldId, value,
-                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumericalAny<LessThanOrEqualMatchComparer> : &FillFuncNumericalAny<LessThanOrEqualMatchComparer>, &AndWith,
+                    mode == UnaryMatchOperationMode.Any ? &FillFuncNumericalAny<LessThanOrEqualMatchComparer> : &FillFuncNumericalAny<LessThanOrEqualMatchComparer>,
+                    &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
         }
@@ -882,7 +1015,7 @@ namespace Corax.Queries
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
             }
             else
-            {                
+            {
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.NotEquals,
                     searcher, fieldId, value,
@@ -912,6 +1045,16 @@ namespace Corax.Queries
             }
         }
 
+        public static UnaryMatch<TInner, TValueType> YieldAllIn(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value,
+            UnaryMatchOperationMode mode = UnaryMatchOperationMode.Any, int take = -1)
+        {
+            return new UnaryMatch<TInner, TValueType>(
+                in inner, UnaryMatchOperation.AllIn,
+                searcher, fieldId, value,
+                &FillFuncSequenceAllIn, &AndWith,
+                inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), mode, take: take);
+        }
+        
         internal struct GreaterThanMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -1067,6 +1210,5 @@ namespace Corax.Queries
 
             throw new NotSupportedException($"Type '{typeof(TValueType).Name} is not supported. Only long, ulong, int, uint, double and float are supported.");
         }
-
     }
 }

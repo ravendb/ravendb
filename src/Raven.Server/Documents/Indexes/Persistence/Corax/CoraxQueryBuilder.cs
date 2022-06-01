@@ -287,12 +287,23 @@ public static class CoraxQueryBuilder
 
             var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
 
+            var hasGotTheRealType = false;
 
             if (ie.All)
             {
-                throw new NotImplementedException($"{nameof(Corax)} doesn't support AllIn");
-            }
+                var uniqueMatches = new HashSet<string>();
+                foreach (var tuple in QueryBuilderHelper.GetValuesForIn(query, ie, metadata, parameters))
+                {
+                    if (exact && metadata.IsDynamic)
+                        fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
+                    uniqueMatches.Add(QueryBuilderHelper.CoraxGetValueAsString(tuple.Value));
+                }
+
+                return indexSearcher.AllInQuery(fieldName, uniqueMatches, fieldId);
+
+            }
+            
             var matches = new List<string>();
             foreach (var tuple in QueryBuilderHelper.GetValuesForIn(query, ie, metadata, parameters))
             {

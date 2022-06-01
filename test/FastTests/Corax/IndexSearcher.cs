@@ -665,6 +665,50 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void AllIn()
+        {
+            var entry0 = new IndexEntry { Id = "entry/0", Content = new string[] {  "quo", "consequatur?", "officia", "in", "pariatur.", "illo", "minim", "nihil", "consequuntur", "eum", "consequuntur", "error", "qui", "et", "eos", "minim", "numquam", "commodo", "architecto", "ut", "Cicero", "deserunt", "Finibus", "sunt", "nesciunt.", "molestiae", "Quis", "THIS_IS_UNIQUE_VALUE,", "eum", "in"}, };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] {  "incididunt", "fugiat", "quia", "consequatur?", "magnam", "officia", "elit,", "illum", "ipsa", "of", "culpa", "ea", "voluptas", "Duis", "voluptatem", "Lorem", "modi", "qui", "Sed", "veritatis", "written", "ea", "mollit", "sint", "porro", "ratione", "THIS_IS_UNIQUE_VALUE,", "consectetur", "laudantium,", "aliquam"}, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] {  "laboris", "natus", "Neque", "consequatur,", "qui", "ut", "natus", "illo", "Quis", "voluptas", "eaque", "quasi", "", "aut", "esse", "sed", "qui", "aut", "eos", "eius", "quia", "esse", "aliquip", "", "vel", "quia", "aliqua.", "quia", "consequatur,", "Sed"}, };
+            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] {  "enim", "aliquid", "voluptas", "Finibus", "eaque", "esse", "Duis", "aut", "voluptatem.", "reprehenderit", "ad", "illum", "consequatur?", "architecto", "velit", "esse", "veniam,", "amet,", "voluptatem", "accusantium", "THIS_IS_UNIQUE_VALUE.", "dolore", "eum", "laborum.", "ipsam", "of", "explicabo.", "voluptatem", "et", "quis"}, };
+            var entry4 = new IndexEntry { Id = "entry/4", Content = new string[] {  "incididunt", "id", "ratione", "inventore", "pariatur.", "molestiae", "dolor", "sit", "Nemo", "de", "nulla", "et", "proident,", "quae", "ipsam", "iste", "in", "dolore", "culpa", "enim", "dolor", "consectetur", "veritatis", "of", "45", "fugiat", "magnam", "Bonorum", "dolor", "beatae"}, };
+            var entry5 = new IndexEntry { Id = "entry/5", Content = new string[] {  "laboriosam,", "totam", "voluptate", "et", "sit", "culpa", "reprehenderit", "eius", "accusantium", "", "omnis", "beatae", "amet,", "nulla", "tempor", "ullamco", "dolor", "ipsam", "vel", "THIS_IS_UNIQUE_VALUE", "quia", "", "consequatur,", "labore", "aliqua.", "dicta", "nostrum", "ut", "dolorem", "Duis"}, };
+            var entry6 = new IndexEntry { Id = "entry/6", Content = new string[] {  "enim", "sed", "ad", "deserunt", "eu", "omnis", "voluptate", "in", "qui", "rem", "sunt", "tempor", "voluptatem", "vel", "enim", "velit", "velit", "aliquip", "by", "in", "eum", "dolore", "incidunt", "commodi", "anim", "amet,", "quo", "est,", "ratione", "sit"}, };
+            var entry7 = new IndexEntry { Id = "entry/7", Content = new string[] {  "sed", "qui", "esse", "THIS_IS_UNIQUE_VALUE", "dolore", "totam", "Nemo", "veniam,", "reprehenderit", "consequuntur", "consequuntur", "aperiam,", "fugiat", "sed", "corporis", "45", "culpa", "accusantium", "quae", "dolor", "voluptate", "dolor", "et", "explicabo.", "voluptate", "Nemo", "tempora", "accusantium", "dolore", "in"}, };
+            var entry8 = new IndexEntry { Id = "entry/8", Content = new string[] {  "nihil", "velit", "quia", "amet,", "fugit,", "eiusmod", "magna", "aliqua.", "ullamco", "accusantium", "nulla", "ex", "sit", "quo", "sit", "sit", "enim", "qui", "sunt", "aspernatur", "laboris", "autem", "voluptas", "amet,", "ipsa", "commodo", "minima", "consectetur,", "fugiat", "voluptas"}, };
+            var entry9 = new IndexEntry { Id = "entry/9", Content = new string[] {  "dolorem", "ipsa", "in", "omnis", "ullamco", "ab", "esse", "aut", "rem", "eu", "iure", "ad", "consequuntur", "est", "adipisci", "velit", "inventore", "nesciunt.", "ad", "vitae", "laborum.", "esse", "voluptate", "et", "fugiat", "fugiat", "voluptas", "quae", "dolor", "qui"}, };
+            var entries = new[] {entry0, entry1, entry2, entry3, entry4, entry5, entry6, entry7, entry8, entry9};
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match = searcher.AllInQuery("Content", new HashSet<string>() {"quo", "in"}, ContentIndex);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+            
+            {
+                var match = searcher.AllInQuery("Content", new HashSet<string>(){"dolorem", "ipsa", "in", "omnis", "ullamco", "ab", "esse", "aut", "rem", "eu", "iure", "ad", "consequuntur", "est", "adipisci", "velit", "inventore", "nesciunt.", "ad", "vitae", "laborum.", "esse", "voluptate", "et", "fugiat", "fugiat", "voluptas", "quae", "dolor", "qui"}, ContentIndex);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+            
+            {
+                var match = searcher.AllInQuery("Content", new HashSet<string>() {"dolorem", "ipsa", "in", "omnis", "ullamco", "ab", "esse", "aut", "rem", "eu", "iure", "ad", "consequuntur", "est", "adipisci", "velit", "inventore", "nesciunt.", "ad", "vitae", "laborum.", "esse", "voluptate", "et", "fugiat", "fugiat", "voluptas", "quae", "dolor", 
+                    "THIS_IS_SUPER_UNIQUE_VALUE"}, ContentIndex);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, match.Fill(ids));
+            }
+        }
+        
+        
+        [Fact]
         public void SimpleStartWithStatement()
         {
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "a road", "a lake", "the mountain" }, };
@@ -1517,6 +1561,7 @@ namespace FastTests.Corax
         {
             var ids = ArrayPool<long>.Shared.Rent(2048);
             var random = new Random(1000);
+            
             var strings = new string[]
             {
                 "ing", "hehe", "sad", "mac", "iej", "asz", "yk", "rav", "endb", "co", "rax", "mix", "ture", "net", "fram", "work", "th", "is", " ", "gre", "at", "te",
