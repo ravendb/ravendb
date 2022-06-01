@@ -336,7 +336,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             {
                 IQueryMatch match = searcher.StartWithQuery("Content1", "0", new ConstantScoreFunction(0f));
-                for (int i = 1; i < mod; ++i)
+                for (int i = 0; i < mod; ++i)
                 {
                     match = searcher.Or(match, searcher.StartWithQuery("Content1", $"{i}", new ConstantScoreFunction(i)));
                 }

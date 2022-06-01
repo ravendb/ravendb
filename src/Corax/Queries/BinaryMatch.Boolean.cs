@@ -101,9 +101,9 @@ namespace Corax.Queries
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
 
-                var bufferHolder = QueryContext.MatchesRawPool.Rent(2 * sizeof(long) * matches);
-                var innerBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
-
+                var bufferHolder = QueryContext.MatchesPool.Rent(2 * matches);
+                
+                Span<long> innerBuffer = bufferHolder;
                 var innerMatches = innerBuffer.Slice(0, matches);
                 var outerMatches = innerBuffer.Slice(matches, matches);
                 Debug.Assert(innerMatches.Length == matches);
@@ -121,7 +121,7 @@ namespace Corax.Queries
                 
                 // Merge the hits from every side into the output buffer. 
                 var result = MergeHelper.Or(buffer, innerMatches.Slice(0, innerSize), outerMatches.Slice(0, outerSize));                
-                QueryContext.MatchesRawPool.Return(bufferHolder);
+                QueryContext.MatchesPool.Return(bufferHolder);
 
                 return result;
             }
@@ -146,26 +146,32 @@ namespace Corax.Queries
                     return count;
                 }
 
-                var bufferHolder = QueryContext.MatchesRawPool.Rent(sizeof(long) * matches.Length);
-                var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matches.Length);                
+                var bufferHolder = QueryContext.MatchesPool.Rent(matches.Length);
+                Span<long> buffer = bufferHolder[..matches.Length];
 
                 // RavenDB-17750: The basic concept for this fill function is that we do not really care from which side the matches come
                 //                but we need somewhat ensure that we are conceptually getting as small amount of overlapping matches on 
-                //                different calls as possible. 
+                //                different calls as possible. That is why we will try to get as much as possible but no less from each side.
 
-                int totalLength = buffer.Length;
-                int idx = totalLength / 2;
+                int totalLength = 0;
 
-                var innerSlice = buffer.Slice(0, idx);
+                // The heuristic is that if we are requesting the 'last few' items we should do any
+                // work to try to 'get a balanced load'. Therefore less that 128 items makes absolutely
+                // no sense to try to balance as we would lose the ability to chunk items. 
+                int firstChunkSize = buffer.Length < 128 ? buffer.Length : buffer.Length / 2;
+
+                // We will try to get half of the matches from the first side.
+                var innerSlice = buffer[..firstChunkSize];
                 int innerCount = inner.Fill(innerSlice);
-                var outerSlice = buffer.Slice(idx, idx);
-                int outerCount = outer.Fill(outerSlice);
-                Debug.Assert(innerSlice.Length == outerSlice.Length);
+
+                // We will try to fill the rest of the matches from the second side as the first may not have used all of them
+                var outerSlice = buffer[innerCount..];                                
+                int outerCount = innerCount < buffer.Length ? outer.Fill(outerSlice) : 0;
 
                 // If we depleted everything we are done. 
                 if (innerCount == 0 && outerCount == 0)
                 {
-                    idx = 0;
+                    totalLength = 0;
                     goto END; // Nothing more to do here, we are done. 
                 }
 
@@ -182,25 +188,21 @@ namespace Corax.Queries
                 else if (outerCount == 0)
                     isOuterNext = false;
                 else
-                    isOuterNext = innerMax > outerMax;               
+                    isOuterNext = innerMax > outerMax;
 
                 // This is the first run, merge on external buffer and copy back.
-                idx = MergeHelper.Or(matches, innerSlice.Slice(0, innerCount), outerSlice.Slice(0, outerCount));                
-                if (idx == matches.Length)
-                    return idx; // The buffer is full, we are done. 
+                totalLength = MergeHelper.Or(matches, innerSlice.Slice(0, innerCount), outerSlice.Slice(0, outerCount));                
+                if (totalLength == matches.Length)
+                    goto END; // The buffer is full, we are done. 
 
                 // Most of the times we may not need to execute this part, specially when the matches are unique among sets.
                 // Also when faced with smaller buffers it will execute until they are filled.
-                var leftoverMatches = buffer.Slice(idx);
-                while (leftoverMatches.Length > (totalLength / 32))
+                var leftoverMatches = buffer[totalLength..];
+
+                // Given that we are going to be calling Fill, which would try to fill the buffer as much as it can there is no
+                // reason why we are not going to try to fill it here but avoid going overboard for leftovers.
+                while (leftoverMatches.Length > 0)
                 {
-                    // We use 1/32th of the buffer as an heuristic of how many calls we believe it would make sense to do to fill up the
-                    // buffer vs providing more documents to the aggregations upper in the query tree. This can change, but at 4Kb buffers
-                    // 128 empty places is a good enough tradeoff. 
-
-                    if (innerCount == 0 && outerCount == 0)
-                        break; // Nothing more to do here, we are done. 
-
                     int newIdx;
                     if (isOuterNext && outerCount != 0)
                     {
@@ -217,6 +219,10 @@ namespace Corax.Queries
                         else
                         {
                             isOuterNext = false;
+
+                            // If the other is also zero, we are done. 
+                            if (innerCount == 0)
+                                goto END;
                         }
                     }
                     else
@@ -234,22 +240,25 @@ namespace Corax.Queries
                         else
                         {
                             isOuterNext = true;
+
+                            // If the other is also zero, we are done. 
+                            if (outerCount == 0)
+                                goto END;
                         }
                     }
 
                     if ( newIdx != 0)
                     {
                         // Copy the result of matches to the buffer.
-                        matches.Slice(0, idx).CopyTo(buffer);
-                        idx = MergeHelper.Or(matches, buffer.Slice(0, idx), leftoverMatches.Slice(0, newIdx));                        
-
-                        leftoverMatches = buffer.Slice(idx);
+                        matches[0..totalLength].CopyTo(buffer);
+                        totalLength = MergeHelper.Or(matches, buffer[..totalLength], leftoverMatches[0..newIdx]);                                                
+                        leftoverMatches = buffer[totalLength..];
                     }
                 }
 
-                END:
-                QueryContext.MatchesRawPool.Return(bufferHolder);
-                return idx;
+            END:
+                QueryContext.MatchesPool.Return(bufferHolder);
+                return totalLength;
             }      
 
             static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter> match)
