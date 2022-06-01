@@ -1,4 +1,6 @@
 ﻿using System;
+using Corax.Exceptions;
+using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -16,6 +18,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 {
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
+    private bool _initialized;
 
     public CoraxIndexPersistence(Index index) : base(index)
     {
@@ -95,7 +98,24 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void Initialize(StorageEnvironment environment)
     {
-        // lucene method
+        using (var tx = environment.WriteTransaction())
+        {
+            try
+            {
+                IndexVersionGuardian.AssertIndex(tx);
+            }
+            catch (CoraxIndexVersionNotFound)
+            {
+                IndexVersionGuardian.WriteCurrentIndexVersion(tx);
+            }
+            catch (CoraxInvalidIndexVersionException)
+            {
+                throw;
+            }
+            tx.Commit();
+        }
+
+        _initialized = true;    
     }
 
     public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)

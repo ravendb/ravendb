@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                     else
                     {
-                        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.Corax)
+                        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.EngineTypeStored)
                             configurationTree.Add(configurationKey, SearchEngineType.Lucene.ToString());
                         else
                             configurationTree.Add(configurationKey, defaultEngineType.ToString());

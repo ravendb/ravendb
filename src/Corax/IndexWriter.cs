@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Exceptions;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow.Json;
@@ -78,6 +79,19 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
+            try
+            {
+                IndexVersionGuardian.AssertIndex(Transaction);
+            }
+            catch (CoraxIndexVersionNotFound)
+            {
+                IndexVersionGuardian.WriteCurrentIndexVersion(Transaction);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping = null)
@@ -89,6 +103,7 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
 
             _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
+            IndexVersionGuardian.AssertIndex(Transaction);
         }
 
 

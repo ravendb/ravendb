@@ -47,7 +47,7 @@ public class SpatialTests : StorageTest
     public void CanIndexReadAndDeleteLongLatSpatial(double latitude, double longitude, string geohash)
     {
         var IdString = "entry-1";
-        var geohashesh = Enumerable.Range(1, geohash.Length)
+        var geohashes = Enumerable.Range(1, geohash.Length)
             .Select(i => 
                 geohash.Substring(0, i)
                 )
