@@ -1555,7 +1555,10 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.HubPullReplications),
             nameof(DatabaseRecord.RavenEtls),
             nameof(DatabaseRecord.SqlEtls),
-            nameof(DatabaseRecord.OlapEtls)
+            nameof(DatabaseRecord.OlapEtls),
+            nameof(DatabaseRecord.ElasticSearchEtls),
+            nameof(DatabaseRecord.QueueEtls)
+
         };
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
