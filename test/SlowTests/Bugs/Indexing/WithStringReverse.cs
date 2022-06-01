@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -32,10 +33,11 @@ namespace SlowTests.Bugs.Indexing
             public string ReverseName { get; set; }
         }
 
-        [Fact]
-        public async Task GivenSomeUsers_QueryWithAnIndex_ReturnsUsersWithNamesReversed()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task GivenSomeUsers_QueryWithAnIndex_ReturnsUsersWithNamesReversed(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
@@ -73,10 +75,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public async Task CanQueryInReverse()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryInReverse(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition

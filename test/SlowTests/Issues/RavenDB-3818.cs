@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SparialSearchWithDistanceErrorPercent()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SparialSearchWithDistanceErrorPercent(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

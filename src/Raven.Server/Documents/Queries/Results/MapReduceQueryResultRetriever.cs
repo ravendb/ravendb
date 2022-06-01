@@ -1,22 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
-using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
     public class MapReduceQueryResultRetriever : StoredValueQueryResultRetriever
     {
-        public MapReduceQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
-            : base(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, database, query, queryTimings, documentsStorage, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
+        public MapReduceQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
+            : base(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, database, query, queryTimings, documentsStorage, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
         {
         }
     }
@@ -27,8 +26,8 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly JsonOperationContext _context;
         private QueryTimingsScope _storageScope;
 
-        protected StoredValueQueryResultRetriever(string storedValueFieldName, DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database?.Scripts, query, queryTimings, fieldsToFetch, documentsStorage, context, true, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, database?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator)
+        protected StoredValueQueryResultRetriever(string storedValueFieldName, DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
+            : base(database?.Scripts, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, true, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, database?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator)
         {
             if (storedValueFieldName == null)
                 throw new ArgumentNullException(nameof(storedValueFieldName));
@@ -77,16 +76,37 @@ namespace Raven.Server.Documents.Queries.Results
             return djv;
         }
 
-        public override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
+        public override unsafe Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
-            var storedValue = input.GetField(_storedValueFieldName).GetBinaryValue(state);
+            BlittableJsonReaderObject result;
+            if (retrieverInput.LuceneDocument is null)
+            {
+                retrieverInput.CoraxEntry.Read(FieldsToFetch.IndexFields.Count + 1, out var binaryValue);
+                fixed (byte* ptr = &binaryValue.GetPinnableReference())
+                {
+                    using var temp = new BlittableJsonReaderObject(ptr, binaryValue.Length, _context);
+                    result = temp.Clone(_context);
+                }
 
-            var allocation = _context.GetMemory(storedValue.Length);
+                //
+                // var allocation = _context.GetMemory(value.Length);
+                // var buffer = new UnmanagedWriteBuffer(_context, allocation);
+                //
+                // fixed (byte* ptr = value)
+                //     buffer.Write(ptr, value.Length);
 
-            UnmanagedWriteBuffer buffer = new UnmanagedWriteBuffer(_context, allocation);
-            buffer.Write(storedValue, 0, storedValue.Length);
+                //result = new BlittableJsonReaderObject(allocation.Address, value.Length, _context, buffer);
+            }
+            else
+            {
+                var storedValue = retrieverInput.LuceneDocument.GetField(_storedValueFieldName).GetBinaryValue(retrieverInput.State);
 
-            var result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
+                var allocation = _context.GetMemory(storedValue.Length);
+                var buffer = new UnmanagedWriteBuffer(_context, allocation);
+                buffer.Write(storedValue, 0, storedValue.Length);
+
+                result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
+            }
 
             return new Document
             {
@@ -94,22 +114,22 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, ScoreDoc scoreDoc, IState state, CancellationToken token)
+        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
         {
             if (FieldsToFetch.IsProjection)
-                return GetProjection(input, scoreDoc, null, state, token);
+                return GetProjection(ref retrieverInput, null, token);
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
-                var doc = DirectGet(input, null, DocumentFields.All, state);
+                var doc = DirectGet(ref retrieverInput, null, DocumentFields.All);
 
-                FinishDocumentSetup(doc, scoreDoc);
+                FinishDocumentSetup(doc, retrieverInput.Score);
 
                 return (doc, null);
             }
         }
 
-        public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)
+        public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
         {
             key = null;
             return false;

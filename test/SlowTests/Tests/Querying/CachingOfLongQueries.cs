@@ -8,7 +8,7 @@ using System.Linq;
 using Xunit.Abstractions;
 
 using FastTests;
-
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
@@ -19,10 +19,11 @@ namespace SlowTests.Tests.Querying
         {
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var val = new string('a', 2048);
                 using (var session = store.OpenSession())

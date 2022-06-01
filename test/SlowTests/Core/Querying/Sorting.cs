@@ -8,8 +8,9 @@ using System.Linq;
 using Xunit.Abstractions;
 
 using FastTests;
-
+using FastTests.Server.Documents.Indexing;
 using Xunit;
+using Tests.Infrastructure;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
 
@@ -21,10 +22,11 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void BasicSorting()
+        [Theory]
+        [RavenData]
+        public void BasicSorting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

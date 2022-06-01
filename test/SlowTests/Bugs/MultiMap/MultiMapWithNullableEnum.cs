@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Bugs.MultiMap
         {
         }
 
-        [Fact]
-        public async Task Can_create_index()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Can_create_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

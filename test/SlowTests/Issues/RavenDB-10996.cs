@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Indexes;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,10 +41,11 @@ namespace SlowTests.Issues
   }
 }";
 
-        [Fact]
-        public void CanGetCorrectOutputWhenUsingDuplicateArray()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetCorrectOutputWhenUsingDuplicateArray(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new Raven.Client.Documents.Indexes.IndexDefinition
                 {

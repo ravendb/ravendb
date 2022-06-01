@@ -3,6 +3,7 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -43,12 +44,12 @@ namespace Raven.Server.Documents.Indexes
             return _filters;
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             writer.Value.Delete(tombstone.LowerId, stats);
         }
 
-        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
@@ -76,9 +77,9 @@ namespace Raven.Server.Documents.Indexes
             return numberOfOutputs;
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
         {
-            return new MapQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand,includeRevisionsCommand: includeRevisionsCommand);
+            return new MapQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand,includeRevisionsCommand: includeRevisionsCommand);
         }
 
         public override void SaveLastState()

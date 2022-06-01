@@ -48,8 +48,8 @@ namespace Raven.Server.Web.Studio
         public async Task UpdateDirectoryResult(string databaseName, string error)
         {
             var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-            var driveInfo = DiskSpaceChecker.GetDriveInfo(_path, drivesInfo, out var realPath);
-            var diskSpaceInfo = DiskSpaceChecker.GetDiskSpaceInfo(driveInfo.DriveName);
+            var driveInfo = DiskUtils.GetDriveInfo(_path, drivesInfo, out var realPath);
+            var diskSpaceInfo = DiskUtils.GetDiskSpaceInfo(driveInfo.DriveName, driveInfo);
 
             if (CanAccessPath(_path, out var pathAccessError) == false)
                 error = pathAccessError;

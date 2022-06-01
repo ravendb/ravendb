@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Should_not_throw_on_large_buffer()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Should_not_throw_on_large_buffer(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new SearchIndex());
 

@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -37,12 +38,13 @@ namespace SlowTests.Bugs.Indexing
             public bool Active { get; set; }
         }
 
-        [Fact]
-        public async Task Should_give_clear_error()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Should_give_clear_error(Options options)
         {
             var fieldOptions = new IndexFieldOptions { Analyzer = typeof(ThrowingAnalyzerImpl).AssemblyQualifiedName };
-
-            using (var store = GetDocumentStore())
+            
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
@@ -58,7 +60,7 @@ namespace SlowTests.Bugs.Indexing
                     session.SaveChanges();
                 }
 
-
+                
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<RavenException>(() =>
@@ -82,12 +84,13 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public async Task Should_disable_index()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Should_disable_index(Options options)
         {
             var fieldOptions = new IndexFieldOptions { Analyzer = typeof(ThrowingAnalyzerImpl).AssemblyQualifiedName };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition

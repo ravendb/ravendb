@@ -7,6 +7,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.Tests.Indexes
         {
         }
 
-        [Fact]
-        public void IndexWithFirstOrDefaultOnWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOrDefaultOnWhere(Options options)
         {
-            IndexWithDynamicSource<FirstOrDefaultOnWhere_Index>();
+            IndexWithDynamicSource<FirstOrDefaultOnWhere_Index>(options);
         }
 
         public class FirstOrDefaultOnWhere_Index : AbstractIndexCreationTask<Item>
@@ -36,10 +38,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithFirstOrDefaultOnWhereWithPredicate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOrDefaultOnWhereWithPredicate(Options options)
         {
-            IndexWithDynamicSource<FirstOrDefaultOnWhereWithPredicate_Index>();
+            IndexWithDynamicSource<FirstOrDefaultOnWhereWithPredicate_Index>(options);
         }
         public class FirstOrDefaultOnWhereWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -53,10 +56,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithFirstOnWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOnWhere(Options options)
         {
-            IndexWithDynamicSource<FirstOnWhere_Index>();
+            IndexWithDynamicSource<FirstOnWhere_Index>(options);
         }
         public class FirstOnWhere_Index : AbstractIndexCreationTask<Item>
         {
@@ -70,10 +74,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithFirstOnWhereWithPredicate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithFirstOnWhereWithPredicate(Options options)
         {
-            IndexWithDynamicSource<FirstOnWhereWithPredicate_Index>();
+            IndexWithDynamicSource<FirstOnWhereWithPredicate_Index>(options);
         }
         public class FirstOnWhereWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -87,10 +92,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOrDefaultOnWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOrDefaultOnWhere(Options options)
         {
-            IndexWithDynamicSource<SingleOrDefaultOnWhere_Index>();
+            IndexWithDynamicSource<SingleOrDefaultOnWhere_Index>(options);
         }
         public class SingleOrDefaultOnWhere_Index : AbstractIndexCreationTask<Item>
         {
@@ -104,10 +110,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOrDefaultOnWhereWithPredicate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOrDefaultOnWhereWithPredicate(Options options)
         {
-            IndexWithDynamicSource<SingleOrDefaultOnWhereWithPredicate_Index>();
+            IndexWithDynamicSource<SingleOrDefaultOnWhereWithPredicate_Index>(options);
         }
         public class SingleOrDefaultOnWhereWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -121,10 +128,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOnWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOnWhere(Options options)
         {
-            IndexWithDynamicSource<SingleOnWhere_Index>();
+            IndexWithDynamicSource<SingleOnWhere_Index>(options);
         }
         public class SingleOnWhere_Index : AbstractIndexCreationTask<Item>
         {
@@ -138,10 +146,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithSingleOnWhereWithPredicate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithSingleOnWhereWithPredicate(Options options)
         {
-            IndexWithDynamicSource<SingleOnWhereWithPredicate_Index>();
+            IndexWithDynamicSource<SingleOnWhereWithPredicate_Index>(options);
         }
         public class SingleOnWhereWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -155,10 +164,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithLastOrDefaultOnWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOrDefaultOnWhere(Options options)
         {
-            IndexWithDynamicSource<LastOrDefaultOnWhere_Index>();
+            IndexWithDynamicSource<LastOrDefaultOnWhere_Index>(options);
         }
         public class LastOrDefaultOnWhere_Index : AbstractIndexCreationTask<Item>
         {
@@ -172,10 +182,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
         
-        [Fact]
-        public void IndexWithLastOrDefaultOnWhereWithPredicate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOrDefaultOnWhereWithPredicate(Options options)
         {
-            IndexWithDynamicSource<LastOrDefaultOnWhereWithPredicate_Index>();
+            IndexWithDynamicSource<LastOrDefaultOnWhereWithPredicate_Index>(options);
         }
         public class LastOrDefaultOnWhereWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -189,10 +200,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void IndexWithLastOnWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOnWhere(Options options)
         {
-            IndexWithDynamicSource<LastOnWhere_Index>();
+            IndexWithDynamicSource<LastOnWhere_Index>(options);
         }
         public class LastOnWhere_Index : AbstractIndexCreationTask<Item>
         {
@@ -207,10 +219,11 @@ namespace SlowTests.Tests.Indexes
         }
 
 
-        [Fact]
-        public void IndexWithLastOnWhereWithPredicate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLastOnWhereWithPredicate(Options options)
         {
-            IndexWithDynamicSource<LastOnWhereWithPredicate_Index>();
+            IndexWithDynamicSource<LastOnWhereWithPredicate_Index>(options);
         }
         public class LastOnWhereWithPredicate_Index : AbstractIndexCreationTask<Item>
         {
@@ -224,10 +237,10 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public void IndexWithDynamicSource<T>() where T : AbstractIndexCreationTask<Item>, new()
+        public void IndexWithDynamicSource<T>(Options options) where T : AbstractIndexCreationTask<Item>, new()
         {
             var index = new T();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(index);
 
@@ -238,7 +251,7 @@ namespace SlowTests.Tests.Indexes
                 }
 
                 Indexes.WaitForIndexing(store);
-                
+                WaitForUserToContinueTheTest(store);
                 var errors = Indexes.WaitForIndexingErrors(store, new[] { index.IndexName }, errorsShouldExists: false)?
                     .SelectMany(e => e.Errors)
                     .Select(e => e.Error)

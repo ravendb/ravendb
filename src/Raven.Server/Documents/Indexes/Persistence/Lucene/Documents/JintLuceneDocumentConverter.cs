@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -145,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             if (inner.IsString())
                             {
                                 spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
+                                spatial = (IEnumerable<AbstractField>)AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
                             }
                             else if (inner.IsObject())
                             {
@@ -154,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                     && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
                                 {
                                     spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                    spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                                    spatial = (IEnumerable<AbstractField>)AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
                                 }
                                 else
                                 {

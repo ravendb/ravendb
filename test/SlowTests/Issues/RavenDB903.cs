@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,29 +24,31 @@ namespace SlowTests.Issues
             public string Description { get; set; }
         }
 
-        [Fact]
-        public void Test1()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Test1(Options options)
         {
             DoTest(session => session.Query<Product, TestIndex>()
                                      .Search(x => x.Description, "Hello")
                                      .Intersect()
                                      .Where(x => x.Name == "Bar")
-                                     .As<Product>());
+                                     .As<Product>(), options);
         }
 
-        [Fact]
-        public void Test2()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Test2(Options options)
         {
             DoTest(session => session.Query<Product, TestIndex>()
                                      .Where(x => x.Name == "Bar")
                                      .Intersect()
                                      .Search(x => x.Description, "Hello")
-                                     .As<Product>());
+                                     .As<Product>(), options);
         }
 
-        private void DoTest(Func<IDocumentSession, IQueryable<Product>> queryFunc)
+        private void DoTest(Func<IDocumentSession, IQueryable<Product>> queryFunc, Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.ExecuteIndex(new TestIndex());
 

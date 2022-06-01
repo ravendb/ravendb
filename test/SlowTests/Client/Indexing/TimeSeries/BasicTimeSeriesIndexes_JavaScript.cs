@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -220,10 +221,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void BasicMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddSeconds(1);
@@ -377,10 +379,11 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMapIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMapIndexWithLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -537,10 +540,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void BasicMapReduceIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var today = RavenTestHelper.UtcToday;
                 var tomorrow = today.AddDays(1);
@@ -716,11 +720,12 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMapReduceIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     var today = RavenTestHelper.UtcToday;
 
@@ -863,10 +868,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void CanMapAllTimeSeriesFromCollection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapAllTimeSeriesFromCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -1009,10 +1015,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void CanMapAllTimeSeries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapAllTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -1200,12 +1207,13 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMultiMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMultiMapIndex(Options options)
         {
             var now = DateTime.UtcNow.Date;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var timeSeriesIndex = new MyMultiMapTsIndex();
                 await timeSeriesIndex.ExecuteAsync(store);
@@ -1261,12 +1269,13 @@ return ({
             }
         }
 
-        [Fact]
-        public void TimeSeriesNamesFor()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void TimeSeriesNamesFor(Options options)
         {
             var now = DateTime.UtcNow.Date;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_ByTimeSeriesNames();
                 index.Execute(store);

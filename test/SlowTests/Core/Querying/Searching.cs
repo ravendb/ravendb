@@ -14,7 +14,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Camera = SlowTests.Core.Utils.Entities.Camera;
@@ -30,10 +30,11 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void CanSearchByMultipleTerms()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSearchByMultipleTerms(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -85,10 +86,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanSearchByMultipleFields()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSearchByMultipleFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
@@ -139,7 +141,7 @@ namespace SlowTests.Core.Querying
                             .Search(x => x.Title, "nosql", options: SearchOptions.Not)
                             .Search(x => x.Desc, "querying")
                             .ToList();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, notNosqlOrQuerying.Count);
                     Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1-A"));
                     Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/3-A"));
@@ -156,10 +158,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanDoSpatialSearch()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)] 
+        public void CanDoSpatialSearch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var eventsSpatialIndex = new Events_SpatialIndex();
                 eventsSpatialIndex.Execute(store);
@@ -240,10 +243,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanDoSearchBoosting()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanDoSearchBoosting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 
@@ -278,10 +282,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanProvideSuggestionsAndLazySuggestions()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanProvideSuggestionsAndLazySuggestions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 
@@ -305,7 +310,6 @@ namespace SlowTests.Core.Querying
                     });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
-
                     var suggestionResult = session.Query<User, Users_ByName>()
                         .SuggestUsing(f => f.ByField(x => x.Name, "johne"))
                         .Execute();
@@ -331,10 +335,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearchAndLazyFacatedSearch()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearchAndLazyFacatedSearch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new CameraCost().Execute(store);
 

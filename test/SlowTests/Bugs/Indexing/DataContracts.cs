@@ -4,6 +4,7 @@ using FastTests;
 using Xunit;
 using System.Linq;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -13,10 +14,12 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void RespectsNameOnDataMemberAttribute()
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RespectsNameOnDataMemberAttribute(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -36,10 +39,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void RespectsNameOnDataMemberAttributeWithNestedCollection()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RespectsNameOnDataMemberAttributeWithNestedCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

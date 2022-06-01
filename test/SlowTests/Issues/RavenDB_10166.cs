@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task RandomResultsShouldBeRecievedInDifferentOrderEachTime()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task RandomResultsShouldBeRecievedInDifferentOrderEachTime(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

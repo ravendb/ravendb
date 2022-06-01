@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -113,10 +114,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanFilterByLocationAndSortByDistanceFromDifferentPointWDocQuery()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFilterByLocationAndSortByDistanceFromDifferentPointWDocQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -132,10 +134,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanSortByDistanceWOFilteringWDocQuery()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSortByDistanceWOFilteringWDocQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -150,10 +153,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanSortByDistanceWOFilteringWDocQueryBySpecifiedField()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSortByDistanceWOFilteringWDocQueryBySpecifiedField(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -169,10 +173,11 @@ namespace SlowTests.Tests.Spatial
         }
 
 
-        [Fact]
-        public void CanSortByDistanceWOFiltering()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSortByDistanceWOFiltering(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -187,10 +192,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanSortByDistanceWOFilteringBySpecifiedField()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSortByDistanceWOFilteringBySpecifiedField(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 

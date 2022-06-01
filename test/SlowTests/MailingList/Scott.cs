@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanQueryMapReduceIndexGeo()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryMapReduceIndexGeo(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {

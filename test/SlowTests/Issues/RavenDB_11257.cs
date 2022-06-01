@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,10 +28,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void RandomOrderingShouldWork()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void RandomOrderingShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Products_ByName().Execute(store);
 

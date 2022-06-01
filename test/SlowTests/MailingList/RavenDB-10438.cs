@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 namespace SlowTests.MailingList
@@ -13,10 +14,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanQuery2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQuery2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new TestDocumentByName());
 
@@ -65,10 +67,12 @@ namespace SlowTests.MailingList
                 }
             }
         }
-        [Fact]
-        public void CanQuery()
+        
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new TestDocumentByName());
 

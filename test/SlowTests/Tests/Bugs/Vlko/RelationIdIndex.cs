@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Tests.Bugs.Vlko
         {
         }
 
-        [Fact]
-        public void CanBeUsedForTransformResultsWithDocumentId()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanBeUsedForTransformResultsWithDocumentId(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ThorIndex().Execute(store);
 

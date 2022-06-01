@@ -17,6 +17,7 @@ namespace SlowTests.Core.Utils.Indexes
                            let address = LoadDocument<Address>(user.AddressId)
                            select new
                            {
+                               Test = "a",
                                City = address.City
                            };
         }

@@ -5,6 +5,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -63,11 +64,12 @@ namespace SlowTests.Tests.Spatial
                 Store(x => x.Longitude, FieldStorage.Yes);
             }
         }
-
-        [Fact]
-        public void WeirdSpatialResults()
+        
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WeirdSpatialResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -89,6 +91,7 @@ namespace SlowTests.Tests.Spatial
                 }
 
                 new MyIndex().Execute(store);
+
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics stats;
@@ -106,12 +109,12 @@ namespace SlowTests.Tests.Spatial
                 }
             }
         }
-
-
-        [Fact]
-        public void MatchSpatialResults()
+        
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MatchSpatialResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -147,6 +150,7 @@ namespace SlowTests.Tests.Spatial
 
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(1, result.Length); // Assert.AreEqual failed. Expected:<0>. Actual:<50>.
+                    WaitForUserToContinueTheTest(store);
                 }
             }
         }
@@ -170,10 +174,11 @@ namespace SlowTests.Tests.Spatial
             public double Longitude { get; set; }
         }
 
-        [Fact]
-        public void WeirdSpatialResults2()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WeirdSpatialResults2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -205,10 +210,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void SpatialSearchWithSwedishCulture()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SpatialSearchWithSwedishCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

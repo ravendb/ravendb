@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,18 +27,19 @@ namespace SlowTests.Bugs.Indexing
             public int Age { get; set; }
             public bool Active { get; set; }
         }
-
-        private readonly Action<DatabaseRecord> _modifyMapTimeout = doc =>
-        {
-            doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "0";
-        };
-
-        [Fact]
-        public void WillIndexAllWhenCreatingIndex()
+        
+        [Theory]
+        [RavenExplicitData]
+        public void WillIndexAllWhenCreatingIndex(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = _modifyMapTimeout
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "0";
+                }
             }))
             {
                 using (var session = store.OpenSession())
@@ -65,12 +67,18 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void WillIndexAllAfterCreatingIndex()
+        [Theory]
+        [RavenExplicitData()]
+        public void WillIndexAllAfterCreatingIndex(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = _modifyMapTimeout
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "0";
+                }
             }))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {

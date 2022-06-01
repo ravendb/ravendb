@@ -4,6 +4,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
@@ -19,10 +20,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             public int Fax { get; set; }
         }
 
-        [Fact]
-        public async Task CanUseIdMethodInJavascriptIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanUseIdMethodInJavascriptIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new JavaScriptIndexWithIdMethod().Execute(store);
 
@@ -58,10 +60,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public async Task CanUseGetMetadataMethodInJavascriptIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        public async Task CanUseGetMetadataMethodInJavascriptIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new JavaScriptIndexWithGetMetadataMethod().Execute(store);
 

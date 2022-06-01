@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -355,7 +356,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public static void HandleDeleteBySourceDocumentId(MapReduceIndex index, HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public static void HandleDeleteBySourceDocumentId(MapReduceIndex index, HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             HandleReferencesDelete(handleReferences, handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
 
@@ -406,14 +407,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public static void HandleDeleteBySourceDocument(HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public static void HandleDeleteBySourceDocument(HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             HandleReferencesDelete(handleReferences, handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
 
             HandleDeleteBySourceDocument(tombstone, writer, stats);
         }
 
-        public static void HandleReferencesDelete(HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public static void HandleReferencesDelete(HandleReferences handleReferences, HandleCompareExchangeReferences handleCompareExchangeReferences, Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (handleCompareExchangeReferences != null)
                 handleCompareExchangeReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
@@ -422,7 +423,7 @@ namespace Raven.Server.Documents.Indexes
                 handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
-        private static void HandleDeleteBySourceDocument(Tombstone tombstone, Lazy<IndexWriteOperation> writer, IndexingStatsScope stats)
+        private static void HandleDeleteBySourceDocument(Tombstone tombstone, Lazy<IndexWriteOperationBase> writer, IndexingStatsScope stats)
         {
             writer.Value.DeleteBySourceDocument(tombstone.LowerId, stats);
         }

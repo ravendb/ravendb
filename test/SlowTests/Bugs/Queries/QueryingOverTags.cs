@@ -2,6 +2,7 @@
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -11,14 +12,15 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void Can_chain_wheres_when_querying_collection_with_any()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_chain_wheres_when_querying_collection_with_any(Options options)
         {
             var entity = new EntityWithTags
             {
                 Tags = new[] { "FOO", "BAR" }
             };
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {

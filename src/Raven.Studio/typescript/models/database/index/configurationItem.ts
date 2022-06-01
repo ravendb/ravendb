@@ -32,7 +32,8 @@ class configurationItem {
         "Indexing.ScratchSpaceLimitInMb",
         "Indexing.Throttling.TimeIntervalInMs",
         "Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin",
-        "Indexing.TransactionSizeLimitInMb"
+        "Indexing.TransactionSizeLimitInMb",
+        "Indexing.Static.SearchEngineType"
     ];
     
     key = ko.observable<string>();

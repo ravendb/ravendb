@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
@@ -426,7 +427,7 @@ public class ShardedQueryProcessor : IDisposable
             return;
 
         var fieldsToFetch = new FieldsToFetch(_query, null);
-        var retriever = new ShardedMapReduceResultRetriever(_parent.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, fieldsToFetch, null, _context, false, null, null, null,
+        var retriever = new ShardedMapReduceResultRetriever(_parent.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, SearchEngineType.Lucene, fieldsToFetch, null, _context, false, null, null, null,
             _parent.DatabaseContext.IdentityPartsSeparator);
 
         var currentResults = _result.Results;
@@ -434,10 +435,11 @@ public class ShardedQueryProcessor : IDisposable
 
         foreach (var data in currentResults)
         {
+            var retrieverInput = new RetrieverInput();
             (Document document, List<Document> documents) = retriever.GetProjectionFromDocument(new Document
             {
                 Data = data
-            }, null, null, fieldsToFetch, _context, null, CancellationToken.None);
+            }, ref retrieverInput, fieldsToFetch, _context, CancellationToken.None);
 
             if (document != null)
             {

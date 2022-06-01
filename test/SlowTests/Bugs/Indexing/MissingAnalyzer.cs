@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -19,10 +20,11 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void Should_give_clear_error_when_starting()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Should_give_clear_error_when_starting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var e = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {

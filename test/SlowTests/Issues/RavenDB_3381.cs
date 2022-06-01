@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,10 +52,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void WorkWithPostfixWildcard()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void WorkWithPostfixWildcard(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new BlogPosts_ForSearch().Execute(store);
 

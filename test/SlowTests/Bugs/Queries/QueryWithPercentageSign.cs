@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -19,10 +20,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void CanQueryUsingPercentageSign()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryUsingPercentageSign(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {

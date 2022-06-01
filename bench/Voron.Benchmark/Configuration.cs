@@ -6,8 +6,8 @@ namespace Voron.Benchmark
     public class Configuration
     {
         public const int RecordsPerTransaction = 1000;
-        public const int Transactions = 100;
-        public const string Path = @"C:\Scratch\bench.data";
+        public const int Transactions = 1000;
+        public const string Path = @"Z:\Bench";
 
         /// <summary>
         /// This is the global allocator for test strings

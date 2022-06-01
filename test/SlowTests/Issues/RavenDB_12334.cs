@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Map_reduce_results_should_not_contains_implicit_nulls_wich_were_not_indexed()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Map_reduce_results_should_not_contains_implicit_nulls_wich_were_not_indexed(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DocsIndex().Execute(store);
                 using (var session = store.OpenAsyncSession())

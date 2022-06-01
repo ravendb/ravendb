@@ -12,10 +12,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void FacetRqlShouldSupportAliasNotation()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FacetRqlShouldSupportAliasNotation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 

@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,10 +39,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void LowLevelRemoteStream()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LowLevelRemoteStream(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByActive().Execute(store);
 
@@ -58,6 +60,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
+                    WaitForUserToContinueTheTest(store);
                     var enumerator = session.Advanced
                         .Stream(session.Query<User, Users_ByActive>().OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName));
 
@@ -72,10 +75,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void HighLevelRemoteStream()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void HighLevelRemoteStream(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByActive().Execute(store);
 
@@ -106,10 +110,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void HighLevelLocalStreamWithFilter()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void HighLevelLocalStreamWithFilter(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(
                     new IndexDefinition
@@ -149,10 +154,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void LowLevelEmbeddedStream()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LowLevelEmbeddedStream(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByActive().Execute(store);
 

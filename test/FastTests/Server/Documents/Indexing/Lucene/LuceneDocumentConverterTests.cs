@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Workers;
@@ -513,17 +514,17 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 throw new System.NotImplementedException();
             }
 
-            public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
+            public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
             {
                 throw new System.NotImplementedException();
             }
 
-            public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+            public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
             {
                 throw new System.NotImplementedException();
             }
 
-            public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+            public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
             {
                 throw new System.NotImplementedException();
             }

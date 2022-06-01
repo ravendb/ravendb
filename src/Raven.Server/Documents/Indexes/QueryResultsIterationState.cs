@@ -5,13 +5,13 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class QueryResultsIterationState : PulsedEnumerationState<IndexReadOperation.QueryResult>
+    public class QueryResultsIterationState : PulsedEnumerationState<LuceneIndexReadOperation.QueryResult>
     {
         public QueryResultsIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {
         }
 
-        public override void OnMoveNext(IndexReadOperation.QueryResult current)
+        public override void OnMoveNext(LuceneIndexReadOperation.QueryResult current)
         {
             ReadCount++;
         }

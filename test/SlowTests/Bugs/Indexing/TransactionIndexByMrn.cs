@@ -2,6 +2,7 @@
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
@@ -26,10 +27,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void CanCreateIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCreateIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Transaction_ByMrn().Execute(store);
             }

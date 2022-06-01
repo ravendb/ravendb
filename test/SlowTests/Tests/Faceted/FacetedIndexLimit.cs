@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,12 +27,13 @@ namespace SlowTests.Tests.Faceted
             _data = GetCameras(NumCameras);
         }
 
-        [Fact]
-        public void CanPerformSearchWithTwoDefaultFacets()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformSearchWithTwoDefaultFacets(Options options)
         {
             var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -81,8 +83,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_TermAsc()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_TermAsc(Options options)
         {
             var facets = new List<Facet>
             {
@@ -98,7 +101,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -136,8 +139,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_TermDesc()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_TermDesc(Options options)
         {
             var facets = new List<Facet>
             {
@@ -154,7 +158,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -193,8 +197,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_HitsAsc()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_HitsAsc(Options options)
         {
             var facets = new List<Facet>
             {
@@ -211,7 +216,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -260,8 +265,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_HitsDesc()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_HitsDesc(Options options)
         {
             //also specify more results than we have
             var facets = new List<Facet>
@@ -279,7 +285,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -320,12 +326,13 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformSearchWithTwoDefaultFacets_LuceneQuery()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformSearchWithTwoDefaultFacets_LuceneQuery(Options options)
         {
             var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -375,8 +382,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_TermAsc_LuceneQuery()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_TermAsc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
             {
@@ -392,7 +400,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -431,8 +439,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_TermDesc_LuceneQuery()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_TermDesc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
             {
@@ -449,7 +458,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -488,8 +497,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_HitsAsc_LuceneQuery()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_HitsAsc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
             {
@@ -506,7 +516,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -550,8 +560,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedLimitSearch_HitsDesc_LuceneQuery()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedLimitSearch_HitsDesc_LuceneQuery(Options options)
         {
             //also specify more results than we have
             var facets = new List<Facet>
@@ -569,7 +580,7 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 

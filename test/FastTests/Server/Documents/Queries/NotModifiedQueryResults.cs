@@ -5,6 +5,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries
 {
@@ -14,11 +15,12 @@ namespace FastTests.Server.Documents.Queries
         public NotModifiedQueryResults(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Fact]
-        public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified()
+        
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

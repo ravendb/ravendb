@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Tests.Linq
         {
         }
 
-        [Fact]
-        public void Query_IncludeAllQueryFunctionality()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_IncludeAllQueryFunctionality(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -98,10 +100,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Query_IncludeAllQueryFunctionalityAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_IncludeAllQueryFunctionalityAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -178,10 +181,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionByChangeVector()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Load_IncludeBuilder_IncludeRevisionByChangeVector(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 RevisionsHelper.SetupRevisionsAsync(store).Wait();
@@ -210,10 +214,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -243,10 +248,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionByChangeVectors()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Load_IncludeBuilder_IncludeRevisionByChangeVectors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 var cvList = new List<string>();
@@ -297,10 +303,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorsAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorsAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 var cvList = new List<string>();
@@ -365,10 +372,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -383,7 +391,7 @@ namespace SlowTests.Tests.Linq
 
                     session.SaveChanges();
                 }
-
+                WaitForUserToContinueTheTest(store);
                 string changeVector;
                 var beforeDateTime = DateTime.UtcNow;
                 using (var session = store.OpenSession())
@@ -443,10 +451,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectorsAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectorsAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -518,11 +527,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc(Options options)
         {
             string changeVector;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 RevisionsHelper.SetupRevisionsAsync(store).Wait();
@@ -557,11 +567,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtcAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtcAsync(Options options)
         {
             string changeVector;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -594,11 +605,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Query_IncludeBuilder_IncludeRevisionBefore()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_IncludeBuilder_IncludeRevisionBefore(Options options)
         {
             string changeVector;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 RevisionsHelper.SetupRevisionsAsync(store).Wait();
@@ -631,11 +643,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Query_IncludeBuilder_IncludeRevisionBeforeAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_IncludeBuilder_IncludeRevisionBeforeAsync(Options options)
         {
             string changeVector;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -668,10 +681,11 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Fact]
-        public void Query_RawQueryChangeVectorInsidePropertyWithIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQueryChangeVectorInsidePropertyWithIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
@@ -712,10 +726,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Query_RawQueryChangeVectorInsidePropertyWithIndexAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQueryChangeVectorInsidePropertyWithIndexAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
@@ -757,10 +772,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Query_RawQueryGetRevisionBeforeDateTime()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQueryGetRevisionBeforeDateTime(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
@@ -797,10 +813,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public async Task Query_RawQueryGetRevisionBeforeDateTimeAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQueryGetRevisionBeforeDateTimeAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
@@ -835,10 +852,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new NameIndex().Execute(store);
                 Indexes.WaitForIndexing(store);
@@ -891,10 +909,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQuery_IncludeRevisions_Jint_StaticIndexQueryAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQuery_IncludeRevisions_Jint_StaticIndexQueryAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await new NameIndex().ExecuteAsync(store);
                 Indexes.WaitForIndexing(store);
@@ -946,10 +965,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public void Query_RawQuery_IncludeRevisions_Jint_IndexQuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQuery_IncludeRevisions_Jint_IndexQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
@@ -998,10 +1018,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public void Query_RawQuery_IncludeRevisions_beforeDateTime_Jint()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQuery_IncludeRevisions_beforeDateTime_Jint(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/rhino";
 
@@ -1047,10 +1068,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQuery_IncludeRevisions_beforeDateTime_JintAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQuery_IncludeRevisions_beforeDateTime_JintAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
 
@@ -1096,10 +1118,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public void Query_RawQuery_IncludeRevisions_Jint()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQuery_IncludeRevisions_Jint(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
 
@@ -1148,10 +1171,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQuery_IncludeRevisions_JintAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQuery_IncludeRevisions_JintAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
 
@@ -1201,10 +1225,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQuery_IncludeRevisionsArray_Jint()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQuery_IncludeRevisionsArray_Jint(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new NameIndex().Execute(store);
                 Indexes.WaitForIndexing(store);
@@ -1295,10 +1320,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQuery_IncludeRevisionsArray_JintAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQuery_IncludeRevisionsArray_JintAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
                 var cvList = new List<string>();
@@ -1377,10 +1403,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public void Query_RawQuery_IncludeRevisionsWithoutAlias()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQuery_IncludeRevisionsWithoutAlias(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
 
@@ -1422,10 +1449,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQuery_IncludeRevisionsWithoutAliasAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQuery_IncludeRevisionsWithoutAliasAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id = "users/Rhino";
 
@@ -1467,10 +1495,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public void Query_RawQueryWithParameters_IncludeRevisions_Array()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQueryWithParameters_IncludeRevisions_Array(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -1544,10 +1573,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public void Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -1618,10 +1648,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOptionAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOptionAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -1691,10 +1722,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public void Query_RawQueryWithParameters_AliasSyntaxError()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_RawQueryWithParameters_AliasSyntaxError(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 
@@ -1735,10 +1767,11 @@ select Foo(u)"
             }
         }
 
-        [Fact]
-        public async Task Query_RawQueryWithParameters_AliasSyntaxErrorAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_RawQueryWithParameters_AliasSyntaxErrorAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cvList = new List<string>();
 

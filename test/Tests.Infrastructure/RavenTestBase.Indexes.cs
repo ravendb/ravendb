@@ -281,14 +281,14 @@ public partial class RavenTestBase
             return null;
         }
 
-        public int WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)
+        public long WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)
         {
             timeout ??= (Debugger.IsAttached
                 ? TimeSpan.FromMinutes(15)
                 : TimeSpan.FromMinutes(1));
 
             var sp = Stopwatch.StartNew();
-            var entriesCount = -1;
+            var entriesCount = -1L;
 
             while (sp.Elapsed < timeout.Value)
             {

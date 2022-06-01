@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using FastTests;
+using NuGet.Protocol.Plugins;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -18,7 +19,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -34,10 +35,11 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Fact]
-        public void CanUseLoadDocumentToIndexReferencedDocs()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseLoadDocumentToIndexReferencedDocs(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var postsByContent = new Posts_ByContent();
                 postsByContent.Execute(store);
@@ -86,10 +88,11 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
-        public void BasicLoadDocumentsWithEnumerable()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BasicLoadDocumentsWithEnumerable(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_ByEmployeeLastName().Execute(store);
 
@@ -131,10 +134,11 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
-        public void BasicLoadDocuments()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BasicLoadDocuments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByCity().Execute(store);
 
@@ -217,7 +221,7 @@ namespace SlowTests.Core.Indexing
 
                     session.SaveChanges();
                 }
-
+                
                 Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
@@ -263,10 +267,11 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
-        public void BasicLoadDocuments_Casing()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BasicLoadDocuments_Casing(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -409,10 +414,11 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
-        public void ShouldReindexOnReferencedDocumentChange()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldReindexOnReferencedDocumentChange(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var postsByContent = new Posts_ByContent();
                 postsByContent.Execute(store);
@@ -461,10 +467,11 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
-        public void CanProceedWhenReferencedDocumentsAreMissing()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanProceedWhenReferencedDocumentsAreMissing(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var postsByContent = new Posts_ByContent();
                 postsByContent.Execute(store);
@@ -496,8 +503,9 @@ namespace SlowTests.Core.Indexing
             }
         }
         
-        [Fact]
-        public async Task HandleReference_ShouldCompleteTheIndexing()
+        [Theory]
+        [RavenExplicitData]
+        public async Task HandleReference_ShouldCompleteTheIndexing(RavenTestParameters config)
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-14506
             const int batchSize = 128;
@@ -507,6 +515,8 @@ namespace SlowTests.Core.Indexing
                 ModifyDatabaseRecord = doc =>
                 {
                     doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = batchSize.ToString();
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -548,8 +558,9 @@ namespace SlowTests.Core.Indexing
             }
         }
         
-        [Fact]
-        public async Task HandleReferenceAndMapping_ShouldNotMissChangedReference()
+        [Theory]
+        [RavenExplicitData]
+        public async Task HandleReferenceAndMapping_ShouldNotMissChangedReference(RavenTestParameters config)
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-14506
             const int batchSize = 128;
@@ -559,7 +570,8 @@ namespace SlowTests.Core.Indexing
                 ModifyDatabaseRecord = doc =>
                 {
                     doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = batchSize.ToString();
-                    
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                    doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
                 },
                 ModifyDocumentStore = localStore =>
                 {

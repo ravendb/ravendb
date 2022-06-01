@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,13 +32,16 @@ namespace SlowTests.Issues
             {
                 Map = persons => from person in persons
                     select new { person.Name, person.Pets };
+                Store(p=> p.Pets, FieldStorage.Yes);
+                Index(p => p.Pets, FieldIndexing.No);
             }
         }
                 
-        [Fact]
-        public void CanQueryNestedClass()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryNestedClass(Options options)
         {             
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new PersonIndex().Execute(store); 
                 
@@ -54,9 +58,9 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var allPets = new List<Pet> { fluffy };
+                    var allPets = new List<Pet> { fluffy };                    WaitForUserToContinueTheTest(store);
+
                     var query = session.Query<Person>().Where(p => p.Pets.ContainsAny(allPets)).ToList();                    
-                    
                     Assert.Equal(1, query.Count);
                 }                                
             }

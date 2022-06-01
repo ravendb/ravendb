@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ public class RavenDB_17626 : RavenTestBase
     {
     }
 
-    [Fact]
-    public void EnumerableInSelectManyWillBeCastedProperly()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void EnumerableInSelectManyWillBeCastedProperly(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             store.ExecuteIndex(new Index());
             var date = DateTime.UtcNow;

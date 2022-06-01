@@ -4,9 +4,11 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,16 +25,17 @@ namespace SlowTests.Tests.Spatial
             public SpatialIdx()
             {
                 Map = docs => from e in docs
-                              select new { e.Capacity, e.Venue, e.Date, Coordinates = CreateSpatialField(e.Latitude, e.Longitude) };
+                    select new {e.Capacity, e.Venue, e.Date, Coordinates = CreateSpatialField(e.Latitude, e.Longitude)};
 
                 Index(x => x.Venue, FieldIndexing.Search);
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_do_spatial_search_with_client_api(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -62,13 +65,32 @@ namespace SlowTests.Tests.Spatial
                 }
             }
         }
-
-        [Theory]
-        [CriticalCultures]
-        public void Can_do_spatial_search_with_client_api3(CultureInfo cultureInfo)
+        public enum CultureInfoTest
         {
-            using (CultureHelper.EnsureCulture(cultureInfo))
-            using (var store = GetDocumentStore())
+            Invariant,
+            CurrentCulture,
+            Netherlands,
+            Turkey
+        }
+
+        public CultureInfo GetCultureInfo(CultureInfoTest culture) => culture switch
+        {
+            CultureInfoTest.Invariant => CultureInfo.InvariantCulture,
+            CultureInfoTest.CurrentCulture => CultureInfo.CurrentCulture,
+            CultureInfoTest.Netherlands => new CultureInfo("NL"),
+            CultureInfoTest.Turkey => new CultureInfo("tr-TR"),
+            _ => throw new ArgumentOutOfRangeException(nameof(culture), culture, null)
+        };
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(CultureInfoTest.Invariant, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(CultureInfoTest.CurrentCulture, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(CultureInfoTest.Netherlands, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(CultureInfoTest.Turkey, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_do_spatial_search_with_client_api3(Options options, CultureInfoTest cultureInfo)
+        {
+            using (CultureHelper.EnsureCulture(GetCultureInfo(cultureInfo)))
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -90,10 +112,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api2()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_do_spatial_search_with_client_api2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -115,10 +138,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api_within_given_capacity()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_do_spatial_search_with_client_api_within_given_capacity(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -182,10 +206,54 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api_addorder()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void PolandTestOrderByDistance(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            {
+                new SpatialIdx().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+
+                    session.Store(new Event("czestochowa", 50.776147, 19.136877));
+                    session.Store(new Event("katowice", 50.259591, 19.024823));
+                    session.Store(new Event("hadera", 32.437408, 34.925621));
+                    session.Store(new Event("torun", 53.005565, 18.628870));
+                    session.Store(new Event("bydgoszcz", 53.116155, 17.999482));
+                    session.Store(new Event("plock", 52.527658, 19.713035));
+                    session.Store(new Event("kalisz", 51.759978, 18.076977));
+                    session.SaveChanges();
+                }
+                WaitForUserToContinueTheTest(store);
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var events = session.Advanced.DocumentQuery<Event>("SpatialIdx")
+                        .WithinRadiusOf("Coordinates", 700, 53.060699, 18.624821, SpatialUnits.Kilometers)
+                        .OrderByDistance("Coordinates", 53.060699, 18.624821)
+                        // .AddOrder("Venue", false)
+                        .ToList();
+
+                    var expectedOrder = new[] {"torun", "bydgoszcz", "plock", "kalisz", "czestochowa", "katowice"};
+
+                    Assert.Equal(expectedOrder.Length, events.Count);
+
+                    for (int i = 0; i < events.Count; i++)
+                    {
+                        Assert.Equal(expectedOrder[i], events[i].Venue);
+                    }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_do_spatial_search_with_client_api_addorder(Options options)
+        {
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -220,7 +288,7 @@ namespace SlowTests.Tests.Spatial
 
                     for (int i = 0; i < events.Count; i++)
                     {
-                        Assert.Equal(expectedOrder[i], events[i].Venue);
+                       Assert.Equal(expectedOrder[i], events[i].Venue);
                     }
                 }
 
@@ -230,6 +298,8 @@ namespace SlowTests.Tests.Spatial
                         .WithinRadiusOf("Coordinates", 6.0, 38.96939, -77.386398)
                         .AddOrder("Venue", false)
                         .OrderByDistance("Coordinates", 38.96939, -77.386398)
+                        .OrderByDistance("Coordinates", 38.96939, -77.386398)
+
                         .ToList();
 
                     var expectedOrder = new[] { "a/1", "a/2", "a/3", "b/1", "b/2", "b/3", "c/1", "c/2", "c/3" };

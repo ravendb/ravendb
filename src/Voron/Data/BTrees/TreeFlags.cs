@@ -10,6 +10,7 @@ namespace Voron.Data.BTrees
         FixedSizeTrees = 2,
         MultiValueTrees = 4,
         LeafsCompressed = 8,
-        Streams = 16
+        Streams = 16,
+        CompactTrees = 32,
     }
 }

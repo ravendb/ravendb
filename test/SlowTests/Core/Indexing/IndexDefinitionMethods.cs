@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Fact]
-        public void CanUseMetadataFor()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseMetadataFor(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_CompanyByType().Execute(store);
                 Indexes.WaitForIndexing(store);
@@ -74,10 +76,11 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseAsDocumentToIndexAllDocumentFields()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseAsDocumentToIndexAllDocumentFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -93,16 +96,18 @@ namespace SlowTests.Core.Indexing
                         .Where(x => x.Query == "Address1")
                         .OfType<Company>()
                         .ToArray();
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, companies.Length);
                     Assert.Equal("Address1", companies[0].Address1);
                 }
             }
         }
 
-        [Fact]
-        public void CanUseRecurse()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseRecurse(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Posts_Recurse().Execute(store);
 

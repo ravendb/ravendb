@@ -8,6 +8,7 @@ using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void WillDetectAnalyzerAutomatically()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void WillDetectAnalyzerAutomatically(Options options)
         {
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(options))
             {
                                                 
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition

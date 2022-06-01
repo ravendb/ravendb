@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         public string Name => "Cleanup";
 
         public virtual (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
+            Lazy<IndexWriteOperationBase> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
             const long pageSize = long.MaxValue;
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false

@@ -137,7 +137,7 @@ public abstract class AbstractIndexCreateController
 
             try
             {
-                IndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, GetDatabaseName());
+                LuceneIndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, GetDatabaseName());
             }
             catch (Exception e)
             {

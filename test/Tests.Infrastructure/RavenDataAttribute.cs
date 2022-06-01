@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using FastTests;
+using Raven.Server.Config;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -9,9 +10,9 @@ namespace Tests.Infrastructure;
 [Flags]
 public enum RavenSearchEngineMode : byte
 {
-    //Corax = 1 << 1,
+    Corax = 1 << 1,
     Lucene = 1 << 2,
-    All = /*Corax | */Lucene
+    All = Corax | Lucene
 }
 
 [Flags]
@@ -65,36 +66,35 @@ public class RavenDataAttribute : DataAttribute
         if (mode.HasFlag(RavenDatabaseMode.Single))
             yield return (RavenDatabaseMode.Single, RavenTestBase.Options.ForMode(RavenDatabaseMode.Single));
 
-        if (mode.HasFlag(RavenDatabaseMode.Sharded))
-            yield return (RavenDatabaseMode.Sharded, RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
+        //if (mode.HasFlag(RavenDatabaseMode.Sharded))
+        //    yield return (RavenDatabaseMode.Sharded, RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
     }
 
-    internal static IEnumerable<(RavenSearchEngineMode SearchEngineMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
+    internal static IEnumerable<(RavenSearchEngineMode SearchMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
     {
-        //if (mode.HasFlag(RavenSearchEngineMode.Corax))
-        //{
-        //    var coraxOptions = options.Clone();
+        if (mode.HasFlag(RavenSearchEngineMode.Corax))
+        {
+            var coraxOptions = options.Clone();
 
-        //    coraxOptions.ModifyDatabaseRecord += record =>
-        //    {
-        //        record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
-        //        record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
-        //    };
-
-        //    yield return (RavenSearchEngineMode.Corax, coraxOptions);
-        //}
+            coraxOptions.ModifyDatabaseRecord += record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
+            };
+            coraxOptions.AddToDescription($", {nameof(RavenDataAttribute.SearchEngineMode)} = {nameof(RavenSearchEngineMode.Corax)}");
+            yield return (RavenSearchEngineMode.Corax, coraxOptions);
+        }
 
         if (mode.HasFlag(RavenSearchEngineMode.Lucene))
         {
             var luceneOptions = options.Clone();
-            luceneOptions.SearchEngineMode = RavenSearchEngineMode.Lucene;
 
-            //luceneOptions.ModifyDatabaseRecord += record =>
-            //{
-            //    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Lucene";
-            //    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Lucene";
-            //};
-
+            luceneOptions.ModifyDatabaseRecord += record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Lucene";
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Lucene";
+            };
+            luceneOptions.AddToDescription($", {nameof(RavenDataAttribute.SearchEngineMode)} = {nameof(RavenSearchEngineMode.Lucene)}");
             yield return (RavenSearchEngineMode.Lucene, luceneOptions);
         }
     }

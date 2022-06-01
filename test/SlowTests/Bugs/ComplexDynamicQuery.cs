@@ -1,6 +1,8 @@
 ﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Nest;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
@@ -11,10 +13,11 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void UsingNestedCollections()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void UsingNestedCollections(Options options)
         {
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(options))
             {
                 using(var s = store.OpenSession())
                 {

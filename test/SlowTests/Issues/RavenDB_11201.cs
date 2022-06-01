@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanIndexNullValuesInArrays()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexNullValuesInArrays(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Dogs_Owners().Execute(store);
                 new Dogs_Owners_ByBreed().Execute(store);

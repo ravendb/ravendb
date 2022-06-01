@@ -24,6 +24,10 @@ import fileImporter = require("common/fileImporter");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
+type certificatesSortMode = "default" |
+                            "byNameAsc"  | "byExpirationAsc"  | "byValidFromAsc" |
+                            "byNameDesc" | "byExpirationDesc" | "byValidFromDesc";
+
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
     expirationText: string;
@@ -95,8 +99,10 @@ class certificates extends viewModelBase {
 
     hasAnyFilters: KnockoutComputed<boolean>;
     filterAndSortDescription: KnockoutComputed<string>;
-    sortCriteria = ko.observable<string>();
     noCertificateIsVisible: KnockoutComputed<boolean>;
+    
+    currentSortMode = ko.observable<certificatesSortMode>("default");
+    sortModeText: KnockoutComputed<string>;
 
     deleteExistingCertificate = ko.observable<boolean>(false);
     
@@ -106,7 +112,7 @@ class certificates extends viewModelBase {
         this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterRegenerateCertificateMode",
             "deletePermission", "fileSelected", "copyThumbprint",
             "deleteCertificateConfirm", "renewServerCertificate", "canBeAutomaticallyRenewed",
-            "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters",
+            "sortCertificates", "clearAllFilters",
             "addPermission","addPermissionWithBlink","addDatabase","addDatabaseWithBlink");
         
         this.initObservables();
@@ -313,10 +319,29 @@ class certificates extends viewModelBase {
 
             const databases = this.databasesToShow().join(", ");
             const databasesPart = databases.length ? `<strong>Databases</strong>: ${databases}` : "";
-
-            const sortPart = this.sortCriteria() ? `<strong>Sorted by</strong>: ${this.sortCriteria()} <br />` : "";
+            
+            const sortPart = this.sortModeText() ? `<strong>Sorted by</strong>: ${this.sortModeText()} <br />` : "";
             
             return `${sortPart}${clearancePart}${clearancePart ? "<span class='margin-right-sm'></span>" : ""}${statePart}${clearancePart || statePart ? "<br />" : ""}${databasesPart}`;
+        });
+        
+        this.sortModeText = ko.pureComputed(() => {
+            switch (this.currentSortMode()) {
+                case "byNameAsc":
+                    return "Name - Ascending";
+                case "byNameDesc":
+                    return "Name - Descending";
+                case "byExpirationAsc":
+                    return "Expiration Date - Ascending";
+                case "byExpirationDesc":
+                    return "Expiration Date - Descending";
+                case "byValidFromAsc":
+                    return "Valid-From Date - Ascending";
+                case "byValidFromDesc":
+                    return "Valid-From Date - Descending";
+                case "default":
+                    return "";
+            }
         });
         
         this.noCertificateIsVisible = ko.pureComputed(() => {
@@ -568,6 +593,7 @@ class certificates extends viewModelBase {
                 
                 this.wellKnownAdminCerts(certificatesInfo.WellKnownAdminCerts || []);
                 this.filterCertificates();
+                this.sortCertificates(this.currentSortMode());
             });
     }
     
@@ -700,7 +726,6 @@ class certificates extends viewModelBase {
     }
     
     sortByDefault(): void {
-        this.sortCriteria("");
         const orderedCertificates = this.sortByDefaultInternal(this.certificates());
         this.certificates(orderedCertificates);
 }
@@ -723,15 +748,40 @@ class certificates extends viewModelBase {
         return orderedCertificates
     }
     
-    sortByName(mode: string): void {
-        this.sortCriteria(`Name - ${this.getModeText(mode)}`);
+    sortCertificates(mode: certificatesSortMode) {
+        this.currentSortMode(mode);
+        
+        switch (mode) {
+            case "byNameAsc":
+                this.sortByName("asc");
+                break;
+            case "byNameDesc":
+                this.sortByName("desc");
+                break;
+            case "byExpirationAsc":
+                this.sortByExpiration("asc");
+                break;
+            case "byExpirationDesc":
+                this.sortByExpiration("desc");
+                break;
+            case "byValidFromAsc":
+                this.sortByValidFrom("asc");
+                break;
+            case "byValidFromDesc":
+                this.sortByValidFrom("desc");
+                break;
+            case "default":
+                this.sortByDefault();
+                break;
+        }
+    }
+
+    private sortByName(mode: sortMode): void {
         this.certificates.sort((a, b) =>
             generalUtils.sortAlphaNumeric(a.Name.toLocaleLowerCase(), b.Name.toLocaleLowerCase(), mode as sortMode));
     }
 
-    sortByExpiration(mode: string): void {
-        this.sortCriteria(`Expiration Date - ${this.getModeText(mode)}`);
-        
+    private sortByExpiration(mode: sortMode): void {
         this.certificates.sort((a, b) =>
         {
             const result = (a as unifiedCertificateDefinitionWithCache).expirationNumber - (b as unifiedCertificateDefinitionWithCache).expirationNumber;
@@ -739,18 +789,12 @@ class certificates extends viewModelBase {
         });
     }
 
-    sortByValidFrom(mode: string): void {
-        this.sortCriteria(`Valid-From Date - ${this.getModeText(mode)}`);
-
+    private sortByValidFrom(mode: sortMode): void {
         this.certificates.sort((a, b) =>
         {
             const result = (a as unifiedCertificateDefinitionWithCache).validFromNumber - (b as unifiedCertificateDefinitionWithCache).validFromNumber;
             return mode === "asc" ? result : -result;
         });
-    }
-    
-    getModeText(mode: string): string {
-        return mode === "asc" ? "Ascending" : "Descending";
     }
 
     createDatabaseNameAutoCompleterForFilter() {

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,10 +24,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void QueryIndex_Success()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryIndex_Success(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ResourceViewModels_ByTag().Execute(store);
 
@@ -156,7 +158,6 @@ namespace SlowTests.MailingList
                     session.Store(alias3);
 
                     session.SaveChanges();
-
                     Indexes.WaitForIndexing(store);
 
                     var result = session.Query<ResourceViewModel, ResourceViewModels_ByTag>().ToList();
@@ -194,6 +195,10 @@ namespace SlowTests.MailingList
                                                   into g
                                                   select new TopTag { Name = g.Key, Count = g.Sum(x => x.Count) }
                                     };
+                Index(p => p.TopTags, FieldIndexing.No);
+                Index(p => p.Declarations, FieldIndexing.No);
+                Store(p => p.TopTags, FieldStorage.Yes);
+                Store(p => p.Declarations, FieldStorage.Yes);
             }
         }
 

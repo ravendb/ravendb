@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,10 +43,11 @@ namespace SlowTests.Client.Queries
             public List<RoleData> Roles;
         }
 
-        [Fact]
-        public async Task Can_Include_Secondary_Level_With_Alias()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Can_Include_Secondary_Level_With_Alias(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var userIndex = new UserIndex();
                 await userIndex.ExecuteAsync(store);

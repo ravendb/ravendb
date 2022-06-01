@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Corax - Low level indexing engine</Description>
+    <Authors>Hibernating Rhinos</Authors>
+    <TargetFramework>net6.0</TargetFramework>
+    <RuntimeFrameworkVersion>6.0.5</RuntimeFrameworkVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Corax</AssemblyName>
+    <PackageId>Corax</PackageId>
+    <PackageTags>storage;acid;corax;ravendb;nosql</PackageTags>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+    <Configurations>Debug;Release;Validate</Configurations>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <Compile Remove="Properties\AssemblyInfo.Linux.cs" />
+    <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <Compile Remove="Properties\AssemblyInfo.Windows.cs" />
+    <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Spatial4n" Version="0.4.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
+    <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
+    <ProjectReference Include="..\Voron\Voron.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
+    <DefineConstants>$(DefineConstants);VALIDATE;VALIDATE_PAGES</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+</Project>

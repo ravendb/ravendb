@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
@@ -22,10 +26,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
         }
 
-        [Fact]
-        public async Task Group_by_string_calculate_count()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Group_by_string_calculate_count(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -111,10 +116,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public async Task Group_by_string_calculate_sum()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Group_by_string_calculate_sum(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -253,10 +259,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public void Group_by_does_not_support_custom_equality_comparer()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Group_by_does_not_support_custom_equality_comparer(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -274,10 +281,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public async Task Can_project_in_map_reduce()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_project_in_map_reduce(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -340,10 +348,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public async Task Order_by_string_integer_and_decimal_fields()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Order_by_string_integer_and_decimal_fields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -461,10 +470,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public void Group_by_nested_field_sum_on_collection()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Group_by_nested_field_sum_on_collection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -524,7 +534,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                             })
                             .OrderBy(x => x.Country)
                             .ToList();
-
+                   
                     Assert.Equal(2, orders.Count);
 
                     Assert.Equal("Norway", orders[0].Country);
@@ -559,10 +569,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public void Group_by_number()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Group_by_number(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

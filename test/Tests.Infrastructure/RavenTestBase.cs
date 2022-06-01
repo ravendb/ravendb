@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -22,7 +21,6 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -363,19 +361,6 @@ namespace FastTests
             return null;
         }
 
-        protected string GetLastStatesFromAllServersOrderedByTime()
-        {
-            List<(string tag, RachisConsensus.StateTransition transition)> states = new List<(string tag, RachisConsensus.StateTransition transition)>();
-            foreach (var s in Servers)
-            {
-                foreach (var state in s.ServerStore.Engine.PrevStates)
-                {
-                    states.Add((s.ServerStore.NodeTag, state));
-                }
-            }
-            return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
-        }
-
         protected static async Task<TC> AssertWaitForSingleAsync<TC>(Func<Task<TC>> act, int timeout = 15000, int interval = 100) where TC : ICollection
         {
             var ret = await WaitForSingleAsync(act, timeout, interval);
@@ -697,6 +682,25 @@ namespace FastTests
             {
             }
 
+            public static Options ForSearchEngine(RavenSearchEngineMode mode)
+            {
+                var config = new RavenTestParameters() { SearchEngine = mode };
+                return ForSearchEngine(config);
+            }
+
+
+            public static Options ForSearchEngine(RavenTestParameters config)
+            {
+                return new Options()
+                {
+                    ModifyDatabaseRecord = d =>
+                    {
+                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                    }
+                };
+            }
+
             private Options(bool frozen)
             {
                 DeleteDatabaseOnDispose = true;
@@ -749,7 +753,7 @@ namespace FastTests
                 }
             }
 
-            private void AddToDescription(string descriptionToAdd)
+            public void AddToDescription(string descriptionToAdd)
             {
                 _descriptionBuilder ??= new StringBuilder();
 
@@ -940,91 +944,6 @@ namespace FastTests
                     DatabaseMode = DatabaseMode,
                     _descriptionBuilder = new StringBuilder(_descriptionBuilder.ToString())
                 };
-            }
-        }
-
-        public static async Task WaitForPolicyRunner(DocumentDatabase database)
-        {
-            var loops = 10;
-            await database.TimeSeriesPolicyRunner.HandleChanges();
-            for (int i = 0; i < loops; i++)
-            {
-                var rolled = await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-                if (rolled == 0)
-                    return;
-            }
-
-            Assert.True(false, $"We still have pending rollups left.");
-        }
-
-        protected static void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
-        {
-            //This try catch is only to investigate RavenDB-15366 issue
-            try
-            {
-                session.SaveChanges();
-            }
-            catch (Exception e)
-            {
-                if (!(session is InMemoryDocumentSessionOperations inMemoryDocumentSessionOperations))
-                    throw;
-
-                foreach (var entity in inMemoryDocumentSessionOperations.DocumentsByEntity)
-                {
-                    if (!(entity.Key is T t) || t != loaded)
-                        continue;
-
-                    var blittable = inMemoryDocumentSessionOperations.JsonConverter.ToBlittable(entity.Key, entity.Value);
-                    throw new InvalidOperationException($"blittable: {blittable}\n documentInfo {entity.Value.Document}", e);
-                }
-            }
-        }
-
-        protected static async Task SaveChangesWithTryCatchAsync<T>(IAsyncDocumentSession session, T loaded) where T : class
-        {
-            //This try catch is only to investigate RavenDB-15366 issue
-            try
-            {
-                await session.SaveChangesAsync();
-            }
-            catch (Exception e)
-            {
-                if (!(session is InMemoryDocumentSessionOperations inMemoryDocumentSessionOperations))
-                    throw;
-
-                foreach (var entity in inMemoryDocumentSessionOperations.DocumentsByEntity)
-                {
-                    if (!(entity.Key is T u) || u != loaded)
-                        continue;
-
-                    var blittable = inMemoryDocumentSessionOperations.JsonConverter.ToBlittable(entity.Key, entity.Value);
-                    throw new InvalidOperationException($"blittable: {blittable}\n documentInfo {entity.Value.Document}", e);
-                }
-            }
-        }
-
-        protected void WriteDocDirectlyFromStorageToTestOutput(string storeDatabase, string docId, [CallerMemberName] string caller = null)
-        {
-            AsyncHelpers.RunSync(() => WriteDocDirectlyFromStorageToTestOutputAsync(storeDatabase, docId));
-        }
-
-        protected async Task WriteDocDirectlyFromStorageToTestOutputAsync(string storeDatabase, string docId, [CallerMemberName] string caller = null)
-        {
-            //This function is only to investigate RavenDB-15366 issue
-
-            var db = await GetDatabase(storeDatabase);
-            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var doc = db.DocumentsStorage.Get(context, docId);
-
-                var sb = new StringBuilder();
-                sb.AppendLine($"Test: '{caller}'. Document: '{docId}'. Data:");
-                sb.AppendLine(doc.Data.ToString());
-
-                Output?.WriteLine(sb.ToString());
-                Console.WriteLine(sb.ToString());
             }
         }
     }

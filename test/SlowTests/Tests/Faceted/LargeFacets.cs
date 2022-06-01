@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,10 +39,12 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanGetSameResult()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanGetSameResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index().Execute(store);
 

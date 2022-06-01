@@ -30,10 +30,11 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
-        public async Task CanPutUpdateAndDeleteMapIndex()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanPutUpdateAndDeleteMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string usersByname = "users/byName";
 
@@ -59,8 +60,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanGetTermsForIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -96,8 +97,8 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanGetTermsForIndex_WithPaging(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -133,10 +134,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanQueryForMetadataAndIndexEntriesOnly()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryForMetadataAndIndexEntriesOnly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -191,12 +193,13 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public async Task CanGetIndexNames()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanGetIndexNames(Options options)
         {
             var index1 = new Users_ByName();
             var index2 = new Posts_ByTitleAndContent();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 index1.Execute(store);
                 index2.Execute(store);
@@ -208,11 +211,12 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public async Task CanResetIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanResetIndex(Options options)
         {
             var index = new Users_ByName();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 index.Execute(store);
                 using (var session = store.OpenSession())

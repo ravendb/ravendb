@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanCompileIndex1()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCompileIndex1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserDateTimeIndex();
                 store.ExecuteIndex(index);
@@ -56,7 +58,7 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<User, LastAccessPerUserDateTimeIndex>()
@@ -70,10 +72,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanCompileIndex2()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCompileIndex2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserDateTimeIndex();
                 store.ExecuteIndex(index);
@@ -126,10 +129,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanCompileIndex3()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCompileIndex3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserDateTimeDefaultIndex();
                 store.ExecuteIndex(index);
@@ -178,10 +182,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanCompileIndex4()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCompileIndex4(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserTicksIndex();
                 store.ExecuteIndex(index);
@@ -253,13 +258,14 @@ namespace SlowTests.Issues
             public LastAccessPerUserDateTimeIndex()
             {
                 Map = users =>
-                    from user in users
+                    from user in users                    
                     select new Result
                     {
                         LastAccess = user.LoginsByDate.Last().Value
                     };
 
                 StoreAllFields(FieldStorage.Yes);
+                Index(i => i.LastAccess, FieldIndexing.No);
             }
         }
 
@@ -287,6 +293,7 @@ namespace SlowTests.Issues
                     };
 
                 StoreAllFields(FieldStorage.Yes);
+                Index(i => i.LastAccess, FieldIndexing.No);
             }
         }
 

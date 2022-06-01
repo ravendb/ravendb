@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Fact]
-        public void GeoSpatialTest()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void GeoSpatialTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new EventsBySimpleLocation().Execute(store);
                 using (var session = store.OpenSession())

@@ -1,10 +1,10 @@
 ﻿using FastTests;
 using Newtonsoft.Json;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -14,10 +14,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void CanFetchMultiplePropertiesFromCollection()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFetchMultiplePropertiesFromCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

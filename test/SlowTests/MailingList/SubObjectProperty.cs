@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +13,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void CanProjectProperly()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanProjectProperly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Sites_ByAdminData().Execute(store);
                 using (var session = store.OpenSession())

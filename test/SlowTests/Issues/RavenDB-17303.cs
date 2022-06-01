@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,10 +33,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SortNullsWithAlphaNumerics()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void SortNullsWithAlphaNumerics(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var s = store.OpenSession())
             {
@@ -56,15 +58,16 @@ namespace SlowTests.Issues
                     .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
                     .Select(x=>x.Name)
                     .ToList();
-                WaitForUserToContinueTheTest(store);
+             //   WaitForUserToContinueTheTest(store);
                 Assert.Equal(new[]{null, "1BC", "02BC", "Me", "Pla"}, names);
             }
         }
         
-        [Fact]
-        public async Task PagingWithAlphaNumericSorting()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task PagingWithAlphaNumericSorting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 int nullNameCount = 4;
                 using (var session = store.OpenAsyncSession())

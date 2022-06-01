@@ -9,7 +9,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Spatial4n.Core.Context.Nts;
+using Spatial4n.Context.Nts;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +33,7 @@ namespace SlowTests.Tests.Spatial
                     var doc = new Lucene.Net.Documents.Document();
 
 #pragma warning disable 612
-                    var writeShape = NtsSpatialContext.GEO.ReadShape("LINESTRING (0 0, 1 1, 2 1)");
+                    var writeShape = NtsSpatialContext.Geo.ReadShape("LINESTRING (0 0, 1 1, 2 1)");
 #pragma warning restore 612
                     var spatialField = new SpatialField("WKT", new SpatialOptionsFactory().Geography.Default());
                     var writeStrategy = spatialField.Strategy;
@@ -45,7 +46,7 @@ namespace SlowTests.Tests.Spatial
                 }
 
 #pragma warning disable 612
-                var shape = NtsSpatialContext.GEO.ReadShape("LINESTRING (1 0, 1 1, 1 2)");
+                var shape = NtsSpatialContext.Geo.ReadShape("LINESTRING (1 0, 1 1, 1 2)");
 #pragma warning restore 612
                 SpatialArgs args = new SpatialArgs(SpatialOperation.Intersects, shape);
                 var spatialField2 = new SpatialField("WKT", new SpatialOptionsFactory().Geography.Default());
@@ -59,10 +60,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void LineStringsShouldIntersect()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, Skip = "Corax is not supporting area indexing.")]
+        public void LineStringsShouldIntersect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeoIndex());
@@ -89,10 +91,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CirclesShouldNotIntersect()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CirclesShouldNotIntersect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeoIndex());
@@ -121,10 +124,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void GeohashIndexDefaultLevel_LineStringShouldNotThrowException()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void GeohashIndexDefaultLevel_LineStringShouldNotThrowException(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeoIndex());
@@ -152,10 +156,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void GeohashIndexLevel7_LineStringShouldNotThrowException()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void GeohashIndexLevel7_LineStringShouldNotThrowException(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeohashIndexLevel7());

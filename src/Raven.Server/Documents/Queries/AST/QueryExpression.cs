@@ -298,12 +298,12 @@ namespace Raven.Server.Documents.Queries.AST
 
       
 
-        private static object GetFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
+        public static object GetFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
         {
             switch (type)
             {
                 case ValueTokenType.Long:
-                    return QueryBuilder.ParseInt64WithSeparators(value);
+                    return QueryBuilderHelper.ParseInt64WithSeparators(value);
                 case ValueTokenType.Double:
                     return double.Parse(value, CultureInfo.InvariantCulture);
                 case ValueTokenType.Parameter:

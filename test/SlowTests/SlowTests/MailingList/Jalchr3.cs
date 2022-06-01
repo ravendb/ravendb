@@ -8,6 +8,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,8 +21,9 @@ namespace SlowTests.SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void Streaming_documents_will_respect_the_sorting_order()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Streaming_documents_will_respect_the_sorting_order(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -30,6 +33,11 @@ namespace SlowTests.SlowTests.MailingList
                     {
                         CustomizeJsonSerializer = serializer => serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore
                     };
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {

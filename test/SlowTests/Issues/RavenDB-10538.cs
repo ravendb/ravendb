@@ -7,6 +7,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void FacetWithNullableDateTime()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FacetWithNullableDateTime(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new FooIndex().Execute(store);
                 var now = DateTime.Now;
@@ -69,10 +71,11 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
-        public async Task TestGeneratedFacetsTest()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task TestGeneratedFacetsTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DocsIndex().Execute(store);
                 using (var session = store.OpenAsyncSession())

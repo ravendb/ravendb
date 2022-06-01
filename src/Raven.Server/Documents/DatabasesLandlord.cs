@@ -84,6 +84,7 @@ namespace Raven.Server.Documents
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
             internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
+            internal Action<CancellationToken> DelayIncomingReplication;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;

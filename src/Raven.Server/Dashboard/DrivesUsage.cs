@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
@@ -29,6 +30,8 @@ namespace Raven.Server.Dashboard
         public long RavenSize { get; set; }
 
         public long RavenTempBuffersSize { get; set; }
+        
+        public IoStatsResult IoStatsResult { get; set; }
 
         public List<DatabaseDiskUsage> Items { get; set; }
 
@@ -46,6 +49,7 @@ namespace Raven.Server.Dashboard
                 [nameof(TotalCapacity)] = TotalCapacity,
                 [nameof(FreeSpace)] = FreeSpace,
                 [nameof(IsLowSpace)] = IsLowSpace,
+                [nameof(IoStatsResult)] = IoStatsResult?.ToJson(),
             };
         }
 

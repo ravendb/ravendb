@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -44,10 +45,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldAtBeEscaped()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldAtBeEscaped(Options options)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
 
             new Index().Execute(store);
             using (var session = store.OpenSession())

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 using Camera = SlowTests.Core.Utils.Entities.Camera;
@@ -27,11 +28,12 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
-        public void CanDoSimpleQueryOnDatabase()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDoSimpleQueryOnDatabase(Options options)
         {
             const string indexName = "CompaniesByName";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var contact1 = new Contact { FirstName = "Expression Name" };
                 var contact2 = new Contact { FirstName = "Expression First Name" };
@@ -70,10 +72,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanProcessLongQueryString()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanProcessLongQueryString(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -110,10 +113,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanStreamQueryResult()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanStreamQueryResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Users_ByName();
                 index.Execute(store);
@@ -142,10 +146,12 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanGetFacets()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanGetFacets(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new CameraCost();
                 index.Execute(store);
@@ -329,10 +335,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanGetSuggestions()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetSuggestions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Users_ByName();
                 index.Execute(store);

@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Fact]
-        public void CanPerformSpatialSearchWithNulls()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformSpatialSearchWithNulls(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var indexDefinition = new IndexDefinition
                 {
@@ -61,10 +63,11 @@ namespace SlowTests.Tests.Spatial
         }
 
 
-        [Fact]
-        public void CanUseNullCoalescingOperator()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseNullCoalescingOperator(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var indexDefinition = new IndexDefinition
                 {

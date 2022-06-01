@@ -127,6 +127,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Corax\Corax.csproj" />
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
@@ -145,8 +146,8 @@
     <PackageReference Include="Google.Api.Gax.Rest" Version="3.7.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="3.7.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="Lucene.Net" Version="3.0.60001" />
-    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60001" />
+    <PackageReference Include="Lucene.Net" Version="3.0.60002" />
+    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60002" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.2.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.2.0" />

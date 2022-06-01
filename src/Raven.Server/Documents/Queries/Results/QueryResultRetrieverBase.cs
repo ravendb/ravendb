@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Corax;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Lucene.Net.Documents;
 using Lucene.Net.Store;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
@@ -21,9 +23,11 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -54,6 +58,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected readonly QueryTimingsScope RetrieverScope;
 
+        protected readonly SearchEngineType SearchEngineType;
+
+
         private QueryTimingsScope _projectionScope;
         private QueryTimingsScope _projectionStorageScope;
         private QueryTimingsScope _functionScope;
@@ -62,7 +69,7 @@ namespace Raven.Server.Documents.Queries.Results
         private TimeSeriesRetriever _timeSeriesRetriever;
 
         protected QueryResultRetrieverBase(
-            ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
+            ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
             JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand,
             char identitySeparator)
@@ -73,6 +80,7 @@ namespace Raven.Server.Documents.Queries.Results
             _includeDocumentsCommand = includeDocumentsCommand;
             _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
+            SearchEngineType = searchEngineType;
             _identitySeparator = identitySeparator;
 
             ValidateFieldsToFetch(fieldsToFetch);
@@ -86,8 +94,6 @@ namespace Raven.Server.Documents.Queries.Results
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
-
-
 
         protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
         {
@@ -107,11 +113,11 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public abstract (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state, CancellationToken token);
+        public abstract (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
-        public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
+        public abstract bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
 
-        public abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state);
+        public abstract Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 
         protected abstract Document LoadDocument(string id);
 
@@ -119,7 +125,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected (Document Document, List<Document> List) GetProjection(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, string lowerId, IState state, CancellationToken token)
+        protected (Document Document, List<Document> List) GetProjection(ref RetrieverInput retrieverInput, string lowerId, CancellationToken token)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
@@ -127,7 +133,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (FieldsToFetch.AnyExtractableFromIndex == false)
                 {
                     using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                        doc = DirectGet(input, lowerId, DocumentFields.All, state);
+                        doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
 
                     if (doc == null)
                     {
@@ -140,15 +146,18 @@ namespace Raven.Server.Documents.Queries.Results
                         return default;
                     }
 
-                    return GetProjectionFromDocumentInternal(doc, input, scoreDoc, FieldsToFetch, _context, state, token);
+                    return GetProjectionFromDocumentInternal(doc, ref retrieverInput, FieldsToFetch, _context, token);
                 }
 
                 var result = new DynamicJsonValue();
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
-                if (FieldsToFetch.ExtractAllFromIndex)
+
+                if (SearchEngineType == SearchEngineType.Lucene)
                 {
-                    fields = input.GetFields()
+                    if (FieldsToFetch.ExtractAllFromIndex)
+                    {
+                        fields = retrieverInput.LuceneDocument.GetFields()
                         .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
@@ -157,10 +166,13 @@ namespace Raven.Server.Documents.Queries.Results
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
                         .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
+                    }
                 }
 
                 if (fields == null)
+                {
                     fields = FieldsToFetch.Fields;
+                }
                 else if (FieldsToFetch.Fields != null && FieldsToFetch.Fields.Count > 0)
                 {
                     foreach (var kvp in FieldsToFetch.Fields)
@@ -172,73 +184,82 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                 }
 
-                foreach (var fieldToFetch in fields.Values)
+                if (fields is not null)
                 {
-                    if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here 
-                        TryExtractValueFromIndex(fieldToFetch, input, result, state))
-                        continue;
-
-                    if (FieldsToFetch.Projection.MustExtractFromIndex)
+                    foreach (var fieldToFetch in fields?.Values)
                     {
-                        if (FieldsToFetch.Projection.MustExtractOrThrow)
-                        {
-                            if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
-                                continue; // here we try again, for `id()` fields
+                        if (fieldToFetch.CanExtractFromIndex && // skip `id()` fields here 
+                                TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
+                            continue;
 
-                            FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(fieldToFetch.Name.Value);
+                        if (FieldsToFetch.Projection.MustExtractFromIndex)
+                        {
+                            if (FieldsToFetch.Projection.MustExtractOrThrow)
+                            {
+                                if (TryExtractValueFromIndex(ref retrieverInput, fieldToFetch, result))
+                                    continue; // here we try again, for `id()` fields
+
+                                FieldsToFetch.Projection
+                                    .ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(
+                                        fieldToFetch.Name
+                                            .Value);
+                            }
+
+                            continue;
                         }
 
-                        continue;
-                    }
-
-                    if (doc == null)
-                    {
-                        using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                            doc = DirectGet(input, lowerId, DocumentFields.All, state);
-
                         if (doc == null)
+                        {
+                            using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
+                                doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
+
+                            if (doc == null)
+                            {
+                                if (FieldsToFetch.Projection.MustExtractFromDocument)
+                                {
+                                    if (FieldsToFetch.Projection.MustExtractOrThrow)
+                                        FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId,
+                                            fieldToFetch.Name.Value);
+
+                                    break;
+                                }
+
+                                // we don't return partial results
+                                return default;
+                            }
+                        }
+
+                        if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key,
+                                out var fieldVal, token))
+                        {
+                            if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
+                            {
+                                if (fieldVal is BlittableJsonReaderObject nested)
+                                    doc.Data = nested;
+                                else if (fieldVal is Document d)
+                                    doc = d;
+                                else
+                                    ThrowInvalidQueryBodyResponse(fieldVal);
+                                FinishDocumentSetup(doc, retrieverInput.Score);
+                                return (doc, null);
+                            }
+
+                            if (fieldVal is List<object> list)
+                                fieldVal = new DynamicJsonArray(list);
+
+                            if (fieldVal is Document d2)
+                                fieldVal = d2.Data;
+
+                            result[key] = fieldVal;
+                        }
+                        else
                         {
                             if (FieldsToFetch.Projection.MustExtractFromDocument)
                             {
                                 if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                    FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value);
-
-                                break;
+                                    FieldsToFetch.Projection
+                                        .ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(lowerId, fieldToFetch.Name.Value);
                             }
-
-                            // we don't return partial results
-                            return default;
-                        }
-                    }
-
-                    if (TryGetValue(fieldToFetch, doc, input, state, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token))
-                    {
-                        if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
-                        {
-                            if (fieldVal is BlittableJsonReaderObject nested)
-                                doc.Data = nested;
-                            else if (fieldVal is Document d)
-                                doc = d;
-                            else
-                                ThrowInvalidQueryBodyResponse(fieldVal);
-                            FinishDocumentSetup(doc, scoreDoc);
-                            return (doc, null);
-                        }
-
-                        if (fieldVal is List<object> list)
-                            fieldVal = new DynamicJsonArray(list);
-
-                        if (fieldVal is Document d2)
-                            fieldVal = d2.Data;
-
-                        result[key] = fieldVal;
-                    }
-                    else
-                    {
-                        if (FieldsToFetch.Projection.MustExtractFromDocument)
-                        {
-                            if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(lowerId, fieldToFetch.Name.Value);
                         }
                     }
                 }
@@ -252,26 +273,45 @@ namespace Raven.Server.Documents.Queries.Results
                     };
                 }
 
-                return (ReturnProjection(result, doc, scoreDoc, _context), null);
+                return (ReturnProjection(result, doc, _context, retrieverInput.Score), null);
             }
         }
 
-        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state, CancellationToken token)
+        private bool TryExtractValueFromIndex(ref RetrieverInput retrieverInput, FieldsToFetch.FieldToFetch fieldToFetch, DynamicJsonValue result)
+        {
+            switch (SearchEngineType)
+            {
+                case SearchEngineType.Corax:
+                    if (CoraxTryExtractValueFromIndex(fieldToFetch, ref retrieverInput, result))
+                        return true;
+                    break;
+                case SearchEngineType.Lucene:
+                    if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
+                        return true;
+                    break;
+                default:
+                    throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
+            }
+
+            return false;
+        }
+
+        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
         {
             using (RetrieverScope?.Start())
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
-                return GetProjectionFromDocumentInternal(doc, luceneDoc, scoreDoc, fieldsToFetch, context, state, token);
+                return GetProjectionFromDocumentInternal(doc, ref retrieverInput, fieldsToFetch, context, token);
             }
         }
 
-        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state, CancellationToken token)
+        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
         {
             var result = new DynamicJsonValue();
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token) == false)
+                if (TryGetValue(fieldToFetch, doc, ref retrieverInput, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token) == false)
                 {
                     if (FieldsToFetch.Projection.MustExtractFromDocument)
                     {
@@ -283,13 +323,13 @@ namespace Raven.Server.Documents.Queries.Results
                         continue;
                 }
 
-                var immediateResult = AddProjectionToResult(doc, scoreDoc, fieldsToFetch, result, key, fieldVal);
+                var immediateResult = AddProjectionToResult(doc, retrieverInput.Score, fieldsToFetch, result, key, fieldVal);
 
                 if (immediateResult.Document != null || immediateResult.List != null)
                     return immediateResult;
             }
 
-            return (ReturnProjection(result, doc, scoreDoc, context), null);
+            return (ReturnProjection(result, doc, context, retrieverInput.Score), null);
         }
 
         protected (Document Document, List<Document> List) AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
@@ -309,7 +349,8 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 var r = CreateNewDocument(doc, key, fieldVal);
                 FinishDocumentSetup(r.Document, scoreDoc);
-                if (r.List == null) return r;
+                if (r.List == null)
+                    return r;
                 foreach (Document item in r.List)
                 {
                     FinishDocumentSetup(item, scoreDoc);
@@ -417,7 +458,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
 
-        protected Document ReturnProjection(DynamicJsonValue result, Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, JsonOperationContext context)
+        protected Document ReturnProjection(DynamicJsonValue result, Document doc, JsonOperationContext context, Lucene.Net.Search.ScoreDoc scoreDoc = null)
         {
             var metadata = Json.BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result);
             metadata[Constants.Documents.Metadata.Projection] = true;
@@ -444,12 +485,14 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 doc.Data = newData;
             }
-            FinishDocumentSetup(doc, scoreDoc);
+
+            if (scoreDoc != null)
+                FinishDocumentSetup(doc, scoreDoc);
 
             return doc;
         }
 
-        private bool TryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
+        private bool LuceneTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
         {
             var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -481,6 +524,24 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             return anyExtracted;
+        }
+
+        private bool CoraxTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, ref RetrieverInput retrieverInput, DynamicJsonValue toFill)
+        {
+            if (fieldToFetch.CanExtractFromIndex == false)
+                return false;
+
+            var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+
+            if (FieldsToFetch.IndexFields.ContainsKey(fieldToFetch.Name.Value) == false)
+                return false;
+
+            var id = FieldsToFetch.IndexFields[fieldToFetch.Name.Value].Id;
+            if (TryGetValueFromCoraxIndex(_context, id, ref retrieverInput, out var value) == false)
+                return false;
+
+            toFill[name] = value;
+            return true;
         }
 
         internal static FieldType GetFieldType(string field, Lucene.Net.Documents.Document indexDocument)
@@ -528,6 +589,64 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsNumeric;
         }
 
+        private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, int fieldId, ref RetrieverInput retrieverInput, out object value)
+        {
+            var type = retrieverInput.CoraxEntry.GetFieldType(fieldId, out var intOffset);
+
+            switch (type)
+            {
+                case IndexEntryFieldType.Tuple:
+                    retrieverInput.CoraxEntry.Read(fieldId, out var data);
+                    value = Encodings.Utf8.GetString(data);
+                    break;
+                case IndexEntryFieldType.List:
+                    var iterator = retrieverInput.CoraxEntry.ReadMany(fieldId);
+                    var array = new DynamicJsonArray();
+                    while (iterator.ReadNext())
+                        array.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                    value = array;
+                    break;
+                case IndexEntryFieldType.RawList:
+                    iterator = retrieverInput.CoraxEntry.ReadMany(fieldId);
+                    array = new DynamicJsonArray();
+                    while (iterator.ReadNext())
+                    {
+                        fixed (byte* ptr = &iterator.Sequence.GetPinnableReference())
+                            value = new BlittableJsonReaderObject(ptr, iterator.Sequence.Length, context);
+                    }
+                    value = array;
+                    break;
+                case IndexEntryFieldType.Raw:
+                    retrieverInput.CoraxEntry.Read(fieldId, out Span<byte> blittableBinary);
+                    fixed (byte* ptr = &blittableBinary.GetPinnableReference())
+                        value = new BlittableJsonReaderObject(ptr, blittableBinary.Length, context);
+                    break;
+                case IndexEntryFieldType.Simple:
+                    retrieverInput.CoraxEntry.Read(fieldId, out data);
+                    if (data.Length is 10 or 12)
+                    {
+                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.NullValue.Span) == 0)
+                        {
+                            value = null;
+                            break;
+                        }
+                        if (data.SequenceCompareTo(CoraxDocumentConverterBase.EmptyString.Span) == 0)
+                        {
+                            value = string.Empty;
+                            break;
+                        }
+                    }
+
+                    value = Encodings.Utf8.GetString(data);
+                    break;
+                default:
+                    value = null;
+                    return false;
+            }
+
+            return true;
+        }
+
         private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)
         {
             if (field.IsBinary)
@@ -566,7 +685,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
+        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -580,15 +699,17 @@ namespace Raven.Server.Documents.Queries.Results
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, indexFields, anyDynamicIndexFields, out _, out args[i], token);
+
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, ref retrieverInput, indexFields, anyDynamicIndexFields, out _, out args[i], token);
                     if (ReferenceEquals(args[i], document))
                     {
-                        args[i] = Tuple.Create(document, luceneDoc, state, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
+                        args[i] = Tuple.Create(document, retrieverInput.LuceneDocument, retrieverInput.State, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
                     }
                 }
                 value = GetFunctionValue(fieldToFetch, document.Id, args, token);
                 return true;
             }
+
 
             if (fieldToFetch.QueryField.IsCounter)
             {
@@ -687,20 +808,34 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
-                    if (luceneDoc != null)
+                    object fieldValue = null;
+                    switch (SearchEngineType)
                     {
-                        var fields = luceneDoc.GetFields(fieldToFetch.QueryField.SourceAlias);
-                        if (fields != null && fields.Length > 0)
-                        {
-                            foreach (var field in fields)
+                        case SearchEngineType.Lucene:
+                            var fields = retrieverInput.LuceneDocument.GetFields(fieldToFetch.QueryField.SourceAlias);
+                            if (fields != null && fields.Length > 0)
                             {
-                                if (field == null)
-                                    continue;
+                                foreach (var field in fields)
+                                {
+                                    if (field == null)
+                                        continue;
 
-                                var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
-                                _loadedDocumentIds.Add(fieldValue.ToString());
+                                    fieldValue = ConvertType(_context, field, GetFieldType(field.Name, retrieverInput.LuceneDocument), retrieverInput.State);
+                                    _loadedDocumentIds.Add(fieldValue.ToString());
+                                }
                             }
-                        }
+                            break;
+                        case SearchEngineType.Corax:
+                            if (indexFields.TryGetValue(fieldToFetch.QueryField.SourceAlias, out var fieldDefinition) == false ||
+                                TryGetValueFromCoraxIndex(_context, fieldDefinition.Id, ref retrieverInput, out fieldValue) == false)
+                            {
+                                throw new InvalidDataException($"Field {fieldToFetch.QueryField.SourceAlias} not found in index");
+                            }
+                            _loadedDocumentIds.Add(fieldValue?.ToString());
+
+                            break;
+                        case SearchEngineType.None:
+                            throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
                     }
                 }
                 else

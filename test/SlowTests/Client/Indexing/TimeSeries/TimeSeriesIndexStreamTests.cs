@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
         {
         }
 
-        [Fact]
-        public void BasicMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddSeconds(1);

@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -136,7 +137,7 @@ namespace SlowTests.Tests.Spatial
                         .ToList();
                 }
             }
-
+            
             [Theory]
             [CriticalCultures]
             public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)

@@ -10,6 +10,8 @@ using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
+
 
 namespace SlowTests.MailingList
 {
@@ -27,10 +29,11 @@ namespace SlowTests.MailingList
             public string Value2 { get; set; }
         }
 
-        [Fact]
-        public void DistinctByValue()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctByValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

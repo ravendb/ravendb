@@ -8,10 +8,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -21,10 +24,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void ThreeOrClauses_works()
+        [Theory]
+        [RavenData]
+        public void ThreeOrClauses_works(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -66,10 +70,11 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
-        public void FourOrClauses_fails()
+        [Theory]
+        [RavenData]
+        public void FourOrClauses_fails(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 

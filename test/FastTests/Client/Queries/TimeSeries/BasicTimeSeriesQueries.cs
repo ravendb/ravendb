@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,10 +29,11 @@ namespace FastTests.Client.Queries.TimeSeries
             public long Count { get; set; }
         }
 
-        [Fact]
-        public void BasicMapIndex_Query()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapIndex_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddSeconds(1);
@@ -59,7 +61,7 @@ namespace FastTests.Client.Queries.TimeSeries
                     "   User = ts.DocumentId.ToString() " +
                     "}" }
                 }));
-
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<TsMapIndexResult>("MyTsIndex")
@@ -254,10 +256,11 @@ namespace FastTests.Client.Queries.TimeSeries
             }
         }
 
-        [Fact]
-        public void BasicMapReduceIndex_Query()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapReduceIndex_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var today = RavenTestHelper.UtcToday;
                 var tomorrow = today.AddDays(1);

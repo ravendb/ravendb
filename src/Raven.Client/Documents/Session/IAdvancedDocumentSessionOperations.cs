@@ -179,6 +179,11 @@ namespace Raven.Client.Documents.Session
         IDictionary<string, DocumentsChanges[]> WhatChanged();
 
         /// <summary>
+        /// Returns all the tracked entities in this session.
+        /// </summary>
+        IDictionary<string, EntityInfo> GetTrackedEntities();
+
+        /// <summary>
         /// SaveChanges will wait for the changes made to be replicates to `replicas` nodes
         /// </summary>
         void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, int replicas = 1, bool majority = false);

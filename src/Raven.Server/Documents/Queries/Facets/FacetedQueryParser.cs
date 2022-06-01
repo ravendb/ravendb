@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Queries.Facets
             switch (type)
             {
                 case ValueTokenType.Long:
-                    var lng = QueryBuilder.ParseInt64WithSeparators(value);
+                    var lng = QueryBuilderHelper.ParseInt64WithSeparators(value);
                     return (NumericUtils.DoubleToPrefixCoded(lng), RangeType.Double);
                 case ValueTokenType.Double:
                     var dbl = double.Parse(value, CultureInfo.InvariantCulture);

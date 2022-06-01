@@ -2,6 +2,7 @@ using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Sparrow
@@ -98,6 +99,80 @@ namespace Sparrow
         /// <remarks>The 32bits and 64bits hashes for the same data are different. In short those are 2 entirely different algorithms</remarks>
         public static class XXHash32
         {
+
+            // TODO: Check if it is better to have ReadOnlySpan built on top of pointer or the other way around. 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(ReadOnlySpan<byte> buffer, uint seed = 0)
+            {
+                uint h32;
+
+                ReadOnlySpan<uint> uintBuffer = MemoryMarshal.Cast<byte, uint>(buffer);
+
+                int idx = 0;
+                if (uintBuffer.Length >= 4)
+                {
+                    int limit = uintBuffer.Length - 4;
+
+                    uint v1 = seed + XXHash32Constants.PRIME32_1 + XXHash32Constants.PRIME32_2;
+                    uint v2 = seed + XXHash32Constants.PRIME32_2;
+                    uint v3 = seed + 0;
+                    uint v4 = seed - XXHash32Constants.PRIME32_1;
+
+                    do
+                    {
+                        v1 += uintBuffer[idx + 0] * XXHash32Constants.PRIME32_2;
+                        v2 += uintBuffer[idx + 1] * XXHash32Constants.PRIME32_2;
+                        v3 += uintBuffer[idx + 2] * XXHash32Constants.PRIME32_2;
+                        v4 += uintBuffer[idx + 3] * XXHash32Constants.PRIME32_2;
+
+                        idx += 4;
+
+                        v1 = Bits.RotateLeft32(v1, 13);
+                        v2 = Bits.RotateLeft32(v2, 13);
+                        v3 = Bits.RotateLeft32(v3, 13);
+                        v4 = Bits.RotateLeft32(v4, 13);
+
+                        v1 *= XXHash32Constants.PRIME32_1;
+                        v2 *= XXHash32Constants.PRIME32_1;
+                        v3 *= XXHash32Constants.PRIME32_1;
+                        v4 *= XXHash32Constants.PRIME32_1;
+                    }
+                    while (idx <= limit);
+
+                    h32 = Bits.RotateLeft32(v1, 1) + Bits.RotateLeft32(v2, 7) + Bits.RotateLeft32(v3, 12) + Bits.RotateLeft32(v4, 18);
+                }
+                else
+                {
+                    h32 = seed + XXHash32Constants.PRIME32_5;
+                }
+
+                h32 += (uint)buffer.Length;
+
+                while (idx + 1 <= uintBuffer.Length)
+                {
+                    h32 += uintBuffer[idx] * XXHash32Constants.PRIME32_3;
+                    h32 = Bits.RotateLeft32(h32, 17) * XXHash32Constants.PRIME32_4;
+                    idx += 1;
+                }
+
+                idx *= 4;
+
+                while (idx < buffer.Length)
+                {
+                    h32 += buffer[idx] * XXHash32Constants.PRIME32_5;
+                    h32 = Bits.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;
+                    idx++;
+                }
+
+                h32 ^= h32 >> 15;
+                h32 *= XXHash32Constants.PRIME32_2;
+                h32 ^= h32 >> 13;
+                h32 *= XXHash32Constants.PRIME32_3;
+                h32 ^= h32 >> 16;
+
+                return h32;
+            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static uint CalculateInline(byte* buffer, int len, uint seed = 0)
             {
@@ -156,7 +231,7 @@ namespace Sparrow
                     while (buffer < bEnd)
                     {
                         h32 += (uint)(*buffer) * XXHash32Constants.PRIME32_5;
-                        h32 = Bits.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;                    
+                        h32 = Bits.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;
                         buffer++;
                     }
 

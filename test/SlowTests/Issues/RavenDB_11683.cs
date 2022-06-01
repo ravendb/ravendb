@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                     });
 
                     session.SaveChanges();
-
+                    WaitForUserToContinueTheTest(store);
                     session.Advanced.RawQuery<dynamic>(@"from Remittances as r
 
 group by r.ClaimPayment.ServiceLinePayments[].ClaimAdjustments[].ReasonCode, r.ClaimPayment.ClaimStatusCode

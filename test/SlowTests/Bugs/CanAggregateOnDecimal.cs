@@ -3,6 +3,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using System.Linq;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,10 +52,11 @@ namespace SlowTests.Bugs
             public decimal Amount { get; set; }
         }
 
-        [Fact]
-        public void MapOnly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MapOnly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DecimalAggregationMap().Execute(store);
                 using (var session = store.OpenSession())
@@ -84,10 +86,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void Reduce()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Reduce(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DecimalAggregationReduce().Execute(store);
                 using (var session = store.OpenSession())

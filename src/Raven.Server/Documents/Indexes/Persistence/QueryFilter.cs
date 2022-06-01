@@ -41,9 +41,9 @@ public class QueryFilter : IDisposable
         _filterSingleRun = index.DocumentDatabase.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
     }
 
-    public FilterResult Apply(global::Lucene.Net.Documents.Document document, string key, IState state)
+    public FilterResult Apply(ref RetrieverInput input, string key)
     {
-        var doc = _retriever.DirectGet(document, key, DocumentFields.All, state);
+        var doc = _retriever.DirectGet(ref input, key, DocumentFields.All);
         if (doc == null)
         {
             _skippedResults.Value++;

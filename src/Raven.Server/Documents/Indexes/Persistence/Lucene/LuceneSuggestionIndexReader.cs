@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public sealed class LuceneSuggestionIndexReader : IndexOperationBase
+    public sealed class LuceneSuggestionIndexReader : SuggestionIndexReaderBase
     {
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseSearcher;
@@ -25,14 +25,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IState _state;
 
-        public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, Transaction readTransaction)
             : base(index, LoggingSource.Instance.GetLogger<LuceneSuggestionIndexReader>(index._indexStorage.DocumentDatabase.Name))
         {
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public SuggestionResult Suggestions(IndexQueryServerSide query, SuggestionField field, JsonOperationContext documentsContext, CancellationToken token)
+        public override SuggestionResult Suggestions(IndexQueryServerSide query, SuggestionField field, JsonOperationContext documentsContext, CancellationToken token)
         {
             var options = field.GetOptions(documentsContext, query.QueryParameters) ?? new SuggestionOptions();
             var terms = field.GetTerms(documentsContext, query.QueryParameters);

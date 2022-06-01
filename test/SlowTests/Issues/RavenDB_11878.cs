@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -153,10 +154,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SupportCounterNamesForInIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void SupportCounterNamesForInIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new CounterIndex().Execute(store);
 

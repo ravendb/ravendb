@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -96,10 +97,12 @@ namespace SlowTests.Bugs.Indexing
         }
 
 
-        [Fact]
-        public void CanCreateCompletelyDynamicFields()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanCreateCompletelyDynamicFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Product_ByAttribute().Execute(store);
 
@@ -128,10 +131,12 @@ namespace SlowTests.Bugs.Indexing
             }
         }        
 
-        [Fact]
-        public void CanCreateCompletelyDynamicFieldsWithProjection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanCreateCompletelyDynamicFieldsWithProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Product_ByAttributeStored().Execute(store);
 
@@ -164,10 +169,12 @@ Color: product.Color
             }
         }
 
-        [Fact]
-        public void CanCreateCompletelyDynamicNumericFields()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanCreateCompletelyDynamicNumericFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Product_ByNumericAttribute().Execute(store);
 
@@ -196,10 +203,12 @@ Color: product.Color
             }
         }
 
-        [Fact]
-        public void CanCreateCompletelyDynamicNumericFieldsUsingField()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanCreateCompletelyDynamicNumericFieldsUsingField(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Product_ByNumericAttributeUsingField().Execute(store);
 
@@ -228,10 +237,12 @@ Color: product.Color
             }
         }
 
-        [Fact]
-        public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRangeUsingInt()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRangeUsingInt(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Product_ByIntAttribute().Execute(store);
 
@@ -260,10 +271,12 @@ Color: product.Color
             }
         }
 
-        [Fact]
-        public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRange()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRange(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Product_ByNumericAttribute().Execute(store);
 

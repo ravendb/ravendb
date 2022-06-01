@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Spatial;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -61,10 +62,11 @@ namespace SlowTests.Tests.Spatial
             Assert.Equal("POLYGON ((0 0, 1 1, 2 2, 0 0))", wkt.Sanitize("POLYGON ZM ((0 0 0 0, 1 1 1 1, 2 2 2 2, 0 0 0 0))"));
         }
 
-        [Fact]
-        public void Integration()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Integration(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new SpatialIndex());

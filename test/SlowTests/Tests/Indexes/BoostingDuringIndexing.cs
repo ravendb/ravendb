@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,10 +59,12 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void CanBoostFullDocument()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanBoostFullDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersAndAccounts().Execute(store);
 
@@ -96,10 +99,12 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void CanGetBoostedValues()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanGetBoostedValues(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersByName().Execute(store);
 

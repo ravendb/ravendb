@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,10 +38,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_Dictionary_Created_Field_In_Lucene_Search()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_Use_Dictionary_Created_Field_In_Lucene_Search(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 
@@ -64,10 +66,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_Dictionary_Created_Field_In_Linq_Where()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_Use_Dictionary_Created_Field_In_Linq_Where(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 
@@ -92,10 +95,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_Dictionary_Created_Field_In_Linq_Search()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+
+        public void Can_Use_Dictionary_Created_Field_In_Linq_Search(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 
@@ -120,10 +126,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_Dictionary_Created_Field_In_Linq_Search_Workaround()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void Can_Use_Dictionary_Created_Field_In_Linq_Search_Workaround(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.ExecuteIndex(new TranTestIndex());
 

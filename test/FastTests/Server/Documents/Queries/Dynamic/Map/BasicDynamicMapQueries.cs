@@ -2,13 +2,16 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.Client.Documents.Linq;
+using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
@@ -19,10 +22,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
         }
 
-        [Fact]
-        public async Task String_where_clause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task String_where_clause(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -42,10 +46,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Numeric_where_equals_clause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Numeric_where_equals_clause(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -65,10 +70,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Numeric_between_clause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Numeric_between_clause(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -94,10 +100,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Numeric_range_where_clause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Numeric_range_where_clause(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -127,10 +134,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Where_clause_and_sorting()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Where_clause_and_sorting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -161,10 +169,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_doubles()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Sorting_by_doubles(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -187,10 +196,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_integers()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Sorting_by_integers(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -213,10 +223,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_nested_string_field()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Sorting_by_nested_string_field(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -251,10 +262,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_nested_integer_field()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Sorting_by_nested_integer_field(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -289,10 +301,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_strings()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Sorting_by_strings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -320,10 +333,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Partial_match()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Partial_match(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -358,10 +372,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Empty_query()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Empty_query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -397,10 +412,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Can_project_in_map()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_project_in_map(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -459,10 +475,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public void Collection_query()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Collection_query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -493,10 +510,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public void Can_query_on_dictionary()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_query_on_dictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -531,7 +549,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 {
                     var items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict["a"] == "b").ToList();
                     Assert.Equal(1, items.Count);
-
+                    WaitForUserToContinueTheTest(store);
                     items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict.Any(y => y.Key == "a")).ToList();
                     Assert.Equal(2, items.Count);
 

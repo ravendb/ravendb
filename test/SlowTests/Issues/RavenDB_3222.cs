@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,10 +36,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TDSQ()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void TDSQ(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIndexForTest().Execute(store);
 

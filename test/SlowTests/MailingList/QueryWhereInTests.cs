@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -74,10 +75,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_Only_AfterLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_Only_AfterLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -86,10 +88,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_Hit1_Then_AfterLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_Hit1_Then_AfterLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -98,10 +101,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_Miss2_Then_AfterLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_Miss2_Then_AfterLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -110,10 +114,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_Hit3_Then_AfterLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_Hit3_Then_AfterLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -122,10 +127,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_Miss4_Then_AfterLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_Miss4_Then_AfterLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -134,10 +140,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_Hit5_Then_AfterLast()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_Hit5_Then_AfterLast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -148,10 +155,11 @@ namespace SlowTests.MailingList
 
 
 
-        [Fact]
-        public void WhereIn_AfterLast_Then_Hit1()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_AfterLast_Then_Hit1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -160,10 +168,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_AfterLast_Then_Miss2()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_AfterLast_Then_Miss2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -173,10 +182,11 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
-        public void WhereIn_AfterLast_Then_Hit3()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_AfterLast_Then_Hit3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -186,10 +196,11 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
-        public void WhereIn_AfterLast_Then_Miss4()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_AfterLast_Then_Miss4(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -198,10 +209,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_AfterLast_Then_Hit5()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_AfterLast_Then_Hit5(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,
@@ -210,10 +222,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WhereIn_Miss2_Then_Miss4()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhereIn_Miss2_Then_Miss4(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
                 AssertMatches(store,

@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void DistinctCountShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctCountShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

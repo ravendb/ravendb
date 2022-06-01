@@ -2,6 +2,7 @@
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -13,10 +14,11 @@ namespace SlowTests.Bugs.Queries
 
         private const string PropertyName = "MyCustomProperty";
 
-        [Fact]
-        public void SuccessTest1()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SuccessTest1(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 dynamic expando = new ExpandoObject();
 
@@ -41,10 +43,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void SuccessTest2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SuccessTest2(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 dynamic expando = new ExpandoObject();
 
@@ -71,10 +74,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void FailureTest()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void FailureTest(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 dynamic expando = new ExpandoObject();
 

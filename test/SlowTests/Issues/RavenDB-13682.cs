@@ -23,10 +23,11 @@ namespace SlowTests.Issues
             public string Name;
         }
 
-        [Fact]
-        public void CanQueryByRoundedSpatialRanges()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryByRoundedSpatialRanges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -118,10 +119,11 @@ order by spatial.distance(spatial.point(a.Lat, a.Lng), spatial.point(35.1, -106.
             }
         }
 
-        [Fact]
-        public void CanUseDynamicQueryOrderBySpatial_WithAlias()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseDynamicQueryOrderBySpatial_WithAlias(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -142,10 +144,11 @@ limit 1")
             }
         }
 
-        [Fact]
-        public void CanUseDynamicQueryOrderBySpatial()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseDynamicQueryOrderBySpatial(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -166,10 +169,11 @@ limit 1")
             }
         }
 
-        [Fact]
-        public void CanProjectDistanceComputation()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanProjectDistanceComputation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -204,10 +208,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanGetDistanceFromSpatialQuery()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetDistanceFromSpatialQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 

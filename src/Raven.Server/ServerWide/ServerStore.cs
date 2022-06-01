@@ -31,6 +31,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -3410,14 +3411,14 @@ namespace Raven.Server.ServerWide
             return json;
         }
 
-        public static IEnumerable<Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment, bool includeTempBuffers)
+        public IEnumerable<Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment, bool includeTempBuffers)
         {
             var fullPath = environment?.Environment.Options.BasePath.FullPath;
             if (fullPath == null)
                 yield break;
 
             var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
-            var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
+            var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
             if (diskSpaceResult == null)
                 yield break;
 
@@ -3427,71 +3428,90 @@ namespace Raven.Server.ServerWide
                 Name = environment.Name,
                 Type = environment.Type.ToString(),
                 UsedSpace = sizeOnDisk.DataFileInBytes,
-                DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
-                {
-                    DriveName = diskSpaceResult.DriveName,
-                    VolumeLabel = diskSpaceResult.VolumeLabel,
-                    TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                    TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                },
+                DiskSpaceResult = FillDiskSpaceResult(diskSpaceResult),
                 UsedSpaceByTempBuffers = 0
             };
 
-            var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
-            if (journalPathUsage != null)
+            var ioStatsResult = Server.DiskStatsGetter.Get(driveInfo?.BasePath.DriveName);
+            if (ioStatsResult != null)
+                usage.IoStatsResult = FillIoStatsResult(ioStatsResult); 
+
+            if (diskSpaceResult.DriveName == driveInfo?.JournalPath.DriveName)
             {
-                if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
-                {
                     usage.UsedSpace += sizeOnDisk.JournalsInBytes;
                     usage.UsedSpaceByTempBuffers += includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0;
                 }
                 else
                 {
-                    yield return new Client.ServerWide.Operations.MountPointUsage
+                var journalDiskSpaceResult = DiskUtils.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
+                if (journalDiskSpaceResult != null)
+                    {
+                    var journalUsage = new Client.ServerWide.Operations.MountPointUsage
                     {
                         Name = environment.Name,
                         Type = environment.Type.ToString(),
-                        DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
-                        {
-                            DriveName = journalPathUsage.DriveName,
-                            VolumeLabel = journalPathUsage.VolumeLabel,
-                            TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                            TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
-                        },
+                        DiskSpaceResult = FillDiskSpaceResult(journalDiskSpaceResult),
                         UsedSpaceByTempBuffers = includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0
                     };
+                    var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
+                    if (journalIoStatsResult != null)
+                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
+                    
+                    yield return journalUsage;
                 }
             }
 
             if (includeTempBuffers)
             {
-                var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
-                if (tempBuffersDiskSpaceResult != null)
+                if (diskSpaceResult.DriveName == driveInfo?.TempPath.DriveName)
                 {
-                    if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
-                    {
                         usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
                     }
                     else
                     {
-                        yield return new Client.ServerWide.Operations.MountPointUsage
+                    var tempBuffersDiskSpaceResult = DiskUtils.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+                    if (tempBuffersDiskSpaceResult != null)
+                        {
+                        var tempBuffersUsage = new Client.ServerWide.Operations.MountPointUsage
                         {
                             Name = environment.Name,
                             Type = environment.Type.ToString(),
                             UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
-                            DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
-                            {
-                                DriveName = tempBuffersDiskSpaceResult.DriveName,
-                                VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
-                                TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                            }
+                            DiskSpaceResult = FillDiskSpaceResult(tempBuffersDiskSpaceResult)
                         };
+                        var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
+                        if(tempBufferIoStatsResult != null)
+                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
+
+                        yield return tempBuffersUsage;
                     }
                 }
             }
 
             yield return usage;
+        }
+
+        private static Client.ServerWide.Operations.DiskSpaceResult FillDiskSpaceResult(Sparrow.Server.Utils.DiskSpaceResult journalDiskSpaceResult)
+        {
+            return new Client.ServerWide.Operations.DiskSpaceResult
+            {
+                DriveName = journalDiskSpaceResult.DriveName,
+                VolumeLabel = journalDiskSpaceResult.VolumeLabel,
+                TotalFreeSpaceInBytes = journalDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                TotalSizeInBytes = journalDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+            };
+        }
+
+        private static IoStatsResult FillIoStatsResult(DiskStatsResult ioStatsResult)
+        {
+            return new IoStatsResult
+            {
+                IoReadOperations = ioStatsResult.IoReadOperations, 
+                IoWriteOperations = ioStatsResult.IoWriteOperations,
+                ReadThroughputInKb = ioStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
+                WriteThroughputInKb = ioStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
+                QueueLength = ioStatsResult.QueueLength,
+            };
         }
 
         public StreamsTempFile GetTempFile(string fileTypeOrName, string suffix, bool? isEncrypted = null)

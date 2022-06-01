@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,19 +15,21 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void ShouldCastNullToThePropertyType()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldCastNullToThePropertyType(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new NullableIndex().Execute(store);
             }
         }
 
-        [Fact]
-        public void ShouldWorkAlsoWithAnonymousResultTypeWhichRequiredExplicitlyCast()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldWorkAlsoWithAnonymousResultTypeWhichRequiredExplicitlyCast(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new AnonymousNullableIndex().Execute(store);
             }

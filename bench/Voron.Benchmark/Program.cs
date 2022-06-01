@@ -1,5 +1,5 @@
-﻿using BenchmarkDotNet.Running;
-using BenchmarkDotNet.Configs;
+﻿using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Running;
 
 namespace Voron.Benchmark
 {

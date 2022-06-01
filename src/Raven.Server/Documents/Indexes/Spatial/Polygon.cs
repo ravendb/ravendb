@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using GeoAPI.Geometries;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Spatial
 {

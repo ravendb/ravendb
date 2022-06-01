@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Timings;
@@ -13,21 +12,22 @@ namespace Raven.Server.Documents.Queries.Results.Sharding;
 
 public class ShardedMapReduceResultRetriever : QueryResultRetrieverBase
 {
-    public ShardedMapReduceResultRetriever(ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, char identitySeparator) : base(scriptRunnerCache, query, queryTimings, fieldsToFetch, documentsStorage, context, reduceResults, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, identitySeparator)
+    public ShardedMapReduceResultRetriever(ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, char identitySeparator)
+        : base(scriptRunnerCache, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, reduceResults, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, identitySeparator)
     {
     }
 
-    public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, ScoreDoc scoreDoc, IState state, CancellationToken token)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)
+    public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
     {
         throw new NotImplementedException();
     }
 
-    public override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
+    public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
     {
         throw new NotImplementedException();
     }

@@ -8,7 +8,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene;
 
-public partial class IndexReadOperation
+public partial class LuceneIndexReadOperation
 {
     partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, int doc, ref Document d)
     {

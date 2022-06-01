@@ -52,6 +52,9 @@ public enum RavenTestCategory : long
     CompareExchange = 1L << 37,
     Embedded = 1L << 38,
     ClusterTransactions = 1L << 39,
+    Highlighting = 1L << 40,
+    Smuggler = 1L << 41,
+    Lucene = 1L << 42,
     [Description("Changes API")]
-    ChangesApi = 1L << 40
+    ChangesApi = 1L << 43
 }

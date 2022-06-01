@@ -18,7 +18,7 @@ namespace Raven.Server.Storage.Schema
 
             public const int DocumentsVersion = 60_000;
 
-            public const int IndexVersion = 50_000;
+            public const int IndexVersion = 54_000;
         }
 
         private static readonly int[] SkippedDocumentsVersion = { 40_012 };

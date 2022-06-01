@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Json;
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             Definition.State = State;
         }
 
-        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 

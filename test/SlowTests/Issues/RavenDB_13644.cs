@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,22 +25,24 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes(Options options)
         {
-            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange>();
+            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange>(options);
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_JavaScript()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes_JavaScript(Options options)
         {
-            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange_JavaScript>();
+            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange_JavaScript>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes<TIndex>()
+        private void CanLoadCompareExchangeInIndexes<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new TIndex();
                 var indexName = index.IndexName;
@@ -222,22 +225,24 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_Simple()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes_Simple(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Simple<Index_With_CompareExchange_Simple>();
+            CanLoadCompareExchangeInIndexes_Simple<Index_With_CompareExchange_Simple>(options);
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_Simple_JavaScript()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes_Simple_JavaScript(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Simple<Index_With_CompareExchange_Simple_JavaScript>();
+            CanLoadCompareExchangeInIndexes_Simple<Index_With_CompareExchange_Simple_JavaScript>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes_Simple<TIndex>()
+        private void CanLoadCompareExchangeInIndexes_Simple<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new TIndex();
                 var indexName = index.IndexName;
@@ -420,22 +425,24 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_Query()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes_Query(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange>();
+            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange>(options);
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_Query_JavaScript()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanLoadCompareExchangeInIndexes_Query_JavaScript(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange_JavaScript>();
+            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange_JavaScript>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes_Query<TIndex>()
+        private void CanLoadCompareExchangeInIndexes_Query<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new TIndex();
                 var indexName = index.IndexName;
@@ -724,10 +731,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanLoadCompareExchangeInIndexes_TimeSeries()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanLoadCompareExchangeInIndexes_TimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new TimeSeries_Index_With_CompareExchange();
                 var indexName = index.IndexName;
@@ -952,10 +960,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_TimeSeries_Query()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanLoadCompareExchangeInIndexes_TimeSeries_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new TimeSeries_Index_With_CompareExchange();
                 var indexName = index.IndexName;
@@ -1255,10 +1264,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanLoadCompareExchangeInIndexes_Counters()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanLoadCompareExchangeInIndexes_Counters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Counters_Index_With_CompareExchange();
                 var indexName = index.IndexName;
@@ -1481,10 +1491,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_Counters_Query()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanLoadCompareExchangeInIndexes_Counters_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Counters_Index_With_CompareExchange();
                 var indexName = index.IndexName;
@@ -1783,16 +1794,17 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_MapReduce_Query()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes_MapReduce_Query(Options options)
         {
-            CanLoadCompareExchangeInIndexes_MapReduce_Query<Index_With_CompareExchange_MapReduce>();
+            CanLoadCompareExchangeInIndexes_MapReduce_Query<Index_With_CompareExchange_MapReduce>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes_MapReduce_Query<TIndex>()
+        private void CanLoadCompareExchangeInIndexes_MapReduce_Query<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new TIndex();
                 var indexName = index.IndexName;
@@ -2072,10 +2084,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_MapReduce_Counters_Query()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanLoadCompareExchangeInIndexes_MapReduce_Counters_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Counters_Index_With_CompareExchange_MapReduce();
                 var indexName = index.IndexName;
@@ -2365,10 +2378,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanLoadCompareExchangeInIndexes_MapReduce_TimeSeries_Query()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanLoadCompareExchangeInIndexes_MapReduce_TimeSeries_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new TimeSeries_Index_With_CompareExchange_MapReduce();
                 var indexName = index.IndexName;

@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -51,14 +52,15 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void SimpleInsertAndRead()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SimpleInsertAndRead(Options options)
         {
             string expectedContainerName = "someContainer123098";
             string expectedItemName = "someItem456";
             int expectedQuantity = 123;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new NestedObjectIndex().Execute(store);
 

@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Jint.Runtime.References;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
@@ -142,15 +144,16 @@ namespace Raven.Server.Documents.Indexes
             public const long TimeTicks = 50_000;
 
             public const long Analyzers = 52_000;
-
+            
             public const long ReduceKeyProcessorHashDoubleFix = 52_001; // RavenDB-17572
 
             public const long ProperlyParseThreeDigitsMillisecondsDates = 52_002; // RavenDB-17711
 
+            public const long EngineTypeStored = 54_000; // introducing Corax, added engine type to the index storage
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = ProperlyParseThreeDigitsMillisecondsDates;
+            public const long CurrentVersion = EngineTypeStored;
         }
     }
 
@@ -179,6 +182,8 @@ namespace Raven.Server.Documents.Indexes
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
             IndexFields = new Dictionary<string, IndexField>(StringComparer.Ordinal);
+            var lastUsedId = new Reference<int>() { Value = mapFields.Length };
+
 
             foreach (var field in mapFields)
             {
@@ -186,7 +191,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (field is AutoIndexField autoField)
                 {
-                    foreach (var indexField in autoField.ToIndexFields())
+                    foreach (var indexField in autoField.ToIndexFields(lastUsedId))
                     {
                         IndexFields.Add(indexField.Name, indexField);
                     }

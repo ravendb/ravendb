@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,14 +15,15 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Fact]
-        public void Test()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Test(Options options)
         {
             var myHouse = new DummyGeoDoc(44.757767, -93.355322);
             // The gym is about 7.32 miles (11.79 kilometers) from my house.
             var gym = new DummyGeoDoc(44.682861, -93.25);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new KmGeoIndex());

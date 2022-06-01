@@ -10,6 +10,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Timings;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,10 +22,11 @@ public class FilterTests : RavenTestBase
     {
     }
 
-    [Fact]
-    public void CanUseFilterAsContextualKeywordForBackwardCompatability()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanUseFilterAsContextualKeywordForBackwardCompatability(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
         // raw
@@ -48,10 +50,11 @@ select filter(a)").Count();
         }
     }
 
-    [Fact]
-    public void CanUseFilterWithCollectionQuery()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanUseFilterWithCollectionQuery(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
         Employee result;
@@ -167,10 +170,11 @@ select filter(a)").Count();
         // with load
     }
 
-    [Fact]
-    public async Task AsyncCanUseFilterWithCollectionQuery()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task AsyncCanUseFilterWithCollectionQuery(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -229,10 +233,11 @@ select filter(a)").Count();
         }
     }
 
-    [Fact]
-    public void CanFilterWithLoad()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanFilterWithLoad(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -279,10 +284,11 @@ select filter(a)").Count();
         }
     }
 
-    [Fact]
-    public void CanUseFilterQueryOnMapIndexes()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanUseFilterQueryOnMapIndexes(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems(additional: new() { (new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank") }));
 
 
@@ -465,6 +471,7 @@ select filter(a)").Count();
         // spatial
         using (var s = store.OpenSession())
         {
+            WaitForUserToContinueTheTest(store);
             var shape =
                 "POLYGON((-122.32246398925781 47.643055992166275,-122.32795715332031 47.62917538239487,-122.33207702636719 47.60904194838943,-122.32109069824219 47.595846873927044,-122.31422424316406 47.594920778814824,-122.30701446533203 47.58959541384278,-122.28538513183594 47.59029005739745,-122.27989196777344 47.620382422330565,-122.28401184082031 47.62454769305083,-122.27645874023438 47.632414521155376,-122.27577209472656 47.6421307328982,-122.29328155517578 47.64536906863988,-122.32246398925781 47.643055992166275))";
             var emp = s.Advanced.RawQuery<Employee>(@"
@@ -485,7 +492,7 @@ filter Name = 'Frank'")
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData("from Employees filter spatial.within(spatial.point(Location.Latitude, Location.Longitude), spatial.wkt($wkt))", typeof(RavenException))]
     [InlineData("from Employees filter MoreLikeThis('emps/jane')", typeof(RavenException))]
     [InlineData("from Employees filter MoreLikeThis('emps/jane') select suggest(Name, 'jake')", typeof(RavenException))]
@@ -502,10 +509,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void InvalidFilterQueriesInLinq()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void InvalidFilterQueriesInLinq(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems());
         {
             using var session = store.OpenSession();
@@ -516,10 +524,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void CanUseFilterQueryOnMapReduce()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanUseFilterQueryOnMapReduce(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems());
 
         Summary summary;
@@ -566,10 +575,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public async Task AsyncCanUseFilterQueryOnMapReduce()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task AsyncCanUseFilterQueryOnMapReduce(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems());
 
         Summary summary;
@@ -598,10 +608,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void ExtendedLinqTest()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void ExtendedLinqTest(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -641,10 +652,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void CannotUseFacetWithFilter()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CannotUseFacetWithFilter(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             new BlogIndex().Execute(store);
             var facets = new List<Facet> { new Facet { FieldName = "Tags", Options = new FacetOptions { TermSortMode = FacetTermSortMode.CountDesc } } };
@@ -680,10 +692,11 @@ filter Name = 'Frank'")
         };
     }
 
-    [Fact]
-    public void Timings()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void Timings(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 

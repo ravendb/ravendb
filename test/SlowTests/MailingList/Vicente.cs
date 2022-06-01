@@ -9,6 +9,7 @@ using Xunit;
 using System.Linq;
 using Raven.Client.Documents;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -18,7 +19,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        public const string query =
+        private const string Query =
             @"CTOTurning a dream into a web :)
 https://www.talentous.comSenior consultantWorking as software architect and senior developer in Raona key accounts.Software Design Engineer•	In this company, I worked as software design engineer developing software projects with Microsoft Visual Studio 2008/2010, SQL Server 2008, Visual C# & LINQ and Entity Framework. I participated in the whole software project lifecycle, performing design, implementation and modification tasks. Also, I did load testing and software debug and optimization. 
 
@@ -34,15 +35,16 @@ https://www.talentous.comSenior consultantWorking as software architect and seni
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void CanQuery()
+        [Theory]
+        [RavenData]
+        public void CanQuery(Options options)
         {
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(options))
             {
                 using(var session = store.OpenSession())
                 {
                     session.Query<Item>()
-                        .Search(x => x.Name, query)
+                        .Search(x => x.Name, Query)
                         .ToList();
                 }
             }

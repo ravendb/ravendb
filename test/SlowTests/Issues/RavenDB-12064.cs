@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,8 +13,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldGetIdentityPropertyFromFilteredType()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldGetIdentityPropertyFromFilteredType(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -42,10 +44,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void OfTypeAfterSelectShouldWorkFine()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void OfTypeAfterSelectShouldWorkFine(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersIndex2().Execute(store);
                 using (var session = store.OpenSession())
@@ -56,6 +59,7 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
+                WaitForUserToContinueTheTest(store);
                 Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -106,6 +110,9 @@ namespace SlowTests.Issues
                         Name = user.Name,
                         Friend = user.Friend
                     };
+                
+                Stores.Add(i => i.Friend, FieldStorage.Yes);
+                Index(i => i.Friend, FieldIndexing.No);
             }
             public class Result
             {

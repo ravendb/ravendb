@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void SameHash()
         {
-            var perFieldAnalyzerComparer = new RavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();
+            var perFieldAnalyzerComparer = new LuceneRavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();
             Assert.Equal(perFieldAnalyzerComparer.GetHashCode("Name"), perFieldAnalyzerComparer.GetHashCode("@in<Name>"));
             Assert.True(perFieldAnalyzerComparer.Equals("Name", "@in<Name>"));
         }

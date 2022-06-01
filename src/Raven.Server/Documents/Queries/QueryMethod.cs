@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
         }
 
-        public static void ThrowMethodNotSupported(MethodType methodType, string queryText, BlittableJsonReaderObject parameters)
+        public static object ThrowMethodNotSupported(MethodType methodType, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Method '{methodType}' is not supported.", queryText, parameters);
         }

@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Document_id_not_null_when_projecting()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Document_id_not_null_when_projecting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new TimeoutsIndex().Execute(store);
 
