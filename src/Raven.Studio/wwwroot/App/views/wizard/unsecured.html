@@ -97,9 +97,7 @@
                                         </a>
                                     </li>
                                 </ul>
-                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: ip">
-                                    <div class="help-block" data-bind="validationMessage: ip"></div>
-                                </div>
+                                <div class="help-block" data-bind="validationMessage: ip"></div>
                                 <div class="help-block" data-bind="visible: $parent.isLoopbackOnly()">This node won't be reachable from outside this machine.</div>
                             </div>
                         </div>
@@ -155,7 +153,7 @@
             </button>
             <div class="flex-separator"></div>
             <button type="submit" class="btn btn-primary btn-lg">
-                <span>Next</span> <i class="icon-arrow-right"></i>
+                <span>Finish</span> <i class="icon-arrow-right"></i>
             </button>
         </div>
     </form>

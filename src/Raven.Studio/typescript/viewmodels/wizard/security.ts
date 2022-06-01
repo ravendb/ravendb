@@ -1,23 +1,14 @@
 import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
-import popoverUtils = require("common/popoverUtils");
 
 class security extends setupStep {
     
     compositionComplete() {
         super.compositionComplete();
-        this.model.mode("LetsEncrypt");
+        
+        this.model.mode(this.model.mode() || "LetsEncrypt");
         
         this.setupDisableReasons();
-
-        popoverUtils.longWithHover($(".toggle-zip-only"), {
-            content: `<small>
-                          <strong>Toggle ON</strong>: Wizard will only create a setup zip package for external setup. Current server will NOT be modified.<br />
-                          <strong>Toggle OFF</strong>: Wizard will create a setup zip package AND set up the current server.
-                      </small>`,
-            html: true,
-            placement: "top"
-        })
     }
     
     clickUnsecured() {
