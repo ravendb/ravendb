@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.PeriodicBackup
     {
         public static void AssertFreeSpaceForSnapshot(string directoryPath, long sizeInBytes, string action, Logger logger)
         {
-            var destinationDriveInfo = DiskSpaceChecker.GetDiskSpaceInfo(directoryPath);
+            var destinationDriveInfo = DiskUtils.GetDiskSpaceInfo(directoryPath);
             if (destinationDriveInfo == null)
             {
                 if (logger.IsInfoEnabled)

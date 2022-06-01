@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +12,8 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
@@ -394,8 +395,9 @@ namespace Raven.Server.Documents.Handlers
                 using (var context = QueryOperationContext.Allocate(database, needsServerContext))
                 using (context.OpenReadTransaction())
                 {
-                    foreach (var waitForIndexItem in indexesToWait)
+                    for (var i = 0; i < indexesToWait.Count; i++)
                     {
+                        var waitForIndexItem = indexesToWait[i];
                         if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
                             continue;
 
@@ -408,9 +410,7 @@ namespace Raven.Server.Documents.Handlers
                             if (throwOnTimeout == false)
                                 return;
 
-                            throw new TimeoutException(
-                                $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                                $"indexes has caught up with the changes as of etag: {cutoffEtag}");
+                            ThrowTimeoutException(indexesToWait, i, sp, context, cutoffEtag);
                         }
                     }
                 }
@@ -418,6 +418,45 @@ namespace Raven.Server.Documents.Handlers
                 if (hadStaleIndexes == false)
                     return;
             }
+        }
+
+        private static void ThrowTimeoutException(List<WaitForIndexItem> indexesToWait, int i, Stopwatch sp, QueryOperationContext context, long cutoffEtag)
+        {
+            var staleIndexesCount = 0;
+            var erroredIndexes = new List<string>();
+            var pausedIndexes = new List<string>();
+
+            for (var j = i; j < indexesToWait.Count; j++)
+            {
+                var index = indexesToWait[j].Index;
+
+                if (index.State == IndexState.Error)
+                {
+                    erroredIndexes.Add(index.Name);
+                }
+                else if (index.Status == IndexRunningStatus.Paused)
+                {
+                    pausedIndexes.Add(index.Name);
+                }
+
+                if (index.IsStale(context, cutoffEtag))
+                    staleIndexesCount++;
+            }
+
+            var errorMessage = $"After waiting for {sp.Elapsed}, could not verify that all indexes has caught up with the changes as of etag: {cutoffEtag:#,#;;0}. " +
+                               $"Total relevant indexes: {indexesToWait.Count}, total stale indexes: {staleIndexesCount}";
+
+            if (erroredIndexes.Count > 0)
+            {
+                errorMessage += $", total errored indexes: {erroredIndexes.Count} ({string.Join(", ", erroredIndexes)})";
+            }
+
+            if (pausedIndexes.Count > 0)
+            {
+                errorMessage += $", total paused indexes: {pausedIndexes.Count} ({string.Join(", ", pausedIndexes)})";
+            }
+
+            throw new TimeoutException(errorMessage);
         }
 
         private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
@@ -440,6 +479,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var index in database.IndexStore.GetIndexes())
                 {
+                    if (index.State is IndexState.Disabled)
+                        continue;
+
                     if (index.Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection) ||
                         index.WorksOnAnyCollection(modifiedCollections))
                     {
