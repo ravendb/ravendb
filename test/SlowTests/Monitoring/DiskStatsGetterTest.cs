@@ -4,14 +4,20 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Sparrow.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Monitoring
 {
-    public class DiskStatsGetterTest
+    public class DiskStatsGetterTest : NoDisposalNeeded
     {
+        public DiskStatsGetterTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [MultiplatformFact(RavenPlatform.Linux)]
         public async Task DiskStats_WhenGet_ShouldBeLessThenTwoSimpleGet()
         {
@@ -43,7 +49,7 @@ namespace SlowTests.Monitoring
                         stop.Restart();
                         _ = await diskStatsGetter.GetAsync(currentDirectory);
                         var stopElapsed = stop.Elapsed;
-                        if(10 * baseTime < stopElapsed)
+                        if (10 * baseTime < stopElapsed)
                             Interlocked.Increment(ref errorCount);
                     }
                 })).ToArray();
