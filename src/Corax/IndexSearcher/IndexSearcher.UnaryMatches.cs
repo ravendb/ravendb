@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Corax.Queries;
+using Corax.Utils;
 using Voron;
 
 namespace Corax;
@@ -22,6 +23,11 @@ public partial class IndexSearcher
             Slice.From(Allocator, ApplyAnalyzer((Slice)(object)term, fieldId), out var slice);
             return BuildUnaryMatch(in set, fieldId, slice, @operation, take);
         }
+        else if (typeof(TValueType) == typeof(TermQueryItem[]))
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, TValueType>.YieldAllIn(set, this, fieldId, term, take: take));
+        }
+
 
         return BuildUnaryMatch(in set, fieldId, term, @operation, take);
     }

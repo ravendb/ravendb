@@ -73,7 +73,7 @@ namespace SlowTests.Tests.Spatial
             Turkey
         }
 
-        public CultureInfo GetCultureInfo(CultureInfoTest culture) => culture switch
+        public static CultureInfo GetCultureInfo(CultureInfoTest culture) => culture switch
         {
             CultureInfoTest.Invariant => CultureInfo.InvariantCulture,
             CultureInfoTest.CurrentCulture => CultureInfo.CurrentCulture,
