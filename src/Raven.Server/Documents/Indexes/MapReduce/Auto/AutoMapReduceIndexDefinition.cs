@@ -118,6 +118,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 writer.WriteString(field.GroupByArrayBehavior.ToString());
 
                 writer.WriteComma();
+
+                writer.WritePropertyName(nameof(field.HasQuotedName));
+                writer.WriteBool(field.HasQuotedName);
+
+                writer.WriteComma();
                 
                 writer.WritePropertyName(nameof(field.Id));
                 writer.WriteInteger(field.Id);
@@ -207,6 +212,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 json.TryGet(nameof(AutoIndexField.Name), out string name);
                 json.TryGet(nameof(AutoIndexField.Aggregation), out int aggregationAsInt);
+                json.TryGet(nameof(AutoIndexField.HasQuotedName), out bool hasQuotedName);
                 json.TryGet(nameof(AutoIndexField.Id), out int id);
                 
                 var field = new AutoIndexField
@@ -215,6 +221,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     Storage = FieldStorage.No,
                     Indexing = AutoFieldIndexing.Default,
                     Aggregation = (AggregationOperation)aggregationAsInt,
+                    HasQuotedName = hasQuotedName,
                     Id = id
                 };
 
@@ -233,6 +240,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 json.TryGet(nameof(IndexField.Name), out string name);
                 json.TryGet(nameof(IndexField.Indexing), out string indexing);
                 json.TryGet(nameof(AutoIndexField.GroupByArrayBehavior), out string groupByArray);
+                json.TryGet(nameof(AutoIndexField.HasQuotedName), out bool hasQuotedName);
                 json.TryGet(nameof(IndexField.Id), out int id);
                 
                 var field = new AutoIndexField
@@ -241,6 +249,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     Storage = FieldStorage.No,
                     Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
                     GroupByArrayBehavior = (GroupByArrayBehavior)Enum.Parse(typeof(GroupByArrayBehavior), groupByArray),
+                    HasQuotedName = hasQuotedName,
                     Id = id
                 };
 

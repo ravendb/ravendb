@@ -221,6 +221,21 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Remaining server storage disk space in %")]
             public const string StorageDiskRemainingSpacePercentage = "1.10.4";
 
+            [Description("IO read operations per second")]
+            public const string StorageDiskIoReadOperations = "1.10.5";
+            
+            [Description("IO write operations per second")]
+            public const string StorageDiskIoWriteOperations = "1.10.6";
+
+            [Description("Read throughput in kilobytes pe second")]
+            public const string StorageDiskReadThroughput = "1.10.7";
+            
+            [Description("Write throughput in kilobytes pe second")]
+            public const string StorageDiskWriteThroughput = "1.10.8";
+            
+            [Description("Queue length")]
+            public const string StorageDiskQueueLength = "1.10.9";
+            
             [Description("Server certificate expiration date")]
             public const string ServerCertificateExpiration = "1.11.1";
 
@@ -406,6 +421,21 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Remaining storage disk space in MB")]
             public const string StorageDiskRemainingSpace = "5.2.{0}.2.6";
+            
+            [Description("IO read operations per second")]
+            public const string StorageDiskIoReadOperations = "5.2.{0}.2.7";
+            
+            [Description("IO write operations per second")]
+            public const string StorageDiskIoWriteOperations = "5.2.{0}.2.8";
+            
+            [Description("Read throughput in kilobytes per second")]
+            public const string StorageDiskReadThroughput = "5.2.{0}.2.9";
+            
+            [Description("Write throughput in kilobytes per second")]
+            public const string StorageDiskWriteThroughput = "5.2.{0}.2.10";
+            
+            [Description("Queue length")]
+            public const string StorageDiskQueueLength = "5.2.{0}.2.11";
 
             [Description("Number of document puts per second (one minute rate)")]
             public const string DocPutsPerSecond = "5.2.{0}.3.1";

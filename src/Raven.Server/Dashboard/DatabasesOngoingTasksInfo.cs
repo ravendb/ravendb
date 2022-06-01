@@ -56,7 +56,7 @@ namespace Raven.Server.Dashboard
 
         public long SqlEtlCount { get; set; }
         
-        // public long ElasticSearchEtlCount { get; set; }  // TODO: RavenDB-18090
+        public long ElasticSearchEtlCount { get; set; }
         
         public long OlapEtlCount { get; set; }
 
@@ -74,6 +74,7 @@ namespace Raven.Server.Dashboard
                 [nameof(ReplicationSinkCount)] = ReplicationSinkCount,
                 [nameof(RavenEtlCount)] = RavenEtlCount,
                 [nameof(SqlEtlCount)] = SqlEtlCount,
+                [nameof(ElasticSearchEtlCount)] = ElasticSearchEtlCount,
                 [nameof(OlapEtlCount)] = OlapEtlCount,
                 [nameof(PeriodicBackupCount)] = PeriodicBackupCount,
                 [nameof(SubscriptionCount)] = SubscriptionCount

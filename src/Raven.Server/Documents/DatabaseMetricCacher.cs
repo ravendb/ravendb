@@ -20,7 +20,7 @@ namespace Raven.Server.Documents
 
         private DiskSpaceResult CalculateDiskSpaceInfo()
         {
-            return DiskSpaceChecker.GetDiskSpaceInfo(_database.Configuration.Core.DataDirectory.FullPath);
+            return DiskUtils.GetDiskSpaceInfo(_database.Configuration.Core.DataDirectory.FullPath);
         }
     }
 }

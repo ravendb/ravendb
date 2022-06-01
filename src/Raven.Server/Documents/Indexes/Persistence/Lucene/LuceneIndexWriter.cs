@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 // this commit stage is written to the temp scratch buffers
                 var fullPath = directory.TempFullPath;
-                var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(fullPath);
+                var driveInfo = DiskUtils.GetDiskSpaceInfo(fullPath);
                 var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
                 throw new DiskFullException($"There isn't enough space to commit the index to {fullPath}. " +
                                             $"Currently available space: {freeSpace}", e);

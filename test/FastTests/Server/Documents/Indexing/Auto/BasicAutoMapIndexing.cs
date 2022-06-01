@@ -97,7 +97,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Name2",
                     Storage = FieldStorage.No,
-                    Indexing = AutoFieldIndexing.Default | AutoFieldIndexing.Search
+                    Indexing = AutoFieldIndexing.Default | AutoFieldIndexing.Search,
+                    HasQuotedName = true
                 };
 
                 var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 }), Guid.NewGuid().ToString());
@@ -135,6 +136,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
+                Assert.True(((AutoIndexField)indexes[1].Definition.MapFields["Name2"]).HasQuotedName);
                 Assert.Equal(AutoFieldIndexing.Search | AutoFieldIndexing.Default, indexes[1].Definition.MapFields["Name2"].As<AutoIndexField>().Indexing);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Low, indexes[1].Definition.Priority);

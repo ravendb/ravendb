@@ -24,6 +24,10 @@ import fileImporter = require("common/fileImporter");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
+type certificatesSortMode = "default" |
+                            "byNameAsc"  | "byExpirationAsc"  | "byValidFromAsc" |
+                            "byNameDesc" | "byExpirationDesc" | "byValidFromDesc";
+
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
     expirationText: string;
@@ -95,16 +99,20 @@ class certificates extends viewModelBase {
 
     hasAnyFilters: KnockoutComputed<boolean>;
     filterAndSortDescription: KnockoutComputed<string>;
-    sortCriteria = ko.observable<string>();
     noCertificateIsVisible: KnockoutComputed<boolean>;
+    
+    currentSortMode = ko.observable<certificatesSortMode>("default");
+    sortModeText: KnockoutComputed<string>;
+
+    deleteExistingCertificate = ko.observable<boolean>(false);
     
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterReGenerateCertificateMode",
+        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "enterRegenerateCertificateMode",
             "deletePermission", "fileSelected", "copyThumbprint",
-            "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed",
-            "sortByDefault", "sortByName", "sortByExpiration", "sortByValidFrom", "clearAllFilters",
+            "deleteCertificateConfirm", "renewServerCertificate", "canBeAutomaticallyRenewed",
+            "sortCertificates", "clearAllFilters",
             "addPermission","addPermissionWithBlink","addDatabase","addDatabaseWithBlink");
         
         this.initObservables();
@@ -311,10 +319,29 @@ class certificates extends viewModelBase {
 
             const databases = this.databasesToShow().join(", ");
             const databasesPart = databases.length ? `<strong>Databases</strong>: ${databases}` : "";
-
-            const sortPart = this.sortCriteria() ? `<strong>Sorted by</strong>: ${this.sortCriteria()} <br />` : "";
+            
+            const sortPart = this.sortModeText() ? `<strong>Sorted by</strong>: ${this.sortModeText()} <br />` : "";
             
             return `${sortPart}${clearancePart}${clearancePart ? "<span class='margin-right-sm'></span>" : ""}${statePart}${clearancePart || statePart ? "<br />" : ""}${databasesPart}`;
+        });
+        
+        this.sortModeText = ko.pureComputed(() => {
+            switch (this.currentSortMode()) {
+                case "byNameAsc":
+                    return "Name - Ascending";
+                case "byNameDesc":
+                    return "Name - Descending";
+                case "byExpirationAsc":
+                    return "Expiration Date - Ascending";
+                case "byExpirationDesc":
+                    return "Expiration Date - Descending";
+                case "byValidFromAsc":
+                    return "Valid-From Date - Ascending";
+                case "byValidFromDesc":
+                    return "Valid-From Date - Descending";
+                case "default":
+                    return "";
+            }
         });
         
         this.noCertificateIsVisible = ko.pureComputed(() => {
@@ -374,19 +401,24 @@ class certificates extends viewModelBase {
         }
     }
 
-    deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+    deleteCertificateConfirm(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + generalUtils.escapeHtml(certificate.Thumbprint) + "", {
             buttons: ["No", "Yes, delete"],
             html: true
         })
             .done(result => {
                 if (result.can) {
-                    eventsCollector.default.reportEvent("certificates", "delete");
-                    new deleteCertificateCommand(certificate.Thumbprint)
-                        .execute()
-                        .always(() => this.loadCertificates());
+                    this.deleteCertificate(certificate.Thumbprint);
                 }
             });
+    }
+    
+    private deleteCertificate(thumbprint: string) {
+        eventsCollector.default.reportEvent("certificates", "delete");
+        
+        new deleteCertificateCommand(thumbprint)
+            .execute()
+            .always(() => this.loadCertificates());
     }
 
     exportServerCertificates() {
@@ -401,19 +433,9 @@ class certificates extends viewModelBase {
         this.model(certificateModel.generate());
     }
 
-    enterReGenerateCertificateMode(itemToReGenerate: unifiedCertificateDefinition) {
+    enterRegenerateCertificateMode(itemToRegenerate: unifiedCertificateDefinition) {
         eventsCollector.default.reportEvent("certificates", "re-generate");
-        this.model(certificateModel.generate());
-
-        this.model().name(itemToReGenerate.Name);
-        this.model().securityClearance(itemToReGenerate.SecurityClearance);
-
-        for (let dbItem in itemToReGenerate.Permissions) {
-            const permission = new certificatePermissionModel();
-            permission.databaseName(dbItem);
-            permission.accessLevel(itemToReGenerate.Permissions[dbItem]);
-            this.model().permissions.push(permission);
-        }
+        this.model(certificateModel.regenerate(itemToRegenerate));
     }
     
     enterUploadCertificateMode() {
@@ -442,6 +464,7 @@ class certificates extends viewModelBase {
 
     save() {
         const model = this.model();
+        const thumbprint = model.thumbprint();
         
         if (!this.isValid(model.validationGroup)) {
             return;
@@ -449,7 +472,7 @@ class certificates extends viewModelBase {
 
         const maybeWarnTask = $.Deferred<void>();
         
-        if (this.model().mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
+        if (model.mode() !== "replace" && model.securityClearance() === "ValidUser" && model.permissions().length === 0) {
             this.confirmationMessage("Did you forget about assigning database privileges?",
             "Leaving the database privileges section empty is going to prevent users from accessing the database.",
                 {
@@ -471,6 +494,7 @@ class certificates extends viewModelBase {
 
                 switch (model.mode()) {
                     case "generate":
+                    case "regenerate":
                         this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
 
                         new getNextOperationId(null)
@@ -483,6 +507,9 @@ class certificates extends viewModelBase {
 
                                 notificationCenter.instance.monitorOperation(null, operationId)
                                     .done(() => {
+                                        if (model.deleteExpired()) {
+                                            this.deleteCertificate(thumbprint);
+                                        }
                                         messagePublisher.reportSuccess("Client certificate was generated and downloaded successfully.");
                                     })
                                     .fail(() => {
@@ -499,6 +526,7 @@ class certificates extends viewModelBase {
                                 this.onCloseEdit();
                             });
                         break;
+                        
                     case "upload":
                         new uploadCertificateCommand(model)
                             .execute()
@@ -518,6 +546,7 @@ class certificates extends viewModelBase {
                                 this.onCloseEdit();
                             });
                         break;
+                        
                     case "replace":
                         new replaceClusterCertificateCommand(model)
                             .execute()
@@ -564,6 +593,7 @@ class certificates extends viewModelBase {
                 
                 this.wellKnownAdminCerts(certificatesInfo.WellKnownAdminCerts || []);
                 this.filterCertificates();
+                this.sortCertificates(this.currentSortMode());
             });
     }
     
@@ -696,7 +726,6 @@ class certificates extends viewModelBase {
     }
     
     sortByDefault(): void {
-        this.sortCriteria("");
         const orderedCertificates = this.sortByDefaultInternal(this.certificates());
         this.certificates(orderedCertificates);
 }
@@ -719,15 +748,40 @@ class certificates extends viewModelBase {
         return orderedCertificates
     }
     
-    sortByName(mode: string): void {
-        this.sortCriteria(`Name - ${this.getModeText(mode)}`);
+    sortCertificates(mode: certificatesSortMode) {
+        this.currentSortMode(mode);
+        
+        switch (mode) {
+            case "byNameAsc":
+                this.sortByName("asc");
+                break;
+            case "byNameDesc":
+                this.sortByName("desc");
+                break;
+            case "byExpirationAsc":
+                this.sortByExpiration("asc");
+                break;
+            case "byExpirationDesc":
+                this.sortByExpiration("desc");
+                break;
+            case "byValidFromAsc":
+                this.sortByValidFrom("asc");
+                break;
+            case "byValidFromDesc":
+                this.sortByValidFrom("desc");
+                break;
+            case "default":
+                this.sortByDefault();
+                break;
+        }
+    }
+
+    private sortByName(mode: sortMode): void {
         this.certificates.sort((a, b) =>
             generalUtils.sortAlphaNumeric(a.Name.toLocaleLowerCase(), b.Name.toLocaleLowerCase(), mode as sortMode));
     }
 
-    sortByExpiration(mode: string): void {
-        this.sortCriteria(`Expiration Date - ${this.getModeText(mode)}`);
-        
+    private sortByExpiration(mode: sortMode): void {
         this.certificates.sort((a, b) =>
         {
             const result = (a as unifiedCertificateDefinitionWithCache).expirationNumber - (b as unifiedCertificateDefinitionWithCache).expirationNumber;
@@ -735,18 +789,12 @@ class certificates extends viewModelBase {
         });
     }
 
-    sortByValidFrom(mode: string): void {
-        this.sortCriteria(`Valid-From Date - ${this.getModeText(mode)}`);
-
+    private sortByValidFrom(mode: sortMode): void {
         this.certificates.sort((a, b) =>
         {
             const result = (a as unifiedCertificateDefinitionWithCache).validFromNumber - (b as unifiedCertificateDefinitionWithCache).validFromNumber;
             return mode === "asc" ? result : -result;
         });
-    }
-    
-    getModeText(mode: string): string {
-        return mode === "asc" ? "Ascending" : "Descending";
     }
 
     createDatabaseNameAutoCompleterForFilter() {
