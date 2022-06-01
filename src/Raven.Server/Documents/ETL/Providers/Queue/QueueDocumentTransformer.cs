@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -15,13 +14,12 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
-internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithEvents, EtlStatsScope, EtlPerformanceOperation>
+internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithMessages, EtlStatsScope, EtlPerformanceOperation>
 {
     private readonly QueueEtlConfiguration _config;
-    private readonly Dictionary<string, QueueWithEvents> _queues;
-    private readonly List<EtlQueue> _queuesForScript; //todo djordje: do I need this?
-    
-    public QueueDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, QueueEtlConfiguration config) 
+    private readonly Dictionary<string, QueueWithMessages> _queues;
+
+    public QueueDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, QueueEtlConfiguration config)
         : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.QueueEtl), null)
     {
         _config = config;
@@ -30,16 +28,7 @@ internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithEve
 
         LoadToDestinations = destinationQueues;
 
-        _queues = new Dictionary<string, QueueWithEvents>(destinationQueues.Length, StringComparer.OrdinalIgnoreCase);
-        _queuesForScript = new List<EtlQueue>(destinationQueues.Length);
-
-        for (var i = 0; i < _config.EtlQueues.Count; i++)
-        {
-            var queue = _config.EtlQueues[i];
-
-            if (destinationQueues.Contains(queue.Name, StringComparer.OrdinalIgnoreCase))
-                _queuesForScript.Add(queue);
-        }
+        _queues = new Dictionary<string, QueueWithMessages>(destinationQueues.Length, StringComparer.OrdinalIgnoreCase);
     }
 
     public override void Initialize(bool debugMode)
@@ -165,10 +154,10 @@ internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithEve
         var result = document.TranslateToObject(Context);
 
         var queue = GetOrAdd(queueName);
-        queue.Inserts.Add(new QueueItem(Current) { TransformationResult = result, Options = options });
+        queue.Messages.Add(new QueueItem(Current) { TransformationResult = result, Options = options, DeleteAfterProcessing = queue.DeleteProcessedDocuments });
     }
 
-    public override IEnumerable<QueueWithEvents> GetTransformedResults()
+    public override IEnumerable<QueueWithMessages> GetTransformedResults()
     {
         return _queues.Values.ToList();
     }
@@ -178,27 +167,19 @@ internal class QueueDocumentTransformer : EtlTransformer<QueueItem, QueueWithEve
         if (item.IsDelete == false)
         {
             Current = item;
-            DocumentScript.Run(Context, Context, "execute", new object[] {Current.Document}).Dispose();
+            DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
         }
     }
-    
-    private QueueWithEvents GetOrAdd(string queueName)
+
+    private QueueWithMessages GetOrAdd(string queueName)
     {
-        if (_queues.TryGetValue(queueName, out QueueWithEvents queue) == false)
+        if (_queues.TryGetValue(queueName, out QueueWithMessages queue) == false)
         {
-            var etlQueue = _config.EtlQueues.Find(x => x.Name.Equals(queueName, StringComparison.OrdinalIgnoreCase));
+            var etlQueue = _config.Queues?.Find(x => x.Name.Equals(queueName, StringComparison.OrdinalIgnoreCase));
 
-            if (etlQueue == null)
-                ThrowQueueNotDefinedInConfig(queueName);
-
-            _queues[queueName] = queue = new QueueWithEvents(etlQueue);
+            _queues[queueName] = queue = new QueueWithMessages(etlQueue ?? new EtlQueue { Name = queueName });
         }
 
         return queue;
-    }
-
-    private static void ThrowQueueNotDefinedInConfig(string queueName)
-    {
-        throw new InvalidOperationException($"Queue '{queueName}' was not defined in the configuration of Queue ETL task");
     }
 }

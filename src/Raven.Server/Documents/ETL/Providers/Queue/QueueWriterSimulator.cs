@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue;
 
 public class QueueWriterSimulator
 {
-    public IEnumerable<string> SimulateExecuteCommandText(QueueWithEvents records, DocumentsOperationContext context)
+    public IEnumerable<string> SimulateExecuteCommandText(QueueWithMessages records, DocumentsOperationContext context)
     {
         List<string> result = new List<string>();
 
@@ -15,15 +15,15 @@ public class QueueWriterSimulator
         return result;
     }
 
-    private IEnumerable<string> GenerateInsertKafkaMessageCommandText(string topicName, QueueWithEvents topic,
+    private IEnumerable<string> GenerateInsertKafkaMessageCommandText(string topicName, QueueWithMessages topic,
         DocumentsOperationContext context)
     {
         List<string> result = new();
 
-        if (topic.Inserts.Count <= 0) return result;
+        if (topic.Messages.Count <= 0) return result;
         StringBuilder sb = new();
 
-        foreach (QueueItem item in topic.Inserts) sb.AppendLine(item.TransformationResult.ToString());
+        foreach (QueueItem item in topic.Messages) sb.AppendLine(item.TransformationResult.ToString());
 
         result.Add(sb.ToString());
 

@@ -1,8 +1,5 @@
 ﻿using System;
 using Confluent.Kafka;
-using Nest;
-using Raven.Client.Documents.Operations.ETL.ElasticSearch;
-using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 
 namespace Tests.Infrastructure.ConnectionString;
 
@@ -18,7 +15,7 @@ public class KafkaConnectionString
     {
         VerifiedUrl = new Lazy<string>(VerifiedNodesValueFactory);
 
-        Url = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable));
+        Url = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
     }
 
     private Lazy<string> Url { get; }
@@ -55,21 +52,21 @@ public class KafkaConnectionString
         throw new InvalidOperationException($"Can't access Kafka instance. Provided url: {Url.Value}", ex);
 
 
-        bool TryConnect(string url, out Exception ex)
+        bool TryConnect(string url, out Exception exception)
         {
             try
             {
                 var config = new AdminClientConfig() { BootstrapServers = url };
-                var adminClient = new AdminClientBuilder(config).Build();
-
-                var a = adminClient.GetMetadata(TimeSpan.FromSeconds(10));
-                ex = null;
+                var adminClient = new AdminClientBuilder(config).Build(); 
+                
+                adminClient.GetMetadata(TimeSpan.FromSeconds(10));
+                exception = null;
 
                 return true;
             }
             catch (Exception e)
             {
-                ex = e;
+                exception = e;
                 return false;
             }
         }

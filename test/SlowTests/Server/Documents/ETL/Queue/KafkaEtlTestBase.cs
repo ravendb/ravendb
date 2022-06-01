@@ -41,37 +41,35 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders" + TopicSuffix + @"(orderData);
 ";
 
-    protected QueueEtlConfiguration SetupQueueEtlToKafka(DocumentStore store, string script, IEnumerable<EtlQueue> queues,
-        IEnumerable<string> collections, bool applyToAllDocuments = false, string configurationName = null,
+    protected QueueEtlConfiguration SetupQueueEtlToKafka(DocumentStore store, string script,
+        IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false, string configurationName = null,
         string transformationName = null,
         Dictionary<string, string> configuration = null)
     {
-        var connectionStringName = $"{store.Database}@{store.Urls.First()} to Queue";
+        var connectionStringName = $"{store.Database}@{store.Urls.First()} to Kafka";
 
-        List<EtlQueue> topics = queues.ToList();
-
-
-        foreach (var topic in topics)
+        Transformation transformation = new Transformation
         {
-            _definedTopics.Add(topic.Name);
-        }
-
+            Name = transformationName ?? $"ETL : {connectionStringName}",
+            Collections = new List<string>(collections),
+            Script = script,
+            ApplyToAllDocuments = applyToAllDocuments
+        };
         var config = new QueueEtlConfiguration
         {
             Name = configurationName ?? connectionStringName,
             ConnectionStringName = connectionStringName,
-            EtlQueues = topics,
             Transforms =
             {
-                new Transformation
-                {
-                    Name = transformationName ?? $"ETL : {connectionStringName}",
-                    Collections = new List<string>(collections),
-                    Script = script,
-                    ApplyToAllDocuments = applyToAllDocuments
-                }
-            }
+                transformation
+            },
+            Queues = queues?.ToList()
         };
+
+        foreach (var queue in queues?.Select(x => x.Name).ToArray() ?? transformation.GetCollectionsFromScript())
+        {
+            _definedTopics.Add(queue);
+        }
 
         AddEtl(store, config,
             new QueueConnectionString

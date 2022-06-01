@@ -10,12 +10,12 @@ using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue
 {
-    public class BlittableEventBinaryFormatter : CloudEventFormatter, IDisposable
+    public class BlittableJsonEventBinaryFormatter : CloudEventFormatter, IDisposable
     {
         private readonly JsonOperationContext _ctx;
         private readonly List<MemoryStream> _streams = new();
 
-        public BlittableEventBinaryFormatter(JsonOperationContext ctx)
+        public BlittableJsonEventBinaryFormatter(JsonOperationContext ctx)
         {
             _ctx = ctx;
         }
@@ -42,23 +42,8 @@ namespace Raven.Server.Documents.ETL.Providers.Queue
 
             ms.TryGetBuffer(out var buffer);
 
-            return AsArray(buffer); // TODO arek : AsArray is temp workaround for https://github.com/cloudevents/sdk-csharp/issues/209
+            return buffer;
         }
-
-        private static byte[] AsArray(ReadOnlyMemory<byte> memory)
-        {
-            var segment = GetArraySegment(memory);
-            // We probably don't actually need to check the offset: if the count is the same as the length,
-            // I can't see how the offset can be non-zero. But it doesn't *hurt* as a check.
-            return segment.Offset == 0 && segment.Count == segment.Array.Length
-                ? segment.Array
-                : memory.ToArray();
-        }
-
-        private static ArraySegment<byte> GetArraySegment(ReadOnlyMemory<byte> memory) =>
-            MemoryMarshal.TryGetArray(memory, out var segment)
-                ? segment
-                : new ArraySegment<byte>(memory.ToArray());
 
         public override CloudEvent DecodeStructuredModeMessage(ReadOnlyMemory<byte> body, ContentType? contentType, IEnumerable<CloudEventAttribute>? extensionAttributes)
         {
