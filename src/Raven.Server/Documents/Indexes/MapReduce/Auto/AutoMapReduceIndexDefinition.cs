@@ -114,6 +114,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 writer.WritePropertyName(nameof(field.GroupByArrayBehavior));
                 writer.WriteString(field.GroupByArrayBehavior.ToString());
 
+                writer.WriteComma();
+
                 writer.WritePropertyName(nameof(field.HasQuotedName));
                 writer.WriteBool(field.HasQuotedName);
 
