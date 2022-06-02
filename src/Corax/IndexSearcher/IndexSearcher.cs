@@ -157,8 +157,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
     {
+        using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
         var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        var terms = fields?.CompactTreeFor(field);
+        var terms = fields?.CompactTreeFor(fieldName);
         
         if (terms == null)
         {
@@ -166,7 +167,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return false;
         }
         
-        existsTermProvider = new ExistsTermProvider(this, _transaction.Allocator, terms, field);
+        existsTermProvider = new ExistsTermProvider(this, _transaction.Allocator, terms, fieldName);
         return true;
     }
 

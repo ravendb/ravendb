@@ -11,14 +11,14 @@ namespace Corax.Queries
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private readonly string _field;
+        private readonly Slice _fieldName;
         private CompactTree.Iterator _iterator;
 
-        public ExistsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field)
+        public ExistsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName)
         {
             _tree = tree;
             _searcher = searcher;
-            _field = field;
+            _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
         }
@@ -33,7 +33,7 @@ namespace Corax.Queries
         {
             while (_iterator.MoveNext(out Slice termSlice, out var _))
             {
-                term = _searcher.TermQuery(_field, termSlice);
+                term = _searcher.TermQuery(_tree, termSlice);
                 return true;
             }
 
@@ -66,7 +66,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(ExistsTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field }
+                                { "Field", _fieldName.ToString() }
                             });
         }
     }
