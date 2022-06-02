@@ -80,10 +80,12 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
+            internal Action<string> InsideHandleClusterDatabaseChanged;
             internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
             internal Action<CancellationToken> DelayIncomingReplication;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
+            internal ManualResetEvent DeleteDatabaseWhileItBeingDeleted = null;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
         }
@@ -116,7 +118,7 @@ namespace Raven.Server.Documents
                             return;
                         }
 
-
+                        ForTestingPurposes?.InsideHandleClusterDatabaseChanged?.Invoke(type);
                         if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                             return;
 
@@ -339,6 +341,7 @@ namespace Raven.Server.Documents
                 catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
                 {
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
+                    ForTestingPurposes?.DeleteDatabaseWhileItBeingDeleted?.Set();
                     return;
                 }
                 catch (DatabaseConcurrentLoadTimeoutException e)
@@ -1068,9 +1071,9 @@ namespace Raven.Server.Documents
                                       _logger.Info($"Failed to start database '{name}' on timer, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
 
                                   RescheduleDatabaseWakeup(name, milliseconds: _dueTimeOnRetry, wakeup);
-                }
+                              }
                           }, TaskContinuationOptions.OnlyOnFaulted);
-            }
+                }
             }
             catch
             {
@@ -1137,13 +1140,13 @@ namespace Raven.Server.Documents
                     {
                         currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true,
                             ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
-                    }
+    }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Could not create database configuration", e);
                         continue;
-                    }
+}
 
                     CheckConfigurationPaths(configuration, currentConfiguration, databaseName, currRecord.DatabaseName);
                 }
