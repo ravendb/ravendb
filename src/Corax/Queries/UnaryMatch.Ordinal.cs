@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Corax.Utils;
 using Sparrow;
+using Sparrow.Binary;
 using Voron;
 
 namespace Corax.Queries
@@ -161,10 +162,15 @@ namespace Corax.Queries
         }
 
         [SkipLocalsInit]
-        private static int FillFuncSequenceAllIn(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        private static unsafe int FillFuncSequenceAllIn(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
         {
             var value = ((TermQueryItem[])(object)match._value);
-            using var bitset = new BitSet(value.Length);
+            var requiredSizeOfBitset = value.Length / sizeof(byte) + (value.Length % sizeof(byte) == 0 ? 0 : 1);
+            byte* bitsetBuffer = stackalloc byte[requiredSizeOfBitset];
+            var bitsetBufferAsSpan = new Span<byte>(bitsetBuffer, requiredSizeOfBitset);
+
+            var bitset = new PtrBitVector(bitsetBuffer, requiredSizeOfBitset);
+            
             var searcher = match._searcher;
             var fieldId = match._fieldId;
             var currentMatches = matches;
@@ -188,7 +194,7 @@ namespace Corax.Queries
                     if (type == IndexEntryFieldType.Invalid)
                         continue;
 
-                    bitset.Clear();
+                    bitsetBufferAsSpan.Clear();
                     if (type == IndexEntryFieldType.Null)
                     {
                         if (match._operation != UnaryMatchOperation.NotEquals)
@@ -223,12 +229,18 @@ namespace Corax.Queries
                             CheckAndSet(resultX);
                     }
 
-                    if (bitset.IsAllSet() == false)
-                        continue;
+                    int b = 0;
+                    for (; b < requiredSizeOfBitset; ++b)
+                        if (bitset[b] == false)
+                            break;
 
+                    if (b != requiredSizeOfBitset)
+                        continue;
+                        
                     currentMatches[storeIdx] = freeMemory[i];
                     storeIdx++;
                     totalResults++;
+
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
 
