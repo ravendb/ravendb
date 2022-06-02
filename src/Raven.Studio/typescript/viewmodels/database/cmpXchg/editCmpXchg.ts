@@ -419,7 +419,6 @@ class editCmpXchg extends viewModelBase {
             this.isCreatingNewItem(false);
             
             messagePublisher.reportSuccess(`Compare exchange item with key: ${this.key()} was saved successfully`);
-            router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
         } else {
             this.displayExternalChange(true);
             this.spinners.save(false);
