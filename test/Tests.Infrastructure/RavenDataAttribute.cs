@@ -66,8 +66,8 @@ public class RavenDataAttribute : DataAttribute
         if (mode.HasFlag(RavenDatabaseMode.Single))
             yield return (RavenDatabaseMode.Single, RavenTestBase.Options.ForMode(RavenDatabaseMode.Single));
 
-        //if (mode.HasFlag(RavenDatabaseMode.Sharded))
-        //    yield return (RavenDatabaseMode.Sharded, RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
+        if (mode.HasFlag(RavenDatabaseMode.Sharded))
+            yield return (RavenDatabaseMode.Sharded, RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
     }
 
     internal static IEnumerable<(RavenSearchEngineMode SearchMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)

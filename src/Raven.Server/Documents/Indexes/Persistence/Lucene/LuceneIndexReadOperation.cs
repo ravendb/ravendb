@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                         explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, d, document);
                                     }
                                 }
-
+                                AddOrderByFields(query, document, scoreDoc.Doc, ref d);
                                 // We return the document to the caller. 
                                 return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };
                             }

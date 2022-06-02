@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (_indexSearcher.TryGetTermsOfField(field, out var terms) == false)
                 return results;
             
-            if (fromValue is not null)
+            if (string.IsNullOrEmpty(fromValue) == false)
             {
                 Span<byte> fromValueBytes = Encodings.Utf8.GetBytes(fromValue);
                 while (terms.GetNextTerm(out var termSlice))
