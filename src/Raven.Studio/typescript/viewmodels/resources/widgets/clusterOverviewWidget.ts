@@ -172,28 +172,9 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
     }
 
     private nodeStateDataForHtml(state: Raven.Client.ServerWide.RachisState): iconPlusText[] {
-        let iconClass;
-
-        switch (state) {
-            case "Leader":
-                iconClass = "icon-node-leader";
-                break;
-
-            case "Passive":
-            case "Candidate":
-            case "Follower":
-            case "LeaderElect":
-                iconClass = "";
-                break;
-
-            default:
-                console.warn("Invalid node state: " + state);
-                break;
-        }
-
         return [{
             text: state,
-            iconClass: iconClass
+            iconClass: state === "Leader" ? "icon-node-leader" : ""
         }];
     }
 
