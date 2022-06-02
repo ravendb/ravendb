@@ -92,7 +92,13 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
         get => JsUtils.ReadOnly;
         set => JsUtils.ReadOnly = value;
     }
-    IScriptEngineChanges ISingleRun.ScriptEngineHandle { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    IScriptEngineChanges ISingleRun.ScriptEngineHandle
+    {
+        get => ScriptEngineHandle;
+        set
+        {
+        }
+    }
 
     public string OriginalDocumentId;
     public bool RefreshOriginalDocument;
@@ -223,7 +229,6 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     public T LoadDocument(T self, T[] args)
     {
-        //  throw new NotImplementedException();
         using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
         {
             AssertValidDatabaseContext("load");
@@ -236,6 +241,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
             if (args[0].IsArray)
             {
+                //TODO: egor create a emty array (ScriptEngineHandle.CreateEmptyArray) and push directly into it to save allocations
                 var results = new List<T>();
                 var jsArray = args[0];
                 int arrayLength = jsArray.ArrayLength;
@@ -312,7 +318,6 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
         return JsUtils.TranslateToJs(_jsonCtx, document, keepAlive: true);
     }
-
 
     public T DeleteDocument(T self, T[] args)
     {
@@ -968,21 +973,25 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
                 BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
                 selfInstance.Blittable.GetPropertyByIndex(propertyIndex, ref propDetails);
                 var value = propDetails.Value;
-
-                switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
+                BlittableJsonToken type = propDetails.Token & BlittableJsonReaderBase.TypesMask;
+                switch (type)
                 {
                     case BlittableJsonToken.Null:
                         return ScriptEngineHandle.Null;
                     case BlittableJsonToken.Boolean:
                         return (bool)value ? ScriptEngineHandle.True : ScriptEngineHandle.False;
                     case BlittableJsonToken.Integer:
-                        return ScriptEngineHandle.CreateValue((int)value);
-                    case BlittableJsonToken.LazyNumber:
-                    case BlittableJsonToken.String:
-                    case BlittableJsonToken.CompressedString:
-                        return CreateObjectBinder(value);
+                        switch (value)
+                        {
+                            case int intValue:
+                                return ScriptEngineHandle.CreateValue(intValue);
+                            case long:
+                                return CreateObjectBinder(type, value);
+                            default:
+                                throw new ArgumentException($"Invalid value type, expected int or long but got '{value.GetType().FullName}'");
+                        }
                     default:
-                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
+                        return CreateObjectBinder(type, value);
                 }
             }
 
@@ -993,7 +1002,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
     }
 
     public abstract void SetContext();
-    protected abstract T CreateObjectBinder(object value);
+    protected abstract T CreateObjectBinder(BlittableJsonToken type, object value);
 
     protected abstract bool TryGetValueFromBoi(IBlittableObjectInstance iboi, string propName, out IBlittableObjectProperty<T> blittableObjectProperty, out bool b);
 
@@ -1307,12 +1316,12 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
             }
         }
 
-        if (DebugMode)
+        if (DebugMode && entries.Count == 0)
         {
             DebugActions.GetTimeSeries.Add(new DynamicJsonValue
             {
                 ["Name"] = timeSeries,
-                ["Exists"] = entries.Count != 0
+                ["Exists"] = false
             });
         }
 
@@ -1988,6 +1997,7 @@ public abstract class SingleRun<T> : SingleRunBase, ISingleRun
 
     protected abstract void DisposeArgs();
 
+    protected abstract JavaScriptException CreateFullError(Exception e);
 }
 
 public interface ISingleRun

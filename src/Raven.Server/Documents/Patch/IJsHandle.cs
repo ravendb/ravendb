@@ -17,6 +17,7 @@ public interface IJsHandle<T> : IDisposable, IClonable<T>, IEquatable<T>
 {
     T Set(T value);
 
+    //TODO: egor clear debug code
     //public static T Empty;
 
     //public static T GetEmpty()

@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Patch.Jint
             return true;
         }
 
+        //TODO: egor talk with Oren about proxies to do same behavior in v8
         public virtual bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
             if (reference.GetReferencedName() == Constants.Documents.Metadata.Key && 

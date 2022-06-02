@@ -45,6 +45,11 @@ namespace Raven.Server.Documents.Patch.V8
             Item = value;
         }
 
+        public override string ToString()
+        {
+            return Item.ToString();
+        }
+
         public object AsObject()
         {
             return Item.BoundObject;

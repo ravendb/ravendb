@@ -21,8 +21,6 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Indexes.Workers;
-using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -591,6 +589,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             {
                                 var value = property.Value;
                                 var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
+                                //TODO: egor redundant?
                             //    V8EngineEx.DisposeJsObjectsIfNeeded(value);
 
                                 _propertyQueue.Enqueue((property.Key, blittableValue));

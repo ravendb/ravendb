@@ -370,6 +370,10 @@ var process = {
         {
             return new JsHandleJint(new JsNumber(value));
         }
+        public JsHandleJint CreateValue(long value)
+        {
+            return new JsHandleJint(new JsNumber(value));
+        }
 
         public JsHandleJint CreateValue(double value)
         {

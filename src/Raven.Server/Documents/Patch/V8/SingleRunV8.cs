@@ -66,22 +66,25 @@ namespace Raven.Server.Documents.Patch.V8
             ScriptEngineExV8.Context = _contextExV8;
         }
 
-        protected override JsHandleV8 CreateObjectBinder(object value)
+        protected override JsHandleV8 CreateObjectBinder(BlittableJsonToken type, object value)
         {
             InternalHandle internalHandle;
-            switch (value)
+            switch (type)
             {
-                case LazyNumberValue lnv:
-                    internalHandle = ScriptEngineV8.CreateObjectBinder(lnv);
+                case BlittableJsonToken.Integer:
+                    return ScriptEngineHandle.CreateValue((long)value);
+                case BlittableJsonToken.LazyNumber:
+                    internalHandle = ScriptEngineV8.CreateObjectBinder((LazyNumberValue)value);
                     break;
-                case LazyStringValue lsv:
-                    internalHandle = ScriptEngineV8.CreateObjectBinder(lsv);
+                case BlittableJsonToken.String:
+                    internalHandle = ScriptEngineV8.CreateObjectBinder((LazyStringValue)value);
                     break;
-                case LazyCompressedStringValue lcsv:
-                    internalHandle = ScriptEngineV8.CreateObjectBinder(lcsv);
+                case BlittableJsonToken.CompressedString:
+                    internalHandle = ScriptEngineV8.CreateObjectBinder((LazyCompressedStringValue)value);
                     break;
+
                 default:
-                    throw new Exception(nameof(value));
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
             }
 
             return new JsHandleV8(ref internalHandle);
@@ -224,19 +227,11 @@ namespace Raven.Server.Documents.Patch.V8
                         }
                     }
                 }
-                catch (JavaScriptException e)
-                {
-                    //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
-                    //JsUtilsJint.Clear();
-                    //throw CreateFullError(e);
-                    throw new Exception();
-                }
                 catch (V8Exception e)
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
-                    //JsUtilsV8.Clear();
-                    //throw CreateFullError(e);
-                    throw new Exception();
+                    JsUtils.Clear();
+                    throw CreateFullError(e);
                 }
                 catch (Exception)
                 {
@@ -260,6 +255,12 @@ namespace Raven.Server.Documents.Patch.V8
                     }
                 }
             }
+        }
+
+        protected override Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(Exception e)
+        {
+            var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(e.Message, e);
+            return javaScriptException;
         }
 
         protected override void SetArgs(JsHandleV8[] args, IBlittableObjectInstance boi)

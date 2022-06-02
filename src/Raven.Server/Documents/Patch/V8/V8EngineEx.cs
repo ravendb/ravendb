@@ -695,6 +695,12 @@ var process = {
         return new JsHandleV8(ref obj);
     }
 
+    public JsHandleV8 CreateValue(long value)
+    {
+        var obj = Engine.CreateValue(value);
+        return new JsHandleV8(ref obj);
+    }
+
     public JsHandleV8 CreateValue(string value)
     {
         var obj = Engine.CreateValue(value);

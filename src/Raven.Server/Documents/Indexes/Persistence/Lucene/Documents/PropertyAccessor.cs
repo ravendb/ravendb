@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using Jint.Native.Object;
+using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Patch;
@@ -221,16 +222,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _groupByFields = groupByFields;
         }
 
-        //protected void AssertTargetType(object target, [CallerMemberName] string caller = null)
-        //{
-        //    if (typeof(IObjectInstance<>).IsAssignableFrom(target.GetType()) == false)
-        //    {
-        //        throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target assignable from 'IObjectInstance' but got one of type '{target.GetType().Name}' with interfaces: {string.Join(",", target.GetType().GetInterfaces().ToList())}");
-        //    }
-
-        //    AssertTargetTypeInternal(target,caller);
-        //}
-
         protected abstract void AssertTargetType(object target, [CallerMemberName] string caller = null);
 
         public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
@@ -269,57 +260,38 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return GetValue(jsHandle.GetProperty(name));
         }
 
-        private static object GetValue(T jsValue)
+        private object GetValue(T jsValue)
         {
             if (jsValue.IsNull)
                 return null;
-            if (jsValue.IsStringEx)
+            if (jsValue.IsUndefined)
+                return null;
+            if (jsValue.IsStringEx || jsValue.IsRegExp)
                 return jsValue.AsString;
             if (jsValue.IsBoolean)
                 return jsValue.AsBoolean;
-            if (jsValue.IsNumber)
+            if (jsValue.IsInt32)
+                return jsValue.AsInt32;
+            if (jsValue.IsNumberEx)
                 return jsValue.AsDouble;
             if (jsValue.IsDate)
-                return jsValue.AsDate;
+                return jsValue.AsDate; //TODO: egor do we need this: /*.ToDateTime()*/ ?
 
-
-            //TODO: egor impelemnt it in derived class??
-            //if (jsValue is ObjectWrapper ow)
-            //{
-            //    var target = ow.Target;
-            //    switch (target)
-            //    {
-            //        case LazyStringValue lsv:
-            //            return lsv;
-
-            //        case LazyCompressedStringValue lcsv:
-            //            return lcsv;
-
-            //        case LazyNumberValue lnv:
-            //            return lnv; //should be already blittable supported type.
-            //    }
-            //    ThrowInvalidObject(jsValue);
-            //}
-            //else if (jsValue.IsArray)
-            //{
-            //    var arr = jsValue.AsArray;
-            //    var array = new object[arr.Length];
-            //    var i = 0;
-            //    foreach ((var key, var val) in arr.GetOwnPropertiesWithoutLength())
-            //    {
-            //        array[i++] = GetValue(val.Value);
-            //    }
-
-            //    return array;
-            //}
-            else if (jsValue.IsObject)
+            if (jsValue.IsArray)
             {
-                return jsValue.AsObject;
+                var array = new object[jsValue.ArrayLength];
+                for (int i = 0; i < jsValue.ArrayLength; i++)
+                {
+                    using (var prop = jsValue.GetProperty(i))
+                    {
+                        array[i++] = GetValue(prop);
+                    }
+                }
+                return array;
             }
-            if (jsValue.IsUndefined)
-            {
-                return null;
-            }
+
+            if (jsValue.IsObject && TryGetValueAsObject(jsValue, out object value))
+                return value;
 
             ThrowInvalidObject(jsValue);
             return null;
@@ -329,6 +301,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             throw new NotSupportedException($"Was requested to extract the value out of a JsValue object but could not figure its type, value={jsValue}, value type == '{jsValue.ValueType}'");
         }
+
+        protected abstract bool TryGetValueAsObject(T jsValue, out object value);
     }
 
     public class JsPropertyAccessorJint : JsPropertyAccessor<JsHandleJint>
@@ -349,6 +323,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target assignable from 'IObjectInstance' but got one of type '{target.GetType().Name}' with interfaces: {string.Join(",", target.GetType().GetInterfaces().ToList())}");
             }
         }
+
+        protected override bool TryGetValueAsObject(JsHandleJint jsValue, out object value)
+        {
+            //object wrapper is an object so it have to come before the object
+            if (jsValue.Item is ObjectWrapper wrapper)
+            {
+                var target = wrapper.Target;
+                value = Utils.TypeConverter.TryReturnLazyValue(target, jsValue);
+                return true;
+            }
+
+            value = jsValue.AsObject();
+            return true;
+        }
     }
 
     public class JsPropertyAccessorV8 : JsPropertyAccessor<JsHandleV8>
@@ -362,6 +350,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (target.GetType() != typeof(JsHandleV8))
                 throw new ArgumentException(
                     $"{caller} is expecting a target of type of '{nameof(JsHandleV8)}' but got one of type '{target.GetType().Name}'.");
+        }
+
+        protected override bool TryGetValueAsObject(JsHandleV8 jsValue, out object value)
+        {
+            object boundObject = jsValue.Item.BoundObject;
+            if (boundObject != null)
+            {
+                //TODO: egor we throw here, in original v8 code we continue, need to check (same as TypeConverter)
+                value = Utils.TypeConverter.TryReturnLazyValue(boundObject, jsValue);
+                return true;
+            }
+
+            value = jsValue.AsObject();
+            return true;
         }
     }
 }

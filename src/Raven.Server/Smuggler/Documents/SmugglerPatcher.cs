@@ -1,15 +1,11 @@
 ﻿using System;
+using Jint.Runtime;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
-//using Raven.Server.Extensions.Jint;
-using JavaScriptException = Raven.Client.Exceptions.Documents.Patching.JavaScriptException;
-using JintException = Jint.Runtime.JavaScriptException;
-using V8Exception = V8.Net.V8Exception;
+using V8.Net;
 
 
 namespace Raven.Server.Smuggler.Documents
@@ -58,11 +54,11 @@ namespace Raven.Server.Smuggler.Documents
                             translatedResult = _run.Translate(result, ctx, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         }
                     }
-                    catch (JavaScriptException e)
+                    catch (Client.Exceptions.Documents.Patching.JavaScriptException e)
                     {
                         if (e.InnerException is JintException innerExceptionJint && string.Equals(innerExceptionJint.Message, "skip", StringComparison.OrdinalIgnoreCase))
                             return null;
-                        else if (e.InnerException is V8Exception innerExceptionV8 && string.Equals(innerExceptionV8.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                        if (e.InnerException is V8Exception innerExceptionV8 && string.Equals(innerExceptionV8.Message, "skip", StringComparison.OrdinalIgnoreCase))
                             return null;
 
                         throw;

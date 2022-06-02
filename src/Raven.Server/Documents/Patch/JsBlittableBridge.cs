@@ -1,10 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Jint.Runtime.Interop;
 using Raven.Client;
-using Raven.Server.Documents.Patch.V8;
-using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -32,8 +30,6 @@ public abstract class JsBlittableBridge<T>
 
     protected JsBlittableBridge(IJsEngineHandle<T> scriptEngine)
     {
-        //_writer = writer;
-        //_usageMode = usageMode;
         _scriptEngine = scriptEngine;
     }
 
@@ -88,24 +84,49 @@ public abstract class JsBlittableBridge<T>
             if (isRoot)
                 filterProperties = string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
 
-            object target = jsValue.AsObject();
-            if (target != null)
+            object asObject = jsValue.AsObject();
+            if (asObject is ObjectWrapper wrapper)
             {
-                if (target is LazyNumberValue)
+
+                if (wrapper.Target is LazyNumberValue)
                 {
-                    _writer.WriteValue(BlittableJsonToken.LazyNumber, target);
+                    _writer.WriteValue(BlittableJsonToken.LazyNumber, wrapper.Target);
                 }
-                else if (target is LazyStringValue)
+                else if (wrapper.Target is LazyStringValue)
                 {
-                    _writer.WriteValue(BlittableJsonToken.String, target);
+                    _writer.WriteValue(BlittableJsonToken.String, wrapper.Target);
                 }
-                else if (target is LazyCompressedStringValue)
+                else if (wrapper.Target is LazyCompressedStringValue)
                 {
-                    _writer.WriteValue(BlittableJsonToken.CompressedString, target);
+                    _writer.WriteValue(BlittableJsonToken.CompressedString, wrapper.Target);
                 }
-                else if (target is long)
+                else if (wrapper.Target is long)
                 {
-                    _writer.WriteValue(BlittableJsonToken.Integer, (long)target);
+                    _writer.WriteValue(BlittableJsonToken.Integer, (long)wrapper.Target);
+                }
+                else
+                {
+                    WriteNestedObject(jsValue, filterProperties);
+                }
+            }
+            else if (asObject != null)
+            {
+                //TODO: egor in other places we use the Item.BoundObject for v8, should we do here  as well? or asObject = BOundObject in V8 so I can drop usage of Item.BoundObject and just use asObj is LazyNum... like here also in other places
+                if (asObject is LazyNumberValue)
+                {
+                    _writer.WriteValue(BlittableJsonToken.LazyNumber, asObject);
+                }
+                else if (asObject is LazyStringValue)
+                {
+                    _writer.WriteValue(BlittableJsonToken.String, asObject);
+                }
+                else if (asObject is LazyCompressedStringValue)
+                {
+                    _writer.WriteValue(BlittableJsonToken.CompressedString, asObject);
+                }
+                else if (asObject is long)
+                {
+                    _writer.WriteValue(BlittableJsonToken.Integer, (long)asObject);
                 }
                 else
                 {
@@ -172,46 +193,6 @@ public abstract class JsBlittableBridge<T>
 
     protected abstract void WriteNestedObject(T jsObj, bool filterProperties);
 
-    //private void WriteNestedObject(T jsObj, bool filterProperties)
-    //{
-    //    if (_recursive == null)
-    //        _recursive = new HashSet<object>();
-
-    //    var target = jsObj.AsObject();
-    //    if (target != null)
-    //    {
-    //        if (target is IDictionary || target is IBlittableObjectInstance blittableJsObject)
-    //        {
-    //            WriteValueInternal(target, jsObj, filterProperties);
-    //        }
-    //        else if (target is IEnumerable enumerable)
-    //        {
-    //            _writer.StartWriteArray();
-    //            int i = 0;
-    //            foreach (var item in enumerable)
-    //            {
-                        
-    //                using (var jsItem = _scriptEngine.FromObjectGen(item))
-    //                {
-    //                    WriteJsonValue(jsItem, false, filterProperties, i.ToString(), jsItem);
-    //                }
-    //                i++;
-    //            }
-    //            _writer.WriteArrayEnd();
-    //        }
-    //        else
-    //            WriteObjectType(target);
-    //    }
-    //    else if (jsObj.IsFunction)
-    //        _writer.WriteValueNull();
-    //    else
-    //    {
-    //        // TODO: egor   WriteValueInternal(jsObj.HandleID, jsObj, filterProperties);
-    //        WriteValueInternal(jsObj, jsObj, filterProperties);
-    //    }
-
-    //}
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void WriteObjectType(object target)
     {
@@ -223,84 +204,84 @@ public abstract class JsBlittableBridge<T>
 
     private void WriteNumber(object parent, string propName, double d)
     {
-        var writer = _writer;
-        var boi = parent as BlittableObjectInstanceV8;
-        if (boi == null || propName == null)
-        {
-            GuessNumberType();
-            return;
-        }
-
-        if (boi.OriginalPropertiesTypes != null &&
-            boi.OriginalPropertiesTypes.TryGetValue(propName, out var numType))
-        {
-            if (WriteNumberBasedOnType(numType & BlittableJsonReaderBase.TypesMask))
-                return;
-        }
-        else if (boi.Blittable != null)
-        {
-            var propIndex = boi.Blittable.GetPropertyIndex(propName);
-            if (propIndex != -1)
+         var writer = _writer;
+            var boi = parent as IBlittableObjectInstance;
+            if (boi == null || propName == null)
             {
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-                boi.Blittable.GetPropertyByIndex(propIndex, ref prop);
-                if (WriteNumberBasedOnType(prop.Token & BlittableJsonReaderBase.TypesMask))
+                GuessNumberType();
+                return;
+            }
+
+            if (boi.OriginalPropertiesTypes != null &&
+                boi.OriginalPropertiesTypes.TryGetValue(propName, out var numType))
+            {
+                if (WriteNumberBasedOnType(numType & BlittableJsonReaderBase.TypesMask))
                     return;
             }
-        }
-
-        GuessNumberType();
-
-        bool WriteNumberBasedOnType(BlittableJsonToken type)
-        {
-            if (type == BlittableJsonToken.LazyNumber)
+            else if (boi.Blittable != null)
             {
-                writer.WriteValue(d);
-                return true;
+                var propIndex = boi.Blittable.GetPropertyIndex(propName);
+                if (propIndex != -1)
+                {
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
+                    boi.Blittable.GetPropertyByIndex(propIndex, ref prop);
+                    if (WriteNumberBasedOnType(prop.Token & BlittableJsonReaderBase.TypesMask))
+                        return;
+                }
             }
 
-            if (type == BlittableJsonToken.Integer)
+            GuessNumberType();
+
+            bool WriteNumberBasedOnType(BlittableJsonToken type)
+            {
+                if (type == BlittableJsonToken.LazyNumber)
+                {
+                    writer.WriteValue(d);
+                    return true;
+                }
+
+                if (type == BlittableJsonToken.Integer)
+                {
+                    if (IsDoubleType())
+                    {
+                        // the previous value was a long and now changed to double
+                        writer.WriteValue(d);
+                    }
+                    else
+                    {
+                        writer.WriteValue((long)d);
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            void GuessNumberType()
             {
                 if (IsDoubleType())
                 {
-                    // the previous value was a long and now changed to double
                     writer.WriteValue(d);
                 }
                 else
                 {
                     writer.WriteValue((long)d);
                 }
+            }
+
+            bool IsDoubleType()
+            {
+                var roundedNumber = Math.Round(d, 0);
+                if (roundedNumber.AlmostEquals(d))
+                {
+                    var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
+                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
+                        return false;
+                }
 
                 return true;
             }
-
-            return false;
-        }
-
-        void GuessNumberType()
-        {
-            if (IsDoubleType())
-            {
-                writer.WriteValue(d);
-            }
-            else
-            {
-                writer.WriteValue((long)d);
-            }
-        }
-
-        bool IsDoubleType()
-        {
-            var roundedNumber = Math.Round(d, 0);
-            if (roundedNumber.AlmostEquals(d))
-            {
-                var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
-                if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
-                    return false;
-            }
-
-            return true;
-        }
     }
 
     private void WriteJsInstance(T instance, bool isRoot, bool filterProperties)

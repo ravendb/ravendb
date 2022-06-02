@@ -81,6 +81,11 @@ public struct JsHandleJint : IJsHandle<JsHandleJint>
         }
     }
 
+    public override string ToString()
+    {
+        return Item.ToString();
+    }
+
     public object AsObject()
     {
         return _obj;

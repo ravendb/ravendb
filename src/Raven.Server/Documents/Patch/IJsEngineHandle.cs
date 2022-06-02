@@ -95,6 +95,7 @@ public interface IJsEngineHandle<T> : /*IJavaScriptEngineForParsing<T>,*/ IScrip
     T CreateValue(Int32 value);
 
     T CreateValue(double value);
+    T CreateValue(long value);
 
     T CreateValue(string value);
 

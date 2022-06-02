@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public void CanDisableStrictMode(Options options)
         {
-            options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.StrictMode)] = "false";
+            options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.StrictMode)] = "false";
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())

@@ -172,7 +172,7 @@ from EdgeCaseValues as e select MyProjection(e)";
 
         // TODO [shlomo] RavenDB-18121: V8 version should be activated
         [Theory]
-        [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
+        [RavenData(JavascriptEngineMode = RavenJavascriptEngineMode.Jint)]
         public async Task CanParseNumericEdgeCasesRawValuesInJSProjection(Options options)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();

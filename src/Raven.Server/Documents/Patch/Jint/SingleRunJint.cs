@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Jint;
+using Jint.Runtime;
 using Jint.Runtime.Interop;
-using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using V8.Net;
 
 namespace Raven.Server.Documents.Patch.Jint
 {
@@ -36,10 +35,19 @@ namespace Raven.Server.Documents.Patch.Jint
           //noop
         }
 
-        protected override JsHandleJint CreateObjectBinder(object value)
+        protected override JsHandleJint CreateObjectBinder(BlittableJsonToken type, object value)
         {
-            var obj = new ObjectWrapper(ScriptEngineJint, value);
-            return new JsHandleJint(obj);
+            switch (type)
+            {
+                case BlittableJsonToken.Integer:
+                case BlittableJsonToken.LazyNumber:
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                    ObjectWrapper obj = new ObjectWrapper(ScriptEngineJint, value);
+                    return new JsHandleJint(obj);
+                default:
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
+            }
         }
 
         protected override bool TryGetValueFromBoi(IBlittableObjectInstance iboi, string propName, out IBlittableObjectProperty<JsHandleJint> blittableObjectProperty, out bool b)
@@ -133,16 +141,8 @@ namespace Raven.Server.Documents.Patch.Jint
                 catch (JavaScriptException e)
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
-                    //JsUtilsJint.Clear();
-                    //throw CreateFullError(e);
-                    throw new Exception();
-                }
-                catch (V8Exception e)
-                {
-                    //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
-                    //JsUtilsV8.Clear();
-                    //throw CreateFullError(e);
-                    throw new Exception();
+                    JsUtils.Clear();
+                    throw CreateFullError(e);
                 }
                 catch (Exception)
                 {
@@ -168,6 +168,25 @@ namespace Raven.Server.Documents.Patch.Jint
             }
         }
 
+        protected override Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(Exception ex)
+        {
+            if (ex is JavaScriptException e)
+            {
+                string msg;
+                if (e.Error.IsString())
+                    msg = e.Error.AsString();
+                else if (e.Error.IsObject())
+                    msg = JsBlittableBridge.Translate(_jsonCtx, new JsHandleJint(e.Error.AsObject())).ToString();
+                else
+                    msg = e.Error.ToString();
+
+                msg = "At " + e.Column + ":" + e.LineNumber + " " + msg;
+                var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
+                return javaScriptException;
+            }
+
+            throw new ArgumentException($"expected JavaScriptException but got {ex.GetType().FullName}");
+        }
         protected override void DisposeArgs()
         {
             _refResolverJint.ExplodeArgsOn(null, null);

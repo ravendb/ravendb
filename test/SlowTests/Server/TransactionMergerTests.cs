@@ -119,7 +119,7 @@ namespace SlowTests.Server
 
             using var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = int.MaxValue.ToString()
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.JavaScript.MaxSteps)] = int.MaxValue.ToString()
             });
 
             using (var session = store.OpenAsyncSession())
