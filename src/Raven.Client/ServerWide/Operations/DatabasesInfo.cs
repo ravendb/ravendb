@@ -135,7 +135,7 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(Type)] = Type,
                 [nameof(UsedSpace)] = UsedSpace,
                 [nameof(UsedSpaceByTempBuffers)] = UsedSpaceByTempBuffers,
-                [nameof(DiskSpaceResult)] = DiskSpaceResult.ToJson()
+                [nameof(DiskSpaceResult)] = DiskSpaceResult.ToJson(),
                 [nameof(IoStatsResult)] = IoStatsResult?.ToJson()
             };
         }
