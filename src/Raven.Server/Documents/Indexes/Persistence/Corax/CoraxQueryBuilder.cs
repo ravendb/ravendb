@@ -637,6 +637,12 @@ public static class CoraxQueryBuilder
             else
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
         }
+
+
+        if (indexMapping.TryGetByFieldId(fieldId, out var binding) && binding.Analyzer is not LuceneAnalyzerAdapter )
+        {
+            return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated, true);
+        }
         
         return indexSearcher.SearchQuery(fieldName, valueAsString, scoreFunction, @operator, fieldId, isNegated);
     }

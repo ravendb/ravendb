@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -18,7 +19,7 @@ public partial class IndexSearcher
     }
 
     public IQueryMatch SearchQuery<TScoreFunction>(string field, string searchTerm, TScoreFunction scoreFunction, Constants.Search.Operator @operator, int analyzerId,
-        bool isNegated = false)
+        bool isNegated = false, bool manuallyCutWildcards = false)
         where TScoreFunction : IQueryScoreFunction
     {
         ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
@@ -75,7 +76,26 @@ public partial class IndexSearcher
             if (mode.HasFlag(Constants.Search.SearchMatchOptions.StartsWith | Constants.Search.SearchMatchOptions.EndsWith))
                 mode = Constants.Search.SearchMatchOptions.Contains;
 
-            Slice.From(_transaction.Allocator, encoded.Slice(tokens[0].Offset, (int)tokens[0].Length), ByteStringType.Immutable, out var encodedString);
+            var termForTree = encoded.Slice(tokens[0].Offset, (int)tokens[0].Length);
+            if (manuallyCutWildcards)
+            {
+                if (mode != Constants.Search.SearchMatchOptions.TermMatch)
+                {
+                    if (mode is Constants.Search.SearchMatchOptions.Contains && termForTree.Length <= 2)
+                        throw new InvalidDataException("");
+                    else if (termForTree.Length == 1)
+                        throw new InvalidDataException();
+                }
+                
+                termForTree = mode switch
+                {
+                    Constants.Search.SearchMatchOptions.StartsWith => termForTree.Slice(1),
+                    Constants.Search.SearchMatchOptions.EndsWith => termForTree.Slice(0, termForTree.Length - 1),
+                    Constants.Search.SearchMatchOptions.Contains => termForTree.Slice(1, termForTree.Length - 2)
+                };
+            }
+            
+            Slice.From(_transaction.Allocator, termForTree, ByteStringType.Immutable, out var encodedString);
             BuildExpression(mode, encodedString);
         }
 
