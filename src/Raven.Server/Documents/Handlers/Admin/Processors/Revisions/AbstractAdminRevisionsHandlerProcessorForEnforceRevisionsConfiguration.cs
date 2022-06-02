@@ -3,7 +3,6 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
@@ -16,14 +15,14 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected abstract ValueTask AddOperationAsync(long operationId, OperationCancelToken token);
+        protected abstract void AddOperation(long operationId, OperationCancelToken addOpToken);
 
         public override async ValueTask ExecuteAsync()
         {
             var token = RequestHandler.CreateTimeLimitedOperationToken();
-            var operationId = RequestHandler.GetLongQueryString("operationId", false) ?? -RequestHandler.ServerStore.Operations.GetNextOperationId();
+            var operationId = RequestHandler.GetLongQueryString("operationId", false) ?? RequestHandler.ServerStore.Operations.GetNextOperationId();
 
-            await AddOperationAsync(operationId, token);
+            AddOperation(operationId, token);
 
             using (ClusterContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
