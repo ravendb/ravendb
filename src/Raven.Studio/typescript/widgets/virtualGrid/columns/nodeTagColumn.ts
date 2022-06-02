@@ -26,14 +26,10 @@ class nodeTagColumn<T extends { nodeTag: string, noData: boolean }> extends hype
 
         const description = this.hrefProvider(item).targetDescription;
         const titleText = description ? `Go to ${description}` : "";
+        
+        const nodeDataClass = item.noData ? "no-data" : `node-${nodeTag}`
 
-        if (item.noData) {
-            return `<div class="node-no-data node-spinner">
-                        <span class="node-label no-data" title="${titleText}">${nodeTag}</span>
-                    </div>`;
-        } else {
-            return `<span class="node-label node-${nodeTag}" title="${titleText}">${nodeTag}</span>`;
-        }
+        return `<span class="node-label ${nodeDataClass}" title="${titleText}">${nodeTag}</span>`;
     }
 
     toDto(): virtualColumnDto {

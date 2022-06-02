@@ -133,15 +133,15 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         return [
             new nodeTagColumn<nodeStatsItem>(grid, item => this.prepareUrl(item, "Cluster Dashboard")),
 
-            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.disconnected() ? "Trying to connect.." : (item.nodeType() ? this.nodeTypeDataForHtml(item.nodeType()) : ""), "Type", "15%"),
+            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeType() ? this.nodeTypeDataForHtml(item.nodeType()) : "-", "Type", "15%"),
 
-            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeState() ? this.nodeStateDataForHtml(item.nodeState()) : "", "State", "15%"),
+            new iconsPlusTextColumn<nodeStatsItem>(grid, item => item.nodeState() ? this.nodeStateDataForHtml(item.nodeState()) : "-", "State", "15%"),
 
-            new textColumn<nodeStatsItem>(grid, item => item.formattedUpTime() ?? "", "Up time", "15%"),
+            new textColumn<nodeStatsItem>(grid, item => item.formattedUpTime() ?? "-", "Up time", "15%"),
 
-            new textColumn<nodeStatsItem>(grid, item => item.formattedStartTime() ?? "", "Start time", "20%"),
+            new textColumn<nodeStatsItem>(grid, item => item.formattedStartTime() ?? "-", "Start time", "20%"),
             
-            new actionColumn<nodeStatsItem>(grid, item => router.navigate(item.nodeUrl()), "URL", item => item.nodeUrl() ?? "" , "20px",
+            new actionColumn<nodeStatsItem>(grid, item => router.navigate(item.nodeUrl()), "URL", item => item.nodeUrl() ?? "-" , "20px",
                 {
                     title: () => 'Go to URL'
                 }),
