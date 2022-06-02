@@ -68,3 +68,12 @@ function GetUbuntuImageTags($repo, $version, $arch) {
     }
         
 }
+
+function GetWindowsImageTags($repo, $version) {
+    return @(
+        "$($repo):$($version)-windows",
+        "$($repo):windows-latest",
+        "$($repo):windows-latest-lts",
+        "$($repo):5.4-windows-latest"
+    )
+}
