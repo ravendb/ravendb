@@ -18,8 +18,8 @@ internal class ShardedQueriesHandlerProcessorForPatch : AbstractShardedOperation
     }
     protected override HttpMethod OperationMethod => HttpMethod.Patch;
 
-    protected override (Func<JsonOperationContext, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options)
+    protected override (Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options)
     {
-        return (c => new PatchByQueryOperation.PatchByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, c, query, options, operationId), OperationType.UpdateByQuery);
+        return ((c, shardNumber) => new PatchByQueryOperation.PatchByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, c, query, options, operationId), OperationType.UpdateByQuery);
     }
 }

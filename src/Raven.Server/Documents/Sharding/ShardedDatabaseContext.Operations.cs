@@ -69,7 +69,7 @@ public partial class ShardedDatabaseContext
             OperationType operationType,
             string description,
             IOperationDetailedDescription detailedDescription,
-            Func<JsonOperationContext, RavenCommand<OperationIdResult>> commandFactory,
+            Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> commandFactory,
             OperationCancelToken token = null)
         {
             var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, token);
@@ -79,7 +79,7 @@ public partial class ShardedDatabaseContext
 
         private async Task<IOperationResult> CreateTaskAsync(
             ShardedOperation operation,
-            Func<JsonOperationContext, RavenCommand<OperationIdResult>> commandFactory,
+            Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> commandFactory,
             Action<IOperationProgress> onProgress,
             OperationCancelToken token)
         {
@@ -92,7 +92,7 @@ public partial class ShardedDatabaseContext
             {
                 for (var shardNumber = 0; shardNumber < tasks.Length; shardNumber++)
                 {
-                    var command = commandFactory(context);
+                    var command = commandFactory(context, shardNumber);
 
                     tasks[shardNumber] = ConnectAsync(_context, operation.Operation, command, shardNumber, t);
                 }

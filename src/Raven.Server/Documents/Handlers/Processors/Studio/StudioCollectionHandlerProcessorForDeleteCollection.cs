@@ -16,11 +16,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
         {
         }
 
-        protected override ValueTask DeleteCollectionAsync(DocumentsOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds, long operationId)
+        protected override void DeleteCollection(DocumentsOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds,
+            long operationId, OperationCancelToken token)
         {
-            ExecuteCollectionOperation((runner, collectionNameParam, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionNameParam, 0, long.MaxValue, options, onProgress, token)),
-                context, returnContextToPool, OperationType.DeleteByCollection, collectionName, operationId, excludeIds);
-            return ValueTask.CompletedTask;
+            ExecuteCollectionOperation(
+                (runner, collectionNameParam, options, onProgress, tokenParam) =>
+                    Task.Run(async () => await runner.ExecuteDelete(collectionNameParam, 0, long.MaxValue, options, onProgress, tokenParam)),
+                context, returnContextToPool, OperationType.DeleteByCollection, collectionName, operationId, excludeIds, token);
         }
 
         protected override long GetNextOperationId()
@@ -28,12 +30,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
 
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext docsContext, IDisposable returnContextToPool, OperationType operationType, string collectionName, long operationId, HashSet<string> excludeIds)
+        private void ExecuteCollectionOperation(
+            Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation,
+            DocumentsOperationContext docsContext, IDisposable returnContextToPool, OperationType operationType, string collectionName, long operationId,
+            HashSet<string> excludeIds, OperationCancelToken token)
         {
-            var token = RequestHandler.CreateTimeLimitedCollectionOperationToken();
+            var opToken = RequestHandler.CreateTimeLimitedCollectionOperationToken();
 
             var collectionRunner = new StudioCollectionRunner(RequestHandler.Database, docsContext, excludeIds);
-            
+
             // use default options
             var options = new CollectionOperationOptions();
 
@@ -42,10 +47,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
                 operationType,
                 collectionName,
                 detailedDescription: null,
-                onProgress => operation(collectionRunner, collectionName, options, onProgress, token),
+                onProgress => operation(collectionRunner, collectionName, options, onProgress, opToken),
                 token: token);
 
-            _ = task.ContinueWith(_ => returnContextToPool.Dispose());
+            _ = task.ContinueWith(_ =>
+            {
+                using (returnContextToPool)
+                    opToken.Dispose();
+            });
         }
     }
 }

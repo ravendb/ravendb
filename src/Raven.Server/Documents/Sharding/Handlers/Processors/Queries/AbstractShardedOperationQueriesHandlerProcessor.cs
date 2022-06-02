@@ -29,7 +29,7 @@ internal abstract class AbstractShardedOperationQueriesHandlerProcessor : Abstra
         return ContextPool.AllocateOperationContext(out asyncOperationContext);
     }
 
-    protected abstract (Func<JsonOperationContext, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options);
+    protected abstract (Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options);
 
     protected override void ScheduleOperation(TransactionOperationContext asyncOperationContext, IDisposable returnAsyncOperationContext, IndexQueryServerSide query, long operationId, QueryOperationOptions options)
     {

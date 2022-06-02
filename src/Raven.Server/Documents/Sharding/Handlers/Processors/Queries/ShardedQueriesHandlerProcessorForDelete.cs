@@ -22,8 +22,8 @@ internal class ShardedQueriesHandlerProcessorForDelete : AbstractShardedOperatio
     }
     protected override HttpMethod OperationMethod => HttpMethod.Delete;
 
-    protected override (Func<JsonOperationContext, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options)
+    protected override (Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options)
     {
-        return (c => new DeleteByQueryOperation.DeleteByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, query, options, operationId), OperationType.UpdateByQuery);
+        return ((c, shardNumber) => new DeleteByQueryOperation.DeleteByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, query, options, operationId), OperationType.UpdateByQuery);
     }
 }

@@ -2,15 +2,17 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Studio
 {
-    public class DeleteStudioCollectionOperation : IMaintenanceOperation
+    public class DeleteStudioCollectionOperation : IOperation<OperationIdResult>
     {
         private readonly long? _operationId;
         private readonly string _collectionName;
@@ -23,12 +25,12 @@ namespace Raven.Server.Documents.Commands.Studio
             _excludeIds = excludeIds;
         }
 
-        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new DeleteStudioCollectionCommand(_operationId, _collectionName, _excludeIds);
         }
 
-        internal class DeleteStudioCollectionCommand : RavenCommand
+        internal class DeleteStudioCollectionCommand : RavenCommand<OperationIdResult>
         {
             private readonly long? _operationId;
             private readonly string _collectionName;
@@ -42,7 +44,6 @@ namespace Raven.Server.Documents.Commands.Studio
             }
 
             public override bool IsReadRequest => false;
-
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
@@ -73,6 +74,14 @@ namespace Raven.Server.Documents.Commands.Studio
                 };
 
                 return request;
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if(response == null)
+                    return;
+
+                Result = JsonDeserializationClient.OperationIdResult(response);
             }
         }
     }

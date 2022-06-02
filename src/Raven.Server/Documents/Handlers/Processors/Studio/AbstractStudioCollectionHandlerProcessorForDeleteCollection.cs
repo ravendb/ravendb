@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio
@@ -15,7 +16,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
         {
         }
 
-        protected abstract ValueTask DeleteCollectionAsync(TOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds, long operationId);
+        protected abstract void DeleteCollection(TOperationContext context, IDisposable returnContextToPool, string collectionName, HashSet<string> excludeIds,
+            long operationId, OperationCancelToken token);
 
         protected abstract long GetNextOperationId();
 
@@ -39,12 +41,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
                 }
             }
 
-            await DeleteCollectionAsync(context, returnContextToPool, collectionName, excludeIds, operationId);
-
             using (ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
             await using (var writer = new AsyncBlittableJsonTextWriter(writeContext, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(writeContext, operationId, ServerStore.NodeTag);
+            }
+
+            using (var token = RequestHandler.CreateOperationToken())
+            {
+                DeleteCollection(context, returnContextToPool, collectionName, excludeIds, operationId, token);
             }
         }
     }

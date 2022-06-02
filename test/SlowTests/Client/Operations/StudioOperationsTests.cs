@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.Sharding.Operations;
 using Sparrow.Json;
@@ -31,15 +33,13 @@ namespace SlowTests.Client.Operations
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.TimeSeries | DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
 
-                await store.Maintenance.SendAsync(new DeleteStudioCollectionOperation(null, "Orders", null));
-                await Task.Delay(1000);
+                var op = await store.Operations.SendAsync(new DeleteStudioCollectionOperation(null, "Orders", new List<string>(){ "Orders/1-A" }));
+                var operationResult = (BulkOperationResult)await op.WaitForCompletionAsync();
 
-                await AssertWaitForTrueAsync(async () =>
-                {
-                    var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-                    
-                    return stats != null && stats.Collections["Orders"] == 0;
-                });
+                var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                
+                Assert.NotNull(stats);
+                Assert.Equal(1, stats.Collections["Orders"]);
             }
         }
 
