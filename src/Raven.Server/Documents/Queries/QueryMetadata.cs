@@ -31,9 +31,10 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
-using Spatial4n.Core.Shapes;
-using Spatial4n.Core.Shapes.Nts;
+using Spatial4n.Shapes;
+using Spatial4n.Shapes.Nts;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
+using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -575,7 +576,7 @@ function execute(doc, args){
                         break;
 
                     case ValueExpression ve:
-                        foreach ((object value, _) in QueryBuilder.GetValues(Query, this, parameters, ve))
+                        foreach ((object value, _) in QueryBuilderHelper.GetValues(Query, this, parameters, ve))
                         {
                             string path = value.ToString();
                             if (string.IsNullOrEmpty(path))
@@ -753,7 +754,7 @@ function execute(doc, args){
 
                 if (vt.Value == ValueTokenType.Parameter)
                 {
-                    foreach (var v in QueryBuilder.GetValues(Query, this, parameters, vt))
+                    foreach (var v in QueryBuilderHelper.GetValues(Query, this, parameters, vt))
                     {
                         AddCounterToInclude(counterIncludes, parameters, v, sourcePath);
                     }
@@ -761,7 +762,7 @@ function execute(doc, args){
                     continue;
                 }
 
-                var value = QueryBuilder.GetValue(Query, this, parameters, vt);
+                var value = QueryBuilderHelper.GetValue(Query, this, parameters, vt);
 
                 AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
             }
@@ -828,7 +829,7 @@ function execute(doc, args){
                             if (!(expression.Arguments[index] is ValueExpression vt))
                                 continue;
                             var argIndex = index - start;
-                            var arg = QueryBuilder.GetValue(Query, this, parameters, vt);
+                            var arg = QueryBuilderHelper.GetValue(Query, this, parameters, vt);
 
                             // name arg
                             if (argIndex == 0)
@@ -2127,7 +2128,7 @@ function execute(doc, args){
                 var valueType1 = GetValueTokenType(parameters, fv, unwrapArrays: false);
                 var valueType2 = GetValueTokenType(parameters, sv, unwrapArrays: false);
 
-                if (QueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
+                if (QueryBuilderHelper.AreValueTokenTypesValid(valueType1, valueType2) == false)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
             }
 
@@ -2149,12 +2150,12 @@ function execute(doc, args){
                     {
                         var previousValue = (ValueExpression)values[i - 1];
 
-                        if (QueryBuilder.AreValueTokenTypesValid(previousValue.Value, value.Value) == false)
+                        if (QueryBuilderHelper.AreValueTokenTypesValid(previousValue.Value, value.Value) == false)
                             ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
                     }
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
-                    if (i > 0 && QueryBuilder.AreValueTokenTypesValid(previousType, valueType) == false)
+                    if (i > 0 && QueryBuilderHelper.AreValueTokenTypesValid(previousType, valueType) == false)
                         ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, values.ToArray());
 
                     if (valueType != ValueTokenType.Null)
@@ -2320,7 +2321,7 @@ function execute(doc, args){
                 if (secondArgument is ValueExpression == false)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a value", QueryText, parameters);
 
-                var value = QueryBuilder.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
+                var value = QueryBuilderHelper.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
                 if (value.Type != ValueTokenType.Long)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a number", QueryText, parameters);
 
@@ -2343,7 +2344,7 @@ function execute(doc, args){
                 if (secondArgument is ValueExpression == false)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a value", QueryText, parameters);
 
-                var value = QueryBuilder.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
+                var value = QueryBuilderHelper.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
                 if (value.Type != ValueTokenType.Long && value.Type != ValueTokenType.Double)
                     throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a number", QueryText, parameters);
 
@@ -2479,7 +2480,7 @@ function execute(doc, args){
                             var spatialOptions = SpatialOptions.Default;
                             var spatialField = new SpatialField(fieldNameAsString, spatialOptions);
 
-                            var circle = (ICircle)QueryBuilder.HandleCircle(_metadata.Query, shapeExpression, _metadata, parameters, fieldNameAsString, spatialField, out var units);
+                            var circle = (ICircle)LuceneQueryBuilder.HandleCircle(_metadata.Query, shapeExpression, _metadata, parameters, fieldNameAsString, spatialField, out var units);
                             var circleShape = new Circle(circle, units, spatialOptions);
 
                             AddSpatialShapeToMetadata(circleShape);
@@ -2494,7 +2495,7 @@ function execute(doc, args){
                             var fieldNameAsString = fieldName.ToString();
                             var spatialOptions = SpatialOptions.Default;
                             var spatialField = new SpatialField(fieldNameAsString, spatialOptions);
-                            var shape = QueryBuilder.HandleWkt(_metadata.Query, shapeExpression, _metadata, parameters, fieldNameAsString, spatialField, out var units);
+                            var shape = LuceneQueryBuilder.HandleWkt(_metadata.Query, shapeExpression, _metadata, parameters, fieldNameAsString, spatialField, out var units);
 
                             SpatialShapeBase shapeBase = null;
                             if (shape is ICircle circle)
@@ -2596,7 +2597,7 @@ function execute(doc, args){
             return sb.ToString();
         }
 
-        private QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
+        internal QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
         {
             if (arguments == null || arguments.Count == 0)
                 throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument but no arguments were passed", QueryText, parameters);
@@ -2607,7 +2608,7 @@ function execute(doc, args){
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, bool withoutAlias, string methodName, BlittableJsonReaderObject parameters, string queryText)
+        internal QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, bool withoutAlias, string methodName, BlittableJsonReaderObject parameters, string queryText)
         {
             if (argument is FieldExpression field)
             {

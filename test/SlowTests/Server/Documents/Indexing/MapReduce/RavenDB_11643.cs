@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
@@ -95,7 +96,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                                 }
                             }
                             
-                            var writeOperation = new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
+                            var writeOperation = new Lazy<IndexWriteOperationBase>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
 
                             try
                             {

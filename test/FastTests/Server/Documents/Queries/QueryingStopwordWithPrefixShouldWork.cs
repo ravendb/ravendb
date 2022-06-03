@@ -1,6 +1,8 @@
 ﻿using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,10 +28,11 @@ namespace FastTests.Server.Documents.Queries
             }
         }
 
-        [Fact]
-        public void CanQueryStopwordsWithPrefix()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryStopwordsWithPrefix(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new FooByBar();
                 index.Execute(store);
@@ -38,6 +41,7 @@ namespace FastTests.Server.Documents.Queries
                     session.Store(new Foo { Bar = "Andrew" });
                     session.Store(new Foo { Bar = "boo" });
                     session.SaveChanges();
+                    WaitForUserToContinueTheTest(store);
                     Assert.Single(session.Query<Foo>("FooByBar").Search(x => x.Bar, "And*").Customize(x => x.WaitForNonStaleResults()).ToList());
                 }
             }

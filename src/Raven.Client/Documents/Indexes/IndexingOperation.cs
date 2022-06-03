@@ -37,6 +37,14 @@ namespace Raven.Client.Documents.Indexes
             public const string RecreateSearcher = "Lucene/RecreateSearcher";
         }
 
+        internal static class Corax
+        {
+            public const string Delete = "Corax/Delete";
+            public const string Convert = "Corax/Convert";
+            public const string AddDocument = "Corax/AddDocument";
+            public const string Commit = "Corax/Commit";
+        }
+
         internal static class Storage
         {
             public const string Commit = "Storage/Commit";

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Sparrow;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,7 +24,7 @@ namespace SlowTests.Smuggler
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
         public async Task CanImportNorthwind(string file)
         {
@@ -67,12 +68,12 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
-        [InlineData("SlowTests.Smuggler.Data.Indexes_And_Transformers_3.5.ravendbdump")]
-        public async Task CanImportIndexesAndTransformers(string file)
+        [RavenTheory(RavenTestCategory.Smuggler)]
+        [RavenData("SlowTests.Smuggler.Data.Indexes_And_Transformers_3.5.ravendbdump", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanImportIndexesAndTransformers(Options options, string file)
         {
             using (var stream = GetType().Assembly.GetManifestResourceStream(file))
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Assert.NotNull(stream);
 
@@ -149,7 +150,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData("SlowTests.Smuggler.Data.Revisions_3.5.35220.ravendbdump")]
         public async Task CanImportRevisions1(string file)
         {
@@ -211,7 +212,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData("SlowTests.Smuggler.Data.DocumentWithRevisions.ravendbdump")]
         public async Task CanImportRevisions2(string file)
         {
@@ -263,7 +264,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData("SlowTests.Smuggler.Data.RevisionsWithoutADocument.ravendbdump")]
         public async Task CanImportRevisionsWithoutADocument(string file)
         {
@@ -308,7 +309,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData("SlowTests.Smuggler.Data.RevisionsWithoutADocument.ravendbdump")]
         public async Task CanImportRevisionsWithoutADocumentWithPurgeOnDelete(string file)
         {
@@ -344,7 +345,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData("SlowTests.Smuggler.Data.Identities_3.5.35288.ravendbdump")]
         public async Task CanImportIdentities(string file)
         {

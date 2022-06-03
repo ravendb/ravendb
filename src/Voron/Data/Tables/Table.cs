@@ -220,6 +220,12 @@ namespace Voron.Data.Tables
             return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size, out compressed);
         }
 
+        public void DirectRead(long id, out TableValueReader tvr)
+        {
+            var rawData = DirectRead(id, out int size);
+            tvr = new TableValueReader(id, rawData, size);
+        }
+
         public byte* DirectRead(long id, out int size)
         {
             var result = DirectReadRaw(id, out size, out var compressed);
@@ -1936,7 +1942,7 @@ namespace Voron.Data.Tables
                         return false;
 
                     var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-                    var ptr = DirectRead(id, out var size);
+                    var ptr = DirectRead(id, out int size);
 
                     if (tableValueHolder == null)
                         tableValueHolder = new TableValueHolder();

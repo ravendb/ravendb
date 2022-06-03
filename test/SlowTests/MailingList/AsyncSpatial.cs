@@ -1,9 +1,12 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Corax.Utils;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +18,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public async Task SpatialIndexTest()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task SpatialIndexTest(Options options)
         {
-            using (var db = GetDocumentStore())
+            using (var db = GetDocumentStore(options))
             {
                 new Promos_Index().Execute(db);
 
@@ -40,7 +44,6 @@ namespace SlowTests.MailingList
                         Coordinate = new Coordinate { latitude = 12.233, longitude = -73.995 }
                     });
                     await session.SaveChangesAsync();
-
                     Indexes.WaitForIndexing(db);
 
                     var result = await session.Query<Promo, Promos_Index>()
@@ -81,6 +84,11 @@ namespace SlowTests.MailingList
                                     p.Coordinate,
                                     Coordinates = CreateSpatialField(p.Coordinate.latitude, p.Coordinate.longitude)
                                 };
+                Index("Coordinate", FieldIndexing.No);
+                Store("Coordinate", FieldStorage.Yes);
+
+                Spatial(x => x.Coordinate, x => x.Geography.Default(Raven.Client.Documents.Indexes.Spatial.SpatialUnits.Kilometers));
+
             }
         }
     }

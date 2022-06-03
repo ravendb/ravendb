@@ -5,5 +5,8 @@ namespace Raven.Server.Utils.Features;
 public enum Feature
 {
     [Description("PostgreSQL")]
-    PostgreSql
+    PostgreSql,
+    
+    [Description("Corax")]
+    Corax
 }

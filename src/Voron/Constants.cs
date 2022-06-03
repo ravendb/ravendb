@@ -1,6 +1,7 @@
 ﻿using System;
 using Sparrow.Server;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
 
@@ -61,6 +62,16 @@ namespace Voron.Global
             }
         }
 
+        public static class CompactTree
+        {
+            public const int PageHeaderSize = CompactPageHeader.SizeOf;
+
+            static CompactTree()
+            {
+                Constants.Assert(() => PageHeaderSize == sizeof(CompactPageHeader), () => $"{nameof(CompactPageHeader)} size has changed and not updated at Voron.Global.Constants.");
+            }
+        }
+
         public static class Tree
         {
             public const int PageHeaderSize = TreePageHeader.SizeOf;
@@ -101,7 +112,7 @@ namespace Voron.Global
                 Slice.From(ctx, MetadataTreeName, ByteStringType.Immutable, out MetadataTreeNameSlice);
                 Slice.From(ctx, DatabaseFilename, ByteStringType.Immutable, out DatabaseFilenameSlice);
             }
-           }
+        }
 
         public static void Assert(Func<bool> condition, Func<string> reason)
         {

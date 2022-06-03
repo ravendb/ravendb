@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +27,7 @@ namespace SlowTests.Tests.Bugs
             public string Name { get; set; }
         }
 
-        private IDocumentStore SetupSampleData()
+        private IDocumentStore SetupSampleData(Options options)
         {
             var blogOne = new Blog
             {
@@ -56,7 +57,7 @@ namespace SlowTests.Tests.Bugs
                 }
             };
 
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
             using (var s = store.OpenSession())
             {
                 s.Store(blogOne);
@@ -68,10 +69,11 @@ namespace SlowTests.Tests.Bugs
             return store;
         }
 
-        [Fact]
-        public void ScoreShouldBeAValidDoubleValue()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ScoreShouldBeAValidDoubleValue(Options options)
         {
-            using (var store = SetupSampleData())
+            using (var store = SetupSampleData(options))
             {
                 QueryStatistics stats;
                 using (var session = store.OpenSession())

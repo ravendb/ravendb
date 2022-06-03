@@ -24,6 +24,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var fields = new[] { new AutoIndexField
             {
                 Name = "test",
+                Id = 1,
                 Storage = FieldStorage.No
             } };
 

@@ -19,6 +19,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {
@@ -28,10 +29,11 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Fact]
-        public async Task CanReset()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanReset(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -48,10 +50,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task CanDelete()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanDelete(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -67,10 +70,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task CanStopAndStart()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanStopAndStart(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -122,10 +126,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task SetLockModeAndSetPriorityForAutoIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task SetLockModeAndSetPriorityForAutoIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -168,10 +173,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task GetErrors()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task GetErrors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -232,10 +238,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task GetDefinition()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task GetDefinition(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -296,10 +303,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task GetTerms()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task GetTerms(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -332,10 +340,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task Performance()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Performance(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -383,10 +392,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task GetIndexNames()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task GetIndexNames(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -415,10 +425,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task CanExplain()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanExplain(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -457,10 +468,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task MoreLikeThis()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task MoreLikeThis(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

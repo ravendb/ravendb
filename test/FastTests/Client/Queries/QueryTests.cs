@@ -1,12 +1,15 @@
 using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Queries
 {
@@ -40,10 +43,11 @@ namespace FastTests.Client.Queries
             public bool IsDeleted { get; set; }
         }
         
-        [Fact]
-        public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -89,10 +93,11 @@ namespace FastTests.Client.Queries
                 }
             }
         }
-        [Fact]
-        public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -131,10 +136,11 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [Fact]
-        public  void Query_CreateClausesForQueryDynamically()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public  void Query_CreateClausesForQueryDynamically(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -176,10 +182,11 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [Fact]
-        public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -227,10 +234,11 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [Fact]
-        public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -252,12 +260,44 @@ namespace FastTests.Client.Queries
                 _ = await session.Query<A>().Where(x => x.B == new B { Byte = 1 }).ToArrayAsync();
                 _ = await session.Query<A>().Where(x => x.B == new B { Sbyte = 1 }).ToArrayAsync();
             }
+            WaitForUserToContinueTheTest(store);
         }
 
-        [Fact]
-        public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public async Task Query_DifferentTypesComparison(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await StoreAsync(session, 2);
+                await StoreAsync(session, 1);
+                await StoreAsync(session, 1);
+                await StoreAsync(session, 0);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await session.Query<A>().Where(x => x.B.Uint == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Long == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Ulong == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Short == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Ushort == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Char == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Byte == 1 ).ToArrayAsync();
+                _ = await session.Query<A>().Where(x => x.B.Sbyte == 1 ).ToArrayAsync();
+            }
+            WaitForUserToContinueTheTest(store);
+        }
+
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(Options options)
+        {
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {

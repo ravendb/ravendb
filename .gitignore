@@ -141,3 +141,6 @@ bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 gen/*.java
 gen/*.tokens
 gen/*.interp
+
+test/Tryouts/enron_mail_20150507.tar*
+test/Tryouts/69M_reddit_accounts.csv*

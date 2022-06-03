@@ -1183,6 +1183,25 @@ more responsive application.
             return changes;
         }
 
+        public IDictionary<string, EntityInfo> GetTrackedEntities()
+        {
+            var tracked = DocumentsById.GetTrackedEntities(this);
+
+            foreach (var id in _knownMissingIds)
+            {
+                if (tracked.ContainsKey(id))
+                    continue;
+
+                tracked.Add(id, new EntityInfo
+                {
+                    Id = id,
+                    IsDeleted = true
+                });
+            }
+
+            return tracked;
+        }
+
         /// <summary>
         /// Gets a value indicating whether any of the entities tracked by the session has changes.
         /// </summary>

@@ -10,6 +10,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing.Counters
 {
@@ -19,10 +20,11 @@ namespace FastTests.Client.Indexing.Counters
         {
         }
 
-        [Fact]
-        public void BasicMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -232,10 +234,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public async Task BasicMapIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMapIndexWithLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -400,10 +403,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void BasicMapReduceIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -576,10 +580,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public async Task BasicMapReduceIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMapReduceIndexWithLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -741,10 +746,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void MapIndexWithCaseInsensitiveCounterNames()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void MapIndexWithCaseInsensitiveCounterNames(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -790,10 +796,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapCountersIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUpdateMapCountersIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -829,10 +836,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapCountersIndexWithoutUpdatingCompiledIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUpdateMapCountersIndexWithoutUpdatingCompiledIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -870,10 +878,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapReduceCountersIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUpdateMapReduceCountersIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -927,10 +936,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapReduceCountersIndexWithoutUpdatingCompiledIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUpdateMapReduceCountersIndexWithoutUpdatingCompiledIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -984,10 +994,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanMapAllCountersFromCollection()
+        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapAllCountersFromCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -995,7 +1006,6 @@ namespace FastTests.Client.Indexing.Counters
                     session.Store(company, "companies/1");
                     session.CountersFor(company).Increment("HeartRate", 7);
                     session.CountersFor(company).Increment("Likes", 3);
-
                     session.SaveChanges();
                 }
 
@@ -1155,10 +1165,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanMapAllCounters()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapAllCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

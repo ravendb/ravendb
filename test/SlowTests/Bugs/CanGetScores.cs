@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs
 {
@@ -18,10 +19,11 @@ namespace SlowTests.Bugs
 
         private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
-        [Fact]
-        public void FromQuery()
+        [Theory]
+        [RavenData]
+        public void FromQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -54,10 +56,11 @@ namespace SlowTests.Bugs
         }
 
 
-        [Fact]
-        public void FromQueryWithOrderByScoreThenName()
+        [Theory]
+        [RavenData]
+        public void FromQueryWithOrderByScoreThenName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -101,10 +104,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByScoreThenNameDescending()
+        [Theory]
+        [RavenData]
+        public void FromQueryWithOrderByScoreThenNameDescending(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -148,10 +152,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScore()
+        [Theory]
+        [RavenData]
+        public void FromQueryWithOrderByNameThenByScore(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -206,10 +211,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScoreDescending()
+        [Theory]
+        [RavenData]
+        public void FromQueryWithOrderByNameThenByScoreDescending(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -264,10 +270,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScoreThenByAge()
+        [Theory]
+        [RavenData]
+        public void FromQueryWithOrderByNameThenByScoreThenByAge(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -324,10 +331,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge()
+        [Theory]
+        [RavenData]
+        public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.ServerWide;
 
@@ -20,6 +21,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Monitoring.Cpu.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
         public string CpuUsageMonitorExecArguments { get; set; }
 
+        [Description("The minimum interval between measures to calculate the disk stats")]
+        [DefaultValue(1000)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("Monitoring.Disk.ReadStatsDebounceTimeInMs", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting MinDiskStatsInterval { get; set; }
+        
         public MonitoringConfiguration()
         {
             Snmp = new SnmpConfiguration();

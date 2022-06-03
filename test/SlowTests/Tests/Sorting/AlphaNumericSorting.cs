@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -20,23 +21,42 @@ namespace SlowTests.Tests.Sorting
         {
         }
 
-        [Fact]
-        public void basic_alphanumeric_sort()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void basic_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
             {
-                "1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce",
-                "C# ballad", "A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
+                "1",
+                "a1",
+                "a2",
+                "a10",
+                "C++ debugger",
+                "Carmen",
+                "Abalone",
+                "C++ Views",
+                "A-1 steak sauce",
+                "C# ballad",
+                "A and G motor vehicles",
+                "A B C",
+                "Balzac, Honoré de",
+                "Ambassador hotel"
             };
             var titles2 = new List<string>
             {
              //   "1", "a1", "a2", "a10", "A-1 steak sauce"
-                "1","a1","a2", "a10", "C++ debugger", "Carmen", "Abalone"
+                "1",
+                "a1",
+                "a2",
+                "a10",
+                "C++ debugger",
+                "Carmen",
+                "Abalone"
             };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -74,62 +94,80 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void number_and_decimal_alphanumeric_sort()
-        {
-            var titles = new List<string> { ".303-inch machine guns", "3 point 2 and what goes with it", "0.25 mm", "3.1416 and all that", ".300 Vickers machine gun", "1-4-5 boogie-woogie" };
-            var localTracks = new List<Track>();
-            titles.ForEach(x => localTracks.Add(CreateTrack(x)));
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    localTracks.ForEach(session.Store);
-                    session.SaveChanges();
-                }
-
-                new TracksIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
-                        .Select(x => x.Title)
-                        .ToList();
-
-                    localTracks.Sort(new AlphaNumericTrackOrder());
-
-                    Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var titlesFromServer = session.Query<Track, TracksIndex>()
-                        .OrderByDescending(x => x.Title, OrderingType.AlphaNumeric)
-                        .Select(x => x.Title)
-                        .ToList();
-
-                    localTracks.Sort(new AlphaNumericTrackOrder(titleDescending: true));
-
-                    Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
-                }
-            }
-        }
-
-        [Fact]
-        public void basic_sequence_of_characters()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void number_and_decimal_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
             {
-                "% of gain", "Byrum, John", "B*** de B.", "A 99", "$10 a day",
-                "¥ £ $ exchange tables", "C Windows toolkit", "Ba, Amadou", "Andersen, Hans Christian", "1, 2, buckle my shoe"
+                ".303-inch machine guns",
+                "3 point 2 and what goes with it",
+                "0.25 mm",
+                "3.1416 and all that",
+                ".300 Vickers machine gun",
+                "1-4-5 boogie-woogie"
             };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    localTracks.ForEach(session.Store);
+                    session.SaveChanges();
+                }
+
+                new TracksIndex().Execute(store);
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var titlesFromServer = session.Query<Track, TracksIndex>()
+                        .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                        .Select(x => x.Title)
+                        .ToList();
+
+                    localTracks.Sort(new AlphaNumericTrackOrder());
+
+                    Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var titlesFromServer = session.Query<Track, TracksIndex>()
+                        .OrderByDescending(x => x.Title, OrderingType.AlphaNumeric)
+                        .Select(x => x.Title)
+                        .ToList();
+
+                    localTracks.Sort(new AlphaNumericTrackOrder(titleDescending: true));
+
+                    Assert.Equal(localTracks.Select(x => x.Title), titlesFromServer);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void basic_sequence_of_characters(Options options)
+        {
+            var titles = new List<string>
+            {
+                "% of gain",
+                "Byrum, John",
+                "B*** de B.",
+                "A 99",
+                "$10 a day",
+                "¥ £ $ exchange tables",
+                "C Windows toolkit",
+                "Ba, Amadou",
+                "Andersen, Hans Christian",
+                "1, 2, buckle my shoe"
+            };
+            var localTracks = new List<Track>();
+            titles.ForEach(x => localTracks.Add(CreateTrack(x)));
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -166,8 +204,9 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void order_by_two_parameters_alphanumeric()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void order_by_two_parameters_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", "3"));
@@ -177,7 +216,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("2", "4"));
             localTracks.Add(CreateTrack("1.1", "1"));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -216,8 +255,9 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void order_by_two_parameters_first_alphanumeric_than_long()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void order_by_two_parameters_first_alphanumeric_than_long(Options options)
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", year: 2005));
@@ -228,7 +268,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("2", year: 2012));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -267,8 +307,9 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void order_by_two_parameters_first_long_than_alphanumeric()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void order_by_two_parameters_first_long_than_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1.01", year: 2015));
@@ -279,7 +320,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("1.1", year: 2015));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -374,7 +415,7 @@ namespace SlowTests.Tests.Sorting
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineDataWithRandomSeed]
         public async Task random_words_using_document_query(int seed)
         {
@@ -486,12 +527,7 @@ namespace SlowTests.Tests.Sorting
 
         private static Track CreateTrack(string title, string artist = null, int year = 0)
         {
-            return new Track
-            {
-                Title = title,
-                Artist = artist,
-                Year = year
-            };
+            return new Track { Title = title, Artist = artist, Year = year };
         }
 
         class AlphaNumericTrackOrder : IComparer<Track>
@@ -542,18 +578,31 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void dynamic_query_should_work()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void dynamic_query_should_work(Options options)
         {
             var titles = new List<string>
             {
-                "1", "a1", "a2", "a10", "C++ debugger", "Carmen", "Abalone", "C++ Views", "A-1 steak sauce",
-                "C# ballad", "A and G motor vehicles", "A B C", "Balzac, Honoré de", "Ambassador hotel"
+                "1",
+                "a1",
+                "a2",
+                "a10",
+                "C++ debugger",
+                "Carmen",
+                "Abalone",
+                "C++ Views",
+                "A-1 steak sauce",
+                "C# ballad",
+                "A and G motor vehicles",
+                "A B C",
+                "Balzac, Honoré de",
+                "Ambassador hotel"
             };
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -591,16 +640,19 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void OrderByPrefixes()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void OrderByPrefixes(Options options)
         {
             var localTracks = new List<Track>();
-            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445"));
+            localTracks.Add(
+                CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445"));
             localTracks.Add(CreateTrack("1a"));
             localTracks.Add(CreateTrack("11a"));
             localTracks.Add(CreateTrack("1ab"));
             localTracks.Add(CreateTrack("aaaaa000002"));
-            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444"));
+            localTracks.Add(
+                CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444"));
             localTracks.Add(CreateTrack("aaaaa1"));
             localTracks.Add(CreateTrack("aaaaaa"));
             localTracks.Add(CreateTrack("1"));
@@ -608,9 +660,6 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("1a1"));
             localTracks.Add(CreateTrack("1c1"));
             localTracks.Add(CreateTrack("aaaaa"));
-
-
-
 
 
             var localTracksRightOrder = new List<Track>();
@@ -625,10 +674,12 @@ namespace SlowTests.Tests.Sorting
             localTracksRightOrder.Add(CreateTrack("aaaaa1"));
             localTracksRightOrder.Add(CreateTrack("aaaaa000002"));
             localTracksRightOrder.Add(CreateTrack("aaaaaa"));
-            localTracksRightOrder.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444"));
-            localTracksRightOrder.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445"));
+            localTracksRightOrder.Add(
+                CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444"));
+            localTracksRightOrder.Add(
+                CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445"));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -652,15 +703,20 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public void NumbersTests()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void NumbersTests(Options options)
         {
             var localTracks = new List<Track>();
 
-            localTracks.Add(CreateTrack("z00444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444", year: 7));
-            localTracks.Add(CreateTrack("z0000444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445", year: 8));
-            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444", year: 7));
-            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444", year: 7));
+            localTracks.Add(CreateTrack(
+                "z00444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444", year: 7));
+            localTracks.Add(CreateTrack(
+                "z0000444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445", year: 8));
+            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444",
+                year: 7));
+            localTracks.Add(CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444",
+                year: 7));
 
             localTracks.Add(CreateTrack("3333bvc1trt2", year: 4));
             localTracks.Add(CreateTrack("3333bvc1trta", year: 5));
@@ -679,7 +735,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("3333bvc1trt", year: 2));
 
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -702,8 +758,6 @@ namespace SlowTests.Tests.Sorting
                     }
                 }
             }
-
-            
         }
 
         class AlphaNumericTrackOrder2 : IComparer<Track>
@@ -771,12 +825,7 @@ namespace SlowTests.Tests.Sorting
             public TracksIndex()
             {
                 Map = docs => from doc in docs
-                              select new
-                              {
-                                  doc.Title,
-                                  doc.Artist,
-                                  doc.Year
-                              };
+                    select new { doc.Title, doc.Artist, doc.Year };
 
                 Index(x => x.Title, FieldIndexing.Exact);
             }

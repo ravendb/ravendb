@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,13 +17,14 @@ namespace SlowTests.MailingList
         public AutoIndexMerging(ITestOutputHelper output) : base(output)
         {
         }
-
+        
         private const string SampleLogfileStoreId = "123";
 
-        [Fact]
-        public void AutoIndexReuseFails()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void AutoIndexReuseFails(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

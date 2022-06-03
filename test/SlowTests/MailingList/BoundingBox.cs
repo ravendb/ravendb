@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,14 +23,15 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void ShouldGetRightResults()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ShouldGetRightResults(Options options)
         {
             // verify using http://arthur-e.github.io/Wicket/sandbox-gmaps3.html
             var outer = "POLYGON((-2.14 53.0,-2.14 53.6,-1.52 53.6,-1.52 53.0,-2.14 53.0))";
             var inner = "POLYGON((-1.778 53.205,-1.778 53.207,-1.776 53.207,-1.776 53.205,-1.778 53.205))";
 
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 new Shapes_SpatialIndex().Execute(documentStore);
                 using (IDocumentSession db = documentStore.OpenSession())

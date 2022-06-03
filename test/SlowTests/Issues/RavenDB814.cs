@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,10 +25,11 @@ namespace SlowTests.Issues
             public string Country { get; set; }
         }
 
-        [Fact]
-        public void Empty_Strings_Can_Be_Used_In_Where_Equals()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Empty_Strings_Can_Be_Used_In_Where_Equals(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -49,10 +51,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Empty_Strings_Can_Be_Used_In_Where_In_Once()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Empty_Strings_Can_Be_Used_In_Where_In_Once(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -74,10 +77,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Empty_Strings_Can_Be_Used_In_Where_In_Twice()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Empty_Strings_Can_Be_Used_In_Where_In_Twice(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -99,10 +103,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Empty_Strings_Can_Be_Used_In_Where_In_Thrice()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Empty_Strings_Can_Be_Used_In_Where_In_Thrice(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {
@@ -124,10 +129,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Empty_Strings_Can_Be_Used_In_Where_In_With_Other_Data()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Empty_Strings_Can_Be_Used_In_Where_In_With_Other_Data(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 using (var session = documentStore.OpenSession())
                 {

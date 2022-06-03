@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
+using FastTests;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -37,6 +38,7 @@ public class RavenExplicitDataAttribute : DataAttribute
                 {
                     SearchEngine = searchMode,
                     DatabaseMode = databaseMode,
+                    Options = o
                 };
 
                 for (var i = 1; i < array.Length; i++)
@@ -54,6 +56,8 @@ public class RavenTestParameters
 
     public RavenDatabaseMode DatabaseMode;
 
+    public RavenTestBase.Options Options;
+    
     public override string ToString()
     {
         return $"{nameof(DatabaseMode)} = {DatabaseMode}, {nameof(SearchEngine)} = {SearchEngine}";

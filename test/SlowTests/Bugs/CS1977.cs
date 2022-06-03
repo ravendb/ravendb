@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -147,20 +148,22 @@ namespace SlowTests.Bugs
         }
 
 
-        [Fact]
-        public void can_create_index()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void can_create_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ComplexIndex().Execute(store);
             }
         }
 
 
-        [Fact]
-        public void can_create_index_where_reduce_uses_select()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void can_create_index_where_reduce_uses_select(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SelectIndex().Execute(store);
             }

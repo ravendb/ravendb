@@ -13,6 +13,7 @@ using Voron.Impl;
 using Voron.Impl.Paging;
 using Sparrow.Collections;
 using Sparrow.Server;
+using Voron.Data.CompactTrees;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
@@ -29,6 +30,7 @@ namespace Voron.Data.BTrees
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
+        private Dictionary<Slice, CompactTree> _compactTrees;
 
         public event Action<long, PageFlags> PageModified;
         public event Action<long, PageFlags> PageFreed;
@@ -1287,6 +1289,15 @@ namespace Voron.Data.BTrees
             return Name + " " + State.NumberOfEntries;
         }
 
+        internal void PrepareForCommit()
+        {
+            if (_compactTrees != null)
+            {
+                foreach (var ct in _compactTrees.Values)
+                    ct.PrepareForCommit();
+            }
+        }
+
         public void Dispose()
         {
             if (_fixedSizeTrees != null)
@@ -1366,13 +1377,47 @@ namespace Voron.Data.BTrees
             _recentlyFoundPages?.Clear();
         }
 
+        public CompactTree CompactTreeFor(string key)
+        {
+            using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
+            return CompactTreeFor(keySlice);
+        }
+        
+        public CompactTree CompactTreeFor(Slice key)
+        {
+            _compactTrees ??= new Dictionary<Slice, CompactTree>(SliceComparer.Instance);
+
+            if (_compactTrees.TryGetValue(key, out var compactTree) == false)
+            {
+                compactTree = CompactTree.InternalCreate(this, key);
+                if (compactTree == null) // missing value on read transaction
+                    return null;
+                
+                _compactTrees[key.Clone(_llt.Allocator)] = compactTree;
+            }
+
+            State.Flags |= TreeFlags.CompactTrees;
+
+            return compactTree;
+        }
+
+        public long DeleteCompactTreeFor(Slice key)
+        {
+            var compactTree = CompactTreeFor(key);
+            var numberOfEntries = compactTree.NumberOfEntries;
+
+            CompactTree.Delete(compactTree, this);
+            _compactTrees.Remove(key);
+
+            return numberOfEntries;
+        }
+
+
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)
         {
-            if (_fixedSizeTrees == null)
-                _fixedSizeTrees = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
+            _fixedSizeTrees ??= new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
 
-            FixedSizeTree fixedTree;
-            if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
+            if (_fixedSizeTrees.TryGetValue(key, out var fixedTree) == false)
             {
                 fixedTree = new FixedSizeTree(_llt, this, key, valSize);
                 _fixedSizeTrees[fixedTree.Name] = fixedTree;

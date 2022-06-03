@@ -5,6 +5,7 @@ using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -14,10 +15,11 @@ namespace FastTests.Server.Documents.Indexing
         {
         }
 
-        [Fact]
-        public async Task CanUseFullTextSearchInAutoIndex()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanUseFullTextSearchInAutoIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenAsyncSession())
                 {
@@ -57,10 +59,11 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
-        public async Task CanUseFullTextSearchInAutoMapReduceIndex()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanUseFullTextSearchInAutoMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenAsyncSession())
                 {
@@ -92,7 +95,7 @@ namespace FastTests.Server.Documents.Indexing
                         })
                         .Search(x => x.Name, "Ayende")
                         .ToList();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, results.Count);
                     Assert.Equal(2, results[0].Count);
                     Assert.Equal("Ayende Rahien", results[0].Name);

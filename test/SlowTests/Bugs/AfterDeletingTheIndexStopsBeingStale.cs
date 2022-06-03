@@ -9,6 +9,7 @@ using FastTests;
 using Xunit;
 using System.Linq;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs
 {
@@ -18,10 +19,11 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void Deletion()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Deletion(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

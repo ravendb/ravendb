@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,10 @@ namespace SlowTests.Tests.Indexes
         {
         }
 
-        [Fact]
-        public async Task LockingIndexesInMemoryWillNotFail()
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task LockingIndexesInMemoryWillNotFail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new IndexSample
                 {
@@ -40,10 +41,10 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void SetLockModeForAutoIndex()
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SetLockModeForAutoIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -73,10 +74,10 @@ namespace SlowTests.Tests.Indexes
             }
         }
         
-        [Fact]
-        public async Task SetLockModeForStaticIndex()
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task SetLockModeForStaticIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 // create static-index
                 var staticIndex = new IndexSample
@@ -103,10 +104,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
         
-        [Fact]
-        public async Task SetLockModeForStaticAndAutoIndexes()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task SetLockModeForStaticAndAutoIndexes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

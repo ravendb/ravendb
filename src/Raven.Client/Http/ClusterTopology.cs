@@ -184,6 +184,7 @@ namespace Raven.Client.Http
 
     public class NodeStatus : IDynamicJson
     {
+        public string Name { get; set; }
         public bool Connected { get; set; }
         public string ErrorDetails { get; set; }
         public DateTime LastSent { get; set; }
@@ -195,6 +196,7 @@ namespace Raven.Client.Http
         {
             return new DynamicJsonValue
             {
+                [nameof(Name)] = Name,
                 [nameof(Connected)] = Connected,
                 [nameof(ErrorDetails)] = ErrorDetails,
                 [nameof(LastSent)] = LastSent,
@@ -202,6 +204,16 @@ namespace Raven.Client.Http
                 [nameof(LastSentMessage)] = LastSentMessage,
                 [nameof(LastMatchingIndex)] = LastMatchingIndex
             };
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(Name)}:{Name}, " +
+                   $"{nameof(Connected)}:{Connected}, " +
+                   $"{nameof(ErrorDetails)}:{ErrorDetails}, " +
+                   $"{nameof(LastSent)}:{LastSent}, " +
+                   $"{nameof(LastReply)}:{LastReply}, " +
+                   $"{nameof(LastSentMessage)}:{LastSentMessage}";
         }
     }
 }

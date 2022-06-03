@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +17,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public async Task QueryAsync_Simple()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryAsync_Simple(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -35,10 +38,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task QueryAsync_With_Where_Clause()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryAsync_With_Where_Clause(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -61,10 +65,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task QueryAsync_By_Index()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryAsync_By_Index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DogsIndex().Execute(store);
                 

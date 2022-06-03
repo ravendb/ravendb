@@ -2,6 +2,7 @@
 using Xunit;
 using System.Linq;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.PoisonIndexes
 {
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs.PoisonIndexes
         {
         }
 
-        [Fact]
-        public void ShouldNotCauseFailures()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldNotCauseFailures(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

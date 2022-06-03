@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
@@ -126,6 +125,11 @@ namespace Raven.Server.Utils.Monitoring
         public long IndexesUsedDataFileInMb { get; set; }
         public long TotalAllocatedStorageFileInMb { get; set; }
         public long TotalFreeSpaceInMb { get; set; }
+        public double? IoReadOperations { get; set; }
+        public double? IoWriteOperations { get; set; }
+        public long? ReadThroughputInKb { get; set; }
+        public long? WriteThroughputInKb { get; set; }
+        public long? QueueLength { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -136,7 +140,12 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(IndexesAllocatedDataFileInMb)] = IndexesAllocatedDataFileInMb,
                 [nameof(IndexesUsedDataFileInMb)] = IndexesUsedDataFileInMb,
                 [nameof(TotalAllocatedStorageFileInMb)] = TotalAllocatedStorageFileInMb,
-                [nameof(TotalFreeSpaceInMb)] = TotalFreeSpaceInMb
+                [nameof(TotalFreeSpaceInMb)] = TotalFreeSpaceInMb,
+                [nameof(IoReadOperations)] = IoReadOperations,
+                [nameof(IoWriteOperations)] = IoWriteOperations,
+                [nameof(ReadThroughputInKb)] = ReadThroughputInKb,
+                [nameof(WriteThroughputInKb)] = WriteThroughputInKb,
+                [nameof(QueueLength)] = QueueLength
             };
         }
     }

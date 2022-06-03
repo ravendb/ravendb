@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -12,10 +13,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void ShouldNotSelectAllDocs()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldNotSelectAllDocs(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -32,10 +34,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void CanFindByemptyStringMatch()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanFindByemptyStringMatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

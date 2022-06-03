@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -126,10 +127,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseSuggestionsWithAutoIndex()
+        [Theory]
+        [RavenData]
+        public void CanUseSuggestionsWithAutoIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -147,10 +149,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanExtendAutoIndexWithSuggestions()
+        [Theory]
+        [RavenData]
+        public void CanExtendAutoIndexWithSuggestions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 

@@ -9,6 +9,7 @@ using FastTests;
 using Xunit;
 using System.Linq;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -18,10 +19,11 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void CanIndexValuesForDictionary()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexValuesForDictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -46,10 +48,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexValuesForDictionaryAsPartOfDictionary()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexValuesForDictionaryAsPartOfDictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -60,7 +63,7 @@ namespace SlowTests.Bugs.Indexing
                                                     {"Color", "Red"}
                                                 }
                     });
-
+                    
                     s.SaveChanges();
                 }
 
@@ -77,10 +80,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexNestedValuesForDictionaryAsPartOfDictionary()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexNestedValuesForDictionaryAsPartOfDictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -106,10 +110,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexValuesForIDictionaryAsPartOfIDictionary()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexValuesForIDictionaryAsPartOfIDictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -135,10 +140,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexNestedValuesForIDictionaryAsPartOfIDictionary()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexNestedValuesForIDictionaryAsPartOfIDictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -164,10 +170,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexValuesForDictionaryWithNumberForIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexValuesForDictionaryWithNumberForIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

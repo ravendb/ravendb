@@ -63,6 +63,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Debugging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -105,6 +106,8 @@ namespace Raven.Server
         public event EventHandler ServerCertificateChanged;
 
         public ICpuUsageCalculator CpuUsageCalculator;
+
+        public IDiskStatsGetter DiskStatsGetter;
 
         internal bool ThrowOnLicenseActivationFailure;
 
@@ -153,6 +156,9 @@ namespace Raven.Server
                 : CpuHelper.GetExtensionPointCpuUsageCalculator(_tcpContextPool, Configuration.Monitoring, ServerStore.NotificationCenter);
 
             CpuUsageCalculator.Init();
+
+            DiskStatsGetter = DiskUtils.GetOsDiskUsageCalculator(Configuration.Monitoring.MinDiskStatsInterval.AsTimeSpan);
+            
             MetricCacher.Initialize();
 
             if (Logger.IsInfoEnabled)

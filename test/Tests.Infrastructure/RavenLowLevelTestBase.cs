@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -11,11 +11,11 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -38,9 +38,9 @@ namespace FastTests
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
         }
 
-        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db, [CallerMemberName]string caller = null)
+        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db, Action<Dictionary<string, string>> modifyConfiguration = null, [CallerMemberName]string caller = null)
         {
-            var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: dataDirectory, caller: caller);
+            var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: dataDirectory, caller: caller, modifyConfiguration: modifyConfiguration);
             db = database;
             Debug.Assert(database != null);
             return new DisposableAction(() =>
@@ -49,6 +49,12 @@ namespace FastTests
             });
         }
 
+        protected DocumentDatabase CreateDocumentDatabaseForSearchEngine(RavenTestParameters config)
+        {
+            return CreateDocumentDatabase(modifyConfiguration: dictionary =>
+                dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString());
+        }
+        
         protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
         {
             var name = GetDatabaseName(caller);

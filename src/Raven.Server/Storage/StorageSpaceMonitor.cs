@@ -126,13 +126,13 @@ namespace Raven.Server.Storage
 
                         var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)item.Environment.Options;
 
-                        var dataDisk = DiskSpaceChecker.GetDiskSpaceInfo(options.BasePath.FullPath, driveInfo?.BasePath);
+                        var dataDisk = DiskUtils.GetDiskSpaceInfo(options.BasePath.FullPath, driveInfo?.BasePath);
 
                         AddEnvironmentIfLowSpace(dataDisk);
 
                         if (options.JournalPath != null)
                         {
-                            var journalDisk = DiskSpaceChecker.GetDiskSpaceInfo(options.JournalPath.FullPath, driveInfo?.JournalPath);
+                            var journalDisk = DiskUtils.GetDiskSpaceInfo(options.JournalPath.FullPath, driveInfo?.JournalPath);
 
                             if (dataDisk?.DriveName != journalDisk?.DriveName)
                                 AddEnvironmentIfLowSpace(journalDisk);
@@ -140,7 +140,7 @@ namespace Raven.Server.Storage
 
                         if (options.TempPath != null)
                         {
-                            var tempDisk = DiskSpaceChecker.GetDiskSpaceInfo(options.TempPath.FullPath, driveInfo?.TempPath);
+                            var tempDisk = DiskUtils.GetDiskSpaceInfo(options.TempPath.FullPath, driveInfo?.TempPath);
 
                             if (dataDisk?.DriveName != tempDisk?.DriveName)
                                 AddEnvironmentIfLowSpace(tempDisk);

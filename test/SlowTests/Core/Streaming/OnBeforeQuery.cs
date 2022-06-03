@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,13 +18,14 @@ namespace SlowTests.Core.Streaming
         {
         }
 
-        [Fact]
-        public async Task ShouldStreamArticlesOfTenant1()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task ShouldStreamArticlesOfTenant1(Options options)
         {
             const string tenantA = "tenantA";
             const string tenantB = "tenantB";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession(store.Database))
                 {

@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,9 +48,9 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        private IDocumentStore GetTestStore()
+        private IDocumentStore GetTestStore(Options options)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
 
             new PersonsIndex().Execute(store);
             InitData(store);
@@ -57,10 +58,11 @@ namespace SlowTests.Bugs.Caching
             return store;
         }
 
-        [Fact]
-        public void CachedGetQyuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CachedGetQyuery(Options options)
         {
-            using (var store = GetTestStore())
+            using (var store = GetTestStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -74,10 +76,11 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
-        public void CachedPostQyuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CachedPostQyuery(Options options)
         {
-            using (var store = GetTestStore())
+            using (var store = GetTestStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -91,10 +94,11 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
-        public void CachedFacetsGetRequest()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CachedFacetsGetRequest(Options options)
         {
-            using (var store = GetTestStore())
+            using (var store = GetTestStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -122,10 +126,11 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
-        public void CachedFacetsPostRequest()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CachedFacetsPostRequest(Options options)
         {
-            using (var store = GetTestStore())
+            using (var store = GetTestStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -145,10 +150,11 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
-        public async Task CachedMultiFacetsRequest()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CachedMultiFacetsRequest(Options options)
         {
-            using (var store = GetTestStore())
+            using (var store = GetTestStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
                     database))
                 {
 
-                    index.IndexPersistence.TempFileCache.SetMemoryStreamCapacity(1);
+                    ((LuceneIndexPersistence)index.IndexPersistence).TempFileCache.SetMemoryStreamCapacity(1);
                     testingStuff.RunFakeIndex(index);
 
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -78,7 +79,7 @@ namespace SlowTests.Issues
                         },
                         database))
                     {
-                        newIndex.IndexPersistence.TempFileCache.SetMemoryStreamCapacity(1);
+                        ((LuceneIndexPersistence)newIndex.IndexPersistence).TempFileCache.SetMemoryStreamCapacity(1);
                         testingStuff.RunFakeIndex(newIndex);
 
                         Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "Index wasn't replaced");

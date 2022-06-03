@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -14,8 +15,9 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public async Task CanFilter()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanFilter(Options options)
         {
             using (var store = GetDocumentStore())
             {

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -137,10 +138,11 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
         //1105376
-        [Fact]
-        public void Can_search_by_Zip()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_search_by_Zip(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateTestData(store);
 

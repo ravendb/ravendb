@@ -217,6 +217,66 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
+        public async Task OnlyOneNodeShouldUpdateRehab()
+        {
+            var clusterSize = 3;
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MaxChangeVectorDistance)] = "1";
+
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ReplicationFactor = 3,
+                       Server = cluster.Leader,
+                       ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                       {
+                           DisableTopologyUpdates = true
+                       }
+                   }))
+            {
+                var val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
+                Assert.Equal(3, val);
+
+                var mre = new ManualResetEventSlim(false);
+                var slow = Servers.First(s => s != cluster.Leader);
+                try
+                {
+                    slow.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().DelayIncomingReplication = mre.Wait;
+
+                    await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User(), "users/1");
+                        await session.StoreAsync(new User(), "users/2");
+                        await session.SaveChangesAsync();
+                    }
+
+                    val = await WaitForValueAsync(async () => await GetMembersCount(store), 2);
+                    Assert.Equal(2, val);
+
+                    val = await WaitForValueAsync(async () => await GetRehabCount(store), 1);
+                    Assert.Equal(1, val);
+
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var topology = record.Topology;
+                    var rehabTag = topology.Rehabs.Single();
+                    var rehabServer = Servers.Single(s => s.ServerStore.NodeTag == rehabTag);
+                    var database = await rehabServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                    val = await WaitForValueAsync(database.ReplicationLoader.IncomingConnections.Count, 1);
+                    Assert.Equal(1, val);
+                }
+                finally
+                {
+                    mre.Set();
+                }
+                
+                val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
+                Assert.Equal(3, val);
+            }
+        }
+
+        [Fact]
         public async Task DontMoveToRehabOnNoChangeAfterTimeout()
         {
             var clusterSize = 3;

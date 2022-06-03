@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
@@ -101,6 +102,13 @@ namespace Voron.Data.Tables
         public void Add(Slice buffer)
         {
             PtrSize ptr = PtrSize.Create(buffer.Content.Ptr, buffer.Content.Length);
+            Add(ref ptr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(Span<byte> buffer)
+        {
+            PtrSize ptr = PtrSize.Create(Unsafe.AsPointer(ref buffer[0]), buffer.Length);
             Add(ref ptr);
         }
 

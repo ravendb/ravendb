@@ -1,6 +1,7 @@
 ﻿using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries
 {
@@ -17,10 +18,11 @@ namespace FastTests.Server.Documents.Queries
             public int Age { get; set; }
         }
 
-        [Fact]
-        public void QueryWithOrOperators()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryWithOrOperators(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

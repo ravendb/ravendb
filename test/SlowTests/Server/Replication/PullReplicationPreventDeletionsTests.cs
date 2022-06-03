@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Config;
 using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
@@ -28,7 +29,7 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task PreventDeletionOnHubSinkCompromised()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -152,7 +153,7 @@ namespace SlowTests.Server.Replication
             Assert.True(result, lastError);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task DeleteWhenAcceptSinkDeletionsFlagOff()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -263,7 +264,7 @@ namespace SlowTests.Server.Replication
             Assert.True(WaitForDocumentDeletion(sinkStore, "users/insink/1"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task PreventDeletionsOnHub()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -384,8 +385,9 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
-        public async Task EnsureArtificialDocsAreSkippedOnReplication_17795()
+        [RavenTheory(RavenTestCategory.Replication)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task EnsureArtificialDocsAreSkippedOnReplication_17795(RavenTestParameters config)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
@@ -398,14 +400,24 @@ namespace SlowTests.Server.Replication
             {
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
-                ModifyDatabaseName = x => hubDatabase
+                ModifyDatabaseName = x => hubDatabase,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                }
             });
 
             using var sinkStore = GetDocumentStore(new RavenTestBase.Options
             {
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
-                ModifyDatabaseName = x => sinkDatabase
+                ModifyDatabaseName = x => sinkDatabase,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                }
             });
 
             //create artificial doc in sink
@@ -493,7 +505,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task MakeSureDeletionsRevisionsDontReplicate()
         {
             var certificates = Certificates.SetupServerAuthentication();

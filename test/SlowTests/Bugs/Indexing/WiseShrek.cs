@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -65,10 +66,11 @@ namespace SlowTests.Bugs.Indexing
             //}
         }
 
-        [Fact]
-        public void UsingKeywordAnalyzing()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void UsingKeywordAnalyzing(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.Exact };

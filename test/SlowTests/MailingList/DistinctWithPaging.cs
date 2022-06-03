@@ -6,8 +6,10 @@
 
 using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,10 +37,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanWorkProperly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanWorkProperly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ItemIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -64,6 +67,7 @@ namespace SlowTests.MailingList
                                          .Take(10)
                                          .ToList();
 
+                    Assert.Equal(9, stats.SkippedResults);
                     Assert.Equal(Enumerable.Range(1, 10), results);
 
                     var skippedResults = stats.SkippedResults;

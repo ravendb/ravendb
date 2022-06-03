@@ -1,7 +1,9 @@
 ﻿using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +15,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void CanDeployMapReduceIndexWithOutputReduceToCollection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDeployMapReduceIndexWithOutputReduceToCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduce().Execute(store);
 
@@ -34,10 +37,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void CanDeployMapReduceIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDeployMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduce().Execute(store);
 

@@ -6,8 +6,8 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
-using Spatial4n.Core.Distance;
-using Spatial4n.Core.Shapes;
+using Spatial4n.Distance;
+using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 switch (Units)
                 {
                     case SpatialUnits.Kilometers:
-                        result.Distance *= DistanceUtils.MILES_TO_KM;
+                        result.Distance *= DistanceUtils.MilesToKilometers;
                         break;
                     case SpatialUnits.Miles:
                     default:
@@ -184,10 +184,10 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 }
                 else
                 {
-                    var radlat1 = DistanceUtils.DEGREES_TO_RADIANS * lat1;
-                    var radlat2 = DistanceUtils.DEGREES_TO_RADIANS * lat2;
+                    var radlat1 = DistanceUtils.DegreesToRadians * lat1;
+                    var radlat2 = DistanceUtils.DegreesToRadians * lat2;
                     var theta = lng1 - lng2;
-                    var radtheta = DistanceUtils.DEGREES_TO_RADIANS * theta;
+                    var radtheta = DistanceUtils.DegreesToRadians * theta;
                     var dist = Math.Sin(radlat1) * Math.Sin(radlat2) + Math.Cos(radlat1) * Math.Cos(radlat2)
                         * Math.Cos(radtheta);
                     if (dist > 1)
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                         dist = 1;
                     }
                     dist = Math.Acos(dist);
-                    dist = dist * DistanceUtils.RADIANS_TO_DEGREES;
+                    dist = dist * DistanceUtils.RadiansToDegrees;
 
                     const double NumberOfMilesInNauticalMile = 1.1515;
                     const double NauticalMilePerDegree = 60;

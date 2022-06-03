@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Suggestions;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -55,10 +56,11 @@ namespace SlowTests.Tests.Suggestions
             Indexes.WaitForIndexing(store);
         }
 
-        [Fact]
-        public void ExactMatch()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ExactMatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var session = store.OpenSession())
@@ -75,10 +77,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void UsingLinq()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void UsingLinq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var s = store.OpenSession())
@@ -93,10 +96,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void UsingLinq_with_typo_with_options_multiple_fields()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void UsingLinq_with_typo_with_options_multiple_fields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var s = store.OpenSession())
@@ -111,10 +115,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void UsingLinq_with_typo_multiple_fields_in_reverse_order()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void UsingLinq_with_typo_multiple_fields_in_reverse_order(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var session = store.OpenSession())
@@ -129,10 +134,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void UsingLinq_WithOptions()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void UsingLinq_WithOptions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var s = store.OpenSession())
@@ -150,10 +156,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void UsingLinq_Multiple_words()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void UsingLinq_Multiple_words(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var s = store.OpenSession())
@@ -172,10 +179,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void WithTypo()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void WithTypo(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
                 using (var session = store.OpenSession())
@@ -195,10 +203,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void CanGetSuggestions()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetSuggestions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Users_ByName();
                 index.Execute(store);
@@ -236,10 +245,11 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact]
-        public void CanGetResultAfterAddingADocument()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetResultAfterAddingADocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 

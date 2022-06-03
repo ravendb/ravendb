@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -15,10 +16,11 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void LinqTranslateCorrectly()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LinqTranslateCorrectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -34,10 +36,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void LinqTranslateCorrectly_Reverse()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LinqTranslateCorrectly_Reverse(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -53,10 +56,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void LinqTranslateCorrectly_Reverse2()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LinqTranslateCorrectly_Reverse2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -72,10 +76,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void LinqTranslateCorrectlyEquals()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LinqTranslateCorrectlyEquals(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -91,10 +96,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void CanQueryOnRangeEqualsInt()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryOnRangeEqualsInt(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -112,10 +118,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void CanQueryOnRangeEqualsLong()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryOnRangeEqualsLong(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -134,10 +141,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void CanQueryOnRangeInt()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryOnRangeInt(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -155,10 +163,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void CanQueryOnRangeLong()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryOnRangeLong(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -177,10 +186,11 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
-        public void CanQueryOnRangeDoubleAsPartOfIDictionary()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryOnRangeDoubleAsPartOfIDictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {

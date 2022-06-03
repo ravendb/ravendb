@@ -10,7 +10,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
     public class ServerStorageDiskRemainingSpacePercentage : ScalarObjectBase<Gauge32>
     {
         private readonly ServerStore _store;
-        private static readonly Gauge32 Empty = new Gauge32(-1);
 
         public ServerStorageDiskRemainingSpacePercentage(ServerStore store)
             : base(SnmpOids.Server.StorageDiskRemainingSpacePercentage)
@@ -21,11 +20,11 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         protected override Gauge32 GetData()
         {
             if (_store.Configuration.Core.RunInMemory)
-                return Empty;
+                return null;
 
             var result = _store.Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
             if (result == null)
-                return Empty;
+                return null;
 
             var total = Convert.ToDecimal(result.TotalSize.GetValue(SizeUnit.Megabytes));
             var totalFree = Convert.ToDecimal(result.TotalFreeSpace.GetValue(SizeUnit.Megabytes));

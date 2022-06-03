@@ -26,7 +26,7 @@ namespace SlowTests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void DocumentWithBytes(Options options)
         {
             using (var store = GetDocumentStore(options))

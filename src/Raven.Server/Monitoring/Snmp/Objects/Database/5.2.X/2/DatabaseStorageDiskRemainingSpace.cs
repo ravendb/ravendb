@@ -8,8 +8,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
     public class DatabaseStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>
     {
-        private static readonly Gauge32 Empty = new Gauge32(-1);
-
         public DatabaseStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index)
             : base(databaseName, landlord, SnmpOids.Databases.StorageDiskRemainingSpace, index)
         {
@@ -18,11 +16,11 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         protected override Gauge32 GetData(DocumentDatabase database)
         {
             if (database.Configuration.Core.RunInMemory)
-                return Empty;
+                return null;
 
             var result = database.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Database.DiskSpaceInfo);
             if (result == null)
-                return Empty;
+                return null;
 
             return new Gauge32(result.TotalFreeSpace.GetValue(SizeUnit.Megabytes));
         }

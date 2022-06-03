@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,12 @@ namespace FastTests.Client.Queries
         {
         }
 
-        [Fact]
-        public void CanDoPrefixQueryOnAnalyzedFields()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "We do not allow the Search analyzer to be used for anything other than Search(), because it could produce many terms and we don't know how to build query on them.")]
+        public void CanDoPrefixQueryOnAnalyzedFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 new FooBarIndex().Execute(store);

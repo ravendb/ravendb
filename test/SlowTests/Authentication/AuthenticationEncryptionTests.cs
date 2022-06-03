@@ -13,6 +13,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Config;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;
@@ -26,8 +27,9 @@ namespace SlowTests.Authentication
         {
         }
 
-        [Fact]
-        public async Task CanUseEncryption()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task CanUseEncryption(RavenTestParameters configuration)
         {
             string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var _);
 
@@ -36,7 +38,11 @@ namespace SlowTests.Authentication
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = record => {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = configuration.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = configuration.SearchEngine.ToString();
+                    record.Encrypted = true;
+                },
                 Path = NewDataPath()
             }))
             {
@@ -79,8 +85,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public async Task CanRestartEncryptedDbWithIndexes()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task CanRestartEncryptedDbWithIndexes(RavenTestParameters configuration)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -113,7 +120,11 @@ namespace SlowTests.Authentication
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
                 ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = record => {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = configuration.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = configuration.SearchEngine.ToString();
+                    record.Encrypted = true;
+                },
                 Path = NewDataPath()
             }))
             {
@@ -174,8 +185,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public async Task CanCompactEncryptedDb()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task CanCompactEncryptedDb(RavenTestParameters configuration)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -209,7 +221,11 @@ namespace SlowTests.Authentication
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
                 ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = record => {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = configuration.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = configuration.SearchEngine.ToString();
+                    record.Encrypted = true;
+                },
                 Path = path
             }))
             {

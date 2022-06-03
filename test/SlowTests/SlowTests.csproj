@@ -110,6 +110,8 @@
     <EmbeddedResource Include="Data\RavenDB_15753\cat.jpg" />
     <EmbeddedResource Include="Data\RavenDB_15898\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Auto_Orders_ByOrderedAt.zip" />
+    <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />

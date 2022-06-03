@@ -3,6 +3,7 @@ using Xunit;
 using System.Linq;
 using Raven.Client.Documents;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -12,8 +13,9 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void WillAutomaticallyGenerateSelect()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WillAutomaticallyGenerateSelect(Options options)
         {
             using(var store = GetDocumentStore())
             {

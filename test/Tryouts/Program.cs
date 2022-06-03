@@ -2,16 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Blittable;
-using FastTests.Client.Subscriptions;
-using FastTests.Client;
 using FastTests.Server.Documents.Revisions;
-using RachisTests;
-using SlowTests.Issues;
-using SlowTests.MailingList;
-using SlowTests.Rolling;
-using SlowTests.Server.Documents.ETL.Raven;
-using StressTests.Issues;
 using Tests.Infrastructure;
 
 namespace Tryouts
@@ -28,7 +19,7 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             for (int i = 0; i < 10_000; i++)
             {
-                 Console.WriteLine($"Starting to run {i}");
+                Console.WriteLine($"Starting to run {i}");
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())

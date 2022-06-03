@@ -48,7 +48,7 @@ namespace Sparrow.Json
 
             return _context.WriteAsync(stream, this, token);
         }
-
+        
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
             : this(mem, size, context)
         {
@@ -157,8 +157,7 @@ namespace Sparrow.Json
                 ThrowOutOfRangeException(propNamesOffsetFlag);
 
             _objStart = _mem + pos;
-            byte propCountOffset;
-            _propCount = ReadVariableSizeInt(pos, out propCountOffset);
+            _propCount = ReadVariableSizeInt(pos, out byte propCountOffset);
             _metadataPtr = _objStart + propCountOffset;
 
             // analyze main object type and it's offset and propertyIds flags
@@ -681,10 +680,10 @@ namespace Sparrow.Json
                 AddToCache(name, result, index);
             }
 
-        Return:
+            Return:
             return opResult;
 
-        ThrowDisposed:
+            ThrowDisposed:
             ThrowObjectDisposed();
             result = null;
             return false;
@@ -822,7 +821,7 @@ namespace Sparrow.Json
                 mid = (min + max) / 2;
             } while (min <= max);
 
-        NotFound:
+            NotFound:
             return -1;
         }
 
@@ -1070,19 +1069,16 @@ namespace Sparrow.Json
 
         public void BlittableValidation()
         {
-            byte offset;
             var currentSize = Size - 1;
-            int rootPropOffsetSize;
-            int rootPropIdSize;
 
             if (currentSize < 1)
                 throw new InvalidDataException("Illegal data");
-            var rootToken = TokenValidation(*(_mem + currentSize), out rootPropOffsetSize, out rootPropIdSize);
+            var rootToken = TokenValidation(*(_mem + currentSize), out int rootPropOffsetSize, out int rootPropIdSize);
             if (rootToken != BlittableJsonToken.StartObject)
                 throw new InvalidDataException("Illegal root object");
             currentSize--;
 
-            var propsOffsetList = ReadVariableSizeIntInReverse(_mem, currentSize, out offset);
+            var propsOffsetList = ReadVariableSizeIntInReverse(_mem, currentSize, out byte offset);
             if (offset > currentSize)
                 throw new InvalidDataException("Properties names offset not valid");
             currentSize -= offset;
@@ -1095,9 +1091,8 @@ namespace Sparrow.Json
             if ((propsOffsetList > currentSize) || (propsOffsetList <= 0))
                 throw new InvalidDataException("Properties names offset not valid");
 
-            int propNamesOffsetSize;
             var token = (BlittableJsonToken)(*(_mem + propsOffsetList));
-            propNamesOffsetSize = ProcessTokenOffsetFlags(token);
+            int propNamesOffsetSize = ProcessTokenOffsetFlags(token);
 
             if (((token & (BlittableJsonToken)0xC0) != 0) || ((TypesMask & token) != 0x00))
                 throw new InvalidDataException("Properties names token not valid");
@@ -1324,7 +1319,7 @@ namespace Sparrow.Json
                 }
             }
         }
-
+        
         private static void ThrowInvalidTokenType()
         {
             throw new InvalidDataException("Token type not valid");

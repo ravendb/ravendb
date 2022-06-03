@@ -1,11 +1,13 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +19,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void QueryWithToStream()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryWithToStream(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InsertData(store);
             
@@ -43,10 +46,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void DocumentQueryWithToStream()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DocumentQueryWithToStream(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InsertData(store);
 
@@ -69,10 +73,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task QueryWithToStreamAsync()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueryWithToStreamAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InsertData(store);
 
@@ -95,10 +100,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task DocumentQueryWithToStreamAsync()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task DocumentQueryWithToStreamAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 InsertData(store);
 

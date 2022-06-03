@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -57,10 +58,11 @@ namespace SlowTests.Tests.Linq
 
         private readonly Guid userId = new Guid("dc89a428-7eb2-428c-bc97-99763db25f9a");
 
-        [Fact]
-        public void WithNotEmptyObjectsArray()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WithNotEmptyObjectsArray(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SearchableElements().Execute(store);
 
@@ -94,10 +96,11 @@ namespace SlowTests.Tests.Linq
 
         private readonly string[] _users = { "a-A 1", " -", "- " };
 
-        [Fact]
-        public void CanQueryEvilDashStrings()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryEvilDashStrings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SearchableElements().Execute(store);
 
@@ -113,10 +116,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void WithNotEmptyGuidsArray()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WithNotEmptyGuidsArray(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SearchableElements().Execute(store);
 
@@ -148,10 +152,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void WithEmptyObjectsArray()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WithEmptyObjectsArray(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SearchableElements().Execute(store);
 
@@ -183,10 +188,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void WithEmptyGuidsArray()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WithEmptyGuidsArray(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SearchableElements().Execute(store);
 

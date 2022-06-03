@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -56,10 +57,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanQueryByMultipleLocations()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryByMultipleLocations(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MultiLocations().Execute(store);
                 Setup(store);
@@ -72,7 +74,7 @@ namespace SlowTests.Tests.Spatial
                         .ToList();
 
                     RavenTestHelper.AssertNoIndexErrors(store);
-
+WaitForUserToContinueTheTest(store);
                     Assert.NotEmpty(list);
                 }
 
@@ -90,10 +92,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanQueryByMultipleLocations2()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryByMultipleLocations2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MultiLocationsCustomFieldName().Execute(store);
                 Setup(store);
@@ -124,10 +127,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanQueryByMultipleLocationsOverHttp()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryByMultipleLocationsOverHttp(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MultiLocations().Execute(store);
                 Setup(store);
@@ -154,10 +158,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanQueryByMultipleLocationsHttp2()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryByMultipleLocationsHttp2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MultiLocationsCustomFieldName().Execute(store);
                 Setup(store);
@@ -184,10 +189,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanQueryByMultipleLocationsRaw()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryByMultipleLocationsRaw(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MultiLocationsCustomFieldName().Execute(store);
                 Setup(store);
@@ -218,10 +224,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanQueryByMultipleLocationsRawOverHttp()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryByMultipleLocationsRawOverHttp(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MultiLocationsCustomFieldName().Execute(store);
                 Setup(store);

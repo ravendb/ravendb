@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,13 +13,14 @@ namespace SlowTests.Bugs.Queries
         {
         }
 
-        [Fact]
-        public void can_search_for_mrs_shaba()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void can_search_for_mrs_shaba(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 new User_Entity().Execute(documentStore);
-
+                
                 using (var session = documentStore.OpenSession())
                 {
                     var user1 = new User { Id = @"user/111", Name = "King Shaba" };

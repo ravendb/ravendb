@@ -274,12 +274,7 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in _voters)
             {
-                var nodeStatus = new NodeStatus { Connected = voter.Status == AmbassadorStatus.Connected };
-                if (nodeStatus.Connected == false)
-                {
-                    nodeStatus.ErrorDetails = voter.StatusMessage;
-                }
-                dic.Add(voter.Tag,nodeStatus);
+                dic.Add(voter.Tag, voter.GetStatus());
             }
            
             return dic;

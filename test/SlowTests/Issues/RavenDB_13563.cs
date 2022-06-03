@@ -226,7 +226,7 @@ namespace SlowTests.Issues
                 {
                     var indexQueryServerSide = new IndexQueryServerSide(indexQuery.Query, blittableParameters);
 
-                    var luceneQuery = QueryBuilder.BuildQuery(null,
+                    var luceneQuery = LuceneQueryBuilder.BuildQuery(null,
                         null,
                         indexQueryServerSide.Metadata,
                         indexQueryServerSide.Metadata.Query.Where,

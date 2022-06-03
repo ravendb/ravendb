@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -213,10 +215,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_use_custom_method_in_index()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_use_custom_method_in_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexWithCustomMethod().Execute(store);
                 using (var session = store.OpenSession())
@@ -234,10 +237,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Will_throw_on_invalid_return_type()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        public void Will_throw_on_invalid_return_type(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexWithInvalidReturnType().Execute(store);
                 using (var session = store.OpenSession())
@@ -251,19 +255,21 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Will_throw_on_invalid_parameter_count()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        public void Will_throw_on_invalid_parameter_count(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Assert.Throws<IndexCompilationException>(() => new IndexWithInvalidParameterCount().Execute(store));
             }
         }
 
-        [Fact]
-        public void Can_use_arrow_function_with_static_parameter_in_index()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        public void Can_use_arrow_function_with_static_parameter_in_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexWithArrowFunctionStaticParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -281,10 +287,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_use_arrow_function_with_dynamic_parameter_in_index()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        public void Can_use_arrow_function_with_dynamic_parameter_in_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexWithArrowFunctionDynamicParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -302,10 +309,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_use_arrow_function_with_dynamic_and_static_parameter_in_index()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]        
+        public void Can_use_arrow_function_with_dynamic_and_static_parameter_in_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexWithArrowFunctionDynamicAndStaticParameter().Execute(store);
                 using (var session = store.OpenSession())

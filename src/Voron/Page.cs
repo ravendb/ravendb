@@ -1,11 +1,17 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using Voron.Data;
+using Voron.Global;
 
 namespace Voron
 {
-    public unsafe struct Page
+    public readonly unsafe struct Page
     {
         public readonly byte* Pointer;
+        
+        public readonly Span<byte> AsSpan(int numberOfPages) => new Span<byte>(Pointer, Constants.Storage.PageSize * numberOfPages);
+        
+        public readonly Span<byte> AsSpan() => new Span<byte>(Pointer, Constants.Storage.PageSize);
 
         public Page(byte* pointer)
         {

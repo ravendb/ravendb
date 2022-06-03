@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {
@@ -15,10 +16,11 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Fact]
-        public async Task Can_Put()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_Put(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -53,10 +55,11 @@ namespace FastTests.Client.Indexing
             public int Age { set; get; }
         }
 
-        [Fact]
-        public async Task Can_Put_And_Replace()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_Put_And_Replace(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -106,10 +109,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task Can_Put_Replace_And_Back_To_Original()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_Put_Replace_And_Back_To_Original(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90)))
                 {
@@ -172,10 +176,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task Can_start_and_stop_index()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_start_and_stop_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

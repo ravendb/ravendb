@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Client.Queries
 {
@@ -23,10 +24,11 @@ namespace SlowTests.Client.Queries
             public ICollection<string> Tags { get; set; }
         }
 
-        [Fact]
-        public void CanSearchUsingPhrase()
+        [Theory]
+        [RavenData]
+        public void CanSearchUsingPhrase(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -54,10 +56,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void CanSearchUsingPhraseAndOrderBy()
+        [Theory]
+        [RavenData]
+        public void CanSearchUsingPhraseAndOrderBy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -95,10 +98,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void CanSearchUsingPhrase_MultipleSearches()
+        [Theory]
+        [RavenData]
+        public void CanSearchUsingPhrase_MultipleSearches(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -132,10 +136,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void StandardSearchWillProduceExpectedResult()
+        [Theory]
+        [RavenData]
+        public void StandardSearchWillProduceExpectedResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -155,10 +160,11 @@ namespace SlowTests.Client.Queries
 
 
 
-        [Fact]
-        public void SearchCanUseAnd2()
+        [Theory]
+        [RavenData]
+        public void SearchCanUseAnd2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -176,10 +182,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseAnd()
+        [Theory]
+        [RavenData]
+        public void SearchCanUseAnd(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -197,10 +204,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseOr()
+        [Theory]
+        [RavenData]
+        public void SearchCanUseOr(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -218,10 +226,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchWillUseGuessByDefault()
+        [Theory]
+        [RavenData]
+        public void SearchWillUseGuessByDefault(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -242,10 +251,11 @@ namespace SlowTests.Client.Queries
         }
 
 
-        [Fact]
-        public void ActuallySearchWithAndAndNot()
+        [Theory]
+        [RavenData]
+        public void ActuallySearchWithAndAndNot(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -281,10 +291,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseNot()
+        [Theory]
+        [RavenData]
+        public void SearchCanUseNot(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -302,10 +313,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseNotAndAnd()
+        [Theory]
+        [RavenData]
+        public void SearchCanUseNotAndAnd(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -323,10 +335,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void BoostingSearches()
+        [Theory]
+        [RavenData]
+        public void BoostingSearches(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -377,10 +390,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void MultipleSearches()
+        [Theory]
+        [RavenData]
+        public void MultipleSearches(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -414,10 +428,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void UsingSuggest()
+        [Theory]
+        [RavenData]
+        public void UsingSuggest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -455,10 +470,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_search_inner_words()
+        [Theory]
+        [RavenData]
+        public void Can_search_inner_words(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -489,10 +505,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void CanSearchFullyAnalyzedTerm()
+        [Theory]
+        [RavenData]
+        public void CanSearchFullyAnalyzedTerm(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
@@ -515,10 +532,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_search_inner_words_with_extra_condition()
+        [Theory]
+        [RavenData]
+        public void Can_search_inner_words_with_extra_condition(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -552,11 +570,12 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_have_special_characters_in_search_text()
+        [Theory]
+        [RavenData]
+        public void Can_have_special_characters_in_search_text(Options options)
         {
             const string specialCharacters = "+-!(){}:[]^\"~*";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -577,10 +596,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_have_special_characters_in_search_text_string()
+        [Theory]
+        [RavenData]
+        public void Can_have_special_characters_in_search_text_string(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -598,10 +618,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_search_on_array_of_strings()
+        [Theory]
+        [RavenData]
+        public void Can_search_on_array_of_strings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

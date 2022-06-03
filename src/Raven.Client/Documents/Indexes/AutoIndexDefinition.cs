@@ -47,6 +47,8 @@ namespace Raven.Client.Documents.Indexes
 
         public class AutoIndexFieldOptions
         {
+            public int Id { get; set; }
+
             public FieldStorage? Storage { get; set; }
 
             public AutoFieldIndexing? Indexing { get; set; }
@@ -63,7 +65,8 @@ namespace Raven.Client.Documents.Indexes
 
             protected bool Equals(AutoIndexFieldOptions other)
             {
-                return Storage == other.Storage
+                return Id == other.Id
+                       && Storage == other.Storage
                        && Indexing == other.Indexing
                        && Aggregation == other.Aggregation
                        && Equals(Spatial, other.Spatial)
@@ -88,6 +91,7 @@ namespace Raven.Client.Documents.Indexes
                 unchecked
                 {
                     var hashCode = Storage.GetHashCode();
+                    hashCode = (hashCode * 397) ^ Id.GetHashCode();
                     hashCode = (hashCode * 397) ^ Indexing.GetHashCode();
                     hashCode = (hashCode * 397) ^ (int)Aggregation;
                     hashCode = (hashCode * 397) ^ (Spatial != null ? Spatial.GetHashCode() : 0);

@@ -12,6 +12,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,12 +38,13 @@ namespace SlowTests.Issues
             await session.StoreAsync(user2);
         }
 
-        [Fact]
-        public async Task AsyncQueriesShouldThrowTheRightException_InsteadOfUnsupportedSyncOperationException()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task AsyncQueriesShouldThrowTheRightException_InsteadOfUnsupportedSyncOperationException(Options options)
         {
             var query = new SomeQuery { UserId = 1 };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Indexes.WaitForIndexing(store);
 

@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         IList<IFieldable> GetFields();
     }
 
-    public abstract class LuceneDocumentConverterBase : IDisposable
+    public abstract class LuceneDocumentConverterBase : ConverterBase
     {
         protected const float LuceneDefaultBoost = 1f;
         
@@ -81,15 +81,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public readonly LuceneDocument Document = new LuceneDocument();
 
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
-
-        protected readonly Dictionary<string, IndexField> _fields;
-        private readonly bool _indexImplicitNull;
-        private readonly bool _indexEmptyEntries;
-        private readonly Index _index;
-        private readonly int _numberOfBaseFields;
-        private readonly string _keyFieldName;
-        protected readonly bool _storeValue;
-
+        
         public void Clean()
         {
             if (_fieldsCache.Count > 256)
@@ -138,23 +130,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
              int numberOfBaseFields,
              string keyFieldName = null,
              bool storeValue = false,
-             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValueFieldName, fields)
         {
-            _index = index ?? throw new ArgumentNullException(nameof(index));
-            var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
-            foreach (var field in fields)
-                dictionary[field.Name] = field;
-            _fields = dictionary;
-
-            _indexImplicitNull = indexImplicitNull;
-            _indexEmptyEntries = indexEmptyEntries;
-
-            _numberOfBaseFields = numberOfBaseFields;
-            _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
-            _storeValue = storeValue;
             _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
-            Scope = new ConversionScope(this);
+            Scope = new (storeValue, _storeValueField);
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -563,102 +543,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)
-        {
-            foreach (var propertyName in val.GetPropertyNames())
-            {
-                if (propertyName.Length == 0 || propertyName[0] != '$')
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         private IEnumerable<AbstractField> GetComplexObjectFields(string path, BlittableJsonReaderObject val, Field.Store storage, Field.Index indexing, Field.TermVector termVector)
         {
             if (_multipleItemsSameFieldCount.Count == 0 || _multipleItemsSameFieldCount[0] == 1)
                 yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
             yield return GetOrCreateField(path, null, null, null, val, storage, indexing, termVector);
-        }
-
-        private static ValueType GetValueType(object value)
-        {
-            if (value == null)
-                return ValueType.Null;
-
-            if (value is DynamicNullObject)
-                return ValueType.DynamicNull;
-
-            var lazyStringValue = value as LazyStringValue;
-            if (lazyStringValue != null)
-                return lazyStringValue.Size == 0 ? ValueType.EmptyString : ValueType.LazyString;
-
-            var lazyCompressedStringValue = value as LazyCompressedStringValue;
-            if (lazyCompressedStringValue != null)
-                return lazyCompressedStringValue.UncompressedSize == 0 ? ValueType.EmptyString : ValueType.LazyCompressedString;
-
-            var valueString = value as string;
-            if (valueString != null)
-                return valueString.Length == 0 ? ValueType.EmptyString : ValueType.String;
-
-            if (value is Enum)
-                return ValueType.Enum;
-
-            if (value is bool)
-                return ValueType.Boolean;
-
-            if (value is DateTime)
-                return ValueType.DateTime;
-
-            if (value is DateTimeOffset)
-                return ValueType.DateTimeOffset;
-
-            if (value is TimeSpan)
-                return ValueType.TimeSpan;
-
-            if (value is BoostedValue)
-                return ValueType.BoostedValue;
-
-            if (value is DynamicBlittableJson)
-                return ValueType.DynamicJsonObject;
-
-            if (value is DynamicDictionary)
-                return ValueType.ConvertToJson;
-
-            if (value is IEnumerable)
-                return ValueType.Enumerable;
-
-            if (value is LazyNumberValue || value is double || value is decimal || value is float)
-                return ValueType.Double;
-
-            if (value is AbstractField)
-                return ValueType.Lucene;
-
-            if (value is char)
-                return ValueType.String;
-
-            if (value is IConvertible)
-                return ValueType.Convertible;
-
-            if (value is BlittableJsonReaderObject)
-                return ValueType.BlittableJsonObject;
-
-            if (IsNumber(value))
-                return ValueType.Numeric;
-
-            if (value is Stream)
-                return ValueType.Stream;
-
-            if (value is DateOnly)
-                return ValueType.DateOnly;
-
-            if (value is TimeOnly)
-                return ValueType.TimeOnly;
-
-            return ValueType.ConvertToJson;
         }
 
         protected Field GetOrCreateKeyField(LazyStringValue key)
@@ -763,19 +653,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             return field;
 
-            static byte[] ToArray(ConversionScope scope, Stream stream, out int length)
-            {
-                length = (int)(stream.Length - stream.Position);
-
-                var buffer = scope.RentArray(length);
-
-                using (var ms = new MemoryStream(buffer))
-                {
-                    stream.CopyTo(ms);
-
-                    return buffer;
-                }
-            }
+            
         }
 
         private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
@@ -843,7 +721,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected AbstractField GetStoredValueField(BlittableJsonReaderObject value, IWriteOperationBuffer writeBuffer)
         {
             _storeValueField.SetValue(GetStoredValue(value, writeBuffer), 0, value.Size);
-
+            
             return _storeValueField;
         }
 
@@ -862,7 +740,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return storeValueBuffer;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             ClearFieldCache(_fieldsCache);
             ClearFieldCache(_numericFieldsCache);
@@ -917,185 +795,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (isMultipleItemsSameField)
                 _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField++;
-        }
-
-        private static bool IsNumber(object value)
-        {
-            return value is long
-                    || value is decimal
-                    || value is int
-                    || value is byte
-                    || value is short
-                    || value is ushort
-                    || value is uint
-                    || value is sbyte
-                    || value is ulong
-                    || value is float
-                    || value is double;
-        }
-
-        internal static unsafe bool TryToTrimTrailingZeros(LazyNumberValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)
-        {
-            var dotIndex = ldv.Inner.LastIndexOf(".");
-            if (dotIndex <= 0)
-            {
-                dblAsString = null;
-                return false;
-            }
-
-            var index = ldv.Inner.Length - 1;
-            var anyTrailingZeros = false;
-            while (true)
-            {
-                var lastChar = ldv.Inner[index];
-                if (lastChar != '0')
-                {
-                    if (lastChar == '.')
-                        index = index - 1;
-
-                    break;
-                }
-
-                anyTrailingZeros = true;
-                index = index - 1;
-            }
-
-            if (anyTrailingZeros == false)
-            {
-                dblAsString = null;
-                return false;
-            }
-
-            dblAsString = context.AllocateStringValue(null, ldv.Inner.Buffer, index + 1);
-            return true;
-        }
-
-        private enum ValueType
-        {
-            Null,
-
-            DynamicNull,
-
-            EmptyString,
-
-            String,
-
-            LazyString,
-
-            LazyCompressedString,
-
-            Enumerable,
-
-            Double,
-
-            Convertible,
-
-            Numeric,
-
-            BoostedValue,
-
-            DynamicJsonObject,
-
-            BlittableJsonObject,
-
-            Boolean,
-
-            DateTime,
-
-            DateTimeOffset,
-
-            TimeSpan,
-
-            Enum,
-
-            Lucene,
-
-            ConvertToJson,
-
-            Stream,
-
-            DateOnly,
-
-            TimeOnly
-        }
-
-        protected class ConversionScope : IDisposable
-        {
-            private readonly LinkedList<IDisposable> _toDispose = new LinkedList<IDisposable>();
-            private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();
-            private readonly LinkedList<byte[]> _arrays = new LinkedList<byte[]>();
-
-            private readonly LuceneDocumentConverterBase _parent;
-
-            private static readonly byte[] EmptyBuffer = Array.Empty<byte>();
-
-            public ConversionScope(LuceneDocumentConverterBase parent)
-            {
-                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
-            }
-
-            public BlittableJsonReaderObject CreateJson(DynamicJsonValue djv, JsonOperationContext context)
-            {
-                var result = context.ReadObject(djv, "lucene field as json");
-
-                _toDispose.AddFirst(result);
-
-                return result;
-            }
-
-            public void AddToDispose(IDisposable toDispose)
-            {
-                if (toDispose == null)
-                    return;
-
-                _toDispose.AddFirst(toDispose);
-            }
-
-            public void Dispose()
-            {
-                if (_parent._storeValue)
-                    _parent._storeValueField.SetValue(EmptyBuffer);
-
-                if (_toDispose.Count > 0)
-                {
-                    foreach (var toDispose in _toDispose)
-                        toDispose.Dispose();
-
-                    _toDispose.Clear();
-                }
-
-                if (_readers.Count > 0)
-                {
-                    foreach (var reader in _readers)
-                        BlittableObjectReaderPool.Instance.Free(reader);
-
-                    _readers.Clear();
-                }
-
-                if (_arrays.Count > 0)
-                {
-                    foreach (var array in _arrays)
-                        ArrayPool<byte>.Shared.Return(array);
-
-                    _arrays.Clear();
-                }
-            }
-
-            public BlittableObjectReader GetBlittableReader()
-            {
-                var reader = BlittableObjectReaderPool.Instance.Allocate();
-                _readers.AddFirst(reader);
-
-                return reader;
-            }
-
-            public byte[] RentArray(int length)
-            {
-                var array = ArrayPool<byte>.Shared.Rent(length);
-                _arrays.AddFirst(array);
-
-                return array;
-            }
         }
     }
 }

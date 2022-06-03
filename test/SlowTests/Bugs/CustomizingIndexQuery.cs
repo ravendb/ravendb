@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,11 +19,12 @@ namespace SlowTests.Bugs
         public CustomizingIndexQuery(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Fact]
-        public void CanSkipTransformResults()
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSkipTransformResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new PurchaseHistoryIndex().Execute(store);
 
@@ -44,7 +46,6 @@ namespace SlowTests.Bugs
                     });
                     session.SaveChanges();
                 }
-
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<Shipment, PurchaseHistoryIndex>()
@@ -56,10 +57,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void CanSkipTransformResults_Lucene()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSkipTransformResults_Lucene(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new PurchaseHistoryIndex().Execute(store);
 

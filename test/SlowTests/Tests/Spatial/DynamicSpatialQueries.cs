@@ -5,6 +5,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,15 +17,16 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Fact]
-        public void VerifySingleSpatialPropertyInResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifySingleSpatialPropertyInResults(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -56,15 +58,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifyMultipleSpatialPropertiesInResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyMultipleSpatialPropertiesInResults(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -105,15 +108,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifySelectedSpatialPropertiesWithAliasInResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifySelectedSpatialPropertiesWithAliasInResults(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -147,15 +151,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifySelectedSpatialPropertiesWithoutAliasInResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifySelectedSpatialPropertiesWithoutAliasInResults(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -189,15 +194,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifyNoSpatialPropertiesInResultsWhenSelectingOnlyLatitudeProperty()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyNoSpatialPropertiesInResultsWhenSelectingOnlyLatitudeProperty(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -225,15 +231,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifyNoSpatialPropertiesInResultsWhenSelectingNonSpatialField()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyNoSpatialPropertiesInResultsWhenSelectingNonSpatialField(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -261,15 +268,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifyPolygonInResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyPolygonInResults(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -309,15 +317,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifyCirclesInResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyCirclesInResults(Options options)
         {
             var house1 = new GeoDoc(44.75, -93.35);
             var house2 = new GeoDoc(44.751, -93.351);
             var house3 = new GeoDoc(44.752, -93.352);
             var house4 = new GeoDoc(45.75, -94.35);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -380,10 +389,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifyWKTCircleHasDistance()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyWKTCircleHasDistance(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -399,10 +409,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void VerifyWKTCircleDistanceFormat()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyWKTCircleDistanceFormat(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 

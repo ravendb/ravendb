@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +15,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void DynamicQueryingDateTimeShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DynamicQueryingDateTimeShouldWork(Options options)
         {
-            using (var store = SetupStoreAndPushSomeEntities())
+            using (var store = SetupStoreAndPushSomeEntities(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -48,10 +51,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void StaticQueryingDateTimeShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StaticQueryingDateTimeShouldWork(Options options)
         {
-            using (var store = SetupStoreAndPushSomeEntities())
+            using (var store = SetupStoreAndPushSomeEntities(options))
             {
                 var index = new PersonByDate();
                 store.ExecuteIndex(index);
@@ -107,9 +111,9 @@ namespace FastTests.Client
                     };
             }
         }
-        private DocumentStore SetupStoreAndPushSomeEntities()
+        private DocumentStore SetupStoreAndPushSomeEntities(Options options)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
             using (var session = store.OpenSession())
             {       
                 session.Store(new PersonAndDate

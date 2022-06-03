@@ -52,45 +52,45 @@
                                 <span class="sr-only">Toggle Dropdown</span>
                             </button>
                             <ul class="dropdown-menu sort-dropdown">
-                                <li data-bind="click: _.partial(sortByDefault)" title="Server & Client certificates will show first in list">
+                                <li data-bind="click: _.partial(sortCertificates, 'default')" title="Server & Client certificates will show first in list">
                                     <a href="#">
                                         <span>Default</span>
                                     </a>
                                 </li>
                                 <li class="divider"></li>
-                                <li data-bind="click: _.partial(sortByName, 'asc')">
+                                <li data-bind="click: _.partial(sortCertificates, 'byNameAsc')">
                                     <a href="#">
                                         <span>By Name - Asc</span>
                                         <i class="icon-arrow-up pull-right"></i>
                                     </a>
                                 </li>
-                                <li data-bind="click: _.partial(sortByName, 'desc')">
+                                <li data-bind="click: _.partial(sortCertificates, 'byNameDesc')">
                                     <a href="#">
                                         <span>By Name - Desc</span>
                                         <i class="icon-arrow-down pull-right"></i>
                                     </a>
                                 </li>
                                 <li class="divider"></li>
-                                <li data-bind="click: _.partial(sortByExpiration, 'asc')">
+                                <li data-bind="click: _.partial(sortCertificates, 'byExpirationAsc')">
                                     <a href="#">
                                         <span>By Expiration Date - Asc</span>
                                         <i class="icon-arrow-up pull-right"></i>
                                     </a>
                                 </li>
-                                <li data-bind="click: _.partial(sortByExpiration, 'desc')">
+                                <li data-bind="click: _.partial(sortCertificates, 'byExpirationDesc')">
                                     <a href="#">
                                         <span>By Expiration Date - Desc</span>
                                         <i class="icon-arrow-down pull-right"></i>
                                     </a>
                                 </li>
                                 <li class="divider"></li>
-                                <li data-bind="click: _.partial(sortByValidFrom, 'asc')">
+                                <li data-bind="click: _.partial(sortCertificates, 'byValidFromAsc')">
                                     <a href="#">
                                         <span>By Valid-From Date - Asc</span>
                                         <i class="icon-arrow-up pull-right"></i>
                                     </a>
                                 </li>
-                                <li data-bind="click: _.partial(sortByValidFrom, 'desc')">
+                                <li data-bind="click: _.partial(sortCertificates, 'byValidFromDesc')">
                                     <a href="#">
                                         <span>By Valid-From Date - Desc</span>
                                         <i class="icon-arrow-down pull-right"></i>

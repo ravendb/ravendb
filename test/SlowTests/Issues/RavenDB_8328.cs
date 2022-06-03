@@ -2,7 +2,10 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,8 +17,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SpatialOnAutoIndex()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void SpatialOnAutoIndex(RavenTestParameters config)
         {
             var databaseName = $"{nameof(SpatialOnAutoIndex)}-{Guid.NewGuid()}";
             var path = NewDataPath();
@@ -23,7 +27,12 @@ namespace SlowTests.Issues
             {
                 Path = path,
                 ModifyDatabaseName = s => databaseName,
-                DeleteDatabaseOnDispose = false
+                DeleteDatabaseOnDispose = false,
+                ModifyDatabaseRecord = d =>
+                {
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                }
             }))
             {
                 using (var session = store.OpenSession())
@@ -68,6 +77,7 @@ namespace SlowTests.Issues
                         .Statistics(out var stats)
                         .Spatial(factory => factory.Point(x => x.Latitude, x => x.Longitude), factory => factory.WithinRadius(10, 10, 20))
                         .ToList();
+                    WaitForUserToContinueTheTest(store);
 
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)", stats.IndexName);
@@ -78,7 +88,12 @@ namespace SlowTests.Issues
             {
                 Path = path,
                 ModifyDatabaseName = s => databaseName,
-                CreateDatabase = false
+                CreateDatabase = false,
+                ModifyDatabaseRecord = d =>
+                {
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                }
             }))
             {
                 var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)); // checking it index survived restart

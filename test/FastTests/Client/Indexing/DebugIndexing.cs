@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Sparrow;
@@ -11,6 +12,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {
@@ -25,10 +27,11 @@ namespace FastTests.Client.Indexing
             public string Name { get; set; }
         }
 
-        [Fact]
-        public async Task QueriesRunning()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task QueriesRunning(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 IndexQuery q;
                 using (var session = store.OpenSession())

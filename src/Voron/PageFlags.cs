@@ -12,6 +12,17 @@ namespace Voron
         Stream = 16,
         RawData = 32,
         Compressed = 64,
-        ReservedValue3 = 128,
+        // run out of bits, the actual type of this is specified
+        // in byte #13 of the page header
+        Other = 128,
+    }
+    
+    public enum ExtendedPageType : byte
+    {
+        None = 0,
+        SetLeaf = 1,
+        SetBranch = 2,
+        Container = 3,
+        ContainerOverflow = 4,
     }
 }

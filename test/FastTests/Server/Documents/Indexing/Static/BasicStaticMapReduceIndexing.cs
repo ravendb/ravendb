@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries;
@@ -13,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
@@ -22,10 +24,11 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Fact]
-        public async Task The_simpliest_static_map_reduce_index()
+        [Theory]
+        [RavenExplicitData]
+        public async Task The_simpliest_static_map_reduce_index(RavenTestParameters config)
         {
-            using (var database = CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
                 using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
                 {
@@ -114,13 +117,14 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public async Task CanPersist()
+        [Theory]
+        [RavenExplicitData]
+        public async Task CanPersist(RavenTestParameters config)
         {
             IndexDefinition defOne, defTwo;
             string dbName;
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
                 dbName = database.Name;
 

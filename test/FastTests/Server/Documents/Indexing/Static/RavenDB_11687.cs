@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
@@ -14,10 +15,11 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Fact]
-        public void CanIndexDictionaryDirectly()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexDictionaryDirectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexReturningDictionary_MethodSyntax().Execute(store);
                 new IndexReturningDictionary_QuerySyntax().Execute(store);
@@ -55,10 +57,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanMapReduceIndexDictionaryDirectly()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanMapReduceIndexDictionaryDirectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduceIndexReturningDictionary_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionary_QuerySyntax().Execute(store);
@@ -96,10 +99,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanIndexDictionaryWithComplexObjectsDirectly()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new IndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -195,10 +199,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -238,7 +243,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Assert.Equal(1, results.Count);
                     Assert.Equal(1, results[0].Names.Count);
                     Assert.NotNull(results[0].Names["Name"]);
-
+    
 
                     results = session.Query<MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax.Result, MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax>()
                         .Customize(x => x.WaitForNonStaleResults())
@@ -268,10 +273,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MixedSelectWithAnonymusAndDictionary().Execute(store);
 

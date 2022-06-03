@@ -145,8 +145,7 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject ReadNestedObject(int pos)
         {
             AssertContextNotDisposed();
-            byte offset;
-            var size = ReadVariableSizeInt(pos, out offset);
+            var size = ReadVariableSizeInt(pos, out byte offset);
             return new BlittableJsonReaderObject(_mem + pos + offset, size, _context)
             {
                 NoCache = NoCache
@@ -157,8 +156,7 @@ namespace Sparrow.Json
         public LazyStringValue ReadStringLazily(int pos)
         {
             AssertContextNotDisposed();
-            byte offset;
-            var size = ReadVariableSizeInt(pos, out offset);
+            var size = ReadVariableSizeInt(pos, out byte offset);
 
             return _context.AllocateStringValue(null, _mem + pos + offset, size);
         }
@@ -167,8 +165,7 @@ namespace Sparrow.Json
         public LazyCompressedStringValue ReadCompressStringLazily(int pos)
         {
             AssertContextNotDisposed();
-            byte offset;
-            var uncompressedSize = ReadVariableSizeInt(pos, out offset);
+            var uncompressedSize = ReadVariableSizeInt(pos, out byte offset);
             pos += offset;
             var compressedSize = ReadVariableSizeInt(pos, out offset);
             pos += offset;
@@ -184,8 +181,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadVariableSizeInt(byte* buffer, ref int pos)
         {
-            byte offset;
-            var result = ReadVariableSizeInt(buffer, pos, out offset);
+            var result = ReadVariableSizeInt(buffer, pos, out byte offset);
             pos += offset;
             return result;
         }

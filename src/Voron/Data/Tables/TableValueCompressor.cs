@@ -166,7 +166,7 @@ namespace Voron.Data.Tables
                     do
                     {
                         long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-                        table.DirectRead(id, out var size);
+                        table.DirectRead(id, out int size);
                         if (size > 32 * 1024)
                         {
                             if (totalSkipped++ > 16 * 1024)
@@ -192,7 +192,7 @@ namespace Voron.Data.Tables
                     var cur = buffer.Ptr;
                     for (int i = 0; i < used; i++)
                     {
-                        var ptr = table.DirectRead(dataIds[i], out var size);
+                        var ptr = table.DirectRead(dataIds[i], out int size);
                         Memory.Copy(cur, ptr, size);
                         cur += size;
                     }

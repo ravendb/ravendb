@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents.Handlers.Batches;
@@ -94,8 +95,9 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
             using (var context = QueryOperationContext.Allocate(database, needsServerContext))
             using (context.OpenReadTransaction())
             {
-                foreach (var waitForIndexItem in indexesToWait)
+                for (var i = 0; i < indexesToWait.Count; i++)
                 {
+                    var waitForIndexItem = indexesToWait[i];
                     if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
                         continue;
 
@@ -108,9 +110,7 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
                         if (throwOnTimeout == false)
                             return;
 
-                        throw new TimeoutException(
-                            $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                            $"indexes has caught up with the changes as of etag: {cutoffEtag}");
+                        ThrowTimeoutException(indexesToWait, i, sp, context, cutoffEtag);
                     }
                 }
             }
@@ -162,6 +162,45 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
         return new ClusterTransactionRequestProcessor(RequestHandler, topology);
     }
 
+    private static void ThrowTimeoutException(List<WaitForIndexItem> indexesToWait, int i, Stopwatch sp, QueryOperationContext context, long cutoffEtag)
+    {
+        var staleIndexesCount = 0;
+        var erroredIndexes = new List<string>();
+        var pausedIndexes = new List<string>();
+
+        for (var j = i; j < indexesToWait.Count; j++)
+        {
+            var index = indexesToWait[j].Index;
+
+            if (index.State == IndexState.Error)
+            {
+                erroredIndexes.Add(index.Name);
+            }
+            else if (index.Status == IndexRunningStatus.Paused)
+            {
+                pausedIndexes.Add(index.Name);
+            }
+
+            if (index.IsStale(context, cutoffEtag))
+                staleIndexesCount++;
+        }
+
+        var errorMessage = $"After waiting for {sp.Elapsed}, could not verify that all indexes has caught up with the changes as of etag: {cutoffEtag:#,#;;0}. " +
+                           $"Total relevant indexes: {indexesToWait.Count}, total stale indexes: {staleIndexesCount}";
+
+        if (erroredIndexes.Count > 0)
+        {
+            errorMessage += $", total errored indexes: {erroredIndexes.Count} ({string.Join(", ", erroredIndexes)})";
+        }
+
+        if (pausedIndexes.Count > 0)
+        {
+            errorMessage += $", total paused indexes: {pausedIndexes.Count} ({string.Join(", ", pausedIndexes)})";
+        }
+
+        throw new TimeoutException(errorMessage);
+    }
+
     private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
     {
         var indexesToCheck = new List<Index>();
@@ -182,6 +221,9 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
         {
             foreach (var index in database.IndexStore.GetIndexes())
             {
+                if (index.State is IndexState.Disabled)
+                    continue;
+
                 if (index.Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection) ||
                     index.WorksOnAnyCollection(modifiedCollections))
                 {

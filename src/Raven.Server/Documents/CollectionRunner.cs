@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Handlers;
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents
 
                 isStartsWithOrIdQuery = true;
 
-                return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
+                return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, new FieldsToFetch(_operationQuery, null),
                     collectionName, _operationQuery, null, context, null, null, null, new Reference<int>(), new Reference<int>(), new Reference<long>(), token)
                 {
                     Fields = fields, StartAfterId = startAfterId, AlreadySeenIdsCount = alreadySeenIdsCount

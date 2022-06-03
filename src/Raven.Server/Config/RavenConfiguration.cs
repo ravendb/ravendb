@@ -15,8 +15,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 #endif
-
+using Raven.Client.Documents;
 using Raven.Client.Extensions;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
@@ -24,6 +25,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Features;
 using Sparrow.Logging;
 using Voron.Util.Settings;
 
@@ -218,11 +220,25 @@ namespace Raven.Server.Config
             return this;
         }
 
+        public static void AssertPostInitCanUseCoraxFeature(RavenConfiguration configuration)
+        {
+            if (configuration.Indexing.AutoIndexingEngineType == SearchEngineType.Corax || configuration.Indexing.StaticIndexingEngineType == SearchEngineType.Corax)
+                AssertCanUseCoraxFeature(configuration);
+        }
+        
+        public static void AssertCanUseCoraxFeature(RavenConfiguration configuration)
+        {
+            var featureGuardian = new FeatureGuardian(configuration);
+            featureGuardian.Assert(Feature.Corax, () => $"To use {nameof(Corax)} search engine you have set {nameof(CoreConfiguration.FeaturesAvailability)} as {FeaturesAvailability.Experimental}.");
+        }
+        
         public void PostInit()
         {
             if (ResourceType != ResourceType.Server)
                 return;
 
+            AssertPostInitCanUseCoraxFeature(this);
+            
             try
             {
                 SecurityConfiguration.Validate(this);

@@ -3,6 +3,7 @@ using System.Linq;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
@@ -13,10 +14,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
         }
 
-        [Fact]
-        public void Group_by_multiple_fields()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Group_by_multiple_fields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -254,10 +256,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]
-        public void Select_composite_group_by_key()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Select_composite_group_by_key(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,10 +26,11 @@ namespace SlowTests.Tests.Linq
         {
         }
 
-        [Fact]
-        public void Can_Use_Where()
+        [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_Use_Where(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string indexName = "CommitByRevision";
                 using (var session = store.OpenSession())

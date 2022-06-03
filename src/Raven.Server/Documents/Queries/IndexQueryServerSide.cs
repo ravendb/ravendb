@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries
 
         [JsonDeserializationIgnore]
         public int? FilterLimit { get; set; }
-        
+
         [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator Distances;
 
-        
+
         public new int Start
         {
 #pragma warning disable 618
@@ -120,9 +120,9 @@ namespace Raven.Server.Documents.Queries
                 [nameof(WaitForNonStaleResultsTimeout)] = WaitForNonStaleResultsTimeout,
                 [nameof(SkipDuplicateChecking)] = SkipDuplicateChecking,
                 [nameof(ProjectionBehavior)] = ProjectionBehavior,
-                
+
             }, "query");
-            
+
             return _asJson;
         }
 
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (result.Metadata.Query.Offset != null)
                 {
-                    var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    var start = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                     result.Offset = start;
                     result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
                         ? Math.Max(start, result.Start)
@@ -205,21 +205,21 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.Query.Limit != null)
                 {
-                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    var limit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
                     result.Limit = limit;
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
-                
+
                 if (result.Metadata.Query.Limit != null)
                 {
-                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    var limit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
                     result.Limit = limit;
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
-                
+
                 if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.FilterLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
+                    result.FilterLimit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
                 }
             }
         }
@@ -284,21 +284,21 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.Query.Offset != null)
                 {
-                    var offset = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    var offset = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                     result.Offset = offset;
                     result.Start = start + offset;
                 }
 
                 if (result.Metadata.Query.Limit != null)
                 {
-                    pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    pageSize = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
                     result.Limit = pageSize;
                     result.PageSize = Math.Min(result.PageSize, pageSize);
                 }
-                
+
                 if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.FilterLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
+                    result.FilterLimit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
                 }
 
                 if (tracker != null)
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Queries
             if (indexQuery.PageSize < 0)
                 throw new InvalidQueryException($"{nameof(PageSize)} cannot be negative, but was {indexQuery.PageSize}.", indexQuery.Query, indexQuery.QueryParameters);
         }
-        
+
         public (List<Slice> Ids, string StartsWith) ExtractIdsFromQuery(ServerStore serverStore, ByteStringContext allocator, string databaseName)
         {
             if (Metadata.Query.Where == null)
@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Queries
                     var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, serverStore, databaseName, Metadata, allocator);
 
                     idsRetriever.Visit(Metadata.Query.Where, QueryParameters);
-                    
+
                     return (idsRetriever.Ids?.OrderBy(x => x, SliceComparer.Instance).ToList(), idsRetriever.StartsWith);
                 }
             }
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Queries
                 releaseServerContext?.Dispose();
             }
         }
-        
+
         private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
         {
             private readonly Query _query;
@@ -414,7 +414,7 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Id:
                             if (value is ValueExpression ve)
                             {
-                                var id = QueryBuilder.GetValue(_query, _metadata, parameters, ve);
+                                var id = QueryBuilderHelper.GetValue(_query, _metadata, parameters, ve);
 
                                 Debug.Assert(id.Type == ValueTokenType.String || id.Type == ValueTokenType.Null);
 
@@ -422,7 +422,7 @@ namespace Raven.Server.Documents.Queries
                             }
                             if (value is MethodExpression right)
                             {
-                                var id = QueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _databaseName, _serverStore, right, ref parameters);
+                                var id = LuceneQueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _databaseName, _serverStore, right, ref parameters);
                                 if (id is ValueExpression v)
                                     AddId(v.Token.Value);
                             }
@@ -451,7 +451,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (item is ValueExpression iv)
                         {
-                            foreach (var id in QueryBuilder.GetValues(_query, _metadata, parameters, iv))
+                            foreach (var id in QueryBuilderHelper.GetValues(_query, _metadata, parameters, iv))
                             {
                                 AddId(id.Value?.ToString());
                             }
@@ -480,7 +480,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (expression is ValueExpression iv)
                     {
-                        var prefix = QueryBuilder.GetValue(_query, _metadata, parameters, iv);
+                        var prefix = QueryBuilderHelper.GetValue(_query, _metadata, parameters, iv);
                         StartsWith = prefix.Value?.ToString();
                     }
                 }
