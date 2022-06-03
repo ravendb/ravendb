@@ -87,7 +87,7 @@ public class CanUseCoraxOnlyAsExperimental : RavenTestBase
     {
         using var store = GetDocumentStoreWithCustomExperimentalFlag(config, true);
         var indexObject = new TestIndexWithSearchEngine(SearchEngineType.Corax);
-        indexObject.Execute(store);
+        await indexObject.ExecuteAsync(store);
         Indexes.WaitForIndexing(store);
         var database = await GetDatabase(store.Database);
         var index = database.IndexStore.GetIndex(indexObject.IndexName);
@@ -115,7 +115,7 @@ public class CanUseCoraxOnlyAsExperimental : RavenTestBase
     {
         using var store = GetDocumentStoreWithCustomExperimentalFlag(config);
         var indexObject = new TestIndexWithSearchEngine(null);
-        indexObject.Execute(store);
+        await indexObject.ExecuteAsync(store);
         Indexes.WaitForIndexing(store);
         var database = await GetDatabase(store.Database);
         var index = database.IndexStore.GetIndex(indexObject.IndexName);
@@ -166,7 +166,7 @@ public class CanUseCoraxOnlyAsExperimental : RavenTestBase
                 session.SaveChanges();
             }
 
-            indexObject.Execute(store);
+            await indexObject.ExecuteAsync(store);
             Indexes.WaitForIndexing(store);
             var indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {indexObject.IndexName}));
             Assert.Equal(indexErrors1[0].Name, indexObject.IndexName);

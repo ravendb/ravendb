@@ -297,10 +297,11 @@ namespace Corax.Queries
                 long* inputEndPtr = inputStartPtr + matches;
 
                 // The size of this array is fixed to improve cache locality.
-                var bufferHolder = QueryContext.MatchesRawPool.Rent(sizeof(long) * BlockSize);
-                var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, BlockSize);                              
-                long* blockStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(blockMatches));
+                var bufferHolder = QueryContext.MatchesPool.Rent(BlockSize);
+                var blockMatches = bufferHolder.AsSpan().Slice(0, BlockSize);
                 Debug.Assert(blockMatches.Length == BlockSize);
+
+                long* blockStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(blockMatches));                
                 
                 long* inputPtr = inputStartPtr;
                 long* dstPtr = inputStartPtr;
@@ -309,6 +310,8 @@ namespace Corax.Queries
                     var result = term._set.Fill(blockMatches, out int read, pruneGreaterThan: buffer[matches-1]);
                     if (result == false)
                         break;
+
+                    Debug.Assert(read < BlockSize);
 
                     if (read == 0)
                         continue;
@@ -416,6 +419,7 @@ namespace Corax.Queries
                     Debug.Assert((isSmallerInput ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
                 }
 
+                QueryContext.MatchesPool.Return(bufferHolder);
                 return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
             }            
 

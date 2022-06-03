@@ -421,7 +421,6 @@ class editCmpXchg extends shardViewModelBase {
             this.isCreatingNewItem(false);
             
             messagePublisher.reportSuccess(`Compare exchange item with key: ${this.key()} was saved successfully`);
-            router.navigate(appUrl.forCmpXchg(this.db));
         } else {
             this.displayExternalChange(true);
             this.spinners.save(false);

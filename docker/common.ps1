@@ -64,3 +64,11 @@ function GetUbuntuImageTags($repo, $version, $arch) {
     }
         
 }
+
+function GetWindowsImageTags($repo, $version) {
+    return @(
+        "$($repo):$($version)-windows",
+        "$($repo):windows-latest",
+        "$($repo):6.0-windows-latest"
+    )
+}
