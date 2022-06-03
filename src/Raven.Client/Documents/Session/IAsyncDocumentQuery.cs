@@ -83,16 +83,21 @@ namespace Raven.Client.Documents.Session
         Task<Dictionary<string, FacetResult>> ExecuteAggregationAsync(CancellationToken token = default);
     }
 
+    [Obsolete(Constants.Obsolete.GraphApi)]
     public interface IAsyncGraphQuery<T> :
         IQueryBase<T, IAsyncGraphQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query);
 
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IAsyncGraphQuery<T> With<TOther>(string alias, string rawQuery);
 
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentQueryBuilder, IAsyncDocumentQuery<TOther>> queryFactory);
 
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IAsyncGraphQuery<T> WithEdges(string alias, string edgeSelector, string query);
     }
 

@@ -88,16 +88,21 @@ namespace Raven.Client.Documents.Session
         Dictionary<string, FacetResult> ExecuteAggregation();
     }
 
+    [Obsolete(Constants.Obsolete.GraphApi)]
     public interface IGraphQuery<T> :
         IQueryBase<T, IGraphQuery<T>>,
         IDocumentQueryBase<T>
     {
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query);
 
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IGraphQuery<T> With<TOther>(string alias, string rawQuery);
 
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IGraphQuery<T> With<TOther>(string alias, Func<IDocumentQueryBuilder, IDocumentQuery<TOther>> queryFactory);
 
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IGraphQuery<T> WithEdges(string alias, string edgeSelector, string query);
     }
 
