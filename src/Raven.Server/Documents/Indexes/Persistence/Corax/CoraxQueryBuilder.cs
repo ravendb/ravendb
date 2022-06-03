@@ -286,9 +286,7 @@ public static class CoraxQueryBuilder
             }
 
             var fieldId = QueryBuilderHelper.GetFieldId(fieldName, index, indexMapping, queryMapping, exact);
-
-            var hasGotTheRealType = false;
-
+            
             if (ie.All)
             {
                 var uniqueMatches = new HashSet<string>();
