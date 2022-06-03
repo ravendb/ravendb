@@ -4,14 +4,18 @@ import endpoints = require("endpoints");
 
 class getOngoingTasksCommand extends commandBase {
 
-    constructor(private db: database) {
+    constructor(private db: database, private location: databaseLocationSpecifier) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
         const url = endpoints.databases.ongoingTasks.tasks;
+        
+        const args = {
+            ...this.location
+        };
 
-        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, null, this.db)
+        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, args, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to get ongoing tasks", response.responseText, response.statusText));
     }
 }
