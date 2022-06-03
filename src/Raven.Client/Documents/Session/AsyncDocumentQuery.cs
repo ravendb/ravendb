@@ -24,7 +24,12 @@ namespace Raven.Client.Documents.Session
     /// A query against a Raven index
     /// </summary>
     public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAbstractDocumentQueryImpl<T>,
-        IAsyncRawDocumentQuery<T>, IAsyncGraphQuery<T>, IDocumentQueryGenerator, IAsyncDocumentQuery<T>
+        IAsyncRawDocumentQuery<T>,
+#pragma warning disable CS0618
+        IAsyncGraphQuery<T>,
+#pragma warning restore CS0618
+        IDocumentQueryGenerator,
+        IAsyncDocumentQuery<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
@@ -58,6 +63,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+#pragma warning disable CS0618
         IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.Statistics(out QueryStatistics stats)
         {
             Statistics(out stats);
@@ -87,6 +93,7 @@ namespace Raven.Client.Documents.Session
             AddParameter(name, value);
             return this;
         }
+#pragma warning restore CS0618
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Take(int count)
@@ -102,6 +109,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#pragma warning disable CS0618
         IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.Timings(out QueryTimings timings)
         {
             Timings(out timings);
@@ -113,6 +121,7 @@ namespace Raven.Client.Documents.Session
             Skip(count);
             return this;
         }
+#pragma warning restore CS0618
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Skip(int count)
@@ -162,7 +171,7 @@ namespace Raven.Client.Documents.Session
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
-        
+
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact)
         {
@@ -386,7 +395,7 @@ namespace Raven.Client.Documents.Session
             AndAlso();
             return this;
         }
-        
+
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AndAlso(bool wrapPreviousQueryClauses)
         {
@@ -561,6 +570,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#pragma warning disable CS0618
         IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
@@ -572,6 +582,7 @@ namespace Raven.Client.Documents.Session
             BeforeQueryExecuted(beforeQueryExecuted);
             return this;
         }
+#pragma warning restore CS0618
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
@@ -727,11 +738,13 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#pragma warning disable CS0618
         IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
             return this;
         }
+#pragma warning restore CS0618
 
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
@@ -857,6 +870,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#pragma warning disable CS0618
         IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.NoCaching()
         {
             NoCaching();
@@ -868,6 +882,7 @@ namespace Raven.Client.Documents.Session
             NoTracking();
             return this;
         }
+#pragma warning restore CS0618
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.NoTracking()
@@ -1197,6 +1212,7 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TResult>();
         }
 
+#pragma warning disable CS0618
         public IAsyncGraphQuery<T> With<TOther>(string alias, string rawQuery)
         {
             return WithInternal(alias, (AsyncDocumentQuery<TOther>)AsyncSession.Advanced.AsyncRawQuery<TOther>(rawQuery));
@@ -1220,6 +1236,7 @@ namespace Raven.Client.Documents.Session
             var docQuery = (AsyncDocumentQuery<TOther>)queryFactory(new AsyncDocumentQueryBuilder(AsyncSession, $"w{WithTokens.Count}p"));
             return WithInternal(alias, docQuery);
         }
+#pragma warning restore CS0618
 
         private class AsyncDocumentQueryBuilder : IAsyncDocumentQueryBuilder
         {
@@ -1247,6 +1264,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+#pragma warning disable CS0618
         private IAsyncGraphQuery<T> WithInternal<TOther>(string alias, AsyncDocumentQuery<TOther> docQuery)
         {
             if (docQuery.SelectTokens?.Count > 0)
@@ -1272,5 +1290,6 @@ namespace Raven.Client.Documents.Session
 
             return this;
         }
+#pragma warning restore CS0618
     }
 }

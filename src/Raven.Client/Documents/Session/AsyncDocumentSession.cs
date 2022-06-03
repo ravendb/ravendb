@@ -68,12 +68,14 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+#pragma warning disable CS0618
         public IAsyncGraphQuery<T> AsyncGraphQuery<T>(string query)
         {
             var documentQuery = new AsyncDocumentQuery<T>(this, null, null, false);
             documentQuery.GraphQuery(query);
             return documentQuery;
         }
+#pragma warning restore CS0618
 
         /// <summary>
         /// Get the accessor for advanced operations

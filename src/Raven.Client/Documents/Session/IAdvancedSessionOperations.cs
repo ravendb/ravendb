@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
@@ -54,6 +55,7 @@ namespace Raven.Client.Documents.Session
         /// Issue a graph query based on the raw match query provided
         /// </summary>
         /// <typeparam name="T">The query result type</typeparam>
+        [Obsolete(Constants.Obsolete.GraphApi)]
         IGraphQuery<T> GraphQuery<T>(string query);
     }
 }
