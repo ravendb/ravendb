@@ -13,11 +13,11 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
     public class DatabaseStatsSender : BackgroundWorkBase
     {
         private readonly DocumentDatabase _database;
-        private readonly NotificationCenter _notificationCenter;
+        private readonly DatabaseNotificationCenter _notificationCenter;
 
         private Stats _latest;
 
-        public DatabaseStatsSender(DocumentDatabase database, NotificationCenter notificationCenter)
+        public DatabaseStatsSender(DocumentDatabase database, DatabaseNotificationCenter notificationCenter)
             : base(database.Name, database.DatabaseShutdown)
         {
             _database = database;

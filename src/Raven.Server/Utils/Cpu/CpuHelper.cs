@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Dashboard;
+using Raven.Server.NotificationCenter;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -39,7 +40,7 @@ namespace Raven.Server.Utils.Cpu
         internal static ExtensionPointCpuUsageCalculator GetExtensionPointCpuUsageCalculator(
             JsonContextPool contextPool,
             MonitoringConfiguration configuration,
-            NotificationCenter.NotificationCenter notificationCenter)
+            ServerNotificationCenter notificationCenter)
         {
             var extensionPoint = new ExtensionPointCpuUsageCalculator(
                 contextPool,

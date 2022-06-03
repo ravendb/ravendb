@@ -4,7 +4,6 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Dashboard;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -12,7 +11,12 @@ using Sparrow.Server.Collections;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class NotificationCenterWebSocketWriter : IWebsocketWriter, IDisposable
+    public interface INotificationCenterWebSocketWriter
+    {
+    }
+
+    public class NotificationCenterWebSocketWriter<TOperationContext> : IWebsocketWriter, INotificationCenterWebSocketWriter, IDisposable
+        where TOperationContext : JsonOperationContext
     {
         protected readonly WebSocket _webSocket;
         private readonly NotificationsBase _notificationsBase;
@@ -23,7 +27,7 @@ namespace Raven.Server.NotificationCenter
         public Action AfterTrackActionsRegistration;
         private readonly IDisposable _returnContext;
 
-        public NotificationCenterWebSocketWriter(WebSocket webSocket, NotificationsBase notificationsBase, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
+        public NotificationCenterWebSocketWriter(WebSocket webSocket, NotificationsBase notificationsBase, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken resourceShutdown)
         {
             _webSocket = webSocket;
             _notificationsBase = notificationsBase;

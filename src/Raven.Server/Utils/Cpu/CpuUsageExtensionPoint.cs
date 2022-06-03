@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Server.Dashboard;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -14,7 +15,7 @@ namespace Raven.Server.Utils.Cpu
     {
         private readonly JsonContextPool _contextPool;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly ServerNotificationCenter _notificationCenter;
         private readonly ProcessStartInfo _startInfo;
         private readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
 
@@ -37,7 +38,7 @@ namespace Raven.Server.Utils.Cpu
             JsonContextPool contextPool,
             string exec,
             string args,
-            NotificationCenter.NotificationCenter notificationCenter)
+            ServerNotificationCenter notificationCenter)
         {
             _contextPool = contextPool;
             _notificationCenter = notificationCenter;

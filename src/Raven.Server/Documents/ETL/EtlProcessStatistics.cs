@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Util;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
@@ -10,13 +11,13 @@ namespace Raven.Server.Documents.ETL
     {
         private readonly string _processTag;
         private readonly string _processName;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly DatabaseNotificationCenter _notificationCenter;
 
         private readonly EnsureAlerts _alertsGuard;
 
         private bool _preventFromAddingAlertsToNotificationCenter;
 
-        public EtlProcessStatistics(string processTag, string processName, NotificationCenter.NotificationCenter notificationCenter)
+        public EtlProcessStatistics(string processTag, string processName, DatabaseNotificationCenter notificationCenter)
         {
             _processTag = processTag;
             _processName = processName;

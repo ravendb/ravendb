@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
@@ -14,22 +15,19 @@ namespace Raven.Server.NotificationCenter
     public class SlowWriteNotifications : IDisposable
     {
         internal TimeSpan UpdateFrequency = TimeSpan.FromSeconds(15);
-        private readonly NotificationCenter _notificationCenter;
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _database;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
         private Timer _timer;
         private bool _updateNotificationInStorageRequired;
         private readonly object _pagerCreationLock = new object();
         private readonly ConcurrentDictionary<string, SlowWritesDetails.SlowWriteInfo> _slowWrites;
         private readonly Logger _logger;
 
-        public SlowWriteNotifications(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
+        public SlowWriteNotifications([NotNull] AbstractDatabaseNotificationCenter notificationCenter)
         {
-            _notificationCenter = notificationCenter;
-            _notificationsStorage = notificationsStorage;
-            _database = database;
+            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
+
             _slowWrites = new ConcurrentDictionary<string, SlowWritesDetails.SlowWriteInfo>();
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
         }
 
         public void Add(string path, double dataSizeInMb, double durationInSec)
@@ -114,7 +112,7 @@ namespace Raven.Server.NotificationCenter
 
             var id = PerformanceHint.GetKey(PerformanceHintType.SlowIO, source);
 
-            using (_notificationsStorage.Read(id, out var ntv))
+            using (_notificationCenter.Storage.Read(id, out var ntv))
             {
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 {
@@ -126,7 +124,7 @@ namespace Raven.Server.NotificationCenter
                 }
 
                 return PerformanceHint.Create(
-                    _database,
+                    _notificationCenter.Database,
                     "An extremely slow write to disk",
                     "We have detected very slow writes",
                     PerformanceHintType.SlowIO,

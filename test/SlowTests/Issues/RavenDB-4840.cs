@@ -34,10 +34,10 @@ namespace SlowTests.Issues
 
                 database.HugeDocuments.UpdateHugeDocuments(null);
 
-                Assert.True(database.ConfigurationStorage.NotificationsStorage.GetPerformanceHintCount() > 0);
+                Assert.True(database.NotificationCenter.Storage.GetPerformanceHintCount() > 0);
 
                 // now read directly from storage and verify
-                using (database.ConfigurationStorage.NotificationsStorage.Read(HugeDocuments.HugeDocumentsId, out var ntv))
+                using (database.NotificationCenter.Storage.Read(HugeDocuments.HugeDocumentsId, out var ntv))
                 {
                     if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                     {

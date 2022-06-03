@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
@@ -16,32 +17,29 @@ namespace Raven.Server.NotificationCenter
         private static readonly string HighOutputsRate = PerformanceHint.GetKey(PerformanceHintType.Indexing, Source);
         private static readonly string ReferencesLoad = PerformanceHint.GetKey(PerformanceHintType.Indexing_References, Source);
 
-        private readonly NotificationCenter _notificationCenter;
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _database;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
         private DateTime _warningUpdateTime = new DateTime();
-        private readonly ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningIndexOutputsPerDocumentQueue =  new();
+        private readonly ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningIndexOutputsPerDocumentQueue = new();
 
-        private readonly ConcurrentQueue<(string indexName, IndexingReferenceLoadWarning.WarningDetails warningDetails)> _warningReferenceDocumentLoadsQueue =  new();
+        private readonly ConcurrentQueue<(string indexName, IndexingReferenceLoadWarning.WarningDetails warningDetails)> _warningReferenceDocumentLoadsQueue = new();
 
         private Timer _indexingTimer;
         private readonly Logger _logger;
-        private readonly object _locker = new object();
+        private readonly object _locker = new();
 
         internal TimeSpan MinUpdateInterval = TimeSpan.FromSeconds(15);
 
-        public Indexing(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
+        public Indexing([NotNull] AbstractDatabaseNotificationCenter notificationCenter)
         {
-            _notificationCenter = notificationCenter;
-            _notificationsStorage = notificationsStorage;
-            _database = database;
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
+
+            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
         }
 
         public void AddWarning(string indexName, WarnIndexOutputsPerDocument.WarningDetails indexOutputsWarning)
         {
-            if (CanAdd(out DateTime now) == false) 
+            if (CanAdd(out DateTime now) == false)
                 return;
 
             indexOutputsWarning.LastWarningTime = now;
@@ -76,7 +74,7 @@ namespace Raven.Server.NotificationCenter
                 return false;
 
             _warningUpdateTime = now;
-            
+
             return true;
         }
 
@@ -136,7 +134,7 @@ namespace Raven.Server.NotificationCenter
 
         private PerformanceHint GetIndexOutputPerDocumentPerformanceHint()
         {
-            using (_notificationsStorage.Read(HighOutputsRate, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(HighOutputsRate, out NotificationTableValue ntv))
             {
                 WarnIndexOutputsPerDocument details;
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
@@ -144,7 +142,7 @@ namespace Raven.Server.NotificationCenter
                 else
                     details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WarnIndexOutputsPerDocument>(detailsJson, HighOutputsRate);
 
-                return PerformanceHint.Create(_database, "High indexing fanout ratio",
+                return PerformanceHint.Create(_notificationCenter.Database, "High indexing fanout ratio",
                     "Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
                     PerformanceHintType.Indexing, NotificationSeverity.Warning, Source, details);
             }
@@ -152,7 +150,7 @@ namespace Raven.Server.NotificationCenter
 
         private PerformanceHint GetReferenceLoadsPerformanceHint()
         {
-            using (_notificationsStorage.Read(ReferencesLoad, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(ReferencesLoad, out NotificationTableValue ntv))
             {
                 IndexingReferenceLoadWarning details;
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
@@ -160,7 +158,7 @@ namespace Raven.Server.NotificationCenter
                 else
                     details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexingReferenceLoadWarning>(detailsJson, ReferencesLoad);
 
-                return PerformanceHint.Create(_database, "High indexing load reference rate",
+                return PerformanceHint.Create(_notificationCenter.Database, "High indexing load reference rate",
                     "We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. " +
                     "Please see Indexing Performance graph to check the performance of your indexes.",
                     PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);

@@ -139,8 +139,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         private async Task SendNotifications(CanAccessDatabase canAccessDatabase, WebSocket webSocket)
         {
             using (var notifications = new ClusterDashboardNotifications(Server, canAccessDatabase, ServerStore.ServerShutdown))
-            using (var connection = new ClusterDashboardConnection(webSocket, canAccessDatabase, notifications,
-                ServerStore.ContextPool, ServerStore.ServerShutdown))
+            using (var connection = new ClusterDashboardConnection<TransactionOperationContext>(webSocket, canAccessDatabase, notifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
             {
                 await connection.Handle();
             }

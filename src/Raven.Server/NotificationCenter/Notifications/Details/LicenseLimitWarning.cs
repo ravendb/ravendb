@@ -30,7 +30,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public static void AddLicenseLimitNotification(NotificationCenter notificationCenter, LicenseLimitException licenseLimit)
+        public static void AddLicenseLimitNotification(ServerNotificationCenter notificationCenter, LicenseLimitException licenseLimit)
         {
             var alert = AlertRaised.Create(
                 null,
@@ -44,7 +44,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             notificationCenter.Add(alert, updateExisting: true);
         }
 
-        public static void DismissLicenseLimitNotification(NotificationCenter notificationCenter, LimitType type)
+        public static void DismissLicenseLimitNotification(ServerNotificationCenter notificationCenter, LimitType type)
         {
             notificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_LicenseLimit, type.ToString()));
         }

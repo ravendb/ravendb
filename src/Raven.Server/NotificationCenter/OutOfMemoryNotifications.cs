@@ -13,11 +13,10 @@ namespace Raven.Server.NotificationCenter
     public class OutOfMemoryNotifications
     {
         private readonly TimeSpan _updateFrequency = TimeSpan.FromSeconds(15);
-        private readonly ConditionalWeakTable<StorageEnvironment, ConcurrentDictionary<Type, NotificationTime>> _notificationsMetadataTable = 
-            new ConditionalWeakTable<StorageEnvironment, ConcurrentDictionary<Type, NotificationTime>>();
-        private readonly NotificationCenter _notificationsCenter;
+        private readonly ConditionalWeakTable<StorageEnvironment, ConcurrentDictionary<Type, NotificationTime>> _notificationsMetadataTable = new();
+        private readonly AbstractNotificationCenter _notificationsCenter;
 
-        public OutOfMemoryNotifications(NotificationCenter notificationsCenter)
+        public OutOfMemoryNotifications(AbstractNotificationCenter notificationsCenter)
         {
             _notificationsCenter = notificationsCenter;
         }

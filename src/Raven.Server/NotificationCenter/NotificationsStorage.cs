@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -19,9 +21,7 @@ namespace Raven.Server.NotificationCenter
 {
     public unsafe class NotificationsStorage
     {
-        private static readonly Slice ByCreatedAt;
-
-        private static readonly Slice ByPostponedUntil;
+        private readonly string _tableName;
 
         protected readonly Logger Logger;
 
@@ -29,38 +29,11 @@ namespace Raven.Server.NotificationCenter
 
         private TransactionContextPool _contextPool;
 
-        internal readonly TableSchema _actionsSchema = new TableSchema();
-
-        static NotificationsStorage()
-        {
-            using (StorageEnvironment.GetStaticContext(out var ctx))
-            {
-                Slice.From(ctx, "ByCreatedAt", ByteStringType.Immutable, out ByCreatedAt);
-                Slice.From(ctx, "ByPostponedUntil", ByteStringType.Immutable, out ByPostponedUntil);
-            }
-        }
-
         public NotificationsStorage(string resourceName)
         {
+            _tableName = GetTableName(resourceName);
+
             Logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
-
-            _actionsSchema.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = NotificationsSchema.NotificationsTable.IdIndex,
-                Count = 1
-            });
-
-            _actionsSchema.DefineIndex(new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
-            {
-                StartIndex = NotificationsSchema.NotificationsTable.CreatedAtIndex,
-                Name = ByCreatedAt
-            });
-
-            _actionsSchema.DefineIndex(new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
-            {
-                StartIndex = NotificationsSchema.NotificationsTable.PostponedUntilIndex,
-                Name = ByPostponedUntil
-            });
         }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
@@ -71,7 +44,7 @@ namespace Raven.Server.NotificationCenter
             using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                _actionsSchema.Create(tx, NotificationsSchema.NotificationsTree, 16);
+                Documents.Schemas.Notifications.Current.Create(tx, _tableName, 16);
 
                 tx.Commit();
             }
@@ -119,7 +92,7 @@ namespace Raven.Server.NotificationCenter
 
         private void Store(LazyStringValue id, DateTime createdAt, DateTime? postponedUntil, BlittableJsonReaderObject action, RavenTransaction tx)
         {
-            var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
 
             var createdAtTicks = Bits.SwapBytes(createdAt.Ticks);
 
@@ -168,9 +141,9 @@ namespace Raven.Server.NotificationCenter
 
         private IEnumerable<NotificationTableValue> ReadActionsByCreatedAtIndex(TransactionOperationContext context)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
 
-            foreach (var tvr in table.SeekForwardFrom(_actionsSchema.Indexes[ByCreatedAt], Slices.BeforeAllKeys, 0))
+            foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByCreatedAt], Slices.BeforeAllKeys, 0))
             {
                 yield return Read(context, ref tvr.Result.Reader);
             }
@@ -192,9 +165,9 @@ namespace Raven.Server.NotificationCenter
 
         private IEnumerable<NotificationTableValue> ReadPostponedActionsByPostponedUntilIndex(TransactionOperationContext context, DateTime cutoff)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
 
-            foreach (var tvr in table.SeekForwardFrom(_actionsSchema.Indexes[ByPostponedUntil], Slices.BeforeAllKeys, 0))
+            foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByPostponedUntil], Slices.BeforeAllKeys, 0))
             {
                 var action = Read(context, ref tvr.Result.Reader);
 
@@ -213,7 +186,7 @@ namespace Raven.Server.NotificationCenter
 
         private NotificationTableValue Get(string id, JsonOperationContext context, RavenTransaction tx)
         {
-            var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+            var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
 
             using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice slice))
             {
@@ -249,7 +222,7 @@ namespace Raven.Server.NotificationCenter
 
             bool DeleteFromTable(RavenTransaction tx)
             {
-                var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+                var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
 
                 using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice alertSlice))
                 {
@@ -264,7 +237,7 @@ namespace Raven.Server.NotificationCenter
             using (var tx = context.OpenReadTransaction())
             using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice slice))
             {
-                var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+                var table = tx.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
                 return table.ReadByKey(slice, out _);
             }
         }
@@ -303,15 +276,15 @@ namespace Raven.Server.NotificationCenter
 
         private NotificationTableValue Read(JsonOperationContext context, ref TableValueReader reader)
         {
-            var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(NotificationsSchema.NotificationsTable.CreatedAtIndex, out int size)));
+            var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Documents.Schemas.Notifications.NotificationsTable.CreatedAtIndex, out int size)));
 
-            var postponeUntilTicks = *(long*)reader.Read(NotificationsSchema.NotificationsTable.PostponedUntilIndex, out size);
+            var postponeUntilTicks = *(long*)reader.Read(Documents.Schemas.Notifications.NotificationsTable.PostponedUntilIndex, out size);
 
             DateTime? postponedUntil = null;
             if (postponeUntilTicks != _postponeDateNotSpecified)
                 postponedUntil = new DateTime(Bits.SwapBytes(postponeUntilTicks));
 
-            var jsonPtr = reader.Read(NotificationsSchema.NotificationsTable.JsonIndex, out size);
+            var jsonPtr = reader.Read(Documents.Schemas.Notifications.NotificationsTable.JsonIndex, out size);
 
             return new NotificationTableValue
             {
@@ -362,6 +335,13 @@ namespace Raven.Server.NotificationCenter
             RemoveNewVersionAvailableAlertIfNecessary();
         }
 
+        private static string GetTableName(string resourceName)
+        {
+            return string.IsNullOrEmpty(resourceName) 
+                ? Documents.Schemas.Notifications.NotificationsTree
+                : $"{Documents.Schemas.Notifications.NotificationsTree}.{resourceName.ToLowerInvariant()}";
+        }
+
         private void RemoveNewVersionAvailableAlertIfNecessary()
         {
             var buildNumber = ServerVersion.Build;
@@ -410,19 +390,15 @@ namespace Raven.Server.NotificationCenter
                 $"Could not find notification type. Notification: {notificationJson}, created at: {action.CreatedAt}, postponed until: {action.PostponedUntil}");
         }
 
-        public static class NotificationsSchema
+        public NotificationsStorage GetStorageFor(string database)
         {
-            public const string NotificationsTree = "Notifications";
+            if (database == null) 
+                throw new ArgumentNullException(nameof(database));
 
-            public static class NotificationsTable
-            {
-#pragma warning disable 169
-                public const int IdIndex = 0;
-                public const int CreatedAtIndex = 1;
-                public const int PostponedUntilIndex = 2;
-                public const int JsonIndex = 3;
-#pragma warning restore 169
-            }
+            var storage = new NotificationsStorage(database);
+            storage.Initialize(_environment, _contextPool);
+
+            return storage;
         }
     }
 }
