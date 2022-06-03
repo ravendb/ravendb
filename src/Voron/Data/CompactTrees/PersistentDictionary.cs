@@ -19,8 +19,6 @@ namespace Voron.Data.CompactTrees
         public ulong TableHash;
         [FieldOffset(8)]
         public int TableSize;
-        [FieldOffset(12)]
-        public int TableMaxEntries;
         [FieldOffset(16)]
         public long CurrentId;        
         [FieldOffset(24)]
@@ -28,7 +26,7 @@ namespace Voron.Data.CompactTrees
 
         public override string ToString()
         {
-            return $"{nameof(TableHash)}: {TableHash}, {nameof(TableSize)}: {TableSize}, {nameof(TableMaxEntries)}: {TableMaxEntries}, {nameof(CurrentId)}: {CurrentId}, {nameof(PreviousId)}: {PreviousId}";
+            return $"{nameof(TableHash)}: {TableHash}, {nameof(TableSize)}: {TableSize}, {nameof(CurrentId)}: {CurrentId}, {nameof(PreviousId)}: {PreviousId}";
         }
     }
 
@@ -36,7 +34,7 @@ namespace Voron.Data.CompactTrees
     {
         private readonly Page _page;
         
-        public const int UsableDictionarySize = NumberOfPagesForDictionary * Constants.Storage.PageSize - PageHeader.SizeOf - PersistentDictionaryHeader.SizeOf;
+        public const int DefaultDictionarySize = NumberOfPagesForDictionary * Constants.Storage.PageSize - PageHeader.SizeOf - PersistentDictionaryHeader.SizeOf;
 
         public long PageNumber => _page.PageNumber;
         
@@ -61,8 +59,7 @@ namespace Voron.Data.CompactTrees
                 p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
 
                 PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
-                header->TableSize = UsableDictionarySize;
-                header->TableMaxEntries = MaxDictionaryEntries;
+                header->TableSize = DefaultDictionarySize;
                 header->CurrentId = p.PageNumber;
                 header->PreviousId = 0;
 
@@ -81,9 +78,9 @@ namespace Voron.Data.CompactTrees
 
                 dictionary.AsSpan()
                     .Slice(4) // Discard the table size.
-                    .CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize));
+                    .CopyTo(new Span<byte>(p.DataPointer + sizeof(PersistentDictionaryHeader), DefaultDictionarySize));
 
-                header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
+                header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), DefaultDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
 
 #if DEBUG
                 VerifyTable(p);
@@ -98,47 +95,14 @@ namespace Voron.Data.CompactTrees
             return pageNumber;
         }
 
-        public static PersistentDictionary Create<TKeysEnumerator>(LowLevelTransaction llt, in TKeysEnumerator enumerator, PersistentDictionary previousDictionary = null)
-            where TKeysEnumerator : struct, IReadOnlySpanEnumerator
-        {
-            var p = llt.AllocatePage(NumberOfPagesForDictionary);
-            p.Flags = PageFlags.Overflow;
-            p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
-
-            PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
-            header->TableSize = UsableDictionarySize;
-            header->TableMaxEntries = MaxDictionaryEntries;
-            header->CurrentId = p.PageNumber;
-            header->PreviousId = previousDictionary != null ? previousDictionary.PageNumber : 0;
-            
-            var encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
-                new Encoder3Gram<NativeMemoryEncoderState>(
-                    new NativeMemoryEncoderState(p.DataPointer + sizeof(PersistentDictionaryHeader), UsableDictionarySize)));
-            encoder.Train(enumerator, MaxDictionaryEntries);
-
-            header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
-
-#if DEBUG
-            VerifyTable(p);
-#endif
-
-            return new PersistentDictionary(p);
-        }
-
-
         public static PersistentDictionary CreateIfBetter<TKeys1, TKeys2>(LowLevelTransaction llt, TKeys1 trainEnumerator, TKeys2 testEnumerator, PersistentDictionary previousDictionary = null)
             where TKeys1 : struct, IReadOnlySpanEnumerator
             where TKeys2 : struct, IReadOnlySpanEnumerator
         {
-            // Reserve the memory to create the encoder table. 
-            using var scope = llt.Allocator.Allocate(UsableDictionarySize, out var output);
+            var encoderState = new AdaptiveMemoryEncoderState(DefaultDictionarySize);
+            using var encoder = new HopeEncoder<Encoder3Gram<AdaptiveMemoryEncoderState>>(new Encoder3Gram<AdaptiveMemoryEncoderState>(encoderState));
+            encoder.Train(trainEnumerator, MaxDictionaryEntries);                
             
-            // Train the new dictionary.
-            var encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
-                                new Encoder3Gram<NativeMemoryEncoderState>(
-                                    new NativeMemoryEncoderState(output.Ptr, UsableDictionarySize)));
-            encoder.Train(trainEnumerator, MaxDictionaryEntries);
-
             // Test the new dictionary to ensure that we have statistically better compression.
             using var encodeBufferScope = llt.Allocator.Allocate(Constants.Storage.PageSize, out var encodeBuffer);
             
@@ -153,19 +117,28 @@ namespace Voron.Data.CompactTrees
 
             // If the new dictionary is not at least 5% better, we return the current dictionary.             
             if (incumbentSize < successorSize * 1.05)
-                return previousDictionary;            
-                                    
-            var p = llt.AllocatePage(NumberOfPagesForDictionary);
+                return previousDictionary;
+
+            int requiredSize = Encoder3Gram<AdaptiveMemoryEncoderState>.GetDictionarySize(encoderState);
+                
+            int requiredTotalSize = requiredSize + PageHeader.SizeOf + PersistentDictionaryHeader.SizeOf;
+            int requiredPages = (requiredTotalSize / Constants.Storage.PageSize) + ((requiredTotalSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
+
+            var p = llt.AllocatePage(requiredPages);
             p.Flags = PageFlags.Overflow;
-            p.OverflowSize = NumberOfPagesForDictionary * Constants.Storage.PageSize;
+            p.OverflowSize = requiredPages * Constants.Storage.PageSize;
 
             PersistentDictionaryHeader* header = (PersistentDictionaryHeader*)p.DataPointer;
-            header->TableSize = UsableDictionarySize;
-            header->TableMaxEntries = MaxDictionaryEntries;
             header->CurrentId = p.PageNumber;
             header->PreviousId = previousDictionary != null ? previousDictionary.PageNumber : 0;
-            output.CopyTo(0, p.DataPointer + PersistentDictionaryHeader.SizeOf, 0, UsableDictionarySize);
-            header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(long), UsableDictionarySize + PersistentDictionaryHeader.SizeOf - sizeof(long));
+
+            byte* encodingTablesPtr = p.DataPointer + PersistentDictionaryHeader.SizeOf;
+            encoderState.EncodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr, requiredSize / 2));
+            encoderState.DecodingTable.Slice(0, requiredSize / 2).CopyTo(new Span<byte>(encodingTablesPtr + requiredSize / 2, requiredSize / 2));
+
+            var nativeState = new NativeMemoryEncoderState(encodingTablesPtr, requiredSize);
+            header->TableSize = requiredSize;
+            header->TableHash = XXHash64.Calculate(p.DataPointer + sizeof(ulong), (ulong) (header->TableSize + PersistentDictionaryHeader.SizeOf - sizeof(ulong)));
 
 #if DEBUG
             VerifyTable(p);
@@ -195,7 +168,7 @@ namespace Voron.Data.CompactTrees
 
             _encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
                 new Encoder3Gram<NativeMemoryEncoderState>(
-                    new NativeMemoryEncoderState(page.DataPointer + sizeof(PersistentDictionaryHeader), header->TableSize)));
+                    new NativeMemoryEncoderState(page.DataPointer + PersistentDictionaryHeader.SizeOf, header->TableSize)));
         }
 
         public void Decode(ReadOnlySpan<byte> encodedKey, ref Span<byte> decodedKey)
