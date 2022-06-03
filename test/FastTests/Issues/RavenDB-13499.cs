@@ -24,13 +24,15 @@ namespace FastTests.Issues
                 
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618
                     var results1 = session.Advanced
-                            .GraphQuery<JObject>("match (Person as f)-[Relationships as r select TargetId]->(Person as t)")
-                            .ToArray();
+                        .GraphQuery<JObject>("match (Person as f)-[Relationships as r select TargetId]->(Person as t)")
+                        .ToArray();
 
                     var results2 = session.Advanced
-                            .GraphQuery<JObject>("match (Person as f)-[Relationships as r select r.TargetId]->(Person as t)")
-                            .ToArray();
+                        .GraphQuery<JObject>("match (Person as f)-[Relationships as r select r.TargetId]->(Person as t)")
+                        .ToArray();
+#pragma warning restore CS0618
 
                     Assert.Equal(results1, results2);
                 }

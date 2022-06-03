@@ -26,7 +26,9 @@ namespace FastTests.Graph
                     session.Store(bar, barId);
                     session.Store(new Foo {Name = "Foozy", Bars = new List<string> {barId}});
                     session.SaveChanges();
+#pragma warning disable CS0618
                     FooBar res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)").With("Foo", session.Query<Foo>()).Single();
+#pragma warning restore CS0618
                     Assert.Equal(res.Foo.Name, "Foozy");
                     Assert.Equal(res.Bar.Name, "Barvazon");
                 }
@@ -54,11 +56,13 @@ namespace FastTests.Graph
                         new[] {"Fi", "Foozy", "Fah", "Fah", "Foozy"},
                     })
                     {
+#pragma warning disable CS0618
                         var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
                             .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
                             .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18))
                             .WaitForNonStaleResults()
                             .ToList();
+#pragma warning restore CS0618
 
                         Assert.Single(res);
                         Assert.Equal(res[0].Foo.Name, "Foozy");
@@ -77,11 +81,13 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618
                     var query = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
                         .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names).WaitForNonStaleResults(TimeSpan.FromMinutes(3)))
                         .With("Bar", session.Query<Bar>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Age >= 18))
                         .WaitForNonStaleResults()
                         .GetIndexQuery();
+#pragma warning restore CS0618
 
                     Assert.True(query.WaitForNonStaleResults);
                     Assert.Equal(TimeSpan.FromMinutes(5), query.WaitForNonStaleResultsTimeout);
@@ -89,11 +95,13 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenAsyncSession())
                 {
+#pragma warning disable CS0618
                     var query = session.Advanced.AsyncGraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
                         .With("Foo", builder => builder.AsyncDocumentQuery<Foo>().WhereIn(x => x.Name, names).WaitForNonStaleResults(TimeSpan.FromMinutes(3)))
                         .With("Bar", session.Query<Bar>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Where(x => x.Age >= 18))
                         .WaitForNonStaleResults()
                         .GetIndexQuery();
+#pragma warning restore CS0618
 
                     Assert.True(query.WaitForNonStaleResults);
                     Assert.Equal(TimeSpan.FromMinutes(5), query.WaitForNonStaleResultsTimeout);
@@ -151,6 +159,7 @@ namespace FastTests.Graph
                     var from = now.AddDays(-345);
 
                     session.SaveChanges();
+#pragma warning disable CS0618
                     var res = session.Advanced.GraphQuery<FriendsTuple>("match (F1)-[L1]->(F2)")
                         .With("F1", session.Query<Friend>())
                         .With("F2", session.Query<Friend>())
@@ -160,6 +169,7 @@ namespace FastTests.Graph
                         .OrderByDescending(x => x.F1.Age)
                         .Select(x => x.F1)
                         .ToList();
+#pragma warning restore CS0618
 
                     Assert.Equal(res.Count, 4);
                     Assert.Equal(res[0].Name, "F4");
