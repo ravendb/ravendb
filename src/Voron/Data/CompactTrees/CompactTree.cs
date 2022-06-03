@@ -995,9 +995,7 @@ namespace Voron.Data.CompactTrees
             return true;
 
             Failure:
-            // We will free the page, we will no longer use it.
             // TODO: Probably it is best to just not allocate and copy the page afterwards if we use it. 
-            Llt.FreePage(newDictionary.PageNumber);
             Memory.Copy(state.Page.Pointer, tmp.TempPagePointer, Constants.Storage.PageSize);
             return false;
         }
