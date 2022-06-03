@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Changes;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Sparrow.Platform;
@@ -30,11 +31,11 @@ namespace Raven.Server.Documents.Operations
     {
         private readonly string _databaseName;
         private readonly OperationsStorage _operationsStorage;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly AbstractNotificationCenter _notificationCenter;
 
         protected Operations(string databaseName,
             OperationsStorage operationsStorage,
-            NotificationCenter.NotificationCenter notificationCenter,
+            AbstractNotificationCenter notificationCenter,
             DocumentsChanges changes,
             TimeSpan maxCompletedTaskLifeTime)
             : base(changes, maxCompletedTaskLifeTime)

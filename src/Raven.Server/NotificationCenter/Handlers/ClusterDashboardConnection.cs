@@ -7,18 +7,18 @@ using System.Threading.Tasks;
 using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ClusterDashboardConnection : NotificationCenterWebSocketWriter
+    public class ClusterDashboardConnection<TOperationContext> : NotificationCenterWebSocketWriter<TOperationContext>
+        where TOperationContext : JsonOperationContext
     {
         private const int WelcomeMessageId = -1;
         
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ClusterDashboardConnection>(nameof(ClusterDashboardConnection));
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("ClusterDashboardConnection", typeof(ClusterDashboardConnection<>).FullName);
 
         private readonly CanAccessDatabase _canAccessDatabase;
         private readonly ClusterDashboardNotifications _clusterDashboardNotifications;
@@ -29,7 +29,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         private Task _receiveTask;
 
         public ClusterDashboardConnection(WebSocket webSocket, CanAccessDatabase canAccessDatabase, ClusterDashboardNotifications clusterDashboardNotifications,
-            IMemoryContextPool contextPool, CancellationToken resourceShutdown)
+            JsonContextPoolBase<TOperationContext> contextPool, CancellationToken resourceShutdown)
             : base(webSocket, clusterDashboardNotifications, contextPool, resourceShutdown)
         {
             _canAccessDatabase = canAccessDatabase;

@@ -9,6 +9,7 @@ using Raven.Client.Util;
 using Raven.Server.Dashboard;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 
 namespace Raven.Server.NotificationCenter.Handlers
@@ -21,7 +22,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
                 var isValidFor = GetDatabaseAccessValidationFunc();
-                using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, ServerStore.ServerShutdown))
+                using (var writer = new NotificationCenterWebSocketWriter<TransactionOperationContext>(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
                     using (ServerStore.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
                     {

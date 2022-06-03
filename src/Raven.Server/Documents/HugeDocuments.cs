@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Config;
 using Raven.Server.NotificationCenter;
@@ -20,9 +21,7 @@ namespace Raven.Server.Documents
         private readonly SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, long> _hugeDocs;
         private readonly Logger _logger;
         private readonly long _maxWarnSize;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _database;
+        private readonly DatabaseNotificationCenter _notificationCenter;
 
         private volatile bool _needsSync;
         private PerformanceHint _performanceHint;
@@ -30,14 +29,12 @@ namespace Raven.Server.Documents
 
         private Timer _timer;
 
-        public HugeDocuments(NotificationCenter.NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database, int maxCollectionSize, long maxWarnSize)
+        public HugeDocuments([NotNull] DatabaseNotificationCenter notificationCenter, int maxCollectionSize, long maxWarnSize)
         {
-            _notificationCenter = notificationCenter;
-            _notificationsStorage = notificationsStorage;
-            _database = database;
+            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
             _maxWarnSize = maxWarnSize;
             _hugeDocs = new SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, long>(maxCollectionSize);
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
         }
 
         public void AddIfDocIsHuge(Document doc)
@@ -104,7 +101,7 @@ namespace Raven.Server.Documents
         private PerformanceHint GetOrCreatePerformanceHint(out HugeDocumentsDetails details)
         {
             //Read() is transactional, so this is thread-safe
-            using (_notificationsStorage.Read(HugeDocumentsId, out var ntv))
+            using (_notificationCenter.Storage.Read(HugeDocumentsId, out var ntv))
             {
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 {
@@ -120,7 +117,7 @@ namespace Raven.Server.Documents
                                  $"You can alter the warning limits by changing '{RavenConfiguration.GetKey(x => x.PerformanceHints.HugeDocumentSize)}' configuration value.";
 
                 return PerformanceHint.Create(
-                    _database,
+                    _notificationCenter.Database,
                     "Huge documents",
                     message,
                     PerformanceHintType.HugeDocuments,

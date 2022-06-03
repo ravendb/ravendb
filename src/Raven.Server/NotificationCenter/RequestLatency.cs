@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -11,11 +12,9 @@ namespace Raven.Server.NotificationCenter
     public class RequestLatency : IDisposable
     {
         private static readonly string QueryRequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}/Query";
-        private readonly object _addHintSyncObj = new object();
+        private readonly object _locker = new();
         private readonly Logger _logger;
-        private readonly NotificationCenter _notificationCenter;
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _database;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
         private volatile bool _needsSync;
         private PerformanceHint _performanceHint;
@@ -23,17 +22,16 @@ namespace Raven.Server.NotificationCenter
 
         private Timer _timer;
 
-        public RequestLatency(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
+        public RequestLatency([NotNull] AbstractDatabaseNotificationCenter notificationCenter)
         {
-            _notificationCenter = notificationCenter;
-            _notificationsStorage = notificationsStorage;
-            _database = database;
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
+
+            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
         }
 
         public void AddHint(long duration, string action, string query)
         {
-            lock (_addHintSyncObj)
+            lock (_locker)
             {
                 if (_performanceHint == null)
                     _performanceHint = GetOrCreatePerformanceLatencies(out _details);
@@ -55,7 +53,7 @@ namespace Raven.Server.NotificationCenter
                 if (_needsSync == false)
                     return;
 
-                lock (_addHintSyncObj)
+                lock (_locker)
                 {
                     _needsSync = false;
 
@@ -79,7 +77,7 @@ namespace Raven.Server.NotificationCenter
         private PerformanceHint GetOrCreatePerformanceLatencies(out RequestLatencyDetail details)
         {
             //Read() is transactional, so this is thread-safe
-            using (_notificationsStorage.Read(QueryRequestLatenciesId, out var ntv))
+            using (_notificationCenter.Storage.Read(QueryRequestLatenciesId, out var ntv))
             {
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 {
@@ -91,7 +89,7 @@ namespace Raven.Server.NotificationCenter
                 }
 
                 return PerformanceHint.Create(
-                    _database,
+                    _notificationCenter.Database,
                     "Request latency is too high",
                     "We have detected that some query duration has surpassed the configured threshold",
                     PerformanceHintType.RequestLatency,

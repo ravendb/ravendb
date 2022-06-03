@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Server.Dashboard;
+using Raven.Server.NotificationCenter;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix.macOS;
@@ -266,7 +267,7 @@ namespace Raven.Server.Utils.Cpu
             JsonContextPool contextPool,
             string exec,
             string args,
-            NotificationCenter.NotificationCenter notificationCenter)
+            ServerNotificationCenter notificationCenter)
         {
             _inspector = new CpuUsageExtensionPoint(
                 contextPool,

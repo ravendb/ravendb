@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -18,22 +18,19 @@ namespace Raven.Server.NotificationCenter
         private static readonly string PagingRevisionsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.Revisions}";
         private static readonly string PagingCompareExchangeId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.CompareExchange}";
 
-        private readonly NotificationCenter _notificationCenter;
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _database;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
         private readonly object _locker = new object();
-        private readonly ConcurrentQueue<PagingInformation> _pagingQueue = new ConcurrentQueue<PagingInformation>();
+        private readonly ConcurrentQueue<PagingInformation> _pagingQueue = new();
         private readonly DateTime[] _pagingUpdates = new DateTime[Enum.GetNames(typeof(PagingOperationType)).Length];
         private Timer _pagingTimer;
         private readonly Logger _logger;
 
-        public Paging(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
+        public Paging([NotNull] AbstractDatabaseNotificationCenter notificationCenter)
         {
-            _notificationCenter = notificationCenter;
-            _notificationsStorage = notificationsStorage;
-            _database = database;
-            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
+            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
+
+            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
         }
 
         public void Add(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
@@ -142,13 +139,13 @@ namespace Raven.Server.NotificationCenter
                 outcome = false;
                 reasonOfNotUpdating += $"Error in a notification center paging timer. {e}";
             }
-                
+
             return outcome;
         }
 
         private PerformanceHint GetPagingPerformanceHint(string id, PagingOperationType type)
         {
-            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
                 PagingPerformanceDetails details;
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
@@ -160,15 +157,15 @@ namespace Raven.Server.NotificationCenter
                 {
                     case PagingOperationType.Documents:
                     case PagingOperationType.Queries:
-                        return PerformanceHint.Create(_database, $"Page size too big ({type.ToString().ToLower()})",
+                        return PerformanceHint.Create(_notificationCenter.Database, $"Page size too big ({type.ToString().ToLower()})",
                             "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.",
                             PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     case PagingOperationType.Revisions:
-                        return PerformanceHint.Create(_database, "Page size too big (revisions)", 
+                        return PerformanceHint.Create(_notificationCenter.Database, "Page size too big (revisions)",
                             "We have detected that some of the requests are returning excessive amount of revisions. Consider using smaller page sizes.",
                             PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     case PagingOperationType.CompareExchange:
-                        return PerformanceHint.Create(_database, "Page size too big (compare exchange)",
+                        return PerformanceHint.Create(_notificationCenter.Database, "Page size too big (compare exchange)",
                             "We have detected that some of the requests are returning excessive amount of compare exchange values. Consider using smaller page sizes.",
                             PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     default:
@@ -181,6 +178,7 @@ namespace Raven.Server.NotificationCenter
         {
             _pagingTimer?.Dispose();
         }
+
         internal readonly struct PagingInformation
         {
             public PagingOperationType Type { get; }
@@ -201,8 +199,8 @@ namespace Raven.Server.NotificationCenter
                 PageSize = pageSize;
                 Duration = duration;
                 Occurrence = occurrence;
-                TotalDocumentsSizeInBytes = totalDocumentsSizeInBytes;  
-    }
-}
+                TotalDocumentsSizeInBytes = totalDocumentsSizeInBytes;
+            }
+        }
     }
 }

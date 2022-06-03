@@ -15,7 +15,6 @@ namespace Raven.Server.NotificationCenter
     {
         private readonly object _watchersLock = new object();
 
-
         private class State
         {
             public TaskCompletionSource<object> NewWebSocket = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -74,7 +73,7 @@ namespace Raven.Server.NotificationCenter
                     StartBackgroundWorkers();
                 }
 
-                if (watcher.Writer is NotificationCenterWebSocketWriter)
+                if (watcher.Writer is INotificationCenterWebSocketWriter)
                 {
                     if (_state.NumberOfClients == 0)
                     {
@@ -105,7 +104,7 @@ namespace Raven.Server.NotificationCenter
                         StopBackgroundWorkers();
                     }
 
-                    if (watcher.Writer is NotificationCenterWebSocketWriter)
+                    if (watcher.Writer is INotificationCenterWebSocketWriter)
                     {
                         var copy = _state;
                         if (Interlocked.Decrement(ref copy.NumberOfClients) == 0)
@@ -134,7 +133,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             foreach (var worker in BackgroundWorkers)
             {

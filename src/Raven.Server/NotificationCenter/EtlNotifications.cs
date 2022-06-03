@@ -9,15 +9,11 @@ namespace Raven.Server.NotificationCenter
 {
     public class EtlNotifications
     {
-        private readonly NotificationCenter _notificationCenter;
-        private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _databaseName;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
-        public EtlNotifications(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string databaseName)
+        public EtlNotifications(AbstractDatabaseNotificationCenter notificationCenter)
         {
             _notificationCenter = notificationCenter;
-            _notificationsStorage = notificationsStorage;
-            _databaseName = databaseName;
         }
 
         public AlertRaised AddTransformationErrors(string processTag, string processName, Queue<EtlErrorInfo> errors, string preMessage = null)
@@ -75,12 +71,12 @@ namespace Raven.Server.NotificationCenter
 
             var id = AlertRaised.GetKey(etlAlertType, key);
 
-            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
                 details = GetDetails<T>(ntv);
 
                 return AlertRaised.Create(
-                    _databaseName,
+                    _notificationCenter.Database,
                     $"{processTag}: '{processName}'",
                     message,
                     etlAlertType,
@@ -98,7 +94,7 @@ namespace Raven.Server.NotificationCenter
 
             var id = AlertRaised.GetKey(etlAlertType, key);
 
-            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
                 return GetDetails<T>(ntv);
             }
@@ -112,12 +108,12 @@ namespace Raven.Server.NotificationCenter
 
             var id = PerformanceHint.GetKey(etlHintType, key);
 
-            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
                 details = GetDetails<T>(ntv);
 
                 return PerformanceHint.Create(
-                    _databaseName,
+                    _notificationCenter.Database,
                     $"{processTag}: '{processName}'",
                     message,
                     etlHintType,

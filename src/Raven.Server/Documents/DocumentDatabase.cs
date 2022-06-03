@@ -34,6 +34,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
@@ -146,8 +147,8 @@ namespace Raven.Server.Documents
                 MetricCacher = new DatabaseMetricCacher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 ConfigurationStorage = new ConfigurationStorage(this);
-                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
-                HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
+                NotificationCenter = new DatabaseNotificationCenter(this);
+                HugeDocuments = new HugeDocuments(NotificationCenter, configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 Operations = new DatabaseOperations(this);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
@@ -245,7 +246,7 @@ namespace Raven.Server.Documents
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
 
-        public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
+        public DatabaseNotificationCenter NotificationCenter { get; private set; }
 
         public DatabaseOperations Operations { get; private set; }
 
@@ -313,7 +314,7 @@ namespace Raven.Server.Documents
                 Configuration.CheckDirectoryPermissions();
 
                 _addToInitLog("Initializing NotificationCenter");
-                NotificationCenter.Initialize(this);
+                NotificationCenter.Initialize();
 
                 _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
@@ -1643,7 +1644,7 @@ namespace Raven.Server.Documents
 
         private void HandleOnRecoveryError(StorageEnvironmentWithType.StorageEnvironmentType type, string resourceName, object environment, RecoveryErrorEventArgs e)
         {
-            NotificationCenter.NotificationCenter nc;
+            AbstractNotificationCenter nc;
             string title;
 
             switch (type)
@@ -1691,7 +1692,7 @@ namespace Raven.Server.Documents
 
         private void HandleOnIntegrityErrorOfAlreadySyncedData(StorageEnvironmentWithType.StorageEnvironmentType type, string resourceName, object environment, DataIntegrityErrorEventArgs e)
         {
-            NotificationCenter.NotificationCenter nc;
+            AbstractNotificationCenter nc;
             string title;
 
             switch (type)

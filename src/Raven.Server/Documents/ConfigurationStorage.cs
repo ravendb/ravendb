@@ -20,8 +20,6 @@ namespace Raven.Server.Documents
 
         public TransactionContextPool ContextPool { get; }
 
-        public NotificationsStorage NotificationsStorage { get; }
-
         public OperationsStorage OperationsStorage { get; }
 
         public StorageEnvironment Environment { get; }
@@ -65,8 +63,6 @@ namespace Raven.Server.Documents
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
 
-            NotificationsStorage = new NotificationsStorage(db.Name);
-
             OperationsStorage = new OperationsStorage();
 
             Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Configuration);
@@ -76,7 +72,6 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            NotificationsStorage.Initialize(Environment, ContextPool);
             OperationsStorage.Initialize(Environment, ContextPool);
         }
 

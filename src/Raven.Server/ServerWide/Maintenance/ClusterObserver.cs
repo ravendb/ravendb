@@ -16,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -50,7 +51,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly DateTime StartTime = DateTime.UtcNow;
         public SystemTime Time = new SystemTime();
 
-        private NotificationCenter.NotificationCenter NotificationCenter => _server.NotificationCenter;
+        private ServerNotificationCenter NotificationCenter => _server.NotificationCenter;
 
         public ClusterObserver(
             ServerStore server,

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
 using Sparrow.Logging;
@@ -23,13 +24,13 @@ namespace Raven.Server.Storage
         private readonly object _runLock = new object();
         private readonly object _subscribeLock = new object();
 
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly ServerNotificationCenter _notificationCenter;
 
         private Timer _timer;
 
         internal bool SimulateLowDiskSpace;
 
-        public StorageSpaceMonitor(NotificationCenter.NotificationCenter notificationCenter)
+        public StorageSpaceMonitor(ServerNotificationCenter notificationCenter)
         {
             _notificationCenter = notificationCenter;
 

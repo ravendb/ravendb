@@ -56,6 +56,7 @@ namespace Raven.Server.Documents.Sharding
             ShardExecutor = new ShardExecutor(_serverStore, this);
             AllNodesExecutor = new AllNodesExecutor(_serverStore, DatabaseName);
 
+            NotificationCenter = new ShardedDatabaseNotificationCenter(this);
             Streaming = new ShardedStreaming();
             Cluster = new ShardedCluster(this);
             Changes = new ShardedDocumentsChanges(this);
