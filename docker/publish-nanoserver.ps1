@@ -40,16 +40,9 @@ function PushImages($imageTags) {
         PushImagesDryRun $imageTags
     }
 }
-function GetImageTags($repo, $version) {
-        return @(
-            "$($repo):windows-latest",
-            "$($repo):6.0-windows-latest",
-            "$($repo):$($version)-windows"
-        )
-}
 
 $version = GetVersionFromArtifactName
-$tags = GetImageTags $Repo $version
+$tags = GetWindowsImageTags $Repo $version
 PushImages $tags
 
 if ($RemoveImages) {

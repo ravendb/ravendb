@@ -27,12 +27,18 @@ function BuildWindowsDockerImage ($version) {
 
 
     write-host "Build docker image: $version"
-    write-host "Tags: $($repo):$version-windows $($repo):6.0-windows-latest"
+    $tags = GetWindowsImageTags $repo $version
+    $fullNameTag = $tags[0]
 
-    docker build $DockerfileDir `
-            -t "$($repo):windows-latest" `
-            -t "$($repo):6.0-windows-latest" `
-            -t "$($repo):$($version)-windows"
+    write-host "Tags: $tags"
+
+    docker build $DockerfileDir -t $fullNameTag
+
+    foreach ($tag in $tags[1..$tags.Length]) {
+        write-host "Tag $fullNameTag as $tag"
+        docker tag "$fullNameTag" $tag
+        CheckLastExitCode
+    }
 
     Remove-Item -Path $dockerPackagePath
 }

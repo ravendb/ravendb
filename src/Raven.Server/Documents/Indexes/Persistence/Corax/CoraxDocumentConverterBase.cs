@@ -119,7 +119,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
                 else
                 {
-                    using (_allocator.Allocate(16, out var buffer))
+                    using (_allocator.Allocate(128, out var buffer))
                     {
                         var length = 0;
                         switch (value)
